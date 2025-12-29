@@ -17,17 +17,18 @@ const useSmoothScroll = () => {
 
 export default function MuschioRevolution() {
     useSmoothScroll();
-    const [activeMood, setActiveMood] = useState('Velvet');
-    const [showQuiz, setShowQuiz] = useState(false);
 
     const moods = {
         'Velvet': { color: '#1a1a1a', note: 'Oud & Rose', image: 'https://images.unsplash.com/photo-1547483157-ca177890b144?q=80&w=1000' },
         'Glass': { color: '#f0f4f8', note: 'White Moss & Bergamot', image: 'https://images.unsplash.com/photo-1615484477201-9f4953340fab?q=80&w=1000' },
         'Gold': { color: '#D4AF37', note: 'Saffron & Amber', image: 'https://images.unsplash.com/photo-1506461883276-594a12b11cf3?q=80&w=1000' }
-    };
+    } as const;
+
+    const [activeMood, setActiveMood] = useState<keyof typeof moods>('Velvet');
+    const [showQuiz, setShowQuiz] = useState(false);
 
     return (
-        <main className="min-h-screen transition-colors duration-1000" style={{ backgroundColor: moods[activeMood].color }}>
+        <main className="min-h-screen transition-colors duration-1000" style={{ backgroundColor: moods[activeMood]?.color }}>
             <nav className="fixed w-full z-50 px-8 py-8 flex justify-between items-center mix-blend-difference text-white">
                 <span className="text-3xl font-serif tracking-[0.5em] uppercase">Muschio</span>
                 <div className="flex gap-8 items-center uppercase text-[10px] tracking-widest font-bold">
@@ -69,7 +70,7 @@ export default function MuschioRevolution() {
                         {Object.keys(moods).map((mood) => (
                             <button
                                 key={mood}
-                                onClick={() => setActiveMood(mood)}
+                                onClick={() => setActiveMood(mood as keyof typeof moods)}
                                 className={`px-8 py-2 rounded-full border transition-all text-[10px] uppercase tracking-widest ${activeMood === mood ? 'bg-white text-black border-white' : 'border-white/30 text-white hover:border-white'}`}
                             >
                                 {mood}
