@@ -1,0 +1,759 @@
+version: "9.0.0"
+kind: "MASTER_BUILD_PROMPT"
+name: "Custom Fragrance — Premium Niche & Designer E-Commerce Platform"
+authority: "Single authoritative specification for Google Antigravity. Do not combine with older conflicting prompts."
+
+mission:
+  objective: "Build a production-grade premium niche and designer fragrance store that guides customers from discovery to confident purchase with minimal friction."
+  inspiration:
+    - "Harrods: luxury merchandising, hierarchy, navigation and presentation"
+    - "Galeries Lafayette: editorial storytelling, brand presentation and discovery"
+    - "Level Shoes: premium GCC UX and frictionless regional purchasing"
+  rule: "Take inspiration without copying branding, proprietary assets, layouts or distinctive trade dress."
+
+product_principles:
+  - "Discovery-first: help customers find the right fragrance, not merely browse a catalogue."
+  - "Purchase confidence: make authenticity, price, size, stock, delivery and payment clear."
+  - "Minimal friction across discovery, cart and checkout."
+  - "Luxury presentation with strong typography, imagery, whitespace and restrained motion."
+  - "Mobile-first, responsive and accessible."
+  - "English and Arabic are first-class; Arabic is true RTL."
+  - "Money, inventory, orders, payments, discounts, tax and permissions are server-authoritative."
+  - "Never fabricate products, prices, stock, reviews, credentials, provider contracts or FX rates."
+  - "Do not claim absolute performance such as zero latency; define measurable SLOs."
+  - "Client variant switching may feel instant from prefetched authoritative data; checkout and reservation always revalidate server-side."
+
+stack:
+  monorepo: "Turborepo + pnpm 9+"
+  storefront: "Next.js 14+ App Router + React + strict TypeScript + Tailwind CSS + Radix UI + next-intl + next-themes"
+  api: "Node.js + Express + strict TypeScript + Zod"
+  database: "PostgreSQL on Neon + Prisma + pg_trgm"
+  cache_jobs: "Upstash Redis + BullMQ; Redis is acceleration/coordination, never inventory source of truth"
+  storage: "Cloudflare R2"
+  admin: "Vite + React + TanStack Query + TipTap"
+  ai: "DeepSeek through a server-side proxy"
+  payments: "Tabby, Tamara, credit/debit card, Apple Pay and Google Pay where supported"
+  runtime: "Native Windows 10/11 + PowerShell; no WSL2 dependency; no mandatory Docker dependency"
+
+workspace:
+  apps:
+    storefront: "Customer-facing Next.js application"
+    api: "Express REST API and domain services"
+    admin: "React operations, merchandising and CMS portal"
+  packages:
+    ui: "Shared luxury design system"
+    types: "Shared DTOs and Zod contracts"
+    config: "Shared tooling configuration"
+
+creative_direction:
+  positioning: "Luxury fashion house × niche perfumery × editorial magazine × GCC-first commerce"
+  emotional_goal: ["Desirable", "Sophisticated", "Sensory", "Trustworthy", "Effortless"]
+  visual_rules:
+    - "Use cinematic product imagery and editorial compositions."
+    - "Prefer generous whitespace and strong typographic hierarchy."
+    - "Prefer refined surfaces and subtle borders over dense cards."
+    - "Use restrained, purposeful motion."
+    - "Avoid generic SaaS aesthetics, excessive gradients, noisy shadows, excessive glassmorphism and gimmicky animation."
+  colors:
+    accent: "#d2042d"
+    accent_rule: "Reserve primarily for high-intent actions, active states and payment/installment emphasis."
+    light: {canvas: "#FFFFFF", surface: "#FAF9F6", text: "#0F172A", border: "#E2E8F0"}
+    dark: {canvas: "#090D14", surface: "#111622", text: "#F8FAFC", border: "#1E293B"}
+  typography:
+    latin_headings: "Cormorant Garamond or Playfair Display"
+    latin_body: "Inter or Plus Jakarta Sans"
+    arabic: "Cairo or Tajawal"
+    rule: "Verify licensing/availability and load only required weights."
+  themes: ["Light Luxury", "Dark Obsidian"]
+  rtl:
+    - "Use document dir=rtl and lang=ar."
+    - "Use Tailwind logical properties."
+    - "Mirror layout only when semantically correct."
+    - "Do not reverse icons whose meaning should remain directional."
+
+navigation:
+  primary: ["New In", "Fragrance", "Brands", "Shop By", "Discover", "Gifts", "Sale"]
+  utility: ["Search", "Account", "Wishlist", "Cart"]
+  fragrance:
+    - "Niche"
+    - "Designer"
+    - "Men"
+    - "Women"
+    - "Unisex"
+  shop_by:
+    - "Notes"
+    - "Scent Family"
+    - "Occasion"
+    - "Concentration"
+    - "Size"
+    - "Price"
+  discover:
+    - "AI Scent Discovery"
+    - "Discovery Sets"
+    - "Fragrance Guide"
+    - "Journal"
+  behavior:
+    desktop: "Use a clean editorial mega-menu where useful; do not overload the header."
+    mobile: "Use a clear hierarchical drawer; keep Search, Cart, Account and Wishlist easy to reach."
+
+homepage:
+  principle: "Guided discovery journey, not a catalogue dump."
+  required_sections:
+    - "Hero Banner"
+    - "Shop by Category"
+    - "New Arrivals"
+    - "Featured Brands"
+    - "Best Sellers"
+    - "Niche & Designer"
+    - "Shop by Notes"
+    - "Curated Collections"
+    - "Brand Spotlight"
+    - "Fragrance Guide"
+    - "Offers"
+    - "Trust / Authenticity / Delivery"
+    - "Reviews / Social Proof"
+    - "Newsletter"
+  recommended_flow:
+    - "Hero"
+    - "Shop by Category"
+    - "New Arrivals"
+    - "Featured Brands"
+    - "Best Sellers"
+    - "Niche vs Designer"
+    - "Shop by Notes"
+    - "Curated Collections"
+    - "Brand Spotlight"
+    - "Fragrance Guide / AI Discovery"
+    - "Discovery Set"
+    - "Offers"
+    - "Authenticity / Delivery / Payment Trust"
+    - "Reviews / Social Proof"
+    - "Newsletter"
+  rules:
+    - "New arrivals, brands, best sellers and offers are data-driven or merchant-configurable."
+    - "Never show expired or fabricated promotions."
+    - "Trust claims must come from actual business configuration."
+  hero:
+    - "Cinematic editorial art direction."
+    - "One dominant primary CTA plus optional secondary discovery CTA."
+    - "Responsive optimized media and accessible motion fallback."
+
+catalog:
+  filters: ["Brand", "Niche / Designer", "Gender", "Scent Family", "Notes", "Occasion", "Concentration", "Size", "Price", "Availability"]
+  search:
+    technology: "PostgreSQL pg_trgm"
+    behavior:
+      - "Search product name, brand, notes, scent family and relevant fields."
+      - "Support typo tolerance."
+      - "Never expose unpublished/private products."
+      - "Provide useful empty states and suggestions."
+  product_card:
+    include: ["Image", "Brand", "Product name", "Concentration where available", "Price", "Available sizes", "Valid sale state", "Wishlist"]
+    avoid: ["Visual clutter", "Fake urgency", "Unnecessary badges"]
+
+product_page:
+  goal: "Convert interest into confident purchase with minimal cognitive load."
+  required:
+    - "Product Gallery"
+    - "Brand & Product Name"
+    - "Reviews"
+    - "Price & Discount"
+    - "Size Selection"
+    - "Stock Status"
+    - "Add to Cart"
+    - "Buy Now"
+    - "Payment Methods"
+    - "Installment Information"
+    - "Delivery Information"
+    - "Authenticity Guarantee"
+    - "Fragrance Details & Notes"
+    - "You May Also Like"
+    - "More From This Brand"
+    - "Recently Viewed"
+  layout:
+    desktop: "Large gallery plus sticky purchase panel with strong editorial hierarchy."
+    mobile: "Image-first, concise information and accessible purchase actions."
+  purchase_order:
+    - "Brand"
+    - "Product name"
+    - "Reviews/rating"
+    - "Price"
+    - "Valid compare-at price/discount"
+    - "Size selector"
+    - "Stock status"
+    - "Installment/payment information"
+    - "Delivery"
+    - "Authenticity"
+    - "Add to Cart"
+    - "Buy Now"
+  variants:
+    model: "Parent Product -> ProductVariant"
+    sizes: "Arbitrary positive volume sizes; examples include 2ml, 30ml, 50ml, 100ml, 200ml, 300ml."
+    fields: ["Unique SKU", "Price", "Compare-at price", "Inventory", "Optional sample-vial flag"]
+    ux:
+      - "Prefetch authoritative variant data."
+      - "Switch variants synchronously from prefetched data."
+      - "Update price, discount, stock messaging and installment information together."
+      - "Revalidate price and stock on server before reservation/payment."
+  fragrance_details:
+    fields:
+      - "Top / Heart / Base notes"
+      - "Scent family"
+      - "Accords"
+      - "Occasion"
+      - "Concentration"
+      - "Season where configured"
+    rule: "Never invent missing fragrance data."
+  reassurance: ["Authenticity", "Delivery", "Payment", "Returns/policies if configured"]
+
+payments:
+  display: ["Tabby", "Tamara", "Credit/Debit Card", "Apple Pay where supported", "Google Pay where supported"]
+  ux:
+    - "Show supported methods near purchase actions."
+    - "Show truthful installment information directly below or adjacent to Buy Now."
+    - "Calculate from authoritative selected variant/order amount."
+    - "Do not hardcode unsupported provider claims."
+  architecture:
+    interface: "PaymentProviderAdapter"
+    providers: ["Tabby", "Tamara", "Card", "Apple Pay", "Google Pay"]
+    requirements:
+      - "Use current official provider documentation."
+      - "Sandbox support."
+      - "Webhook verification."
+      - "Event persistence."
+      - "Idempotency."
+      - "Order correlation."
+      - "Safe state transitions."
+      - "Timeout/failure handling."
+      - "Refund support where contract permits."
+  security:
+    - "Never expose provider secrets."
+    - "Never trust browser totals."
+    - "Verify provider webhook signatures/tokens."
+    - "Persist event identifiers to prevent duplicate processing."
+
+checkout:
+  principles:
+    - "Guest checkout."
+    - "Minimal required fields."
+    - "Clear order summary."
+    - "Server-side price/tax/discount/inventory revalidation."
+    - "No surprise fees."
+    - "Mobile-friendly forms."
+  regional:
+    - "UAE phone formatting."
+    - "Configured GCC delivery/address fields."
+    - "Google Places/address autocomplete only when configured."
+  flow:
+    - "Validate cart."
+    - "Calculate authoritative totals."
+    - "Reserve inventory transactionally."
+    - "Initiate payment."
+    - "Process provider result/webhook."
+    - "Transition order safely."
+    - "Release reservation on failure/expiration."
+  failure: "Never silently lose cart or order state."
+
+discovery:
+  ai:
+    purpose: "Translate natural-language fragrance preferences into catalog-grounded recommendations."
+    input: ["English", "Arabic", "Notes", "Mood", "Occasion", "Season", "Scent family", "Preferences", "Exclusions"]
+    output: ["SKU", "matchReason", "accordOverlap"]
+    rules:
+      - "Only recommend real catalog SKUs."
+      - "Validate output with Zod."
+      - "Reject unknown SKUs."
+      - "No medical or therapeutic claims."
+      - "AI cannot modify price, stock, order, payment or permissions."
+      - "Rate limit and protect tokens."
+      - "Never expose the DeepSeek key."
+  discovery_sets:
+    default: "5 x 2ml testers unless merchant configuration says otherwise."
+    rules:
+      - "Eligibility server-authoritative."
+      - "Tester inventory isolated from commercial inventory."
+      - "No duplicate fragrance unless explicitly allowed."
+      - "Voucher/credit accounting transactional."
+
+notes_discovery:
+  purpose: "Dedicated fragrance-note discovery experience that shows real perfumes related to a selected note."
+  navigation:
+    entry_points:
+      - "Primary Shop By > Notes navigation"
+      - "Homepage Shop by Notes section"
+      - "Product-page note chips"
+      - "Fragrance Guide contextual links"
+      - "Search suggestions where relevant"
+  notes_index:
+    route: "/notes"
+    requirements:
+      - "Show merchant-configured fragrance notes using editorial imagery or approved visual assets."
+      - "Support EN/AR names, descriptions and SEO metadata."
+      - "Allow search/filter of notes when the configured note library is large."
+      - "Never fabricate a note, description, image, origin claim or fragrance relationship."
+  note_detail:
+    route_pattern: "/notes/{localized-slug}"
+    goal: "Explain the selected note and immediately connect discovery to purchasable perfumes containing that note."
+    required_sections:
+      - "Note hero with configured name, image and concise editorial description"
+      - "Perfumes Featuring This Note"
+      - "Filter and sort controls"
+      - "Related Notes where configured"
+      - "Fragrance education/editorial content where configured"
+      - "Recently Viewed where available"
+    perfume_results:
+      source_of_truth: "Published catalog products joined through ProductNote to the selected Note."
+      rule: "Only show real published products whose catalog relationship to the selected note exists in authoritative data."
+      card: ["Image", "Brand", "Product name", "Concentration where available", "Price", "Available sizes", "Valid sale state", "Wishlist"]
+      filters: ["Brand", "Niche / Designer", "Gender", "Scent Family", "Occasion", "Concentration", "Size", "Price", "Availability"]
+      sorting: ["Featured", "Newest", "Price low to high", "Price high to low"]
+      empty_state: "If no published perfume is related to the selected note, state that no matching perfumes are currently available; never invent recommendations."
+    ux:
+      - "Selected note remains visually clear while browsing related perfumes."
+      - "Clicking another configured note updates navigation to that note's canonical detail page."
+      - "Product note chips are clickable only when the note has a valid published destination."
+      - "Preserve filters and pagination in URL query parameters where appropriate."
+      - "Mobile experience must prioritize note identity, product discovery and filtering without excessive editorial content above results."
+  data_model:
+    Note:
+      required_fields: ["id", "name_en", "name_ar", "slug_en", "slug_ar", "status"]
+      optional_fields: ["description_en", "description_ar", "hero_media_id", "seo_title_en", "seo_title_ar", "seo_description_en", "seo_description_ar"]
+    ProductNote:
+      purpose: "Authoritative many-to-many relationship between Product and Note."
+      optional_metadata: ["position: TOP|HEART|BASE", "prominence/weight if merchant-configured"]
+      invariant: "A note-product relationship must reference an existing Note and Product and must not be inferred by AI at render time."
+  admin:
+    requirements:
+      - "Create, edit, publish/unpublish and localize notes."
+      - "Upload/assign note hero imagery through the authorized media workflow."
+      - "Assign notes to products and optionally classify Top, Heart or Base position."
+      - "Preview how a note landing page will appear before publishing."
+      - "Prevent deletion when referenced unless relationships are explicitly migrated or removed."
+  api:
+    routes:
+      - "/api/v1/notes"
+      - "/api/v1/notes/:slug"
+      - "/api/v1/notes/:slug/products"
+    requirements:
+      - "Return only published/public data to storefront clients."
+      - "Support localized slug resolution."
+      - "Paginate perfume results."
+      - "Allowlist filtering and sorting."
+  seo:
+    - "Each published note detail page has a canonical localized URL."
+    - "Use hreflang for EN/AR equivalents."
+    - "Generate Breadcrumb JSON-LD where applicable."
+    - "Do not index empty, unpublished or private note pages."
+  accessibility:
+    - "Note chips and filters are keyboard accessible and have meaningful accessible names."
+    - "Selected states are not communicated by color alone."
+    - "Arabic note pages support correct RTL reading and focus order."
+  testing:
+    mandatory:
+      - "Selecting a note returns only published perfumes explicitly related through ProductNote."
+      - "Unpublished products never appear on note pages."
+      - "Unknown/unpublished note slug returns the correct not-found behavior."
+      - "EN/AR note slugs and RTL pages resolve correctly."
+      - "Filters, sorting and pagination preserve the selected note."
+      - "Product note chip navigates to the correct note page."
+      - "Empty note results never trigger fabricated perfume recommendations."
+
+brands:
+  pages:
+    - "A-Z directory"
+    - "Featured brand landing page"
+    - "Hero/editorial imagery"
+    - "Brand story/provenance where supplied"
+    - "Product listing"
+    - "More from this brand"
+  taxonomy: ["Niche", "Designer", "Men", "Women", "Unisex"]
+
+fragrance_guide:
+  modules:
+    - "How fragrance notes work"
+    - "Top / Heart / Base"
+    - "Scent families"
+    - "Concentration"
+    - "Choosing by occasion"
+    - "Choosing by season"
+    - "Gift selection"
+    - "How to sample"
+  rule: "Guides should link contextually to real catalog products."
+
+journal:
+  positioning: "Luxury editorial magazine integrated with commerce."
+  features:
+    - "Listing and article detail"
+    - "Author information"
+    - "Reading progress"
+    - "Social sharing"
+    - "Related products"
+    - "Featured in this story"
+    - "EN/AR content"
+    - "SEO metadata and Article JSON-LD"
+  cms: "TipTap + Cloudflare R2"
+
+admin:
+  auth:
+    roles: ["SUPER_ADMIN", "CATALOG_MANAGER", "INVENTORY_MANAGER", "ORDER_MANAGER", "EDITOR"]
+    controls:
+      - "Secure authentication"
+      - "Server-side RBAC"
+      - "Least privilege"
+      - "Session expiry"
+      - "Secure cookies"
+      - "Login rate limiting"
+      - "Audit logs"
+  modules:
+    - "Dashboard"
+    - "Products"
+    - "Variants"
+    - "Brands"
+    - "Notes / Scent Families / Occasions"
+    - "Inventory"
+    - "Orders"
+    - "Payments"
+    - "Discovery Sets"
+    - "CMS / Journal"
+    - "Media"
+    - "Customers"
+    - "Users & Roles"
+    - "Audit Logs"
+    - "Settings"
+  product_builder:
+    - "Create parent product."
+    - "Assign brand, family, gender, occasions and notes."
+    - "Add arbitrary volume variants."
+    - "Set SKU, price, compare-at price and inventory."
+    - "Manage sample-vial eligibility."
+  inventory:
+    - "Separate sealed commercial stock from tester stock."
+    - "Show reservations and available stock."
+    - "Support batch codes and restock thresholds."
+  cms:
+    - "EN/AR editing."
+    - "Cover image."
+    - "Categories."
+    - "Product linking."
+    - "Draft/published/scheduled workflow."
+
+database:
+  entities:
+    - "Brand"
+    - "ScentFamily"
+    - "Occasion"
+    - "Note"
+    - "Product"
+    - "ProductNote"
+    - "ProductVariant"
+    - "Inventory"
+    - "InventoryReservation"
+    - "Customer"
+    - "Address"
+    - "WishlistItem"
+    - "Cart"
+    - "CartItem"
+    - "Order"
+    - "OrderItem"
+    - "Payment"
+    - "PaymentEvent"
+    - "WebhookEvent"
+    - "IdempotencyKey"
+    - "DiscoverySet"
+    - "Voucher"
+    - "VoucherRedemption"
+    - "BlogCategory"
+    - "BlogPost"
+    - "BlogPostProduct"
+    - "MediaAsset"
+    - "AdminUser"
+    - "AdminRole"
+    - "AuditLog"
+    - "ExchangeRate"
+  invariants:
+    - "Unique SKU."
+    - "Each variant belongs to one product."
+    - "Each inventory record belongs to one variant."
+    - "Money uses Decimal, never floating point."
+    - "Timestamps use UTC."
+    - "Indexes support catalogue, search, checkout, order and webhook workloads."
+  currency:
+    examples: ["AED", "SAR", "USD"]
+    rule: "Never invent FX; use merchant-controlled persisted rates or an approved rate source."
+
+inventory:
+  source_of_truth: "PostgreSQL"
+  reservation:
+    duration: "15 minutes unless configured otherwise."
+    transaction:
+      - "SELECT FOR UPDATE on authoritative inventory."
+      - "Verify available sealed stock."
+      - "Create InventoryReservation."
+      - "Atomically update reserved quantity."
+      - "Commit."
+  redis:
+    role: "Acceleration, coordination and BullMQ support only."
+  expiration:
+    - "BullMQ attempts release."
+    - "Release is idempotent."
+    - "Reconciliation detects stale reservations."
+  tests:
+    - "10+ concurrent attempts for one available unit."
+    - "Exactly one successful reservation."
+    - "Repeated release is safe."
+    - "Payment failure restores available stock."
+
+orders:
+  states: ["PENDING", "PAYMENT_PENDING", "AUTHORIZED", "PAID", "FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED", "PAYMENT_FAILED", "REFUNDED"]
+  rule: "Implement explicit safe transition rules; no arbitrary status updates."
+
+seo:
+  - "Localized metadata"
+  - "Canonical URLs"
+  - "hreflang"
+  - "Product, Article and Breadcrumb JSON-LD"
+  - "Sitemap"
+  - "Robots"
+  - "Open Graph"
+  - "Twitter metadata"
+  - "Noindex private/account/checkout/admin routes as appropriate"
+  - "Stable localized slugs"
+  - "Avoid duplicate-content explosions from query parameters"
+
+media:
+  storage: "Cloudflare R2"
+  upload:
+    - "Short-lived presigned URLs."
+    - "Server authorization."
+    - "MIME, extension, size and dimension validation."
+    - "Safe object keys."
+    - "Never trust original filenames/paths."
+    - "WebP/AVIF derivatives where appropriate."
+  frontend:
+    - "Responsive images."
+    - "Lazy load below fold."
+    - "Prioritize true LCP media."
+    - "Meaningful alt text."
+
+accessibility:
+  target: "WCAG 2.2 AA"
+  requirements:
+    - "Keyboard navigation."
+    - "Visible focus."
+    - "Semantic HTML."
+    - "Correct labels."
+    - "Accessible drawers/dialogs/carousels."
+    - "Reduced motion."
+    - "Sufficient contrast."
+    - "Screen-reader-friendly Arabic RTL."
+    - "No color-only meaning."
+
+performance:
+  rules:
+    - "Prefer RSC and small client islands."
+    - "Prefetch high-value navigation and variant data."
+    - "Optimize images."
+    - "Avoid unnecessary third-party scripts."
+    - "Measure Core Web Vitals."
+    - "Define measurable LCP, INP, CLS, API latency and error-rate budgets."
+    - "Do not use unverifiable absolute claims."
+
+security:
+  baseline:
+    - "OWASP-aligned."
+    - "Strict TypeScript; no any."
+    - "Zod validation at trust boundaries."
+    - "Parameterized ORM/database access."
+    - "CSRF protection where applicable."
+    - "Rate limiting."
+    - "Secure headers and cookies."
+    - "Sanitization."
+    - "Authorization on every protected server action."
+    - "Webhook verification."
+    - "Idempotency for money/inventory mutations."
+    - "Secret scanning."
+    - "No secrets in repository."
+  logging: "Never log payment secrets, auth tokens or unnecessary personal data."
+
+api:
+  conventions:
+    - "Versioned REST API."
+    - "Consistent success/error envelope."
+    - "Zod request validation."
+    - "Typed domain errors."
+    - "Request/correlation ID."
+    - "Structured logging."
+    - "Pagination."
+    - "Allowlisted sorting/filtering."
+  routes:
+    - "/api/v1/products"
+    - "/api/v1/search"
+    - "/api/v1/checkout"
+    - "/api/v1/orders"
+    - "/api/v1/payments"
+    - "/api/v1/webhooks"
+    - "/api/v1/ai/scent-discovery"
+    - "/api/v1/media"
+    - "/api/v1/blog"
+    - "/api/v1/wishlist"
+
+testing:
+  layers: ["Unit", "Integration", "End-to-end", "Concurrency", "Security", "Accessibility", "Visual regression", "API contract"]
+  mandatory:
+    - "Variant uniqueness and price/stock synchronization."
+    - "Concurrent inventory race."
+    - "Reservation expiration/release."
+    - "Payment webhook replay."
+    - "Payment failure."
+    - "Idempotency."
+    - "Arabic RTL visual regression."
+    - "Mobile checkout."
+    - "Wishlist."
+    - "Search typo tolerance."
+    - "Dedicated note landing pages and authoritative note-to-perfume filtering."
+    - "AI unknown-SKU rejection."
+    - "Admin RBAC."
+    - "Media upload authorization."
+    - "SEO metadata/structured data."
+  rule: "A test not actually run is not a passing test."
+
+execution_governance:
+  - "Inspect repository before changing anything."
+  - "Write an implementation plan before large changes."
+  - "Work in dependency order."
+  - "Do not ask unnecessary questions for non-blocking decisions."
+  - "If credentials are missing, continue non-blocked work and record the integration blocker."
+  - "Never fabricate credentials, provider responses, API contracts or verification."
+  - "No TODO/FIXME/placeholder production implementations."
+  - "Tests may use fixtures/mocks; production integrations may not silently fall back to fake behavior."
+  - "Never report success when a verification gate failed, was skipped or was not run."
+
+phase_gates:
+  statuses: ["NOT_STARTED", "IN_PROGRESS", "BLOCKED_EXTERNAL", "FAILED", "COMPLETE"]
+  completion_requires:
+    - "Implementation for the phase is complete."
+    - "Lint and strict typecheck pass."
+    - "Relevant automated tests actually pass."
+    - "Relevant production build passes."
+    - "No unresolved critical security defect."
+    - "No placeholder production behavior."
+    - "Documentation is updated."
+  rules:
+    - "Never convert BLOCKED_EXTERNAL into COMPLETE."
+    - "Never report an unexecuted verification as passing."
+
+requirements_traceability:
+  required: true
+  columns: ["Requirement ID", "Requirement", "Implementation files", "Test files", "Verification command", "Result", "Evidence"]
+  rule: "Every mandatory requirement must be traceable from specification to implementation and verification in the final report."
+
+commerce_invariants:
+  - "All persisted money uses Decimal and an explicit currency."
+  - "Browser totals are never authoritative."
+  - "Server recalculates subtotal, discounts, tax, shipping and grand total before payment."
+  - "Payment amount must match the authoritative payable order amount."
+  - "Refunds cannot exceed captured amount minus prior refunds."
+  - "Storefront/Next.js presentation code must not duplicate authoritative pricing, inventory, discount, order or payment business rules owned by API/domain services."
+
+observability:
+  requirements:
+    - "Structured logs with request/correlation IDs."
+    - "Liveness and readiness health checks."
+    - "Measure API latency/error rate, checkout failures, payment/webhook failures, inventory conflicts, stale reservations, zero-result search and AI recommendation failures."
+    - "Never include secrets, auth tokens, payment secrets or unnecessary PII in telemetry."
+
+external_integration_guardrails:
+  - "Never infer undocumented provider behavior."
+  - "Missing documentation or credentials creates BLOCKED_EXTERNAL status for that integration, not a fabricated implementation."
+  - "Test doubles are allowed only in tests/development fixtures and must never silently become production behavior."
+  - "Never fabricate endpoints, webhook payload contracts, signature algorithms, credentials or successful provider responses."
+
+implementation_phases:
+  - "0 Repository reconnaissance"
+  - "1 Monorepo foundation"
+  - "2 Design system and application shell"
+  - "3 Database and domain"
+  - "4 API and commerce services"
+  - "5 Payments and webhooks"
+  - "6 AI, discovery sets and content"
+  - "7 Storefront, catalogue, PDP, cart and checkout"
+  - "8 Admin"
+  - "9 Security, accessibility, performance, reliability and release hardening"
+
+windows_runbook:
+  - "Native Windows + PowerShell."
+  - "pnpm install"
+  - "Configure .env from .env.example."
+  - "Run Prisma migrations."
+  - "Seed approved development data only."
+  - "Build shared packages."
+  - "Run storefront, API and admin."
+  - "Run lint, typecheck, unit/integration tests and E2E."
+  - "Run production builds."
+  - "Do not require WSL2."
+  - "Do not require Docker unless explicitly approved for local infrastructure."
+
+documentation:
+  required:
+    - "README.md"
+    - "ARCHITECTURE.md"
+    - "SECURITY.md"
+    - "RUNBOOK.md"
+    - "DECISIONS.md"
+    - ".env.example"
+  cover:
+    - "Architecture"
+    - "Windows setup"
+    - "Environment configuration"
+    - "Database migration"
+    - "Payment sandbox and webhooks"
+    - "AI configuration"
+    - "Deployment and rollback"
+    - "Security"
+    - "Testing"
+    - "External prerequisites"
+
+definition_of_done:
+  product:
+    - "All requested navigation destinations exist."
+    - "All requested homepage sections or approved equivalents exist."
+    - "Catalogue supports discovery-oriented search and filtering."
+    - "Dedicated Notes discovery pages show only authoritative published perfumes related to the selected note."
+    - "PDP contains all requested conversion and reassurance elements."
+    - "Variants, wishlist, account, cart and checkout work end-to-end."
+    - "Supported payment methods and installment information are truthful and clear."
+    - "AI discovery is catalog-grounded."
+    - "Discovery sets are inventory-safe."
+    - "Journal and brand storytelling are shoppable."
+  engineering:
+    - "Strict TypeScript passes."
+    - "Migrations pass."
+    - "API contracts pass."
+    - "Concurrency, webhook replay and RBAC tests pass."
+    - "Accessibility and RTL visual tests pass."
+    - "Production builds pass."
+  delivery:
+    - "No fake implementations."
+    - "No unresolved critical defects."
+    - "No secrets committed."
+    - "Documentation complete."
+    - "Final report lists exact commands, gates passed, blocked external integrations and approved deviations."
+
+agent_protocol:
+  after_each_phase:
+    - "Implemented"
+    - "Files/modules changed"
+    - "Tests actually run"
+    - "Results"
+    - "Blockers"
+    - "Next phase"
+  final_report:
+    - "Architecture summary"
+    - "Feature completion matrix"
+    - "Test matrix"
+    - "Security/accessibility/performance status"
+    - "External integrations and credentials required"
+    - "Deployment/runbook status"
+    - "Approved deviations"
+
+final_instruction: "Build the actual production system described here. Prioritize correctness, security, accessibility, maintainability, luxury UX, conversion clarity and truthful verification. This prompt is the source of truth."

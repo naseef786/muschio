@@ -1,0 +1,93 @@
+import React from "react";
+import { notFound } from "next/navigation";
+import { unstable_setRequestLocale, getMessages } from "next-intl/server";
+import { NextIntlClientProvider } from "next-intl";
+import { locales, Locale } from "../../i18n";
+import { ThemeProvider } from "next-themes";
+import { Header } from "../../components/header";
+import { Footer } from "../../components/footer";
+import { CartProvider } from "../../context/cart-context";
+import { generateOrganizationJsonLd } from "../../lib/seo";
+import "../globals.css";
+
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "MUSCHIO — Haute Parfumerie & Rare Niche Fragrances | Dubai & GCC",
+  description: "Curated collection of rare niche extraits, royal attars, and bespoke 5x2ml discovery sets with VIP same-day delivery across Dubai and express GCC shipping.",
+  keywords: [
+    "Niche Perfumes Dubai",
+    "Haute Parfumerie UAE",
+    "Amouage Extrait",
+    "Maison Francis Kurkdjian Dubai",
+    "Roja Parfums GCC",
+    "عطور نيش دبي",
+    "عطور أصلية الإمارات",
+    "دهن عود معتق",
+    "لبان حوجري فضي",
+  ],
+  alternates: {
+    canonical: "https://muschio.luxury",
+    languages: {
+      "en-AE": "https://muschio.luxury/en",
+      "ar-AE": "https://muschio.luxury/ar",
+      "en-SA": "https://muschio.luxury/en",
+      "ar-SA": "https://muschio.luxury/ar",
+      "x-default": "https://muschio.luxury/en",
+    },
+  },
+  openGraph: {
+    title: "MUSCHIO — Haute Parfumerie & Luxury Niche Fragrances",
+    description: "The poetry of rare essences. Certified official allocations with White-Glove VIP Same-Day Dubai Delivery and Tabby / Tamara 4x installments.",
+    url: "https://muschio.luxury",
+    siteName: "Muschio Haute Parfumerie",
+    locale: "en_AE",
+    alternateLocale: ["ar_AE", "ar_SA"],
+    type: "website",
+  },
+};
+
+export default async function RootLayout({
+  children,
+  params: { locale },
+}: {
+  children: React.ReactNode;
+  params: { locale: string };
+}) {
+  if (!locales.includes(locale as any)) notFound();
+  unstable_setRequestLocale(locale);
+
+  const messages = await getMessages();
+  const isRtl = locale === "ar";
+  const orgJsonLd = generateOrganizationJsonLd();
+
+  return (
+    <html lang={locale} dir={isRtl ? "rtl" : "ltr"} suppressHydrationWarning>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@300;400;500;600&display=swap"
+          rel="stylesheet"
+        />
+        {/* Organization Structured Data for Google GCC Crawlers */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        />
+      </head>
+      <body className="min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300">
+        <NextIntlClientProvider locale={locale} messages={messages}>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
+            <CartProvider>
+              <Header locale={locale as Locale} />
+              <main className="flex-1">{children}</main>
+              <Footer locale={locale as Locale} />
+            </CartProvider>
+          </ThemeProvider>
+        </NextIntlClientProvider>
+      </body>
+    </html>
+  );
+}
+

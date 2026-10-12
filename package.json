@@ -1,31 +1,21 @@
 {
-  "name": "areejal_arab",
-  "version": "0.1.0",
+  "name": "muschio-monorepo",
+  "version": "1.0.0",
   "private": true,
+  "description": "Muschio — Luxury Niche & Designer Fragrance E-Commerce Platform",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "clsx": "^2.1.1",
-    "framer-motion": "^12.23.26",
-    "lenis": "^1.3.17",
-    "lucide-react": "^0.562.0",
-    "next": "16.0.10",
-    "react": "19.2.1",
-    "react-dom": "19.2.1",
-    "tailwind-merge": "^3.4.0"
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rimraf node_modules"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.10",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "turbo": "^2.4.4",
+    "typescript": "^5.7.3",
+    "rimraf": "^6.0.1",
+    "prettier": "^3.5.2"
+  },
+  "packageManager": "pnpm@10.5.2"
 }
