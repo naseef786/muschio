@@ -16,9 +16,29 @@ const PORT = process.env.PORT || 4000;
 
 // Security & utility middleware
 app.use(helmet());
+
+const allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim())
+  : [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://muschio.luxury",
+    ];
+
 app.use(
   cors({
-    origin: ["http://localhost:3000", "http://localhost:5173", "https://muschio.luxury"],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (e.g. mobile apps, curl, SSR)
+      if (!origin) return callback(null, true);
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith(".vercel.app") ||
+        origin.startsWith("http://localhost:")
+      ) {
+        return callback(null, true);
+      }
+      return callback(null, false);
+    },
     credentials: true,
   })
 );
