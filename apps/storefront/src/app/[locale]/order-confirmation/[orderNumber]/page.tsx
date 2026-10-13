@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "../../../../navigation";
-import { Button, PriceDisplay } from "@muschio/ui";
+import { Button } from "@muschio/ui";
 import { CheckCircle2 } from "lucide-react";
 
 export default function OrderConfirmationPage({
@@ -25,8 +25,8 @@ export default function OrderConfirmationPage({
         </h1>
         <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-sans max-w-md mx-auto leading-relaxed">
           {isAr
-            ? `تم تسجيل طلبك رقم ${orderNumber} بنجاح. سنقوم بتجهيز عطورك الفاخرة في تغليفنا المميز وتوصيلها خلال 24-48 ساعة.`
-            : `Your order #${orderNumber} has been received. Our concierge is preparing your extraits in signature presentation packaging for express delivery within 24-48 hours.`}
+            ? `تم تسجيل مرجع الطلب ${orderNumber}. حالة الدفع والتوصيل تحتاج إلى تأكيد رسمي.`
+            : `Order reference #${orderNumber} was generated. Payment and delivery details are subject to official confirmation.`}
         </p>
       </div>
 
@@ -38,18 +38,18 @@ export default function OrderConfirmationPage({
         <div className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
           <span className="text-zinc-500">{isAr ? "حالة الدفع:" : "Payment Status:"}</span>
           <span className="text-emerald-600 font-medium">
-            {isAr ? "معتمد وموثق (تابي)" : "Authorized & Captured (Tabby)"}
+            {isAr ? "قيد التأكيد" : "Pending payment confirmation"}
           </span>
         </div>
         <div className="flex justify-between border-b border-zinc-200 dark:border-zinc-800 pb-3">
           <span className="text-zinc-500">{isAr ? "طريقة التوصيل:" : "Fulfillment:"}</span>
           <span className="text-zinc-900 dark:text-zinc-100">
-            {isAr ? "توصيل مبرد سريع (دبي)" : "Climate-Controlled Express (Dubai)"}
+            {isAr ? "وفقاً لعنوان الشحن" : "As confirmed during checkout"}
           </span>
         </div>
         <div className="flex justify-between pt-1">
           <span className="text-zinc-500">{isAr ? "المبلغ الإجمالي:" : "Total Paid:"}</span>
-          <PriceDisplay price={1850} locale={locale} size="sm" />
+          <span>{isAr ? "راجع تفاصيل طلبك في التأكيد الرسمي" : "See your official order receipt"}</span>
         </div>
       </div>
 
