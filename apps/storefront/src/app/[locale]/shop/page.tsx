@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import { Link } from "../../../navigation";
 import { Button, Badge, PriceDisplay } from "@muschio/ui";
@@ -80,12 +81,16 @@ export default function ShopCatalogPage({
   params: { locale: "en" | "ar" };
 }) {
   const isAr = locale === "ar";
+  const searchParams = useSearchParams();
+  const search = (searchParams.get("search") || "").trim().toLocaleLowerCase();
+  const [sortOrder, setSortOrder] = useState("featured");
   const [selectedBrandType, setSelectedBrandType] = useState<string | null>(null);
 
   const filtered = CATALOG_PRODUCTS.filter((p) => {
+    if (search && ![p.nameEn, p.nameAr, p.brand, p.family, p.concentration, ...p.notes].join(" ").toLocaleLowerCase().includes(search)) return false;
     if (selectedBrandType && p.brandType !== selectedBrandType) return false;
     return true;
-  });
+  }).sort((a, b) => sortOrder === "price-asc" ? a.price - b.price : sortOrder === "price-desc" ? b.price - a.price : 0);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
@@ -140,11 +145,22 @@ export default function ShopCatalogPage({
         </div>
       </div>
 
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p role="status" className="text-sm text-zinc-600 dark:text-zinc-300">{filtered.length} {isAr ? "عطور" : "fragrances"}{search ? ` · "${search}"` : ""}</p>
+        <label className="flex items-center gap-2 text-sm text-zinc-600 dark:text-zinc-300">{isAr ? "الترتيب" : "Sort by"}
+          <select aria-label={isAr ? "ترتيب المنتجات" : "Sort fragrances"} value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} className="border border-zinc-300 dark:border-zinc-700 bg-luxury-surface px-3 py-2">
+            <option value="featured">{isAr ? "المميزة" : "Featured"}</option>
+            <option value="price-asc">{isAr ? "الأقل سعراً" : "Price: Low to High"}</option>
+            <option value="price-desc">{isAr ? "الأعلى سعراً" : "Price: High to Low"}</option>
+          </select>
+        </label>
+      </div>
+      {filtered.length === 0 && <div className="py-16 text-center space-y-4"><p>{isAr ? "لم يتم العثور على عطور مطابقة." : "No fragrances match your search or filters."}</p><Link href="/shop" className="text-accent underline">{isAr ? "مسح البحث والفلاتر" : "Clear search and filters"}</Link></div>}
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((product, idx) => (
+        {filtered.map((product) => (
           <div
-            key={idx}
+            key={product.slug}
             className="group border border-zinc-200 dark:border-zinc-800 bg-luxury-surface hover:border-zinc-400 dark:hover:border-zinc-600 transition-all duration-300 flex flex-col justify-between"
           >
             <div className="relative h-96 w-full overflow-hidden bg-zinc-950">
