@@ -169,14 +169,16 @@ export default function HomePage({ params: { locale } }: { params: { locale: "en
   };
 
   return (
-    <div className="relative space-y-28 md:space-y-36 pb-32 overflow-hidden">
+    <div className="relative pb-32 overflow-hidden">
       {/* Ambient background glowing orbs */}
-      <div className="ambient-glow-gold top-20 start-10" />
-      <div className="ambient-glow-crimson top-[800px] end-5" />
-      <div className="ambient-glow-amber top-[1800px] start-1/3" />
+      <div className="pointer-events-none absolute inset-0 overflow-hidden -z-10" aria-hidden="true">
+        <div className="ambient-glow-gold top-20 start-10" />
+        <div className="ambient-glow-crimson top-[800px] end-5" />
+        <div className="ambient-glow-amber top-[1800px] start-1/3" />
+      </div>
 
       {/* 1. ULTRA-GLASS HERO BANNER */}
-      <section className="relative min-h-[90vh] flex items-center justify-center px-4 sm:px-6 lg:px-8 pt-8">
+      <section className="relative min-h-[90vh] flex items-center justify-center px-4 sm:px-6 lg:px-8">
         <div className="absolute inset-0 z-0 overflow-hidden">
           <Image
             src="https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=2000&q=85"
@@ -282,7 +284,9 @@ export default function HomePage({ params: { locale } }: { params: { locale: "en
         </div>
       </section>
 
-      {/* 2. INTERACTIVE OLFACTORY MOOD NAVIGATOR & VAULT */}
+      {/* Content sections container with controlled spacing */}
+      <div className="space-y-28 md:space-y-36 mt-28 md:mt-36">
+        {/* 2. INTERACTIVE OLFACTORY MOOD NAVIGATOR & VAULT */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-6 border-b border-zinc-200/60 dark:border-white/10 pb-6">
           <div className="space-y-2">
@@ -626,6 +630,7 @@ export default function HomePage({ params: { locale } }: { params: { locale: "en
           </div>
         </div>
       </section>
+      </div>
 
       {/* 6. INTERACTIVE QUICK SNIFF MODAL */}
       {activeSniffModal && (
