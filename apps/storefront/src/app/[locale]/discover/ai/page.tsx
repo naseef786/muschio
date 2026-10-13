@@ -85,7 +85,7 @@ export default function AIScentDiscoveryPage({
             nameAr: rec.productName,
             brand: rec.brandName,
             concentration: "Extrait de Parfum",
-            price: 0,
+            price: null,
             matchPercentage: rec.matchPercentage,
             image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
@@ -317,7 +317,7 @@ export default function AIScentDiscoveryPage({
                   </div>
 
                   <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                    <PriceDisplay price={rec.price} locale={locale} />
+                    {typeof rec.price === "number" && rec.price > 0 ? <PriceDisplay price={rec.price} locale={locale} /> : <span className="text-sm text-zinc-600 dark:text-zinc-300">{isAr ? "عرض السعر الحالي" : "See current price"}</span>}
                     <Button asChild size="md" variant="gold">
                       <Link href={`/product/${rec.slug}`}>{isAr ? "اكتشف العطر" : "Explore Flacon"} →</Link>
                     </Button>
