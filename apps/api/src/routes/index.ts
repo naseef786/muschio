@@ -385,6 +385,10 @@ router.post("/admin/returns/inspect", requireAdminAuth, async (req, res, next) =
 router.post("/reviews", async (req, res, next) => {
   try {
     const input = CreateReviewInputSchema.parse(req.body);
+    // Customer identity must come from verified authentication, never client input or demo IDs.
+    res.status(503).json({ success: false, error: { code: "REVIEWS_UNAVAILABLE", message: "Review submission is unavailable until authenticated customer identity is configured." } });
+    return;
+    /* Legacy unauthenticated submission disabled.
     const customerId = (req.body.customerId as string) || "cust-demo-1";
     const review = await ReviewsService.submitReview({
       ...input,
@@ -392,6 +396,7 @@ router.post("/reviews", async (req, res, next) => {
       orderItemId: input.orderItemId || undefined,
     });
     res.status(201).json({ success: true, data: review, meta: { requestId: req.id } });
+    */
   } catch (err) {
     next(err);
   }
