@@ -312,6 +312,7 @@ export default function ProductDetailPage({
 }) {
   const isAr = locale === "ar";
   const router = useRouter();
+  const productNotFound = !PRODUCT_VAULT[slug];
   const product = PRODUCT_VAULT[slug] || PRODUCT_VAULT["amouage-interlude-53-man"];
 
   const [selectedVariant, setSelectedVariant] = useState(product.variants[0]);
@@ -401,6 +402,8 @@ export default function ProductDetailPage({
   ]);
 
   const faqJsonLd = generateFaqJsonLd(locale);
+
+  if (productNotFound) return <main className="max-w-4xl mx-auto px-6 py-24 text-center" role="main"><h1 className="text-3xl font-serif mb-5">{isAr ? "العطر غير موجود" : "Fragrance not found"}</h1><Link href="/shop" className="underline text-accent">{isAr ? "استكشف العطور" : "Explore fragrances"}</Link></main>;
 
   return (
     <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-20">
@@ -836,13 +839,13 @@ export default function ProductDetailPage({
               <Button
                 onClick={() => {
                   setReviewModalOpen(false);
-                  alert(isAr ? "شكراً لمشاركتك انطباعك العطري!" : "Thank you for submitting your luxury review!");
+                  alert(isAr ? "خدمة التقييمات غير متاحة حالياً." : "Review submissions are not yet available. No review has been saved.");
                 }}
                 variant="gold"
                 size="md"
                 className="w-full"
               >
-                {isAr ? "إرسال التقييم المعتمد" : "Submit Verified Review"}
+                {isAr ? "إرسال التقييم المعتمد" : "Review submission unavailable"}
               </Button>
             </div>
           </div>

@@ -33,21 +33,7 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const INITIAL_CART: CartItemModel[] = [
-  {
-    id: "cart-1",
-    variantId: "v1-amo-int53",
-    slug: "amouage-interlude-53-man",
-    title: "Interlude 53 Man Extrait de Parfum (100ml)",
-    titleAr: "إنترلود 53 مان إكستري دو بارفان (100 مل)",
-    brand: "Amouage",
-    price: 1850,
-    compareAtPrice: 2100,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80",
-    sizeLabel: "100ml Extrait",
-  },
-];
+const INITIAL_CART: CartItemModel[] = [];
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItemModel[]>(INITIAL_CART);
@@ -60,7 +46,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("muschio_cart");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setItems(parsed);
         }
       }

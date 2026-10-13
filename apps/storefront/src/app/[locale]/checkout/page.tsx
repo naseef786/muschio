@@ -18,18 +18,24 @@ export default function CheckoutPage({
 
   const [paymentMethod, setPaymentMethod] = useState<"TABBY" | "TAMARA" | "CARD">("TABBY");
   const [loading, setLoading] = useState(false);
+  const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    fullName: "His Excellency Sultan Al-Nuaimi",
-    phone: "+971501234567",
-    email: "sultan@muschio.luxury",
-    address: "Downtown Boulevard, Penthouse 42",
-    city: "Dubai",
-    stateOrEmirate: "Dubai",
+    fullName: "",
+    phone: "",
+    email: "",
+    address: "",
+    city: "",
+    stateOrEmirate: "",
     country: "AE",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (items.length === 0) {
+      setCheckoutError(isAr ? "سلة التسوق فارغة." : "Your cart is empty.");
+      return;
+    }
+    setCheckoutError(null);
     setLoading(true);
 
     try {
@@ -54,14 +60,12 @@ export default function CheckoutPage({
         router.push(`/order-confirmation/${result.orderNumber}`);
         return;
       }
+      throw new Error("No confirmed order was returned.");
     } catch (e) {
-      // Fallback
+      setCheckoutError(isAr ? "تعذر تأكيد الطلب. لم يتم إنشاء طلب مؤكد. يرجى المحاولة مرة أخرى." : "We couldn't confirm your order. Your cart is safe; please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    // Seamless fallback for local preview
-    const fallbackOrderNumber = `MSC-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    clearCart();
-    router.push(`/order-confirmation/${fallbackOrderNumber}`);
   };
 
   return (
@@ -76,6 +80,7 @@ export default function CheckoutPage({
         </h1>
       </div>
 
+      {checkoutError && <p role="alert" className="border border-red-400 bg-red-50 dark:bg-red-950/40 p-4 text-sm text-red-700 dark:text-red-200">{checkoutError}</p>}
       <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
         {/* Checkout Form (7 cols) */}
         <div className="lg:col-span-7 space-y-8">
@@ -200,8 +205,8 @@ export default function CheckoutPage({
                   </div>
                   <p className="text-[11px] text-zinc-500 font-sans">
                     {isAr
-                      ? `ادفع 462.50 درهم اليوم، والمتبقي على 3 أشهر بدون أي فوائد.`
-                      : `Pay 462.50 AED today, and the rest over 3 months. No interest or hidden fees.`}
+                      ? `قيمة القسط التقريبية: ${(totalAmount / 4).toFixed(2)} درهم. تخضع لشروط مقدم الخدمة.`
+                      : `Estimated installment: ${(totalAmount / 4).toFixed(2)} AED. Subject to provider approval and terms.`}
                   </p>
                 </div>
                 <input type="radio" checked={paymentMethod === "TABBY"} readOnly className="mt-1" />
@@ -295,7 +300,7 @@ export default function CheckoutPage({
               </div>
             </div>
 
-          <Button type="submit" variant="accent" size="lg" disabled={loading} className="w-full h-14">
+          <Button type="submit" variant="accent" size="lg" disabled={loading || items.length === 0} className="w-full h-14">
             {loading ? (
               isAr ? "جاري حجز المخزون وتأكيد الطلب..." : "Reserving Inventory & Securing Order..."
             ) : (

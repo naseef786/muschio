@@ -85,7 +85,7 @@ export default function AIScentDiscoveryPage({
             nameAr: rec.productName,
             brand: rec.brandName,
             concentration: "Extrait de Parfum",
-            price: 1850,
+            price: null,
             matchPercentage: rec.matchPercentage,
             image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
@@ -99,46 +99,10 @@ export default function AIScentDiscoveryPage({
       // Fallback
     }
 
-    // Graceful offline fallback
-    setTimeout(() => {
-      setResult({
-        auraTitle: isAr ? "الهالة العطرية: عود بخوري ملكي فاحم" : "Olfactory Aura: Regal Incense & Resinous Oud",
-        analysis: isAr
-          ? "بناءً على تفضيلك للأمسيات الملكية والنفحات الصمغية مع اللبان الحوجري والعود الكمبودي المعتق، قمنا بمطابقة كيمياء طلبك مع أندر خلاصات الإكستري في خزانتنا المعتمدة."
-          : "Based on your preference for aristocratic sillage, Omani Silver Frankincense, and aged Cambodian Agarwood, our DeepSeek sommelier has identified 2 superlative extraits.",
-        recommendations: [
-          {
-            slug: "amouage-interlude-53-man",
-            nameEn: "Interlude 53 Man Extrait de Parfum",
-            nameAr: "إنترلود 53 مان إكستري دو بارفان",
-            brand: "Amouage",
-            concentration: "Extrait de Parfum (53%)",
-            price: 1850,
-            matchPercentage: 99,
-            image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
-            reason: isAr
-              ? "توافق كامل بنسبة 99% بفضل تركيز الزيت 53% المعتق لستة أشهر في مسقط."
-              : "Direct 99% match via 53% perfume oil maceration, Silver Frankincense, and aged Cambodian Oud.",
-            accords: isAr ? ["دخاني", "بلسمي", "عود ملكي"] : ["Smoky", "Balsamic", "Royal Oud"],
-          },
-          {
-            slug: "mfk-baccarat-rouge-540-extrait",
-            nameEn: "Baccarat Rouge 540 Extrait de Parfum",
-            nameAr: "باكارات روج 540 إكستري دو بارفان",
-            brand: "Maison Francis Kurkdjian",
-            concentration: "Extrait de Parfum",
-            price: 1650,
-            matchPercentage: 94,
-            image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=800&q=85",
-            reason: isAr
-              ? "إشراقة الزعفران الكشميري والعنبر الأشهب لهالة ملكية لا تُنسى في السهرات."
-              : "Luminous Kashmiri Saffron and Grandiflorum Jasmine providing glowing evening projection.",
-            accords: isAr ? ["عنبري", "زعفران", "دافئ"] : ["Amber", "Saffron", "Luminous"],
-          },
-        ],
-      });
-      setLoading(false);
-    }, 1000);
+    // Do not fabricate personalized recommendations on API failure.
+    setResult({ error: isAr ? "تعذر الاتصال بمستشار العطور حالياً. حاول مرة أخرى لاحقاً." : "The scent advisor is currently unavailable. Please try again later.", recommendations: [] });
+    setLoading(false);
+    return;
   };
 
   return (
@@ -289,7 +253,8 @@ export default function AIScentDiscoveryPage({
       </div>
 
       {/* Results Section */}
-      {result && (
+      {result?.error && <p role="alert" className="text-sm text-red-400">{result.error}</p>}
+      {result && !result.error && (
         <div className="space-y-8 animate-slide-up">
           {/* Aura Analysis Card */}
           <div className="glass-panel p-8 rounded-3xl border border-gold/40 text-zinc-950 dark:text-white space-y-3 shadow-2xl">
@@ -352,7 +317,7 @@ export default function AIScentDiscoveryPage({
                   </div>
 
                   <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                    <PriceDisplay price={rec.price} locale={locale} />
+                    {typeof rec.price === "number" && rec.price > 0 ? <PriceDisplay price={rec.price} locale={locale} /> : <span className="text-sm text-zinc-600 dark:text-zinc-300">{isAr ? "عرض السعر الحالي" : "See current price"}</span>}
                     <Button asChild size="md" variant="gold">
                       <Link href={`/product/${rec.slug}`}>{isAr ? "اكتشف العطر" : "Explore Flacon"} →</Link>
                     </Button>
