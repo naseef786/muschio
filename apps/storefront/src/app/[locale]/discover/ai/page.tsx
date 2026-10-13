@@ -85,7 +85,7 @@ export default function AIScentDiscoveryPage({
             nameAr: rec.productName,
             brand: rec.brandName,
             concentration: "Extrait de Parfum",
-            price: 1850,
+            price: null,
             matchPercentage: rec.matchPercentage,
             image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
@@ -99,7 +99,11 @@ export default function AIScentDiscoveryPage({
       // Fallback
     }
 
-    // Graceful offline fallback
+    // Do not fabricate personalized recommendations on API failure.
+    setResult({ error: isAr ? "تعذر الاتصال بمستشار العطور حالياً. حاول مرة أخرى لاحقاً." : "The scent advisor is currently unavailable. Please try again later.", recommendations: [] });
+    setLoading(false);
+    return;
+    /* Offline demo content intentionally disabled.
     setTimeout(() => {
       setResult({
         auraTitle: isAr ? "الهالة العطرية: عود بخوري ملكي فاحم" : "Olfactory Aura: Regal Incense & Resinous Oud",
@@ -139,6 +143,7 @@ export default function AIScentDiscoveryPage({
       });
       setLoading(false);
     }, 1000);
+    */
   };
 
   return (
@@ -289,7 +294,8 @@ export default function AIScentDiscoveryPage({
       </div>
 
       {/* Results Section */}
-      {result && (
+      {result?.error && <p role="alert" className="text-sm text-red-400">{result.error}</p>}
+      {result && !result.error && (
         <div className="space-y-8 animate-slide-up">
           {/* Aura Analysis Card */}
           <div className="glass-panel p-8 rounded-3xl border border-gold/40 text-zinc-950 dark:text-white space-y-3 shadow-2xl">
