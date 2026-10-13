@@ -86,7 +86,6 @@ export class CatalogService {
     if (sort === "newest") orderBy = { createdAt: "desc" };
     if (sort === "rating") orderBy = { ratingAverage: "desc" };
 
-    try {
       const [items, totalItems] = await Promise.all([
         prisma.product.findMany({
           where,
@@ -112,9 +111,9 @@ export class CatalogService {
         prisma.product.count({ where }),
       ]);
 
-      const totalPages = Math.ceil(totalItems / limit);
+    const totalPages = Math.ceil(totalItems / limit);
 
-      return {
+    return {
         items,
         pagination: {
           page,
@@ -125,37 +124,7 @@ export class CatalogService {
           hasPrevPage: page > 1,
         },
       };
-    } catch (e) {
-      // Fallback mock catalog for local dev
-      const mockItems = [
-        {
-          id: "prod-amouage-interlude-53",
-          slug: "amouage-interlude-53-man",
-          nameEn: "Interlude 53 Man Extrait de Parfum",
-          nameAr: "إنترلود 53 مان إكستري دو بارفان",
-          brand: { name: "Amouage", slug: "amouage", type: "NICHE", countryOfOrigin: "Oman" },
-          scentFamily: { nameEn: "Woody Oriental", nameAr: "شرقي خشبي" },
-          ratingAverage: 4.95,
-          reviewCount: 48,
-          variants: [
-            { id: "var-1", volumeMl: 100, price: 1850, isDecant: false, inventory: { sealedQuantity: 14 } },
-            { id: "var-2", volumeMl: 5, price: 145, isDecant: true, inventory: { decantMilliliters: 120 } }
-          ],
-          notes: []
-        }
-      ];
-      return {
-        items: mockItems,
-        pagination: {
-          page: 1,
-          limit: 20,
-          totalItems: mockItems.length,
-          totalPages: 1,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      };
-    }
+
   }
 
 
