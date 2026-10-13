@@ -9,3 +9,4 @@ export * from "./api";
 export * from "./inventory";
 export * from "./market";
 export * from "./customer";
+export * from "./delivery";

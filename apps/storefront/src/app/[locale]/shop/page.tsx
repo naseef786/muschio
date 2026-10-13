@@ -76,19 +76,27 @@ const CATALOG_PRODUCTS = [
 
 export default function ShopCatalogPage({
   params: { locale },
+  searchParams,
 }: {
   params: { locale: "en" | "ar" };
+  searchParams: { search?: string; brandType?: string };
 }) {
   const isAr = locale === "ar";
-  const [selectedBrandType, setSelectedBrandType] = useState<string | null>(null);
+  const [selectedBrandType, setSelectedBrandType] = useState<string | null>(searchParams.brandType ?? null);
+  const [search, setSearch] = useState(searchParams.search ?? "");
+  const [sort, setSort] = useState("curated");
+  const [family, setFamily] = useState("");
 
   const filtered = CATALOG_PRODUCTS.filter((p) => {
     if (selectedBrandType && p.brandType !== selectedBrandType) return false;
+    if (family && p.family !== family) return false;
+    const query = search.trim().toLocaleLowerCase();
+    if (query && ![p.nameEn, p.nameAr, p.brand, ...p.notes].join(" ").toLocaleLowerCase().includes(query)) return false;
     return true;
-  });
+  }).sort((a, b) => sort === "price-asc" ? a.price - b.price : sort === "price-desc" ? b.price - a.price : sort === "name" ? a.nameEn.localeCompare(b.nameEn) : 0);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
+    <div className="editorial-section space-y-10">
       {/* Header */}
       <div className="space-y-4">
         <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-accent font-medium">
@@ -104,6 +112,11 @@ export default function ShopCatalogPage({
         </p>
       </div>
 
+      <div className="grid sm:grid-cols-3 gap-4">
+        <div><label htmlFor="catalog-search" className="block text-sm mb-2">{isAr ? "ابحث في المجموعة" : "Search the collection"}</label><input id="catalog-search" type="search" value={search} onChange={e => setSearch(e.target.value)} className="glass-input w-full p-3" /></div>
+        <div><label htmlFor="scent-family" className="block text-sm mb-2">{isAr ? "العائلة العطرية" : "Scent family"}</label><select id="scent-family" value={family} onChange={e => setFamily(e.target.value)} className="glass-input w-full p-3"><option value="">{isAr ? "جميع العائلات" : "All scent families"}</option><option value="oriental-amber">{isAr ? "عنبر وشرقي" : "Amber & oriental"}</option><option value="woody-smoky">{isAr ? "خشبي ودخاني" : "Woods & smoke"}</option><option value="fresh-citrus-aquatic">{isAr ? "منعش وحمضي" : "Fresh & citrus"}</option><option value="gourmand-leather">{isAr ? "حلو وجلدي" : "Gourmand & leather"}</option></select></div>
+        <div><label htmlFor="catalog-sort" className="block text-sm mb-2">{isAr ? "ترتيب حسب" : "Sort by"}</label><select id="catalog-sort" value={sort} onChange={e => setSort(e.target.value)} className="glass-input w-full p-3"><option value="curated">{isAr ? "اختيارات موسكيو" : "Muschio edit"}</option><option value="price-asc">{isAr ? "السعر: الأقل أولاً" : "Price: low to high"}</option><option value="price-desc">{isAr ? "السعر: الأعلى أولاً" : "Price: high to low"}</option><option value="name">{isAr ? "الاسم" : "Name: A–Z"}</option></select></div>
+      </div>
       {/* Filter Chips & Controls */}
       <div className="border-y border-zinc-200 dark:border-zinc-800 py-4 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -140,6 +153,8 @@ export default function ShopCatalogPage({
         </div>
       </div>
 
+      <p role="status" className="text-sm">{filtered.length} {isAr ? "عطور" : "fragrances"}</p>
+      {!filtered.length && <div className="delivery-panel space-y-5"><h2>{isAr ? "لم نجد نتائج" : "No fragrances found"}</h2><p>{isAr ? "جرّب اسماً أو نوتة أخرى، أو امسح الفلاتر." : "Try another name or note, or clear your filters."}</p><button className="editorial-button" onClick={() => { setSearch(""); setFamily(""); setSelectedBrandType(null); }}>{isAr ? "مسح الفلاتر" : "Clear filters"}</button></div>}
       {/* Products Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         {filtered.map((product, idx) => (

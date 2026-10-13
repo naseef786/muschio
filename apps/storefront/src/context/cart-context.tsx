@@ -1,7 +1,6 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { muschioApi } from "../lib/api";
 
 export interface CartItemModel {
   id: string;
@@ -33,24 +32,8 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const INITIAL_CART: CartItemModel[] = [
-  {
-    id: "cart-1",
-    variantId: "v1-amo-int53",
-    slug: "amouage-interlude-53-man",
-    title: "Interlude 53 Man Extrait de Parfum (100ml)",
-    titleAr: "إنترلود 53 مان إكستري دو بارفان (100 مل)",
-    brand: "Amouage",
-    price: 1850,
-    compareAtPrice: 2100,
-    quantity: 1,
-    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80",
-    sizeLabel: "100ml Extrait",
-  },
-];
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
-  const [items, setItems] = useState<CartItemModel[]>(INITIAL_CART);
+  const [items, setItems] = useState<CartItemModel[]>([]);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -60,7 +43,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       const saved = localStorage.getItem("muschio_cart");
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           setItems(parsed);
         }
       }
@@ -83,32 +66,21 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   }, [items, isLoaded]);
 
   const addItem = async (newItem: Omit<CartItemModel, "id"> & { id?: string }) => {
+    setItems((items) => {
     const existingIndex = items.findIndex(
       (item) => item.variantId === newItem.variantId || (item.slug === newItem.slug && item.sizeLabel === newItem.sizeLabel)
     );
 
     if (existingIndex > -1) {
-      setItems((prev) =>
-        prev.map((item, idx) =>
+      return items.map((item, idx) =>
           idx === existingIndex ? { ...item, quantity: item.quantity + (newItem.quantity || 1) } : item
-        )
-      );
+        );
     } else {
       const generatedId = newItem.id || `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      setItems((prev) => [...prev, { ...newItem, id: generatedId, quantity: newItem.quantity || 1 }]);
+      return [...items, { ...newItem, id: generatedId, quantity: newItem.quantity || 1 }];
     }
 
-    // Try posting to live backend
-    try {
-      if (newItem.variantId && newItem.variantId.length > 10) {
-        await muschioApi.addToCart({
-          variantId: newItem.variantId,
-          quantity: newItem.quantity || 1,
-        });
-      }
-    } catch (e) {
-      // Graceful offline fallback
-    }
+    });
 
     setCartDrawerOpen(true);
   };

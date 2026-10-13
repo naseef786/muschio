@@ -1,4 +1,6 @@
 import { Router } from "express";
+import { DeliveryService } from "../services/delivery.service";
+import { DeliveryRequestSchema } from "@muschio/types";
 import { CatalogService } from "../services/catalog.service";
 import { NotesService } from "../services/notes.service";
 import { CartService } from "../services/cart.service";
@@ -30,6 +32,13 @@ import {
 import { AdminRole } from "@prisma/client";
 
 const router: Router = Router();
+
+router.post("/delivery/quote", async (req, res, next) => {
+  try {
+    const input = DeliveryRequestSchema.parse(req.body);
+    res.json({ success: true, data: DeliveryService.quote(input), meta: { requestId: req.id } });
+  } catch (error) { next(error); }
+});
 
 // -------------------------------------------------------------
 // 1. CATALOG & SEARCH

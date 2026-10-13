@@ -5,14 +5,14 @@ module.exports = {
     extend: {
       colors: {
         accent: {
-          DEFAULT: "#d2042d",
-          hover: "#b70327",
-          subtle: "rgba(210, 4, 45, 0.08)",
+          DEFAULT: "#46523C",
+          hover: "#303B29",
+          subtle: "rgba(70, 82, 60, 0.08)",
         },
         gold: {
-          DEFAULT: "#D4AF37",
-          light: "#F3E5AB",
-          dark: "#AA7A1E",
+          DEFAULT: "#88724C",
+          light: "#D9CEB9",
+          dark: "#6C5838",
         },
         luxury: {
           canvas: "var(--bg-canvas)",

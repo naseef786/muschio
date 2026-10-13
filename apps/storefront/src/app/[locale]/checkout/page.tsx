@@ -1,313 +1,62 @@
 "use client";
-
-import React, { useState } from "react";
-import { useRouter } from "../../../navigation";
-import { Button, PriceDisplay } from "@muschio/ui";
-import { Lock, CreditCard } from "lucide-react";
+import { useCallback, useState } from "react";
+import { Link, useRouter } from "../../../navigation";
 import { useCart } from "../../../context/cart-context";
 import { muschioApi } from "../../../lib/api";
+import { DeliveryPanel } from "../../../components/delivery-panel";
+import { PriceDisplay } from "@muschio/ui";
 
-export default function CheckoutPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
-  const isAr = locale === "ar";
+export default function CheckoutPage({ params: { locale } }: { params: { locale: "en" | "ar" } }) {
+  const ar = locale === "ar";
+  const c = (en: string, arabic: string) => ar ? arabic : en;
   const router = useRouter();
-  const { items, subtotal, shipping, total: totalAmount, clearCart } = useCart();
-
-  const [paymentMethod, setPaymentMethod] = useState<"TABBY" | "TAMARA" | "CARD">("TABBY");
+  const { items, subtotal, shipping: baseShipping, clearCart } = useCart();
+  const [form, setForm] = useState({ fullName: "", phone: "", email: "", addressLine1: "", city: "", stateOrEmirate: "", country: "AE" });
+  const [method, setMethod] = useState<"CREDIT_CARD" | "TABBY" | "TAMARA">("CREDIT_CARD");
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    fullName: "His Excellency Sultan Al-Nuaimi",
-    phone: "+971501234567",
-    email: "sultan@muschio.luxury",
-    address: "Downtown Boulevard, Penthouse 42",
-    city: "Dubai",
-    stateOrEmirate: "Dubai",
-    country: "AE",
-  });
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
+  const [error, setError] = useState("");
+  const [delivery, setDelivery] = useState<{ id?: string; fee?: number }>({});
+  const selectDelivery = useCallback((id?: string, fee?: number) => setDelivery({ id, fee }), []);
+  const shipping = delivery.fee ?? baseShipping;
+  const fields = [
+    ["fullName", c("Full name", "الاسم الكامل"), "text", "name"],
+    ["email", c("Email", "البريد الإلكتروني"), "email", "email"],
+    ["phone", c("Phone", "رقم الهاتف"), "tel", "tel"],
+    ["addressLine1", c("Street, building and apartment", "الشارع والمبنى والشقة"), "text", "street-address"],
+    ["city", c("City", "المدينة"), "text", "address-level2"],
+    ["stateOrEmirate", c("State / emirate", "الإمارة / المنطقة"), "text", "address-level1"],
+  ] as const;
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    if (loading || !items.length) return;
+    setLoading(true); setError("");
     try {
-      // 1. Attempt server-authoritative checkout via Express API
-      const result = await muschioApi.submitCheckout({
-        cartId: "00000000-0000-0000-0000-000000000001",
-        shippingAddress: {
-          fullName: formData.fullName,
-          phone: formData.phone,
-          email: formData.email,
-          addressLine1: formData.address,
-          city: formData.city,
-          stateOrEmirate: formData.stateOrEmirate,
-          country: formData.country,
-        },
-        paymentMethod: paymentMethod === "CARD" ? "CREDIT_CARD" : paymentMethod,
-        currency: "AED",
-      });
-
-      if (result && result.orderNumber) {
-        clearCart();
-        router.push(`/order-confirmation/${result.orderNumber}`);
-        return;
+      if (items.some(item => !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(item.variantId))) throw new Error("Catalog unavailable");
+      let session = localStorage.getItem("muschio_guest_session");
+      if (!session) { session = crypto.randomUUID(); localStorage.setItem("muschio_guest_session", session); }
+      let serverCart = await muschioApi.getCart(session);
+      if (!serverCart) throw new Error("Checkout unavailable");
+      for (const item of serverCart.items) {
+        if (!await muschioApi.updateCartItem(item.id, 0)) throw new Error("Cart update failed");
       }
-    } catch (e) {
-      // Fallback
-    }
-
-    // Seamless fallback for local preview
-    const fallbackOrderNumber = `MSC-2026-${Math.floor(100000 + Math.random() * 900000)}`;
-    clearCart();
-    router.push(`/order-confirmation/${fallbackOrderNumber}`);
-  };
-
-  return (
-    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-      <div className="space-y-2 border-b border-zinc-200 dark:border-zinc-800 pb-6">
-        <div className="flex items-center gap-2 text-xs font-sans text-emerald-600 font-semibold uppercase tracking-widest">
-          <Lock size={14} />
-          <span>{isAr ? "دفع مشفر وآمن 256-bit" : "256-bit Encrypted Checkout"}</span>
-        </div>
-        <h1 className="font-serif text-3xl sm:text-4xl text-zinc-900 dark:text-zinc-100 font-light">
-          {isAr ? "إتمام الشراء السريع" : "Express Luxury Checkout"}
-        </h1>
+      for (const item of items) {
+        serverCart = await muschioApi.addToCart({ guestSessionId: session, variantId: item.variantId, quantity: item.quantity });
+        if (!serverCart) throw new Error("Availability not confirmed");
+      }
+      const result = await muschioApi.submitCheckout({ cartId: serverCart.id, shippingAddress: form, deliveryServiceId: delivery.id, paymentMethod: method, currency: "AED" });
+      if (!result?.orderNumber) throw new Error("Order not confirmed");
+      clearCart(); router.push(`/order-confirmation/${result.orderNumber}`);
+    } catch { setError(c("Your order could not be confirmed. Your bag is saved. Please try again later.", "لم يتم تأكيد الطلب. حقيبتك محفوظة. يرجى المحاولة لاحقاً.")); }
+    finally { setLoading(false); }
+  }
+  if (!items.length) return <div className="editorial-section text-center space-y-6"><h1 className="font-serif text-4xl">{c("Your bag is empty", "حقيبتك فارغة")}</h1><Link className="editorial-button" href="/shop">{c("Explore fragrances", "استكشف العطور")}</Link></div>;
+  return <div className="editorial-section"><span className="eyebrow">{c("YOUR NEXT DISCOVERY", "اكتشافك التالي")}</span><h1 className="font-serif text-5xl mt-3 mb-10">{c("A few details, then it’s yours.", "بعض التفاصيل، ثم يصبح لك.")}</h1>
+    <form onSubmit={submit} className="grid lg:grid-cols-12 gap-10 items-start">
+      <div className="lg:col-span-7 space-y-7"><section className="delivery-panel"><h2>{c("1. Contact & address", "١. بيانات الاتصال والعنوان")}</h2><div className="grid sm:grid-cols-2 gap-5">{fields.map(([key, label, type, autocomplete]) => <div key={key} className={key === "addressLine1" ? "sm:col-span-2" : ""}><label htmlFor={key} className="block text-sm mb-2">{label}</label><input id={key} type={type} autoComplete={autocomplete} required minLength={key === "phone" ? 8 : key === "fullName" ? 2 : key === "addressLine1" ? 3 : 1} value={form[key]} onChange={event => setForm({ ...form, [key]: event.target.value })} className="glass-input w-full p-3" /></div>)}<div className="sm:col-span-2"><label htmlFor="country" className="block text-sm mb-2">{c("Country", "الدولة")}</label><select id="country" autoComplete="country" value={form.country} onChange={event => { setForm({ ...form, country: event.target.value }); selectDelivery(); }} className="glass-input w-full p-3">{[["AE", c("United Arab Emirates", "الإمارات")], ["SA", c("Saudi Arabia", "السعودية")], ["QA", c("Qatar", "قطر")], ["KW", c("Kuwait", "الكويت")], ["BH", c("Bahrain", "البحرين")], ["OM", c("Oman", "عمان")]].map(([value, name]) => <option value={value} key={value}>{name}</option>)}</select></div></div></section>
+        <DeliveryPanel country={form.country} subtotal={subtotal} locale={locale} onSelect={selectDelivery} />
+        <fieldset className="delivery-panel"><legend className="font-serif text-2xl px-2">{c("2. Payment preference", "٢. طريقة الدفع")}</legend>{(["CREDIT_CARD", "TABBY", "TAMARA"] as const).map(value => <label className="flex gap-3 items-center border-b border-luxury-border py-5" key={value}><input type="radio" name="paymentMethod" value={value} checked={method === value} onChange={() => setMethod(value)} /><span>{value === "CREDIT_CARD" ? c("Credit card", "بطاقة ائتمان") : value === "TABBY" ? "Tabby" : "Tamara"}</span></label>)}<p className="text-xs mt-4">{c("Payment availability and terms are confirmed by the provider.", "يتم تأكيد توفر الدفع وشروطه من مزود الخدمة.")}</p></fieldset>
       </div>
-
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-        {/* Checkout Form (7 cols) */}
-        <div className="lg:col-span-7 space-y-8">
-          {/* Contact & Shipping */}
-          <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-8 space-y-6">
-            <h2 className="font-serif text-2xl text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-              {isAr ? "بيانات التوصيل" : "1. Shipping & Contact Details"}
-            </h2>
-
-            <div className="space-y-4 text-xs font-sans">
-              <div>
-                <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                  {isAr ? "الاسم الكامل" : "Full Name"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                  className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                    {isAr ? "رقم الهاتف (الخليج)" : "Phone Number (GCC)"}
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={formData.phone}
-                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                    className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                    {isAr ? "البريد الإلكتروني" : "Email Address"}
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={formData.email}
-                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                    className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                  {isAr ? "العنوان والشارع" : "Delivery Address & Building"}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.address}
-                  onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                  className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                    {isAr ? "المدينة / الإمارة" : "City / Emirate"}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.city}
-                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                    className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-                  />
-                </div>
-                <div>
-                  <label className="block uppercase tracking-wider text-zinc-500 mb-1.5">
-                    {isAr ? "الدولة" : "Country"}
-                  </label>
-                  <select
-                    value={formData.country}
-                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
-                    className="w-full h-11 px-3 bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-                  >
-                    <option value="AE">United Arab Emirates (الإمارات)</option>
-                    <option value="SA">Saudi Arabia (السعودية)</option>
-                    <option value="QA">Qatar (قطر)</option>
-                    <option value="KW">Kuwait (الكويت)</option>
-                    <option value="BH">Bahrain (البحرين)</option>
-                    <option value="OM">Oman (عُمان)</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Payment Method Selector */}
-          <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-8 space-y-6">
-            <h2 className="font-serif text-2xl text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-              {isAr ? "طريقة الدفع" : "2. Payment Method"}
-            </h2>
-
-            <div className="space-y-3">
-              {/* Tabby Option */}
-              <label
-                onClick={() => setPaymentMethod("TABBY")}
-                className={`flex items-start justify-between p-4 border cursor-pointer transition-all ${
-                  paymentMethod === "TABBY"
-                    ? "border-accent bg-accent/5 dark:bg-accent/10"
-                    : "border-zinc-300 dark:border-zinc-700 bg-luxury-canvas hover:border-zinc-400"
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#3EFEBA] text-zinc-950 font-bold text-xs">
-                      tabby
-                    </span>
-                    <span className="text-xs font-semibold font-sans">
-                      {isAr ? "تابي — قسّمها على 4 دفعات شهرية" : "Tabby — Split into 4 monthly payments"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 font-sans">
-                    {isAr
-                      ? `ادفع 462.50 درهم اليوم، والمتبقي على 3 أشهر بدون أي فوائد.`
-                      : `Pay 462.50 AED today, and the rest over 3 months. No interest or hidden fees.`}
-                  </p>
-                </div>
-                <input type="radio" checked={paymentMethod === "TABBY"} readOnly className="mt-1" />
-              </label>
-
-              {/* Tamara Option */}
-              <label
-                onClick={() => setPaymentMethod("TAMARA")}
-                className={`flex items-start justify-between p-4 border cursor-pointer transition-all ${
-                  paymentMethod === "TAMARA"
-                    ? "border-accent bg-accent/5 dark:bg-accent/10"
-                    : "border-zinc-300 dark:border-zinc-700 bg-luxury-canvas hover:border-zinc-400"
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <span className="px-2 py-0.5 rounded bg-[#FF8F70] text-zinc-950 font-bold text-xs">
-                      tamara
-                    </span>
-                    <span className="text-xs font-semibold font-sans">
-                      {isAr ? "تمارا — قسّم على 4 دفعات بدون فوائد" : "Tamara — Split in 4 interest-free payments"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 font-sans">
-                    {isAr ? "متوافق مع أحكام الشريعة الإسلامية بالكامل." : "100% Sharia compliant installment program."}
-                  </p>
-                </div>
-                <input type="radio" checked={paymentMethod === "TAMARA"} readOnly className="mt-1" />
-              </label>
-
-              {/* Card / Apple Pay Option */}
-              <label
-                onClick={() => setPaymentMethod("CARD")}
-                className={`flex items-start justify-between p-4 border cursor-pointer transition-all ${
-                  paymentMethod === "CARD"
-                    ? "border-accent bg-accent/5 dark:bg-accent/10"
-                    : "border-zinc-300 dark:border-zinc-700 bg-luxury-canvas hover:border-zinc-400"
-                }`}
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2">
-                    <CreditCard size={18} className="text-zinc-700 dark:text-zinc-300" />
-                    <span className="text-xs font-semibold font-sans">
-                      {isAr ? "البطاقة الائتمانية / Apple Pay" : "Credit Card / Apple Pay / Mada"}
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-zinc-500 font-sans">
-                    {isAr ? "دفع فوري آمن ومباشر." : "Instant and secure one-click checkout."}
-                  </p>
-                </div>
-                <input type="radio" checked={paymentMethod === "CARD"} readOnly className="mt-1" />
-              </label>
-            </div>
-          </div>
-        </div>
-
-        {/* Order Review & Submit (5 cols) */}
-        <div className="lg:col-span-5 border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-8 space-y-6">
-          <h2 className="font-serif text-2xl text-zinc-900 dark:text-zinc-100 border-b border-zinc-200 dark:border-zinc-800 pb-4">
-            {isAr ? "الطلب المحدد" : "Your Order"}
-          </h2>
-
-            {items.map((item) => (
-              <div key={item.id} className="flex justify-between items-start">
-                <div>
-                  <span className="font-semibold text-zinc-900 dark:text-zinc-100 block">
-                    {isAr ? item.titleAr : item.title}
-                  </span>
-                  <span className="text-zinc-500">
-                    {item.sizeLabel || "Standard"} × {item.quantity}
-                  </span>
-                </div>
-                <PriceDisplay price={item.price * item.quantity} locale={locale} size="sm" />
-              </div>
-            ))}
-
-            <div className="border-t border-zinc-200 dark:border-zinc-800 pt-3 space-y-2">
-              <div className="flex justify-between text-zinc-500">
-                <span>{isAr ? "المجموع الفرعي" : "Subtotal"}</span>
-                <PriceDisplay price={subtotal} locale={locale} size="sm" />
-              </div>
-              <div className="flex justify-between text-zinc-500">
-                <span>{isAr ? "الشحن الفاخر المبرد" : "Express GCC Delivery"}</span>
-                <span className="text-emerald-600 font-medium">
-                  {shipping === 0 ? (isAr ? "مجاني" : "Complimentary") : `${shipping} AED`}
-                </span>
-              </div>
-              <div className="flex justify-between text-base font-semibold pt-2 border-t border-zinc-200 dark:border-zinc-800">
-                <span>{isAr ? "المجموع الكلي" : "Total Payable"}</span>
-                <PriceDisplay price={totalAmount} locale={locale} size="lg" />
-              </div>
-            </div>
-
-          <Button type="submit" variant="accent" size="lg" disabled={loading} className="w-full h-14">
-            {loading ? (
-              isAr ? "جاري حجز المخزون وتأكيد الطلب..." : "Reserving Inventory & Securing Order..."
-            ) : (
-              isAr ? "تأكيد الطلب والدفع الفاخر" : "Confirm & Authorize Payment"
-            )}
-          </Button>
-
-          <div className="text-center text-[10px] text-zinc-400 font-sans space-y-1">
-            <p>{isAr ? "يتم حجز المخزون حصرياً لمدة 15 دقيقة لضمان طلبك." : "Stock is locked transactionally for 15 minutes to guarantee allocation."}</p>
-          </div>
-        </div>
-      </form>
-    </div>
-  );
+      <aside className="lg:col-span-5 delivery-panel lg:sticky lg:top-44"><h2>{c("Your bag", "حقيبتك")}</h2>{items.map(item => <div key={item.id} className="flex justify-between gap-4 border-b border-luxury-border py-5"><div><span className="eyebrow">{item.brand}</span><p className="font-serif text-xl">{ar ? item.titleAr : item.title}</p><p className="text-xs mt-2">{item.sizeLabel} × {item.quantity}</p></div><PriceDisplay price={item.price * item.quantity} locale={locale} size="sm" /></div>)}<div className="flex justify-between mt-6 text-sm"><span>{c("Subtotal", "المجموع الفرعي")}</span><PriceDisplay price={subtotal} locale={locale} size="sm" /></div><div className="flex justify-between mt-4 text-sm"><span>{c("Estimated delivery", "التوصيل التقديري")}</span><PriceDisplay price={shipping} locale={locale} size="sm" /></div><div className="flex justify-between mt-6 border-t border-luxury-border pt-5"><span>{c("Estimated total", "المجموع التقديري")}</span><PriceDisplay price={subtotal + shipping} locale={locale} /></div><p className="text-xs my-5">{c("Prices, stock, and delivery are verified by the server when you submit.", "يتم التحقق من الأسعار والمخزون والتوصيل عند إرسال الطلب.")}</p>{error && <p role="alert" className="text-red-700 dark:text-red-300 text-sm mb-5">{error}</p>}<button type="submit" disabled={loading} className="editorial-button w-full disabled:opacity-50">{loading ? c("Confirming availability…", "جارٍ تأكيد التوفر…") : c("Submit order", "إرسال الطلب")}</button><Link href="/cart" className="editorial-text-link mt-5">{c("Edit your bag", "تعديل الحقيبة")}</Link></aside>
+    </form>
+  </div>;
 }

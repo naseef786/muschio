@@ -68,6 +68,7 @@ export const OrderSchema = z.object({
 export type Order = z.infer<typeof OrderSchema>;
 
 export const CheckoutPayloadSchema = z.object({
+  deliveryServiceId: z.string().min(1).max(60).optional(),
   cartId: z.string().uuid(),
   shippingAddress: AddressSchema,
   billingAddress: AddressSchema.optional(),

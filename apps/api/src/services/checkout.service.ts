@@ -1,4 +1,6 @@
 import { prisma } from "../prisma";
+import { DeliveryService } from "./delivery.service";
+import { DeliveryRequestSchema } from "@muschio/types";
 import { ApiError } from "../middleware/error-handler";
 import { CheckoutPayload } from "@muschio/types";
 import { OrderStatus } from "@prisma/client";
@@ -41,7 +43,16 @@ export class CheckoutService {
       });
     }
 
-    const shippingAmount = subtotal >= 500 ? 0 : 35;
+    let shippingAmount = subtotal >= 500 ? 0 : 35;
+    if (payload.deliveryServiceId) {
+      const input = DeliveryRequestSchema.parse({ country: shippingAddress.country, subtotal, currency });
+      const quote = DeliveryService.quote(input);
+      const service = quote.services.find(service => service.id === payload.deliveryServiceId);
+      if (!quote.enabled || !service) throw new ApiError(409, "DELIVERY_UNAVAILABLE", "Selected delivery service is unavailable");
+      shippingAmount = service.feeFils / 100;
+    } else if (process.env.DELIVERY_ENABLED === "true") {
+      throw new ApiError(400, "DELIVERY_REQUIRED", "Select an available delivery service");
+    }
     const taxAmount = Math.round(subtotal * 0.05 * 100) / 100;
     const totalAmount = subtotal + shippingAmount;
 

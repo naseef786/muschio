@@ -18,7 +18,8 @@ async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T
         "Content-Type": "application/json",
         ...(options?.headers || {}),
       },
-      next: { revalidate: 60 },
+      ...(options?.cache === "no-store" || (options?.method && options.method !== "GET") ? { cache: "no-store" as const } : { next: { revalidate: 60 } }),
+      signal: options?.signal ?? AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
@@ -35,6 +36,9 @@ async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T
 }
 
 export const muschioApi = {
+  async quoteDelivery(input: { country: string; subtotal: number; currency: "AED" }) {
+    return apiRequest<unknown>("/delivery/quote", { method: "POST", body: JSON.stringify(input), cache: "no-store" });
+  },
   // Products
   async getProducts(params?: Record<string, any>): Promise<Product[] | null> {
     const query = new URLSearchParams(params).toString();

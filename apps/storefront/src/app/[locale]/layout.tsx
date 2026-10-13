@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "MUSCHIO — Haute Parfumerie & Rare Niche Fragrances | Dubai & GCC",
-  description: "Curated collection of rare niche extraits, royal attars, and bespoke 5x2ml discovery sets with VIP same-day delivery across Dubai and express GCC shipping.",
+  description: "Discover niche fragrance houses, scent notes, personal discovery sets, and the Muschio fragrance journal.",
   keywords: [
     "Niche Perfumes Dubai",
     "Haute Parfumerie UAE",
@@ -38,7 +38,7 @@ export const metadata = {
   },
   openGraph: {
     title: "MUSCHIO — Haute Parfumerie & Luxury Niche Fragrances",
-    description: "The poetry of rare essences. Certified official allocations with White-Glove VIP Same-Day Dubai Delivery and Tabby / Tamara 4x installments.",
+    description: "A considered collection. A personal discovery. Explore fragrance, notes, and the rituals that make a scent your own.",
     url: "https://muschio.luxury",
     siteName: "Muschio Haute Parfumerie",
     locale: "en_AE",
@@ -80,8 +80,9 @@ export default async function RootLayout({
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <CartProvider>
+              <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
               <Header locale={locale as Locale} />
-              <main className="flex-1">{children}</main>
+              <main id="main-content" className="flex-1">{children}</main>
               <Footer locale={locale as Locale} />
             </CartProvider>
           </ThemeProvider>
