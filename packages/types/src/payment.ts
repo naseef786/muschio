@@ -7,7 +7,7 @@ export const PaymentMethodTypeSchema = z.enum([
   "CREDIT_CARD",
   "APPLE_PAY",
   "GOOGLE_PAY",
-  "CASH_ON_DELIVERY"
+  "CASH_ON_DELIVERY",
 ]);
 export type PaymentMethodType = z.infer<typeof PaymentMethodTypeSchema>;
 
@@ -19,7 +19,7 @@ export const PaymentStatusSchema = z.enum([
   "FAILED",
   "CANCELLED",
   "REFUNDED",
-  "PARTIALLY_REFUNDED"
+  "PARTIALLY_REFUNDED",
 ]);
 export type PaymentStatus = z.infer<typeof PaymentStatusSchema>;
 
@@ -42,8 +42,8 @@ export const PaymentSessionRequestSchema = z.object({
   method: PaymentMethodTypeSchema,
   returnUrl: z.string().url(),
   cancelUrl: z.string().url(),
-  customerEmail: z.string().email(),
-  customerPhone: z.string(),
+  customerEmail: z.string().email().optional(),
+  customerPhone: z.string().optional(),
 });
 export type PaymentSessionRequest = z.infer<typeof PaymentSessionRequestSchema>;
 
@@ -54,7 +54,9 @@ export const PaymentSessionResponseSchema = z.object({
   clientSecret: z.string().optional(),
   status: PaymentStatusSchema,
 });
-export type PaymentSessionResponse = z.infer<typeof PaymentSessionResponseSchema>;
+export type PaymentSessionResponse = z.infer<
+  typeof PaymentSessionResponseSchema
+>;
 
 export const WebhookPayloadSchema = z.object({
   provider: PaymentMethodTypeSchema,

@@ -1,6 +1,22 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
+import { z } from "zod";
+const SavedItemSchema = z.object({
+  id: z.string().min(1).max(100),
+  variantId: z.string().uuid(),
+  slug: z.string().min(1),
+  title: z.string(),
+  titleAr: z.string(),
+  brand: z.string(),
+  price: z.number().finite().positive(),
+  compareAtPrice: z.number().finite().positive().nullable().optional(),
+  quantity: z.number().int().min(1).max(99),
+  image: z
+    .string()
+    .refine((value) => value.startsWith("/") || /^https:\/\//.test(value)),
+  sizeLabel: z.string().optional(),
+});
 
 export interface CartItemModel {
   id: string;
@@ -44,7 +60,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed)) {
-          setItems(parsed);
+          setItems(
+            parsed.flatMap((item) => {
+              const result = SavedItemSchema.safeParse(item);
+              return result.success ? [result.data] : [];
+            }),
+          );
         }
       }
     } catch (e) {
@@ -65,21 +86,36 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, isLoaded]);
 
-  const addItem = async (newItem: Omit<CartItemModel, "id"> & { id?: string }) => {
+  const addItem = async (
+    newItem: Omit<CartItemModel, "id"> & { id?: string },
+  ) => {
+    if (!z.string().uuid().safeParse(newItem.variantId).success)
+      throw new Error("Only live catalog variants can be added");
     setItems((items) => {
-    const existingIndex = items.findIndex(
-      (item) => item.variantId === newItem.variantId || (item.slug === newItem.slug && item.sizeLabel === newItem.sizeLabel)
-    );
+      const existingIndex = items.findIndex(
+        (item) =>
+          item.variantId === newItem.variantId ||
+          (item.slug === newItem.slug && item.sizeLabel === newItem.sizeLabel),
+      );
 
-    if (existingIndex > -1) {
-      return items.map((item, idx) =>
-          idx === existingIndex ? { ...item, quantity: item.quantity + (newItem.quantity || 1) } : item
+      if (existingIndex > -1) {
+        return items.map((item, idx) =>
+          idx === existingIndex
+            ? {
+                ...item,
+                quantity: Math.min(99, item.quantity + (newItem.quantity || 1)),
+              }
+            : item,
         );
-    } else {
-      const generatedId = newItem.id || `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
-      return [...items, { ...newItem, id: generatedId, quantity: newItem.quantity || 1 }];
-    }
-
+      } else {
+        const generatedId =
+          newItem.id ||
+          `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        return [
+          ...items,
+          { ...newItem, id: generatedId, quantity: newItem.quantity || 1 },
+        ];
+      }
     });
 
     setCartDrawerOpen(true);
@@ -94,12 +130,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       prev
         .map((item) => {
           if (item.id === id) {
-            const newQ = item.quantity + delta;
+            const newQ = Math.min(99, item.quantity + delta);
             return newQ > 0 ? { ...item, quantity: newQ } : null;
           }
           return item;
         })
-        .filter((item): item is CartItemModel => item !== null)
+        .filter((item): item is CartItemModel => item !== null),
     );
   };
 
@@ -107,7 +143,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setItems([]);
   };
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0,
+  );
   const shipping = subtotal >= 500 || subtotal === 0 ? 0 : 35;
   const total = subtotal + shipping;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);

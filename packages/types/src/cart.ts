@@ -30,7 +30,7 @@ export type Cart = z.infer<typeof CartSchema>;
 
 export const AddToCartInputSchema = z.object({
   variantId: z.string().uuid(),
-  quantity: z.number().int().positive().default(1),
+  quantity: z.number().int().positive().max(99).default(1),
   guestSessionId: z.string().optional(),
 });
 export type AddToCartInput = z.infer<typeof AddToCartInputSchema>;

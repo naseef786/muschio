@@ -1,10 +1,19 @@
-import { describe, it, expect, vi } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import jwt from "jsonwebtoken";
 import { AdminRole } from "@prisma/client";
 import { requireAdminAuth, requireRoles } from "../src/middleware/auth";
 import { Request, Response, NextFunction } from "express";
 
-const ADMIN_JWT_SECRET = "super-secret-admin-jwt-key-muschio-luxury-perfumery-2026";
+const { adminLookup } = vi.hoisted(() => ({ adminLookup: vi.fn() }));
+vi.mock("../src/prisma", () => ({
+  prisma: { adminUser: { findFirst: adminLookup } },
+}));
+const ADMIN_JWT_SECRET =
+  "admin-test-fixture-key-with-at-least-64-characters-abcdefghijklmnop";
+beforeEach(() => {
+  vi.stubEnv("ADMIN_JWT_SECRET", ADMIN_JWT_SECRET);
+  adminLookup.mockReset();
+});
 
 describe("RBAC Authorization Middleware", () => {
   it("rejects requests missing authorization header with 401", () => {
@@ -32,13 +41,23 @@ describe("RBAC Authorization Middleware", () => {
     expect(error.statusCode).toBe(401);
   });
 
-  it("authenticates valid admin token and attaches admin payload to request", () => {
+  it("authenticates a signed admin token using the active database role", async () => {
     const payload = {
       id: "admin-1",
       email: "director@muschio.luxury",
       role: AdminRole.SUPER_ADMIN,
     };
-    const token = jwt.sign(payload, ADMIN_JWT_SECRET, { expiresIn: "1h" });
+    const token = jwt.sign(
+      { id: payload.id, purpose: "admin" },
+      ADMIN_JWT_SECRET,
+      {
+        expiresIn: "1h",
+        issuer: "muschio-api",
+        audience: "muschio-admin",
+        algorithm: "HS256",
+      },
+    );
+    adminLookup.mockResolvedValue(payload);
 
     const req = {
       headers: { authorization: `Bearer ${token}` },
@@ -46,7 +65,7 @@ describe("RBAC Authorization Middleware", () => {
     const res = {} as Response;
     const next = vi.fn();
 
-    requireAdminAuth(req, res, next);
+    await requireAdminAuth(req, res, next);
 
     expect(next).toHaveBeenCalledWith();
     expect(req.admin).toBeDefined();
@@ -82,7 +101,10 @@ describe("RBAC Authorization Middleware", () => {
     const res = {} as Response;
     const next = vi.fn();
 
-    const roleGuard = requireRoles([AdminRole.INVENTORY_MANAGER, AdminRole.ORDER_MANAGER]);
+    const roleGuard = requireRoles([
+      AdminRole.INVENTORY_MANAGER,
+      AdminRole.ORDER_MANAGER,
+    ]);
     roleGuard(req, res, next);
 
     expect(next).toHaveBeenCalledTimes(1);

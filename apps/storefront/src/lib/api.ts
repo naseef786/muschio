@@ -1,5 +1,4 @@
 import {
-  Product,
   Note,
   Cart,
   AddToCartInput,
@@ -7,22 +6,73 @@ import {
   AIScentConsultationInput,
   AIScentConsultationResponse,
 } from "@muschio/types";
+import { z } from "zod";
+import { StorefrontProductSchema, StorefrontProduct } from "@muschio/types";
+import { StorefrontOrderSchema, StorefrontOrder } from "@muschio/types";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api/v1";
+const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+const API_BASE = API_ORIGIN
+  ? API_ORIGIN.endsWith("/api/v1")
+    ? API_ORIGIN
+    : `${API_ORIGIN}/api/v1`
+  : "http://localhost:4000/api/v1";
+let sessionRequest: Promise<string | null> | null = null;
+async function guestToken(): Promise<string | null> {
+  if (typeof window === "undefined") return null;
+  const token = localStorage.getItem("muschio_session_token");
+  if (token) return token;
+  if (!sessionRequest) {
+    sessionRequest = (async () => {
+      try {
+        const response = await fetch(`${API_BASE}/sessions/guest`, {
+          method: "POST",
+          cache: "no-store",
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!response.ok) return null;
+        const result = await response.json();
+        if (typeof result.data?.token !== "string") return null;
+        localStorage.setItem("muschio_session_token", result.data.token);
+        return result.data.token as string;
+      } catch {
+        return null;
+      } finally {
+        sessionRequest = null;
+      }
+    })();
+  }
+  return sessionRequest;
+}
 
-async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T | null> {
+async function apiRequest<T>(
+  endpoint: string,
+  options?: RequestInit,
+): Promise<T | null> {
   try {
+    if (!API_ORIGIN && process.env.NODE_ENV === "production") return null;
+    const secured = /^\/(cart|checkout|orders|payments\/session)(\/|\?|$)/.test(
+      endpoint,
+    );
+    const token = secured ? await guestToken() : null;
+    if (secured && !token) return null;
     const res = await fetch(`${API_BASE}${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
+        ...(token ? { "x-storefront-session": token } : {}),
         ...(options?.headers || {}),
       },
-      ...(options?.cache === "no-store" || (options?.method && options.method !== "GET") ? { cache: "no-store" as const } : { next: { revalidate: 60 } }),
+      ...(secured ||
+      options?.cache === "no-store" ||
+      (options?.method && options.method !== "GET")
+        ? { cache: "no-store" as const }
+        : { next: { revalidate: 60 } }),
       signal: options?.signal ?? AbortSignal.timeout(8000),
     });
 
     if (!res.ok) {
+      if (res.status === 401 && secured && typeof window !== "undefined")
+        localStorage.removeItem("muschio_session_token");
       console.warn(`API request to ${endpoint} returned status ${res.status}`);
       return null;
     }
@@ -36,17 +86,35 @@ async function apiRequest<T>(endpoint: string, options?: RequestInit): Promise<T
 }
 
 export const muschioApi = {
-  async quoteDelivery(input: { country: string; subtotal: number; currency: "AED" }) {
-    return apiRequest<unknown>("/delivery/quote", { method: "POST", body: JSON.stringify(input), cache: "no-store" });
+  async quoteDelivery(input: {
+    country: string;
+    subtotal: number;
+    currency: "AED";
+  }) {
+    return apiRequest<unknown>("/delivery/quote", {
+      method: "POST",
+      body: JSON.stringify(input),
+      cache: "no-store",
+    });
   },
   // Products
-  async getProducts(params?: Record<string, any>): Promise<Product[] | null> {
+  async getProducts(
+    params?: Record<string, any>,
+  ): Promise<StorefrontProduct[] | null> {
     const query = new URLSearchParams(params).toString();
-    return apiRequest<Product[]>(`/products${query ? `?${query}` : ""}`);
+    const result = await apiRequest<unknown>(
+      `/products${query ? `?${query}` : ""}`,
+    );
+    const parsed = z.array(StorefrontProductSchema).safeParse(result);
+    return parsed.success ? parsed.data : null;
   },
 
-  async getProductBySlug(slug: string): Promise<Product | null> {
-    return apiRequest<Product>(`/products/${slug}`);
+  async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
+    const result = await apiRequest<{ product?: unknown }>(
+      `/products/${encodeURIComponent(slug)}`,
+    );
+    const parsed = StorefrontProductSchema.safeParse(result?.product);
+    return parsed.success ? parsed.data : null;
   },
 
   // Notes
@@ -69,7 +137,10 @@ export const muschioApi = {
   },
 
   // Cart
-  async getCart(guestSessionId?: string, customerId?: string): Promise<Cart | null> {
+  async getCart(
+    guestSessionId?: string,
+    customerId?: string,
+  ): Promise<Cart | null> {
     const params = new URLSearchParams();
     if (guestSessionId) params.append("guestSessionId", guestSessionId);
     if (customerId) params.append("customerId", customerId);
@@ -104,9 +175,29 @@ export const muschioApi = {
       body: JSON.stringify(request),
     });
   },
+  async getPaymentAvailability(): Promise<{ methods: string[] } | null> {
+    return apiRequest<{ methods: string[] }>("/payments/availability", {
+      cache: "no-store",
+    });
+  },
+  async getOrder(orderNumber: string): Promise<StorefrontOrder | null> {
+    const result = await apiRequest<unknown>(
+      `/orders/lookup/${encodeURIComponent(orderNumber)}`,
+      { cache: "no-store" },
+    );
+    const parsed = StorefrontOrderSchema.safeParse(result);
+    return parsed.success ? parsed.data : null;
+  },
+  async getMyOrders(): Promise<StorefrontOrder[] | null> {
+    const result = await apiRequest<unknown>("/orders", { cache: "no-store" });
+    const parsed = z.array(StorefrontOrderSchema).safeParse(result);
+    return parsed.success ? parsed.data : null;
+  },
 
   // AI Scent Discovery
-  async consultAIScent(input: AIScentConsultationInput): Promise<AIScentConsultationResponse | null> {
+  async consultAIScent(
+    input: AIScentConsultationInput,
+  ): Promise<AIScentConsultationResponse | null> {
     return apiRequest<AIScentConsultationResponse>("/ai/scent-discovery", {
       method: "POST",
       body: JSON.stringify(input),

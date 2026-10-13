@@ -1,5 +1,11 @@
 import { prisma } from "../prisma";
-import { ProductFilter, BrandType, GenderCategory, Concentration } from "@muschio/types";
+import { ApiError } from "../middleware/error-handler";
+import {
+  ProductFilter,
+  BrandType,
+  GenderCategory,
+  Concentration,
+} from "@muschio/types";
 
 export class CatalogService {
   static async getProducts(filters: ProductFilter) {
@@ -72,7 +78,11 @@ export class CatalogService {
     if (isNewArrival !== undefined) where.isNewArrival = isNewArrival;
     if (isBestSeller !== undefined) where.isBestSeller = isBestSeller;
 
-    if (minPrice !== undefined || maxPrice !== undefined || inStock !== undefined) {
+    if (
+      minPrice !== undefined ||
+      maxPrice !== undefined ||
+      inStock !== undefined
+    ) {
       where.variants = {
         some: {
           ...(minPrice !== undefined ? { price: { gte: minPrice } } : {}),
@@ -126,38 +136,13 @@ export class CatalogService {
         },
       };
     } catch (e) {
-      // Fallback mock catalog for local dev
-      const mockItems = [
-        {
-          id: "prod-amouage-interlude-53",
-          slug: "amouage-interlude-53-man",
-          nameEn: "Interlude 53 Man Extrait de Parfum",
-          nameAr: "إنترلود 53 مان إكستري دو بارفان",
-          brand: { name: "Amouage", slug: "amouage", type: "NICHE", countryOfOrigin: "Oman" },
-          scentFamily: { nameEn: "Woody Oriental", nameAr: "شرقي خشبي" },
-          ratingAverage: 4.95,
-          reviewCount: 48,
-          variants: [
-            { id: "var-1", volumeMl: 100, price: 1850, isDecant: false, inventory: { sealedQuantity: 14 } },
-            { id: "var-2", volumeMl: 5, price: 145, isDecant: true, inventory: { decantMilliliters: 120 } }
-          ],
-          notes: []
-        }
-      ];
-      return {
-        items: mockItems,
-        pagination: {
-          page: 1,
-          limit: 20,
-          totalItems: mockItems.length,
-          totalPages: 1,
-          hasNextPage: false,
-          hasPrevPage: false,
-        },
-      };
+      throw new ApiError(
+        503,
+        "CATALOG_UNAVAILABLE",
+        "The live catalog is temporarily unavailable",
+      );
     }
   }
-
 
   static async getProductBySlug(slug: string) {
     const product = await prisma.product.findUnique({

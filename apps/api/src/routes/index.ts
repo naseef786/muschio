@@ -1,4 +1,15 @@
 import { Router } from "express";
+import rateLimit from "express-rate-limit";
+import { storefrontProduct } from "../services/storefront-catalog";
+import { storefrontOrder } from "../services/storefront-order";
+import { z } from "zod";
+import { ApiError } from "../middleware/error-handler";
+import {
+  createGuestSession,
+  requireGuestSession,
+  assertCartOwner,
+  assertOrderOwner,
+} from "../middleware/storefront-auth";
 import { DeliveryService } from "../services/delivery.service";
 import { DeliveryRequestSchema } from "@muschio/types";
 import { CatalogService } from "../services/catalog.service";
@@ -25,19 +36,45 @@ import {
   AddToCartInputSchema,
   CheckoutPayloadSchema,
   PaymentSessionRequestSchema,
-  WebhookPayloadSchema,
   AIScentConsultationInputSchema,
   CreateReviewInputSchema,
 } from "@muschio/types";
 import { AdminRole } from "@prisma/client";
 
 const router: Router = Router();
+const sessionLimiter = rateLimit({
+  windowMs: 60000,
+  limit: 20,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60000,
+  limit: 10,
+  standardHeaders: "draft-7",
+  legacyHeaders: false,
+});
+
+router.post("/sessions/guest", sessionLimiter, (_req, res, next) => {
+  try {
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ success: true, data: { token: createGuestSession() } });
+  } catch (error) {
+    next(error);
+  }
+});
 
 router.post("/delivery/quote", async (req, res, next) => {
   try {
     const input = DeliveryRequestSchema.parse(req.body);
-    res.json({ success: true, data: DeliveryService.quote(input), meta: { requestId: req.id } });
-  } catch (error) { next(error); }
+    res.json({
+      success: true,
+      data: DeliveryService.quote(input),
+      meta: { requestId: req.id },
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 // -------------------------------------------------------------
@@ -48,7 +85,11 @@ router.get("/products", async (req, res, next) => {
   try {
     const filters = ProductFilterSchema.parse(req.query);
     const result = await CatalogService.getProducts(filters);
-    res.json({ success: true, data: result.items, meta: { pagination: result.pagination, requestId: req.id } });
+    res.json({
+      success: true,
+      data: result.items.map(storefrontProduct),
+      meta: { pagination: result.pagination, requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -58,10 +99,19 @@ router.get("/products/:slug", async (req, res, next) => {
   try {
     const result = await CatalogService.getProductBySlug(req.params.slug);
     if (!result) {
-      res.status(404).json({ success: false, error: { code: "NOT_FOUND", message: "Product not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: { code: "NOT_FOUND", message: "Product not found" },
+        });
       return;
     }
-    res.json({ success: true, data: result, meta: { requestId: req.id } });
+    res.json({
+      success: true,
+      data: { product: storefrontProduct(result.product) },
+      meta: { requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -74,8 +124,17 @@ router.get("/search", async (req, res, next) => {
     const accord = req.query.accord as string | undefined;
     const note = req.query.note as string | undefined;
     const gender = req.query.gender as string | undefined;
-    const results = await SearchService.searchCatalog(q, { family, accord, note, gender });
-    res.json({ success: true, data: results, meta: { count: results.length, requestId: req.id } });
+    const results = await SearchService.searchCatalog(q, {
+      family,
+      accord,
+      note,
+      gender,
+    });
+    res.json({
+      success: true,
+      data: results,
+      meta: { count: results.length, requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -104,7 +163,11 @@ router.get("/notes", async (req, res, next) => {
   try {
     const query = NoteFilterQuerySchema.parse(req.query);
     const result = await NotesService.getNotes(query);
-    res.json({ success: true, data: result.items, meta: { pagination: result.pagination, requestId: req.id } });
+    res.json({
+      success: true,
+      data: result.items,
+      meta: { pagination: result.pagination, requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -114,7 +177,15 @@ router.get("/notes/:slug", async (req, res, next) => {
   try {
     const result = await NotesService.getNoteBySlug(req.params.slug);
     if (!result) {
-      res.status(404).json({ success: false, error: { code: "NOTE_NOT_FOUND", message: "Fragrance note not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: {
+            code: "NOTE_NOT_FOUND",
+            message: "Fragrance note not found",
+          },
+        });
       return;
     }
     res.json({ success: true, data: result, meta: { requestId: req.id } });
@@ -128,12 +199,28 @@ router.get("/notes/:slug/products", async (req, res, next) => {
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 20;
     const sort = (req.query.sort as string) || "featured";
-    const result = await NotesService.getPerfumesByNoteSlug(req.params.slug, { page, limit, sort });
+    const result = await NotesService.getPerfumesByNoteSlug(req.params.slug, {
+      page,
+      limit,
+      sort,
+    });
     if (!result) {
-      res.status(404).json({ success: false, error: { code: "NOTE_NOT_FOUND", message: "Fragrance note not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: {
+            code: "NOTE_NOT_FOUND",
+            message: "Fragrance note not found",
+          },
+        });
       return;
     }
-    res.json({ success: true, data: result, meta: { pagination: result.pagination, requestId: req.id } });
+    res.json({
+      success: true,
+      data: result,
+      meta: { pagination: result.pagination, requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -171,91 +258,183 @@ router.post("/markets/calculate", async (req, res, next) => {
 // 3. CART & CHECKOUT
 // -------------------------------------------------------------
 
-router.get("/cart", async (req, res, next) => {
+router.get("/cart", requireGuestSession, async (req, res, next) => {
   try {
-    const guestSessionId = req.query.guestSessionId as string | undefined;
-    const customerId = req.query.customerId as string | undefined;
-    const cart = await CartService.getOrCreateCart(guestSessionId, customerId);
+    const cart = await CartService.getOrCreateCart(req.guestSessionId!);
+    res.setHeader("Cache-Control", "no-store");
     res.json({ success: true, data: cart, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/cart/items", async (req, res, next) => {
+router.post("/cart/items", requireGuestSession, async (req, res, next) => {
   try {
     const body = AddToCartInputSchema.parse(req.body);
-    const cart = await CartService.addItem(body);
+    const cart = await CartService.addItem({
+      ...body,
+      guestSessionId: req.guestSessionId!,
+    });
     res.json({ success: true, data: cart, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
   }
 });
 
-router.patch("/cart/items/:itemId", async (req, res, next) => {
-  try {
-    const { quantity } = req.body;
-    await CartService.updateItem(req.params.itemId, Number(quantity));
-    res.json({ success: true, data: { updated: true }, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.patch(
+  "/cart/items/:itemId",
+  requireGuestSession,
+  async (req, res, next) => {
+    try {
+      const { quantity } = z
+        .object({ quantity: z.number().int().min(0).max(99) })
+        .parse(req.body);
+      await CartService.updateItem(
+        z.string().uuid().parse(req.params.itemId),
+        quantity,
+        req.guestSessionId!,
+      );
+      res.json({
+        success: true,
+        data: { updated: true },
+        meta: { requestId: req.id },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post("/checkout", async (req, res, next) => {
+router.post("/checkout", requireGuestSession, async (req, res, next) => {
   try {
     const payload = CheckoutPayloadSchema.parse(req.body);
-    const order = await CheckoutService.processCheckout(payload);
-    res.status(201).json({ success: true, data: order, meta: { requestId: req.id } });
+    await assertCartOwner(payload.cartId, req.guestSessionId!);
+    PaymentService.assertAvailable(payload.paymentMethod);
+    const order = await CheckoutService.processCheckout(
+      payload,
+      req.guestSessionId!,
+    );
+    res
+      .status(201)
+      .json({
+        success: true,
+        data: storefrontOrder(order),
+        meta: { requestId: req.id },
+      });
   } catch (err) {
     next(err);
   }
 });
 
-router.get("/orders/:id", async (req, res, next) => {
+router.get("/orders/:id", requireGuestSession, async (req, res, next) => {
   try {
-    const order = await CheckoutService.getOrderById(req.params.id);
+    const orderId = z.string().uuid().parse(req.params.id);
+    await assertOrderOwner(orderId, req.guestSessionId!);
+    const order = await CheckoutService.getOrderById(orderId);
+    res.setHeader("Cache-Control", "no-store");
     if (!order) {
-      res.status(404).json({ success: false, error: { code: "ORDER_NOT_FOUND", message: "Order not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: { code: "ORDER_NOT_FOUND", message: "Order not found" },
+        });
       return;
     }
-    res.json({ success: true, data: order, meta: { requestId: req.id } });
+    res.json({
+      success: true,
+      data: storefrontOrder(order),
+      meta: { requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
 });
 
-router.get("/orders/lookup/:orderNumber", async (req, res, next) => {
+router.get("/orders", requireGuestSession, async (req, res, next) => {
   try {
-    const order = await CheckoutService.getOrderByNumber(req.params.orderNumber);
-    if (!order) {
-      res.status(404).json({ success: false, error: { code: "ORDER_NOT_FOUND", message: "Order not found" } });
-      return;
-    }
-    res.json({ success: true, data: order, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
+    const orders = await CheckoutService.getSessionOrders(req.guestSessionId!);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      success: true,
+      data: orders.map(storefrontOrder),
+      meta: { requestId: req.id },
+    });
+  } catch (error) {
+    next(error);
   }
 });
+
+router.get(
+  "/orders/lookup/:orderNumber",
+  requireGuestSession,
+  async (req, res, next) => {
+    try {
+      const order = await CheckoutService.getOrderByNumber(
+        z.string().min(1).max(80).parse(req.params.orderNumber),
+      );
+      if (!order) {
+        res
+          .status(404)
+          .json({
+            success: false,
+            error: { code: "ORDER_NOT_FOUND", message: "Order not found" },
+          });
+        return;
+      }
+      await assertOrderOwner(order.id, req.guestSessionId!);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        success: true,
+        data: storefrontOrder(order),
+        meta: { requestId: req.id },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // -------------------------------------------------------------
 // 4. PAYMENTS & WEBHOOKS
 // -------------------------------------------------------------
 
-router.post("/payments/session", async (req, res, next) => {
-  try {
-    const body = PaymentSessionRequestSchema.parse(req.body);
-    const session = await PaymentService.initiatePayment(body);
-    res.json({ success: true, data: session, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.get("/payments/availability", (_req, res) =>
+  res.json({
+    success: true,
+    data: { methods: PaymentService.availableMethods() },
+  }),
+);
+router.post(
+  "/payments/session",
+  requireGuestSession,
+  async (req, res, next) => {
+    try {
+      const body = PaymentSessionRequestSchema.parse(req.body);
+      await assertOrderOwner(body.orderId, req.guestSessionId!);
+      const session = await PaymentService.initiatePayment(body);
+      res.json({ success: true, data: session, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post("/webhooks/payments", async (req, res, next) => {
+router.post("/webhooks/payments", async (_req, _res, next) => {
+  next(
+    new ApiError(
+      410,
+      "WEBHOOK_DISABLED",
+      "Use the provider-specific verified webhook endpoint",
+    ),
+  );
+});
+router.post("/webhooks/stripe", async (req, res, next) => {
   try {
-    const body = WebhookPayloadSchema.parse(req.body);
-    const result = await PaymentService.handleWebhook(body);
+    const result = await PaymentService.handleStripeWebhook(
+      req.rawBody,
+      req.headers["stripe-signature"],
+    );
     res.json({ success: true, data: result, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
@@ -276,139 +455,226 @@ router.get("/inventory/ledger", requireAdminAuth, async (req, res, next) => {
   }
 });
 
-router.post("/inventory/allocate-tester", requireAdminAuth, async (req, res, next) => {
-  try {
-    const { variantId, warehouseId, quantity, reason } = req.body;
-    const result = await InventoryService.allocateTesterStock({
-      variantId,
-      warehouseId,
-      quantity: Number(quantity),
-      reason,
-    });
-    res.json({ success: true, data: result, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/inventory/allocate-tester",
+  requireAdminAuth,
+  requireRoles([AdminRole.INVENTORY_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const { variantId, warehouseId, quantity, reason } = req.body;
+      const result = await InventoryService.allocateTesterStock({
+        variantId,
+        warehouseId,
+        quantity: Number(quantity),
+        reason,
+      });
+      res.json({ success: true, data: result, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // -------------------------------------------------------------
 // 6. PURCHASING & GOODS RECEIPTS
 // -------------------------------------------------------------
 
-router.get("/purchasing/suppliers", requireAdminAuth, async (req, res, next) => {
-  try {
-    const suppliers = await PurchasingService.getSuppliers();
-    res.json({ success: true, data: suppliers, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.get(
+  "/purchasing/suppliers",
+  requireAdminAuth,
+  async (req, res, next) => {
+    try {
+      const suppliers = await PurchasingService.getSuppliers();
+      res.json({ success: true, data: suppliers, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post("/purchasing/orders", requireAdminAuth, async (req, res, next) => {
-  try {
-    const po = await PurchasingService.createPurchaseOrder(req.body);
-    res.status(201).json({ success: true, data: po, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/purchasing/orders",
+  requireAdminAuth,
+  requireRoles([AdminRole.INVENTORY_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const po = await PurchasingService.createPurchaseOrder(req.body);
+      res
+        .status(201)
+        .json({ success: true, data: po, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post("/purchasing/receive-grn", requireAdminAuth, async (req, res, next) => {
-  try {
-    const grn = await PurchasingService.receiveGoodsReceipt(req.body);
-    res.status(201).json({ success: true, data: grn, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/purchasing/receive-grn",
+  requireAdminAuth,
+  requireRoles([AdminRole.INVENTORY_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const grn = await PurchasingService.receiveGoodsReceipt(req.body);
+      res
+        .status(201)
+        .json({ success: true, data: grn, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // -------------------------------------------------------------
 // 7. FULFILLMENT & SHIPMENTS
 // -------------------------------------------------------------
 
-router.post("/fulfillments", requireAdminAuth, async (req, res, next) => {
-  try {
-    const fulfillment = await FulfillmentService.createFulfillment(req.body);
-    res.status(201).json({ success: true, data: fulfillment, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/fulfillments",
+  requireAdminAuth,
+  requireRoles([AdminRole.ORDER_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const fulfillment = await FulfillmentService.createFulfillment(req.body);
+      res
+        .status(201)
+        .json({
+          success: true,
+          data: fulfillment,
+          meta: { requestId: req.id },
+        });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.post("/fulfillments/dispatch", requireAdminAuth, async (req, res, next) => {
-  try {
-    const shipment = await FulfillmentService.dispatchShipment(req.body);
-    res.json({ success: true, data: shipment, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/fulfillments/dispatch",
+  requireAdminAuth,
+  requireRoles([AdminRole.ORDER_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const shipment = await FulfillmentService.dispatchShipment(req.body);
+      res.json({ success: true, data: shipment, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
-router.get("/orders/:id/fulfillments", async (req, res, next) => {
-  try {
-    const fulfillments = await FulfillmentService.getOrderFulfillments(req.params.id);
-    res.json({ success: true, data: fulfillments, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.get(
+  "/orders/:id/fulfillments",
+  requireGuestSession,
+  async (req, res, next) => {
+    try {
+      const orderId = z.string().uuid().parse(req.params.id);
+      await assertOrderOwner(orderId, req.guestSessionId!);
+      const fulfillments =
+        await FulfillmentService.getOrderFulfillments(orderId);
+      res.setHeader("Cache-Control", "no-store");
+      res.json({
+        success: true,
+        data: fulfillments,
+        meta: { requestId: req.id },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // -------------------------------------------------------------
 // 8. RETURNS & INSPECTION STATION
 // -------------------------------------------------------------
 
-router.post("/returns/request", async (req, res, next) => {
-  try {
-    const returnReq = await ReturnsService.requestReturn(req.body);
-    res.status(201).json({ success: true, data: returnReq, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/returns/request",
+  requireAdminAuth,
+  requireRoles([AdminRole.ORDER_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const returnReq = await ReturnsService.requestReturn(req.body);
+      res
+        .status(201)
+        .json({ success: true, data: returnReq, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.get("/admin/returns", requireAdminAuth, async (req, res, next) => {
   try {
-    const returns = await ReturnsService.getReturnRequests(req.query.status as string);
+    const returns = await ReturnsService.getReturnRequests(
+      req.query.status as string,
+    );
     res.json({ success: true, data: returns, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/admin/returns/inspect", requireAdminAuth, async (req, res, next) => {
-  try {
-    const inspection = await ReturnsService.inspectReturnItem({
-      ...req.body,
-      inspectedBy: req.admin?.email || "Senior Warehouse Lead",
-    });
-    res.json({ success: true, data: inspection, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
-});
+router.post(
+  "/admin/returns/inspect",
+  requireAdminAuth,
+  requireRoles([AdminRole.ORDER_MANAGER]),
+  async (req, res, next) => {
+    try {
+      const inspection = await ReturnsService.inspectReturnItem({
+        ...req.body,
+        inspectedBy: req.admin?.email || "Senior Warehouse Lead",
+      });
+      res.json({
+        success: true,
+        data: inspection,
+        meta: { requestId: req.id },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 // -------------------------------------------------------------
 // 9. REVIEWS & VERIFIED BUYER FEEDBACK
 // -------------------------------------------------------------
 
-router.post("/reviews", async (req, res, next) => {
-  try {
-    const input = CreateReviewInputSchema.parse(req.body);
-    const customerId = (req.body.customerId as string) || "cust-demo-1";
-    const review = await ReviewsService.submitReview({
-      ...input,
-      customerId,
-      orderItemId: input.orderItemId || undefined,
-    });
-    res.status(201).json({ success: true, data: review, meta: { requestId: req.id } });
-  } catch (err) {
-    next(err);
-  }
+router.post("/reviews", async (_req, _res, next) => {
+  next(
+    new ApiError(
+      403,
+      "CUSTOMER_LOGIN_REQUIRED",
+      "Verified customer sign-in is required to submit reviews",
+    ),
+  );
 });
+router.post(
+  "/admin/reviews",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN]),
+  async (req, res, next) => {
+    try {
+      const input = CreateReviewInputSchema.parse(req.body);
+      const customerId = z.string().uuid().parse(req.body.customerId);
+      const review = await ReviewsService.submitReview({
+        ...input,
+        customerId,
+        orderItemId: input.orderItemId || undefined,
+      });
+      res
+        .status(201)
+        .json({ success: true, data: review, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
 
 router.get("/reviews/product/:productId", async (req, res, next) => {
   try {
-    const reviews = await ReviewsService.getProductReviews(req.params.productId);
+    const reviews = await ReviewsService.getProductReviews(
+      req.params.productId,
+    );
     res.json({ success: true, data: reviews, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
@@ -432,7 +698,15 @@ router.get("/content/nodes/:slug", async (req, res, next) => {
   try {
     const node = await ContentService.getContentNodeBySlug(req.params.slug);
     if (!node) {
-      res.status(404).json({ success: false, error: { code: "CONTENT_NOT_FOUND", message: "Content node not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: {
+            code: "CONTENT_NOT_FOUND",
+            message: "Content node not found",
+          },
+        });
       return;
     }
     res.json({ success: true, data: node, meta: { requestId: req.id } });
@@ -483,7 +757,11 @@ router.get("/blog", async (req, res, next) => {
     const page = req.query.page ? Number(req.query.page) : 1;
     const limit = req.query.limit ? Number(req.query.limit) : 10;
     const result = await JournalService.getPosts(page, limit);
-    res.json({ success: true, data: result.items, meta: { pagination: result.pagination, requestId: req.id } });
+    res.json({
+      success: true,
+      data: result.items,
+      meta: { pagination: result.pagination, requestId: req.id },
+    });
   } catch (err) {
     next(err);
   }
@@ -493,7 +771,12 @@ router.get("/blog/:slug", async (req, res, next) => {
   try {
     const post = await JournalService.getPostBySlug(req.params.slug);
     if (!post) {
-      res.status(404).json({ success: false, error: { code: "POST_NOT_FOUND", message: "Article not found" } });
+      res
+        .status(404)
+        .json({
+          success: false,
+          error: { code: "POST_NOT_FOUND", message: "Article not found" },
+        });
       return;
     }
     res.json({ success: true, data: post, meta: { requestId: req.id } });
@@ -506,7 +789,7 @@ router.get("/blog/:slug", async (req, res, next) => {
 // 13. ADMIN OPERATIONS & DASHBOARD (RBAC)
 // -------------------------------------------------------------
 
-router.post("/admin/auth/login", async (req, res, next) => {
+router.post("/admin/auth/login", loginLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body;
     const ip = req.ip || req.socket.remoteAddress;
@@ -535,12 +818,16 @@ router.patch(
     try {
       const { status } = req.body;
       const orderId = req.params.id as string;
-      const updated = await AdminService.updateOrderStatus(orderId, status, req.admin!.id);
+      const updated = await AdminService.updateOrderStatus(
+        orderId,
+        status,
+        req.admin!.id,
+      );
       res.json({ success: true, data: updated, meta: { requestId: req.id } });
     } catch (err) {
       next(err);
     }
-  }
+  },
 );
 
 export { router as apiRouter };

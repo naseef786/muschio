@@ -2,11 +2,23 @@ import { prisma } from "../prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { ApiError } from "../middleware/error-handler";
-
-const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET || "super-secret-admin-jwt-key-muschio-luxury-perfumery-2026";
+import { signingSecret } from "../middleware/storefront-auth";
+import { InventoryService } from "./inventory.service";
 
 export class AdminService {
-  static async login(email: string, password: string, ipAddress?: string, userAgent?: string) {
+  static async login(
+    email: string,
+    password: string,
+    ipAddress?: string,
+    userAgent?: string,
+  ) {
+    const secret = signingSecret("ADMIN_JWT_SECRET");
+    if (typeof email !== "string" || typeof password !== "string")
+      throw new ApiError(
+        400,
+        "INVALID_INPUT",
+        "Email and password are required",
+      );
     const user = await prisma.adminUser.findUnique({
       where: { email, isActive: true },
     });
@@ -36,11 +48,12 @@ export class AdminService {
       },
     });
 
-    const token = jwt.sign(
-      { id: user.id, email: user.email, role: user.role },
-      ADMIN_JWT_SECRET,
-      { expiresIn: "12h" }
-    );
+    const token = jwt.sign({ id: user.id, purpose: "admin" }, secret, {
+      expiresIn: "12h",
+      algorithm: "HS256",
+      issuer: "muschio-api",
+      audience: "muschio-admin",
+    });
 
     return {
       token,
@@ -85,7 +98,10 @@ export class AdminService {
       }),
     ]);
 
-    const totalRevenue = paidOrders.reduce((sum, o) => sum + Number(o.totalAmount), 0);
+    const totalRevenue = paidOrders.reduce(
+      (sum, o) => sum + Number(o.totalAmount),
+      0,
+    );
 
     return {
       totalProducts,
@@ -97,22 +113,52 @@ export class AdminService {
     };
   }
 
-  static async updateOrderStatus(orderId: string, status: any, adminUserId: string) {
-    const order = await prisma.order.update({
-      where: { id: orderId },
-      data: { status },
-    });
+  static async updateOrderStatus(
+    orderId: string,
+    status: any,
+    adminUserId: string,
+  ) {
+    if (!["FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED"].includes(status))
+      throw new ApiError(
+        400,
+        "INVALID_ORDER_TRANSITION",
+        "Payment status must be verified by the payment provider",
+      );
+    return prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+      const current = await tx.order.findUnique({ where: { id: orderId } });
+      if (!current)
+        throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
+      const allowed: Record<string, string[]> = {
+        PAID: ["FULFILLING"],
+        FULFILLING: ["SHIPPED"],
+        SHIPPED: ["DELIVERED"],
+        PENDING: ["CANCELLED"],
+      };
+      if (!allowed[current.status]?.includes(status))
+        throw new ApiError(
+          409,
+          "INVALID_ORDER_TRANSITION",
+          "Order cannot move to the requested status",
+        );
+      const order = await tx.order.update({
+        where: { id: orderId },
+        data: { status },
+      });
 
-    await prisma.auditLog.create({
-      data: {
-        adminUserId,
-        action: "UPDATE_ORDER_STATUS",
-        resourceType: "ORDER",
-        resourceId: orderId,
-        diff: { newStatus: status },
-      },
-    });
+      if (status === "CANCELLED")
+        await InventoryService.releaseOrderReservations(orderId, tx);
+      await tx.auditLog.create({
+        data: {
+          adminUserId,
+          action: "UPDATE_ORDER_STATUS",
+          resourceType: "ORDER",
+          resourceId: orderId,
+          diff: { newStatus: status },
+        },
+      });
 
-    return order;
+      return order;
+    });
   }
 }

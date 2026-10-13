@@ -20,32 +20,7 @@ interface WishlistItem {
   variantId: string;
 }
 
-const DEFAULT_WISHLIST: WishlistItem[] = [
-  {
-    slug: "amouage-interlude-53-man",
-    nameEn: "Interlude 53 Man Extrait de Parfum",
-    nameAr: "إنترلود 53 إكستري دي بارفان",
-    brand: "Amouage",
-    brandType: "NICHE",
-    concentration: "Extrait de Parfum (53%)",
-    price: 1850,
-    compareAtPrice: 2100,
-    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
-    variantId: "v1-amo-int53",
-  },
-  {
-    slug: "mfk-baccarat-rouge-540-extrait",
-    nameEn: "Baccarat Rouge 540 Extrait de Parfum",
-    nameAr: "باكارات روج 540 إكستري دي بارفان",
-    brand: "Maison Francis Kurkdjian",
-    brandType: "NICHE",
-    concentration: "Extrait de Parfum",
-    price: 1650,
-    compareAtPrice: null,
-    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
-    variantId: "v5-mfk-br540",
-  },
-];
+const DEFAULT_WISHLIST: WishlistItem[] = [];
 
 export default function WishlistPage({
   params: { locale },
@@ -149,7 +124,9 @@ export default function WishlistPage({
             </p>
           </div>
           <Button asChild variant="accent" size="lg">
-            <Link href="/shop">{isAr ? "استكشف المجموعة" : "Explore The Vault"}</Link>
+            <Link href="/shop">
+              {isAr ? "استكشف المجموعة" : "Explore The Vault"}
+            </Link>
           </Button>
         </div>
       ) : (
@@ -167,7 +144,9 @@ export default function WishlistPage({
                   className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
                 />
                 <div className="absolute top-3 start-3">
-                  <Badge variant={item.brandType === "NICHE" ? "niche" : "default"}>
+                  <Badge
+                    variant={item.brandType === "NICHE" ? "niche" : "default"}
+                  >
                     {item.brand}
                   </Badge>
                 </div>
@@ -194,7 +173,11 @@ export default function WishlistPage({
 
                 <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 space-y-4">
                   <div className="flex items-center justify-between">
-                    <PriceDisplay price={item.price} locale={locale} size="md" />
+                    <PriceDisplay
+                      price={item.price}
+                      locale={locale}
+                      size="md"
+                    />
                     {item.compareAtPrice && (
                       <span className="text-xs text-zinc-400 line-through">
                         {item.compareAtPrice} AED
@@ -205,6 +188,11 @@ export default function WishlistPage({
                   <div className="grid grid-cols-2 gap-2">
                     <Button
                       onClick={() => handleAddToCart(item)}
+                      disabled={
+                        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                          item.variantId,
+                        )
+                      }
                       variant="accent"
                       size="sm"
                       className="w-full flex items-center justify-center gap-1.5"
@@ -212,7 +200,12 @@ export default function WishlistPage({
                       <ShoppingBag size={14} />
                       <span>{isAr ? "أضف للحقيبة" : "Add to Bag"}</span>
                     </Button>
-                    <Button asChild variant="outline" size="sm" className="w-full">
+                    <Button
+                      asChild
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                    >
                       <Link href={`/product/${item.slug}`}>
                         {isAr ? "التفاصيل" : "Details"}
                       </Link>
@@ -230,10 +223,14 @@ export default function WishlistPage({
         <div className="space-y-2 text-center md:text-start">
           <div className="inline-flex items-center gap-1.5 text-gold text-xs font-sans font-semibold uppercase tracking-widest">
             <Sparkles size={14} />
-            <span>{isAr ? "مجموعة العينات الملكية" : "5x2ml Bespoke Discovery Set"}</span>
+            <span>
+              {isAr ? "مجموعة العينات الملكية" : "5x2ml Bespoke Discovery Set"}
+            </span>
           </div>
           <h2 className="font-serif text-2xl sm:text-3xl text-zinc-900 dark:text-zinc-100">
-            {isAr ? "جرب العطور على بشرتك قبل اقتناء الزجاجة الكاملة" : "Sample on Skin Before Acquiring Full Bottles"}
+            {isAr
+              ? "جرب العطور على بشرتك قبل اقتناء الزجاجة الكاملة"
+              : "Sample on Skin Before Acquiring Full Bottles"}
           </h2>
           <p className="text-xs sm:text-sm text-zinc-500 font-sans max-w-xl">
             {isAr
@@ -243,7 +240,9 @@ export default function WishlistPage({
         </div>
 
         <Button asChild variant="gold" size="lg">
-          <Link href="/discover/sets">{isAr ? "صمم مجموعتك الآن" : "Build Discovery Set"}</Link>
+          <Link href="/discover/sets">
+            {isAr ? "صمم مجموعتك الآن" : "Build Discovery Set"}
+          </Link>
         </Button>
       </div>
     </div>
