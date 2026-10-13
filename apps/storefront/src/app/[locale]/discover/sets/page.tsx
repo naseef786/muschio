@@ -101,7 +101,7 @@ export default function DiscoverySetsPage({
         compareAtPrice: 350,
         quantity: 1,
         image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80",
-        sizeLabel: "5 × 2ml Vials",
+        sizeLabel: `5 × 2ml Vials: ${selectedSamples.join(", ")}`,
       });
       setTimeout(() => setAddedToCart(false), 3000);
     }
