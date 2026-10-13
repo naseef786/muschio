@@ -85,7 +85,7 @@ export default function AIScentDiscoveryPage({
             nameAr: rec.productName,
             brand: rec.brandName,
             concentration: "Extrait de Parfum",
-            price: null,
+            price: 0,
             matchPercentage: rec.matchPercentage,
             image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
@@ -103,47 +103,6 @@ export default function AIScentDiscoveryPage({
     setResult({ error: isAr ? "تعذر الاتصال بمستشار العطور حالياً. حاول مرة أخرى لاحقاً." : "The scent advisor is currently unavailable. Please try again later.", recommendations: [] });
     setLoading(false);
     return;
-    /* Offline demo content intentionally disabled.
-    setTimeout(() => {
-      setResult({
-        auraTitle: isAr ? "الهالة العطرية: عود بخوري ملكي فاحم" : "Olfactory Aura: Regal Incense & Resinous Oud",
-        analysis: isAr
-          ? "بناءً على تفضيلك للأمسيات الملكية والنفحات الصمغية مع اللبان الحوجري والعود الكمبودي المعتق، قمنا بمطابقة كيمياء طلبك مع أندر خلاصات الإكستري في خزانتنا المعتمدة."
-          : "Based on your preference for aristocratic sillage, Omani Silver Frankincense, and aged Cambodian Agarwood, our DeepSeek sommelier has identified 2 superlative extraits.",
-        recommendations: [
-          {
-            slug: "amouage-interlude-53-man",
-            nameEn: "Interlude 53 Man Extrait de Parfum",
-            nameAr: "إنترلود 53 مان إكستري دو بارفان",
-            brand: "Amouage",
-            concentration: "Extrait de Parfum (53%)",
-            price: 1850,
-            matchPercentage: 99,
-            image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
-            reason: isAr
-              ? "توافق كامل بنسبة 99% بفضل تركيز الزيت 53% المعتق لستة أشهر في مسقط."
-              : "Direct 99% match via 53% perfume oil maceration, Silver Frankincense, and aged Cambodian Oud.",
-            accords: isAr ? ["دخاني", "بلسمي", "عود ملكي"] : ["Smoky", "Balsamic", "Royal Oud"],
-          },
-          {
-            slug: "mfk-baccarat-rouge-540-extrait",
-            nameEn: "Baccarat Rouge 540 Extrait de Parfum",
-            nameAr: "باكارات روج 540 إكستري دو بارفان",
-            brand: "Maison Francis Kurkdjian",
-            concentration: "Extrait de Parfum",
-            price: 1650,
-            matchPercentage: 94,
-            image: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=800&q=85",
-            reason: isAr
-              ? "إشراقة الزعفران الكشميري والعنبر الأشهب لهالة ملكية لا تُنسى في السهرات."
-              : "Luminous Kashmiri Saffron and Grandiflorum Jasmine providing glowing evening projection.",
-            accords: isAr ? ["عنبري", "زعفران", "دافئ"] : ["Amber", "Saffron", "Luminous"],
-          },
-        ],
-      });
-      setLoading(false);
-    }, 1000);
-    */
   };
 
   return (
