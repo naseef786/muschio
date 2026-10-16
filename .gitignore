@@ -39,3 +39,7 @@ logs/
 *.njsproj
 *.sln
 *.sw?
+
+.vercel
+.env*
+!.env.example
