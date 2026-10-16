@@ -30,9 +30,16 @@ pnpm dev
 
 ### Step 4: Quality & Verification Gates
 ```powershell
+# Run linting across all monorepo workspaces
+pnpm run lint
+
 # Run TypeScript typechecks across all monorepo workspaces
 pnpm run typecheck
 
-# Run production build validation
+# Run unit, integration, and security tests
+pnpm run test
+
+# Run production build validation across all workspaces
 pnpm run build
 ```
+
