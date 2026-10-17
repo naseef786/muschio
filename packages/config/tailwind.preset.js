@@ -4,15 +4,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        ivory: "#F8F7F3",
+        nearBlack: "#171917",
+        mutedStone: "#77776F",
+        fineBorder: "#E6E4DE",
         accent: {
-          DEFAULT: "#46523C",
-          hover: "#303B29",
-          subtle: "rgba(70, 82, 60, 0.08)",
+          DEFAULT: "#46513B",
+          hover: "#353E2D",
+          subtle: "rgba(70, 81, 59, 0.08)",
         },
-        gold: {
-          DEFAULT: "#88724C",
-          light: "#D9CEB9",
-          dark: "#6C5838",
+        olive: {
+          DEFAULT: "#46513B",
+          hover: "#353E2D",
+          subtle: "rgba(70, 81, 59, 0.08)",
         },
         luxury: {
           canvas: "var(--bg-canvas)",

@@ -1,29 +1,57 @@
 "use client";
 
-import React, { useState } from "react";
-import Image from "next/image";
+import React, { useState, useMemo } from "react";
 import { Link } from "../../../navigation";
-import { Badge, Button } from "@muschio/ui";
-import { Search, Sparkles, ArrowRight, Globe } from "lucide-react";
+import { Search, ArrowUpRight, Globe } from "lucide-react";
 
 const BRAND_DIRECTORY = [
   {
     slug: "amouage",
     name: "Amouage",
     type: "NICHE",
+    letter: "A",
     countryEn: "Sultanate of Oman",
     countryAr: "سلطنة عُمان",
     year: 1983,
-    descriptionEn: "The Gift of Kings. Celebrated for iconic royal Frankincense, Mountain Rock Rose, and aged Cambodian Oud formulated at up to 53% concentration.",
-    descriptionAr: "هدية الملوك. تشتهر باللبان الحوجري الفضي والورد الجبلي والعود الكمبودي المعتق بتركيز يصل إلى 53%.",
-    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
+    descriptionEn: "The Gift of Kings. Celebrated for royal Silver Frankincense, wild mountain rock rose, and aged Cambodian Oud formulated at up to 53% concentration.",
+    descriptionAr: "هدية الملوك. تشتهر باللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتركيز يصل إلى 53%.",
+    image: "/amouage-placeholder.svg",
     perfumesCount: 14,
     featuredPerfume: "Interlude 53 Man Extrait",
+  },
+  {
+    slug: "clive-christian",
+    name: "Clive Christian",
+    type: "NICHE",
+    letter: "C",
+    countryEn: "London, United Kingdom",
+    countryAr: "لندن، المملكة المتحدة",
+    year: 1872,
+    descriptionEn: "Custodian of the Crown Perfumery Company, bearing royal warrant and Queen Victoria's crown on each crystal stopper.",
+    descriptionAr: "وريثة دار العطور الملكية البريطانية، الممنوحة إذناً ملكياً بوضع تاج الملكة فيكتوريا على زجاجاتها.",
+    image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=85",
+    perfumesCount: 6,
+    featuredPerfume: "No. 1 Masculine Edition",
+  },
+  {
+    slug: "creed",
+    name: "Creed",
+    type: "NICHE",
+    letter: "C",
+    countryEn: "Paris, France",
+    countryAr: "باريس، فرنسا",
+    year: 1760,
+    descriptionEn: "Royal legacy perfumery renowned for artisanal infusion methods and legendary historical royal clientele.",
+    descriptionAr: "إرث عطري ملكي ممتد منذ 1760، يشتهر بأساليب التعتيق اليدوية وخدمة البلاط الملكي الأوروبي.",
+    image: "/product-placeholder.svg",
+    perfumesCount: 10,
+    featuredPerfume: "Aventus Millésime",
   },
   {
     slug: "maison-francis-kurkdjian",
     name: "Maison Francis Kurkdjian",
     type: "NICHE",
+    letter: "M",
     countryEn: "Paris, France",
     countryAr: "باريس، فرنسا",
     year: 2009,
@@ -37,6 +65,7 @@ const BRAND_DIRECTORY = [
     slug: "roja-parfums",
     name: "Roja Parfums",
     type: "NICHE",
+    letter: "R",
     countryEn: "London, United Kingdom",
     countryAr: "لندن، المملكة المتحدة",
     year: 2011,
@@ -47,22 +76,10 @@ const BRAND_DIRECTORY = [
     featuredPerfume: "Elysium Pour Homme Parfum",
   },
   {
-    slug: "xerjoff",
-    name: "Xerjoff",
-    type: "NICHE",
-    countryEn: "Turin, Italy",
-    countryAr: "تورينو، إيطاليا",
-    year: 2003,
-    descriptionEn: "Italian luxury perfumes combining classical craftsmanship, aged oud absolutes, and breathtaking sculptural flacons.",
-    descriptionAr: "دار العطور الإيطالية الفاخرة التي تجمع بين الحرفية العريقة وأندر خلاصات العود في زجاجات منحوتة ساحرة.",
-    image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 12,
-    featuredPerfume: "Alexandria II Eau de Parfum",
-  },
-  {
     slug: "tom-ford",
     name: "Tom Ford",
     type: "DESIGNER",
+    letter: "T",
     countryEn: "New York, USA",
     countryAr: "نيويورك، الولايات المتحدة",
     year: 2005,
@@ -73,32 +90,22 @@ const BRAND_DIRECTORY = [
     featuredPerfume: "Tobacco Vanille Eau de Parfum",
   },
   {
-    slug: "clive-christian",
-    name: "Clive Christian",
+    slug: "xerjoff",
+    name: "Xerjoff",
     type: "NICHE",
-    countryEn: "London, United Kingdom",
-    countryAr: "لندن، المملكة المتحدة",
-    year: 1872,
-    descriptionEn: "Custodian of the Crown Perfumery Company, bearing royal warrant and Queen Victoria's crown on each crystal stopper.",
-    descriptionAr: "وريثة دار العطور الملكية البريطانية، الوحيدة الممنوحة إذناً ملكياً بوضع تاج الملكة فيكتوريا على زجاجاتها.",
-    image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 6,
-    featuredPerfume: "No. 1 Masculine Edition",
-  },
-  {
-    slug: "creed",
-    name: "Creed",
-    type: "NICHE",
-    countryEn: "Paris, France",
-    countryAr: "باريس، فرنسا",
-    year: 1760,
-    descriptionEn: "Royal legacy perfumery renowned for artisanal infusion methods and legendary historical royal clientele.",
-    descriptionAr: "إرث عطري ملكي ممتد منذ 1760، يشتهر بأساليب التعتيق اليدوية وخدمة البلاط الملكي الأوروبي.",
-    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 10,
-    featuredPerfume: "Aventus Millésime",
+    letter: "X",
+    countryEn: "Turin, Italy",
+    countryAr: "تورينو، إيطاليا",
+    year: 2003,
+    descriptionEn: "Italian luxury perfumes combining classical craftsmanship, aged oud absolutes, and breathtaking sculptural flacons.",
+    descriptionAr: "دار العطور الإيطالية الفاخرة التي تجمع بين الحرفية العريقة وأندر خلاصات العود في زجاجات منحوتة ساحرة.",
+    image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+    perfumesCount: 12,
+    featuredPerfume: "Alexandria II Eau de Parfum",
   },
 ];
+
+const ALPHABET = ["ALL", "A", "C", "M", "R", "T", "X"];
 
 export default function BrandsDirectoryPage({
   params: { locale },
@@ -106,129 +113,134 @@ export default function BrandsDirectoryPage({
   params: { locale: "en" | "ar" };
 }) {
   const isAr = locale === "ar";
-  const [selectedType, setSelectedType] = useState<string>("ALL");
+  const c = (en: string, ar: string) => (isAr ? ar : en);
+
+  const [selectedLetter, setSelectedLetter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
-  const filtered = BRAND_DIRECTORY.filter((brand) => {
-    if (selectedType !== "ALL" && brand.type !== selectedType) return false;
-    if (search.trim()) {
-      const q = search.toLowerCase();
-      const matchName = brand.name.toLowerCase().includes(q);
-      const matchCountry = (brand.countryEn + brand.countryAr).toLowerCase().includes(q);
-      if (!matchName && !matchCountry) return false;
-    }
-    return true;
-  });
+  const filtered = useMemo(() => {
+    return BRAND_DIRECTORY.filter((brand) => {
+      if (selectedLetter !== "ALL" && brand.letter !== selectedLetter) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchName = brand.name.toLowerCase().includes(q);
+        const matchCountry = (brand.countryEn + brand.countryAr).toLowerCase().includes(q);
+        if (!matchName && !matchCountry) return false;
+      }
+      return true;
+    });
+  }, [selectedLetter, search]);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-      {/* Header */}
-      <div className="space-y-4 max-w-3xl">
-        <div className="inline-flex items-center gap-2 text-accent text-xs font-sans font-semibold uppercase tracking-widest">
-          <Sparkles size={14} />
-          <span>{isAr ? "دليل الدور العطرية العالمية" : "Haute Maison Directory"}</span>
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
+      {/* 1. Header (Level Shoes Architectural Compact Pattern) */}
+      <div className="pb-6 border-b border-[#E6E4DE] flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow mb-1">
+            {c("HAUTE MAISON DIRECTORY", "دليل دور العطور العالمية")}
+          </span>
+          <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal">
+            {c("The Fragrance Houses", "دور العطور")}
+          </h1>
+          <p className="text-xs sm:text-sm text-[#77776F] mt-1 max-w-xl">
+            {c(
+              "Explore master perfume houses sourced directly from official ateliers in Oman, Paris, London, and Turin.",
+              "استكشف أعرق دور العطور العالمية المستوردة مباشرة من أتيلييهاتها الرسمية في عُمان، باريس، لندن، وتورينو.",
+            )}
+          </p>
         </div>
-        <h1 className="font-serif text-4xl sm:text-6xl text-zinc-900 dark:text-zinc-100 font-light">
-          {isAr ? "أعرق الدور العطرية الملكية والنيش" : "The Prestigious Perfume Houses"}
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-500 font-sans leading-relaxed">
-          {isAr
-            ? "استكشف أساطين صناعة العطور المستوردة مباشرة من دورهم الرسمية في عُمان، باريس، لندن، وتورينو، مع ضمان أصالة بنسبة 100%."
-            : "Explore master houses sourced directly from verified ateliers in Oman, Paris, London, and Turin with 100% certified provenance."}
-        </p>
+        <div className="text-xs text-[#77776F]">
+          <span className="font-medium text-[#171917]">{filtered.length}</span>{" "}
+          {c("Houses", "دور عطور")}
+        </div>
       </div>
 
-      {/* Filter and Search Bar */}
-      <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-        {/* Type Filter Buttons */}
-        <div className="flex flex-wrap gap-2 w-full md:w-auto">
-          {[
-            { id: "ALL", labelEn: "All Houses", labelAr: "كافة الدور" },
-            { id: "NICHE", labelEn: "Haute Niche", labelAr: "دور النيش الفاخرة" },
-            { id: "DESIGNER", labelEn: "Designer Privé", labelAr: "المصممون الحصريون" },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setSelectedType(tab.id)}
-              className={`px-4 py-2 text-xs font-sans uppercase tracking-wider transition-all ${
-                selectedType === tab.id
-                  ? "bg-zinc-950 text-white dark:bg-zinc-100 dark:text-zinc-950 font-semibold"
-                  : "bg-luxury-canvas border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-400"
-              }`}
+      {/* 2. Alphabet Bar & Search Toolbar */}
+      <div className="space-y-4">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-[#E6E4DE]">
+          {/* Alphabet Index */}
+          <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+            {ALPHABET.map((letter) => (
+              <button
+                key={letter}
+                type="button"
+                onClick={() => setSelectedLetter(letter)}
+                className={`min-w-[32px] h-8 px-2 text-xs font-sans transition-colors ${
+                  selectedLetter === letter
+                    ? "bg-[#171917] text-white font-medium"
+                    : "text-[#77776F] hover:text-[#171917] hover:bg-[#F3F1EC]"
+                }`}
+              >
+                {letter === "ALL" ? c("All", "الكل") : letter}
+              </button>
+            ))}
+          </div>
+
+          {/* Search Input */}
+          <div className="relative w-full md:w-64">
+            <input
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={c("Search houses…", "ابحث عن دار…")}
+              className="w-full h-9 ps-8 pe-3 text-xs bg-white border border-[#E6E4DE] text-[#171917] focus:outline-none focus:border-[#171917]"
+            />
+            <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-[#77776F]" />
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Brands Grid (Clean Luxury Presentation) */}
+      {filtered.length === 0 ? (
+        <div className="py-16 text-center text-xs text-[#77776F]">
+          {c("No fragrance houses found matching your search.", "لم يتم العثور على دور عطور مطابقة للبحث.")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filtered.map((brand) => (
+            <Link
+              key={brand.slug}
+              href={`/brands/${brand.slug}`}
+              className="group border border-[#E6E4DE] bg-white p-6 flex flex-col justify-between hover:border-[#171917] transition-all"
             >
-              {isAr ? tab.labelAr : tab.labelEn}
-            </button>
-          ))}
-        </div>
-
-        {/* Search Input */}
-        <div className="relative w-full md:w-72">
-          <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-zinc-400" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder={isAr ? "ابحث باسم الدار أو الدولة..." : "Filter by house or country..."}
-            className="w-full h-10 ps-9 pe-3 text-xs bg-luxury-canvas border border-zinc-300 dark:border-zinc-700 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:border-accent"
-          />
-        </div>
-      </div>
-
-      {/* Brands Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filtered.map((brand) => (
-          <div
-            key={brand.slug}
-            className="group border border-zinc-200 dark:border-zinc-800 bg-luxury-surface hover:border-gold/60 transition-all duration-300 flex flex-col justify-between"
-          >
-            <div className="relative h-64 w-full overflow-hidden bg-zinc-950">
-              <Image
-                src={brand.image}
-                alt={brand.name}
-                fill
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
-              <div className="absolute top-4 start-4">
-                <Badge variant={brand.type === "NICHE" ? "niche" : "default"}>
-                  {brand.type === "NICHE" ? (isAr ? "نيش فاخر" : "Haute Niche") : (isAr ? "مجموعة خاصة" : "Designer Privé")}
-                </Badge>
-              </div>
-              <div className="absolute bottom-4 start-4 end-4">
-                <span className="text-[10px] font-sans uppercase tracking-[0.2em] text-gold font-semibold flex items-center gap-1.5 mb-1">
-                  <Globe size={12} />
-                  <span>{isAr ? brand.countryAr : brand.countryEn} • Est. {brand.year}</span>
-                </span>
-                <h3 className="font-serif text-2xl text-white font-light">{brand.name}</h3>
-              </div>
-            </div>
-
-            <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-                {isAr ? brand.descriptionAr : brand.descriptionEn}
-              </p>
-
-              <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-zinc-400 font-sans block">
-                    {isAr ? "العطر الأيقوني:" : "Signature Scent:"}
+              <div>
+                <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-[0.14em] text-[#77776F] pb-3 border-b border-[#E6E4DE]">
+                  <span className="flex items-center gap-1.5">
+                    <Globe size={11} className="text-[#46513B]" />
+                    <span>{isAr ? brand.countryAr : brand.countryEn}</span>
                   </span>
-                  <span className="text-xs font-serif text-zinc-800 dark:text-zinc-200 font-medium">
+                  <span>Est. {brand.year}</span>
+                </div>
+
+                <div className="py-6 flex items-center justify-between">
+                  <h3 className="font-serif text-2xl text-[#171917] font-normal group-hover:underline">
+                    {brand.name}
+                  </h3>
+                  <ArrowUpRight size={18} className="text-[#77776F] group-hover:text-[#171917] transition-colors" />
+                </div>
+
+                <p className="text-xs text-[#77776F] leading-relaxed line-clamp-3">
+                  {isAr ? brand.descriptionAr : brand.descriptionEn}
+                </p>
+              </div>
+
+              <div className="pt-4 mt-6 border-t border-[#E6E4DE] flex items-center justify-between text-xs">
+                <div>
+                  <span className="text-[10px] uppercase text-[#77776F] block">
+                    {c("Signature Creation", "العطر الأيقوني")}
+                  </span>
+                  <span className="font-medium text-[#171917]">
                     {brand.featuredPerfume}
                   </span>
                 </div>
-
-                <Button asChild variant="outline" size="sm" className="group-hover:border-gold group-hover:text-gold transition-colors">
-                  <Link href={`/brands/${brand.slug}`} className="flex items-center gap-1.5">
-                    <span>{isAr ? "اكتشف الدار" : "Explore House"}</span>
-                    <ArrowRight size={13} className="rtl:rotate-180" />
-                  </Link>
-                </Button>
+                <span className="text-[11px] text-[#46513B] font-medium">
+                  {brand.perfumesCount} {c("Creations", "إصدارات")} →
+                </span>
               </div>
-            </div>
-          </div>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

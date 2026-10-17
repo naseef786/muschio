@@ -1,30 +1,35 @@
 export const LUXURY_THEME = {
   colors: {
-    accent: "#d2042d", // Crimson luxury signature
-    accentHover: "#b70327",
-    gold: "#D4AF37",
+    ivory: "#F8F7F3",
+    white: "#FFFFFF",
+    nearBlack: "#171917",
+    olive: "#46513B",
+    mutedStone: "#77776F",
+    fineBorder: "#E6E4DE",
+    accent: "#46513B", // Refined olive accent
+    accentHover: "#353E2D",
     light: {
-      canvas: "#FFFFFF",
-      surface: "#FAF9F6",
+      canvas: "#F8F7F3",
+      surface: "#FFFFFF",
       surface2: "#F3F1EC",
-      text: "#0F172A",
-      muted: "#64748B",
-      border: "#E2E8F0",
-      borderBold: "#CBD5E1",
+      text: "#171917",
+      muted: "#77776F",
+      border: "#E6E4DE",
+      borderBold: "#D4D1C8",
     },
     dark: {
-      canvas: "#090D14",
-      surface: "#111622",
-      surface2: "#182030",
-      text: "#F8FAFC",
-      muted: "#94A3B8",
-      border: "#1E293B",
-      borderBold: "#334155",
+      canvas: "#121412",
+      surface: "#1A1D1A",
+      surface2: "#222622",
+      text: "#F8F7F3",
+      muted: "#9E9E96",
+      border: "#2C312C",
+      borderBold: "#3E453E",
     },
   },
   typography: {
     serif: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
-    sans: "'Inter', 'Plus Jakarta Sans', system-ui, sans-serif",
+    sans: "'Inter', system-ui, -apple-system, sans-serif",
     arabic: "'Cairo', 'Tajawal', sans-serif",
   },
   regional: {
@@ -34,3 +39,4 @@ export const LUXURY_THEME = {
     defaultLanguage: "en" as const,
   },
 } as const;
+

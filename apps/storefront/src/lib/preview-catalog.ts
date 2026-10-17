@@ -21,7 +21,7 @@ export const PREVIEW_CATALOG: Record<string, any> = {
     ratingAverage: 4.95,
     ratingCount: 142,
     images: [
-      "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=85",
+      "/amouage-placeholder.svg",
       "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
     ],
     variants: [

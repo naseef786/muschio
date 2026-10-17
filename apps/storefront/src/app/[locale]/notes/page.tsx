@@ -1,308 +1,295 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
-import { Search, Sparkles, ArrowRight } from "lucide-react";
-
-
+import { Search, ArrowUpRight } from "lucide-react";
 
 interface NoteItem {
   id: string;
   nameEn: string;
   nameAr: string;
-  slugEn: string;
-  slugAr: string;
+  slug: string;
   family: string;
-  origin: string;
-  descriptionEn?: string;
-  descriptionAr?: string;
-  heroImageUrl?: string;
-  featuredProductCount?: number;
+  familyEn: string;
+  familyAr: string;
+  originEn: string;
+  originAr: string;
+  descriptionEn: string;
+  descriptionAr: string;
+  image: string;
+  perfumeCount: number;
 }
 
 const STATIC_NOTES: NoteItem[] = [
   {
-    id: "note-1",
+    id: "taif-rose",
     nameEn: "Royal Taif Rose",
     nameAr: "ورد الطائف الملكي",
-    slugEn: "taif-rose",
-    slugAr: "ward-taif",
+    slug: "taif-rose",
     family: "floral",
-    origin: "Taif, Saudi Arabia",
-    descriptionEn: "Prized for centuries across Arabia, harvested at high altitude in the mountains of Saudi Arabia. Intensely honeyed, deep, and regal floral essence.",
-    descriptionAr: "يُقدّر منذ قرون في الجزيرة العربية، ويُحصد على ارتفاعات شاهقة في جبال الطائف. خلاصة زهرية ملكية غنية بنفحات العسل العميقة.",
-    heroImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 4,
+    familyEn: "Rare Floral",
+    familyAr: "زهري ملكي",
+    originEn: "Taif, Saudi Arabia",
+    originAr: "جبال الطائف، السعودية",
+    descriptionEn: "Prized for centuries across Arabia, harvested at dawn at 2,000 meters altitude. Deep, honeyed, and intensely regal.",
+    descriptionAr: "يُحصد عند الفجر على ارتفاع ألفي متر في جبال الطائف. خلاصة ملكية عريقة بنفحات عسلية دافئة.",
+    image: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 2,
   },
   {
-    id: "note-2",
+    id: "silver-frankincense",
     nameEn: "Silver Frankincense",
     nameAr: "اللبان الحوجري الفضي",
-    slugEn: "silver-frankincense",
-    slugAr: "luban-hojari",
-    family: "resins",
-    origin: "Dhofar, Sultanate of Oman",
-    descriptionEn: "Harvested exclusively in the Dhofar region of Oman. Resinous, ethereal, balsamic, and sacred incense note with citrusy undertones.",
-    descriptionAr: "يُحصد حصرياً من جبال ظفار في سلطنة عُمان. نوتة بخورية صمغية مقدسة مع لمحات حمضية نقية.",
-    heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
+    slug: "silver-frankincense",
+    family: "resin",
+    familyEn: "Sacred Resin",
+    familyAr: "صمغ وبخور مقدس",
+    originEn: "Dhofar, Sultanate of Oman",
+    originAr: "ظفار، سلطنة عُمان",
+    descriptionEn: "Harvested exclusively from Boswellia sacra trees in Dhofar. Sacred, ethereal, and balsamic with radiant citrus undertones.",
+    descriptionAr: "يُستخرج حصرياً من أشجار اللبان في ظفار العمانية. نوتة بخورية نقية مع لمحات بلسمية حمضية مضيئة.",
+    image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 1,
   },
   {
-    id: "note-3",
+    id: "cambodian-oud",
     nameEn: "Cambodian Agarwood (Oud)",
     nameAr: "دهن عود كمبودي معتق",
-    slugEn: "cambodian-oud",
-    slugAr: "oud-cambodi",
-    family: "woods",
-    origin: "Pursat, Cambodia",
-    descriptionEn: "Aged wild oud heartwood delivering dark, leathery, smoky, and deeply balsamic prestige.",
-    descriptionAr: "خشب عود بري معتق يمنح طابعاً داكناً وجلدياً ودخانياً مفعماً بالفخامة والهيبة.",
-    heroImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 5,
+    slug: "cambodian-oud",
+    family: "woody",
+    familyEn: "Precious Wood",
+    familyAr: "أخشاب وعود نادر",
+    originEn: "Pursat, Cambodia",
+    originAr: "بورسات، كمبوديا",
+    descriptionEn: "Aged wild agarwood heartwood delivering a dark, leathery, resinous, and monumental sillage.",
+    descriptionAr: "خشب عود بري معتق يمنح حضوراً مهيباً بنفحات جلدية ودخانية دافئة لا تضاهى.",
+    image: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 2,
   },
   {
-    id: "note-4",
+    id: "florentine-iris",
     nameEn: "Florentine Iris (Orris)",
     nameAr: "سوسن فلورنسا المخملي",
-    slugEn: "florentine-iris",
-    slugAr: "iris-florence",
+    slug: "florentine-iris",
     family: "floral",
-    origin: "Tuscany, Italy",
-    descriptionEn: "Among the most expensive raw materials in perfumery, aged for three years. Powdery, violet-like, sophisticated, and aristocratically soft.",
-    descriptionAr: "من أثمن المواد الخام في عالم العطور، يُعتق لمدة ثلاث سنوات. بودري وناعم كالحرير بأناقة أرستقراطية.",
-    heroImageUrl: "https://images.unsplash.com/photo-1528722828814-77b9b83aafb2?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
+    familyEn: "Powdery Floral",
+    familyAr: "زهور بودرية",
+    originEn: "Tuscany, Italy",
+    originAr: "توسكانا، إيطاليا",
+    descriptionEn: "Aged for three full years before distillation. Powdery, violet-like, sophisticated, and aristocratically soft.",
+    descriptionAr: "تُعتق جذوره لثلاث سنوات كاملة قبل التقطير. نوتة بودرية مخملية مترفة تفيض بالنقاء.",
+    image: "https://images.unsplash.com/photo-1528722828814-77b9b83aafb2?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 2,
   },
   {
-    id: "note-5",
+    id: "golden-ambergris",
     nameEn: "Golden Ambergris",
     nameAr: "العنبر الأشهب الذهبي",
-    slugEn: "golden-ambergris",
-    slugAr: "anbar-dahabi",
+    slug: "golden-ambergris",
     family: "amber",
-    origin: "Arabian Sea",
-    descriptionEn: "Oceanic, salty, warm, and radiant natural fixative that confers magnetic longevity and sensual radiance.",
-    descriptionAr: "عنبر بحري دافئ وإشعاعي يمنح العطر ثباتاً أسطورياً وهالة مغناطيسية آسرة.",
-    heroImageUrl: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 4,
+    familyEn: "Oceanic Amber",
+    familyAr: "عنبر بحري",
+    originEn: "Arabian Sea",
+    originAr: "بحر العرب",
+    descriptionEn: "Oceanic, salty-warm, and solar natural fixative conferring monolithic longevity and crystalline radiance.",
+    descriptionAr: "عنبر بحري شمسي أصيل يمنح التكوين العطري ثباتاً ممتداً وإشراقة بلورية جذابة.",
+    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 3,
   },
   {
-    id: "note-6",
+    id: "calabrian-bergamot",
     nameEn: "Calabrian Bergamot",
-    nameAr: "برغموت كالابريا الإيطالي",
-    slugEn: "calabrian-bergamot",
-    slugAr: "bergamot-calabria",
+    nameAr: "برغموت كالابريا النقي",
+    slug: "calabrian-bergamot",
     family: "citrus",
-    origin: "Calabria, Italy",
-    descriptionEn: "Cold-pressed in Southern Italy. Sparkling, crisp, sun-drenched, and elegantly zesty opening note.",
-    descriptionAr: "معصور على البارد في جنوب إيطاليا. نوتة افتتاحية مشرقة ومبهجة برائحة الحمضيات المشمسة.",
-    heroImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
+    familyEn: "Sparkling Citrus",
+    familyAr: "حمضيات منعشة",
+    originEn: "Calabria, Italy",
+    originAr: "كالابريا، إيطاليا",
+    descriptionEn: "Cold-pressed in Southern Italy. Sparkling, sun-drenched, crisp, and aristocratic citrus opening.",
+    descriptionAr: "معصور على البارد في مزارع جنوب إيطاليا. افتتاحية حمضية مبهجة ومشرقة كشمس الصباح.",
+    image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 2,
   },
   {
-    id: "note-7",
+    id: "bourbon-vanilla",
     nameEn: "Madagascar Bourbon Vanilla",
     nameAr: "فانيليا بوربون مدغشقر",
-    slugEn: "bourbon-vanilla",
-    slugAr: "vanilla-bourbon",
+    slug: "bourbon-vanilla",
     family: "gourmand",
-    origin: "Madagascar",
-    descriptionEn: "Dark, gourmand, woody, and liquor-like vanilla bean absolute with caramel and balsamic nuances.",
-    descriptionAr: "خلاصة حبوب الفانيليا الداكنة ذات الطابع الخشبي اللذيذ مع لمحات الكراميل والبلسم الدافئ.",
-    heroImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
+    familyEn: "Rich Gourmand",
+    familyAr: "فانيليا وغورماند",
+    originEn: "Madagascar",
+    originAr: "مدغشقر",
+    descriptionEn: "Aged black vanilla bean absolute delivering creamy, woody, and liquor-like sweetness.",
+    descriptionAr: "خلاصة حبوب الفانيليا المعتقة تمنح حلاوة بلسمية خشبية كريمية ساحرة.",
+    image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 2,
   },
   {
-    id: "note-8",
-    nameEn: "Guatemalan Cardamom",
-    nameAr: "هيل غواتيمالا الأخضر",
-    slugEn: "guatemalan-cardamom",
-    slugAr: "hail-guatemala",
-    family: "spices",
-    origin: "Cobán, Guatemala",
-    descriptionEn: "Aromatic, cool-spicy, refined, and invigorating note that bridges freshness and warmth.",
-    descriptionAr: "نوتة حارة باردة عطرية وفاخرة تمنح العطر توازناً فريداً بين الانتعاش والدفء.",
-    heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
-  },
-  {
-    id: "note-9",
-    nameEn: "Tuscan Leather",
-    nameAr: "الجلد التوسكاني الفاخر",
-    slugEn: "tuscan-leather",
-    slugAr: "jild-tuscany",
-    family: "leather",
-    origin: "Tuscany, Italy",
-    descriptionEn: "Rich, supple, artisanal leather accord reminiscent of bespoke Florentine saddle-craft.",
-    descriptionAr: "عبق الجلد الطبيعي الفاخر والمترف المستوحى من ورش الجلود الحرفية في فلورنسا.",
-    heroImageUrl: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 3,
-  },
-  {
-    id: "note-10",
+    id: "kashmiri-saffron",
     nameEn: "Kashmiri Saffron",
     nameAr: "زعفران كشمير الأحمر",
-    slugEn: "kashmiri-saffron",
-    slugAr: "zaafaran-kashmir",
-    family: "spices",
-    origin: "Pampore, Kashmir",
-    descriptionEn: "The red gold of spices. Bittersweet, metallic-leather, warm, and distinctly opulent.",
-    descriptionAr: "الذهب الأحمر. نوتة دافئة ذات طابع جلدي حلو ومخملي تضفي طابع الفخامة الشرقية الملكية.",
-    heroImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=80",
-    featuredProductCount: 2,
+    slug: "kashmiri-saffron",
+    family: "spice",
+    familyEn: "Opulent Spice",
+    familyAr: "توابل شرقية",
+    originEn: "Pampore, Kashmir",
+    originAr: "بامبور، كشمير",
+    descriptionEn: "The red gold of spices. Bittersweet, metallic, warm-leathery, and distinctly opulent.",
+    descriptionAr: "ذهب التوابل الأحمر. نوتة دافئة ذات طابع جلدي حلو تضفي عمقاً ملكياً آسراً.",
+    image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=80",
+    perfumeCount: 1,
   },
 ];
 
-export default function NotesIndexPage({ params: { locale } }: { params: { locale: "en" | "ar" } }) {
+const FAMILIES = [
+  { id: "all", labelEn: "All Notes", labelAr: "كل النوتات" },
+  { id: "floral", labelEn: "Floral", labelAr: "زهري" },
+  { id: "woody", labelEn: "Woody & Oud", labelAr: "أخشاب وعود" },
+  { id: "amber", labelEn: "Amber", labelAr: "عنبر" },
+  { id: "resin", labelEn: "Resin & Incense", labelAr: "صموغ وبخور" },
+  { id: "citrus", labelEn: "Citrus", labelAr: "حمضيات" },
+  { id: "spice", labelEn: "Spice", labelAr: "توابل" },
+  { id: "gourmand", labelEn: "Gourmand", labelAr: "غورماند" },
+];
+
+export default function NotesIndexPage({
+  params: { locale },
+}: {
+  params: { locale: "en" | "ar" };
+}) {
   const isAr = locale === "ar";
+  const c = (en: string, ar: string) => (isAr ? ar : en);
+
   const [search, setSearch] = useState("");
   const [selectedFamily, setSelectedFamily] = useState("all");
 
-  const families = [
-    { id: "all", labelEn: "All Notes", labelAr: "كافة النوتات" },
-    { id: "resins", labelEn: "Incense & Resins", labelAr: "بخور وصموغ" },
-    { id: "woods", labelEn: "Precious Oud & Woods", labelAr: "أخشاب وعود" },
-    { id: "floral", labelEn: "Rare Florals", labelAr: "زهور ملكية" },
-    { id: "amber", labelEn: "Amber & Ambergris", labelAr: "عنبر" },
-    { id: "spices", labelEn: "Warm Spices", labelAr: "توابل دافئة" },
-  ];
-
-  const filteredNotes = STATIC_NOTES.filter((n) => {
-    const q = search.toLowerCase();
-    const matchesSearch =
-      n.nameEn.toLowerCase().includes(q) ||
-      n.nameAr.includes(q) ||
-      (n.descriptionEn && n.descriptionEn.toLowerCase().includes(q));
-
-    const matchesFamily = selectedFamily === "all" || n.family === selectedFamily;
-    return matchesSearch && matchesFamily;
-  });
+  const filteredNotes = useMemo(() => {
+    return STATIC_NOTES.filter((n) => {
+      if (selectedFamily !== "all" && n.family !== selectedFamily) return false;
+      if (search.trim()) {
+        const q = search.toLowerCase();
+        const matchesName = n.nameEn.toLowerCase().includes(q) || n.nameAr.includes(q);
+        const matchesDesc = n.descriptionEn.toLowerCase().includes(q) || n.descriptionAr.includes(q);
+        const matchesOrigin = n.originEn.toLowerCase().includes(q) || n.originAr.includes(q);
+        if (!matchesName && !matchesDesc && !matchesOrigin) return false;
+      }
+      return true;
+    });
+  }, [selectedFamily, search]);
 
   return (
-    <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
-      {/* Background glowing orbs */}
-      <div className="ambient-glow-gold top-10 start-10" />
-      <div className="ambient-glow-crimson top-[500px] end-10" />
-
-      {/* Editorial Header */}
-      <div className="glass-panel p-8 sm:p-12 rounded-3xl space-y-6 border border-white/20 shadow-2xl">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full glass-pill text-accent text-xs font-sans uppercase tracking-[0.2em] font-bold">
-          <Sparkles size={14} />
-          <span>{isAr ? "دليل النوتات العطرية v9.0.0" : "Olfactory Library Graph v9.0.0"}</span>
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
+      {/* 1. Header (Level Shoes Architectural Pattern) */}
+      <div className="pb-6 border-b border-[#E6E4DE] flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow mb-1">
+            {c("THE OLFACTORY LIBRARY", "المكتبة العطرية والمكونات")}
+          </span>
+          <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal">
+            {c("Scent Notes & Raw Essences", "نوتات العطور والمكونات النادرة")}
+          </h1>
+          <p className="text-xs sm:text-sm text-[#77776F] mt-1 max-w-xl">
+            {c(
+              "Explore master perfumery through verified raw extracts, from Taif Mountain Rose to sacred Omani Frankincense.",
+              "اكتشف أسرار تركيب العطور من خلال المواد الطبيعية النادرة المستخرجة من أخصب بيئات العالم.",
+            )}
+          </p>
         </div>
-        <h1 className="font-serif text-4xl sm:text-6xl text-zinc-950 dark:text-white font-light leading-tight">
-          {isAr ? (
-            <>
-              دليل النوتات <span className="luxury-gradient-text font-normal italic">والمكونات النادرة</span>
-            </>
-          ) : (
-            <>
-              The Signature <span className="luxury-gradient-text font-normal italic">Fragrance Notes</span>
-            </>
-          )}
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-300 font-sans leading-relaxed max-w-3xl">
-          {isAr
-            ? "استكشف عالم العطور النيش عبر المكونات الطبيعية النادرة، وتعرّف على أسرار الهرم العطري والعطور الملكية التي ترتكز على كل نوتة معتمدة."
-            : "Explore master perfumery through singular rare ingredients, from high-altitude Taif Rose to sacred Dhofari Silver Frankincense. Click any note to view only authenticated, published perfumes containing that extract."}
-        </p>
-
-        {/* Search and Category Filters */}
-        <div className="space-y-4 pt-4 border-t border-white/10">
-          <div className="relative max-w-md">
-            <Search size={18} className="absolute start-4 top-3.5 text-gold" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={
-                isAr
-                  ? "ابحث عن نوتة عطرية (مثل: عود، لبان، سوسن)..."
-                  : "Search note library (e.g. Oud, Frankincense, Iris)..."
-              }
-              className="w-full h-12 ps-12 pe-4 rounded-xl glass-input text-xs sm:text-sm font-sans"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-2 pt-2">
-            {families.map((f) => {
-              const active = selectedFamily === f.id;
-              return (
-                <button
-                  key={f.id}
-                  onClick={() => setSelectedFamily(f.id)}
-                  className={`px-4 py-2 rounded-full text-xs font-sans transition-all ${
-                    active
-                      ? "bg-gold text-zinc-950 font-bold shadow-md ring-2 ring-gold/40"
-                      : "glass-pill text-zinc-700 dark:text-zinc-300 hover:text-gold"
-                  }`}
-                >
-                  {isAr ? f.labelAr : f.labelEn}
-                </button>
-              );
-            })}
-          </div>
+        <div className="text-xs text-[#77776F]">
+          <span className="font-medium text-[#171917]">{filteredNotes.length}</span>{" "}
+          {c("Notes", "نوتة")}
         </div>
       </div>
 
-      {/* Notes Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-        {filteredNotes.map((note) => (
-          <Link
-            key={note.id}
-            href={`/notes/${note.slugEn}`}
-            className="group glass-card rounded-3xl overflow-hidden flex flex-col justify-between border border-white/15 shadow-xl transition-all duration-500 hover:-translate-y-2"
-          >
-            <div className="relative h-64 w-full bg-zinc-950 overflow-hidden">
-              {note.heroImageUrl ? (
+      {/* 2. Scent Family Navigation & Search Toolbar */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-[#E6E4DE]">
+        {/* Scent Family Filter Pills */}
+        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+          {FAMILIES.map((fam) => (
+            <button
+              key={fam.id}
+              type="button"
+              onClick={() => setSelectedFamily(fam.id)}
+              className={`px-3 py-1.5 text-xs font-sans whitespace-nowrap transition-colors ${
+                selectedFamily === fam.id
+                  ? "bg-[#171917] text-white font-medium"
+                  : "bg-white border border-[#E6E4DE] text-[#77776F] hover:text-[#171917] hover:border-[#171917]"
+              }`}
+            >
+              {c(fam.labelEn, fam.labelAr)}
+            </button>
+          ))}
+        </div>
+
+        {/* Search Input */}
+        <div className="relative w-full md:w-64">
+          <input
+            type="search"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={c("Search notes (e.g. Oud, Rose)…", "ابحث عن نوتة (عود، لبان)…")}
+            className="w-full h-9 ps-8 pe-3 text-xs bg-white border border-[#E6E4DE] text-[#171917] focus:outline-none focus:border-[#171917]"
+          />
+          <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-[#77776F]" />
+        </div>
+      </div>
+
+      {/* 3. Notes Grid (Level Shoes Clean Card Hierarchy) */}
+      {filteredNotes.length === 0 ? (
+        <div className="py-16 text-center text-xs text-[#77776F]">
+          {c("No scent notes found matching your search.", "لم يتم العثور على نوتات مطابقة للبحث.")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {filteredNotes.map((note) => (
+            <Link
+              key={note.slug}
+              href={`/notes/${note.slug}`}
+              className="group border border-[#E6E4DE] bg-white flex flex-col justify-between hover:border-[#171917] transition-all"
+            >
+              <div className="relative aspect-[4/3] w-full bg-[#F3F1EC] border-b border-[#E6E4DE] overflow-hidden">
                 <Image
-                  src={note.heroImageUrl}
-                  alt={note.nameEn}
+                  src={note.image}
+                  alt={c(note.nameEn, note.nameAr)}
                   fill
-                  className="object-cover object-center group-hover:scale-110 transition-transform duration-700 opacity-80"
+                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center font-serif text-3xl text-gold italic">
-                  ✦
+                <span className="absolute top-2.5 inset-inline-start-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-white/95 text-[#171917] border border-[#E6E4DE]">
+                  {c(note.familyEn, note.familyAr)}
+                </span>
+              </div>
+
+              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+                <div>
+                  <span className="text-[10px] font-sans uppercase tracking-[0.12em] text-[#77776F] block">
+                    {c(note.originEn, note.originAr)}
+                  </span>
+                  <h3 className="font-serif text-lg text-[#171917] font-normal group-hover:underline mt-1">
+                    {c(note.nameEn, note.nameAr)}
+                  </h3>
+                  <p className="text-xs text-[#77776F] leading-relaxed line-clamp-2 mt-2">
+                    {c(note.descriptionEn, note.descriptionAr)}
+                  </p>
                 </div>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-              <div className="absolute top-4 start-4">
-                <span className="px-3 py-1 rounded-full glass-pill text-[10px] font-sans font-bold text-gold uppercase tracking-wider">
-                  {note.origin}
-                </span>
-              </div>
-              <div className="absolute bottom-4 start-4 end-4">
-                <span className="text-[10px] uppercase font-sans tracking-widest text-gold/80 font-medium">
-                  {isAr ? "خلاصة ملكية" : "Haute Extract"}
-                </span>
-                <h3 className="font-serif text-2xl text-white group-hover:text-gold transition-colors">
-                  {isAr ? note.nameAr : note.nameEn}
-                </h3>
-              </div>
-            </div>
 
-            <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
-              <p className="text-xs text-zinc-600 dark:text-zinc-300 font-sans leading-relaxed line-clamp-3">
-                {isAr ? note.descriptionAr : note.descriptionEn}
-              </p>
-
-              <div className="pt-4 border-t border-white/10 flex items-center justify-between">
-                <span className="text-[11px] font-sans text-zinc-400 font-mono">
-                  {isAr
-                    ? `${note.featuredProductCount || 3} عطور مسجلة`
-                    : `${note.featuredProductCount || 3} Authenticated SKUs`}
-                </span>
-                <span className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-wider text-gold font-bold group-hover:translate-x-1 transition-transform">
-                  <span>{isAr ? "استكشف العطور" : "Explore Extraits"}</span>
-                  <ArrowRight size={14} />
-                </span>
+                <div className="pt-3 border-t border-[#E6E4DE] flex items-center justify-between text-xs">
+                  <span className="text-[#46513B] font-medium">
+                    {note.perfumeCount} {c("Perfumes", "عطور")}
+                  </span>
+                  <span className="text-[#171917] group-hover:underline flex items-center gap-1">
+                    <span>{c("Explore", "استكشف")}</span>
+                    <ArrowUpRight size={13} />
+                  </span>
+                </div>
               </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

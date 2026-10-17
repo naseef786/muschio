@@ -1,1 +1,35 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="400" height="500" viewBox="0 0 400 500"><rect width="400" height="500" fill="#ede6db"/><g fill="none" stroke="#46523c" stroke-width="3"><rect x="145" y="165" width="110" height="190" rx="6"/><rect x="170" y="125" width="60" height="40" rx="2"/><rect x="163" y="215" width="74" height="65"/></g><text x="200" y="250" text-anchor="middle" font-family="serif" font-size="13" fill="#46523c">MUSCHIO</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <rect width="400" height="500" fill="#F8F7F3"/>
+  <g transform="translate(200, 240)">
+    <!-- Aura shadow -->
+    <ellipse cx="0" cy="180" rx="90" ry="12" fill="#E6E4DE" opacity="0.6"/>
+    
+    <!-- Heavy Glass Flacon Base -->
+    <rect x="-70" y="-80" width="140" height="230" rx="2" fill="#FFFFFF" stroke="#E6E4DE" stroke-width="1.5"/>
+    <!-- Glass Wall Highlights -->
+    <rect x="-65" y="-75" width="130" height="220" rx="1" fill="#FAF9F6"/>
+    <!-- Fragrance Liquid Chamber -->
+    <rect x="-56" y="-50" width="112" height="185" rx="2" fill="#F3EFE6" stroke="#EAE5DA" stroke-width="1"/>
+    <!-- Liquid Level -->
+    <path d="M-56, -10 Q0, -8 56, -10 L56, 135 L-56, 135 Z" fill="#EADFC9" opacity="0.85"/>
+    
+    <!-- Front Minimalist Label Plaque -->
+    <rect x="-42" y="20" width="84" height="60" fill="#FFFFFF" stroke="#171917" stroke-width="0.8"/>
+    <text x="0" y="44" font-family="'Inter', sans-serif" font-size="7" font-weight="600" letter-spacing="2.5" fill="#171917" text-anchor="middle">MUSCHIO</text>
+    <line x1="-22" y1="52" x2="22" y2="52" stroke="#46513B" stroke-width="0.75"/>
+    <text x="0" y="66" font-family="'Inter', sans-serif" font-size="5" font-weight="500" letter-spacing="1.5" fill="#77776F" text-anchor="middle">EXTRAIT DE PARFUM</text>
+    
+    <!-- Flacon Shoulder & Collar -->
+    <path d="M-70, -80 L-22, -100 L22, -100 L70, -80 Z" fill="#FFFFFF" stroke="#E6E4DE" stroke-width="1.5"/>
+    <!-- Neck -->
+    <rect x="-16" y="-120" width="32" height="20" fill="#D4D1C8" stroke="#BAB6AB" stroke-width="1"/>
+    <!-- Gold Ring -->
+    <rect x="-18" y="-106" width="36" height="5" fill="#46513B" rx="1"/>
+    
+    <!-- Architectural Faceted Stopper -->
+    <polygon points="-28,-120 28,-120 22,-165 -22,-165" fill="#171917" stroke="#171917" stroke-width="1"/>
+    <!-- Stopper Facet Light Reflection -->
+    <polygon points="-12,-122 12,-122 8,-163 -8,-163" fill="#2C312C" opacity="0.7"/>
+    <line x1="0" y1="-165" x2="0" y2="-120" stroke="#46513B" stroke-width="1" opacity="0.8"/>
+  </g>
+</svg>

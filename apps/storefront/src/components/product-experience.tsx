@@ -1,202 +1,600 @@
 "use client";
-import { useState } from "react";
+
+import React, { useState } from "react";
 import Image from "next/image";
-import { StorefrontProduct } from "@muschio/types";
-import { PriceDisplay } from "@muschio/ui";
 import { Link } from "../navigation";
-import { useCart } from "../context/cart-context";
-export function ProductExperience({
-  product,
-  locale,
-  preview,
-}: {
-  product: StorefrontProduct;
+import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package } from "lucide-react";
+import { PriceDisplay } from "@muschio/ui";
+import { ProductCard } from "./product-card";
+
+export interface ProductDetailProps {
+  product: {
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    descriptionEn: string;
+    descriptionAr: string;
+    concentration: string;
+    brand: { name: string; slug: string; type: string };
+    origin?: string;
+    perfumer?: string;
+    perfumerBio?: string;
+    longevity?: string;
+    sillage?: string;
+    images: string[];
+    variants: Array<{
+      id: string;
+      sku: string;
+      sizeLabelEn: string;
+      sizeLabelAr: string;
+      price: number;
+      compareAtPrice?: number | null;
+      isSampleVial?: boolean;
+      availableQuantity?: number;
+    }>;
+    notes?: Array<{
+      id: string;
+      name: string;
+      slug: string;
+      position: "TOP" | "HEART" | "BASE";
+    }>;
+  };
+  relatedProducts?: Array<any>;
+  houseProducts?: Array<any>;
   locale: "en" | "ar";
   preview: boolean;
-}) {
-  const c = (en: string, ar: string) => (locale === "ar" ? ar : en);
-  const [variantId, setVariantId] = useState(
-    product.variants.find((v) => !v.isSampleVial)?.id,
+}
+
+export function ProductExperience({
+  product,
+  relatedProducts = [],
+  houseProducts = [],
+  locale,
+  preview,
+}: ProductDetailProps) {
+  const isAr = locale === "ar";
+  const c = (en: string, ar: string) => (isAr ? ar : en);
+
+  const [selectedVariantId, setSelectedVariantId] = useState(
+    product.variants.find((v) => !v.isSampleVial)?.id || product.variants[0]?.id,
   );
-  const [image, setImage] = useState(product.images[0]);
-  const [quantity, setQuantity] = useState(1);
-  const cart = useCart();
-  const variant = product.variants.find((v) => v.id === variantId);
-  const available =
-    !preview &&
-    !!variant &&
-    !variant.isSampleVial &&
-    variant.availableQuantity >= quantity;
-  const approvedImage =
-    image &&
-    /^https:\/\/(images\.unsplash\.com|media\.muschio\.luxury)\//.test(image);
-  async function add() {
-    if (!available || !variant) return;
-    await cart.addItem({
-      variantId: variant.id,
-      slug: product.slug,
-      title: product.nameEn,
-      titleAr: product.nameAr,
-      brand: product.brand.name,
-      price: variant.price,
-      compareAtPrice: variant.compareAtPrice,
-      quantity,
-      image: approvedImage ? image : "/product-placeholder.svg",
-      sizeLabel: variant.sizeLabelEn,
-    });
-  }
+  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+  const [isWishlisted, setIsWishlisted] = useState(false);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Accordion open states
+  const [openAccordion, setOpenAccordion] = useState<string | null>("pyramid");
+
+  const toggleAccordion = (id: string) => {
+    setOpenAccordion((prev) => (prev === id ? null : id));
+  };
+
+  const selectedVariant =
+    product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
+
+  const images = product.images.length > 0 ? product.images : ["/product-placeholder.svg"];
+  const currentImage: string = images[selectedImageIndex] || images[0] || "/product-placeholder.svg";
+
+  const handleShare = async () => {
+    if (typeof window !== "undefined") {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        setCopiedLink(true);
+        setTimeout(() => setCopiedLink(false), 2500);
+      } catch {
+        // Fallback
+      }
+    }
+  };
+
+  // Group notes into Top, Heart, Base
+  const topNotes = product.notes?.filter((n) => n.position === "TOP") || [];
+  const heartNotes = product.notes?.filter((n) => n.position === "HEART") || [];
+  const baseNotes = product.notes?.filter((n) => n.position === "BASE") || [];
+
+  const brandSlug = product.brand.slug || product.brand.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+
   return (
-    <div className="editorial-section">
-      <nav className="text-xs mb-8" aria-label={c("Breadcrumb", "مسار التصفح")}>
-        <Link href="/shop">{c("Collection", "المجموعة")}</Link> /{" "}
-        {product.brand.name}
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10">
+      {/* 1. Breadcrumbs (Level Shoes Compact Pattern) */}
+      <nav aria-label="Breadcrumb" className="text-[11px] sm:text-[12px] text-[#77776F] mb-6 md:mb-8">
+        <ol className="flex items-center gap-2 flex-wrap">
+          <li>
+            <Link href="/" className="hover:text-[#171917] transition-colors">
+              {c("Home", "الرئيسية")}
+            </Link>
+          </li>
+          <li>/</li>
+          <li>
+            <Link href="/shop" className="hover:text-[#171917] transition-colors">
+              {c("Fragrance", "العطور")}
+            </Link>
+          </li>
+          <li>/</li>
+          <li>
+            <Link href={`/brands/${brandSlug}`} className="hover:text-[#171917] transition-colors">
+              {product.brand.name}
+            </Link>
+          </li>
+          <li>/</li>
+          <li className="text-[#171917] font-medium truncate max-w-[200px] sm:max-w-none">
+            {c(product.nameEn, product.nameAr)}
+          </li>
+        </ol>
       </nav>
-      {preview && (
-        <p role="status" className="delivery-status mb-8">
-          {c(
-            "Collection preview. Live stock and online purchasing are unavailable for this item.",
-            "معاينة المجموعة. المخزون المباشر والشراء عبر الإنترنت غير متاحين لهذا المنتج.",
-          )}
-        </p>
-      )}
-      <div className="grid md:grid-cols-2 gap-10">
-        <div>
-          <div className="relative aspect-[4/5] bg-luxury-surface2">
-            {approvedImage ? (
+
+      {/* 2. Main Product Section (2-Column Desktop Grid) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 pb-16 border-b border-[#E6E4DE]">
+        {/* Left Column: Gallery (7 Cols Desktop) */}
+        <div className="lg:col-span-7">
+          <div className="lg:sticky lg:top-24 space-y-4">
+            {/* Primary Main Image Canvas (4:5 Ratio, Contain, Never Cropped) */}
+            <div className="relative aspect-[4/5] w-full bg-[#F3F1EC] border border-[#E6E4DE] overflow-hidden flex items-center justify-center">
               <Image
-                src={image}
+                src={currentImage}
                 alt={c(product.nameEn, product.nameAr)}
                 fill
                 priority
-                sizes="(max-width:760px) 100vw, 50vw"
-                className="object-cover"
+                sizes="(max-width: 1024px) 100vw, 55vw"
+                className="object-contain p-6 sm:p-10 md:p-14"
               />
-            ) : (
-              <div className="h-full flex items-center justify-center text-sm">
-                {c("Product image unavailable", "صورة المنتج غير متاحة")}
-              </div>
-            )}
-          </div>
-          {product.images.length > 1 && (
-            <div className="flex flex-wrap gap-3 mt-4">
-              {product.images.map((src, i) => (
-                <button
-                  className="border border-luxury-border px-4 py-3 text-xs"
-                  key={src}
-                  onClick={() => setImage(src)}
-                  aria-pressed={image === src}
-                >
-                  {c("View", "صورة")} {i + 1}
-                </button>
-              ))}
+
+              {/* Wishlist Button on Gallery Canvas */}
+              <button
+                type="button"
+                onClick={() => setIsWishlisted((prev) => !prev)}
+                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                className={`absolute top-4 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border shadow-sm transition-all ${
+                  isWishlisted
+                    ? "bg-white text-[#d2042d] border-[#E6E4DE]"
+                    : "bg-white/90 text-[#77776F] border-[#E6E4DE] hover:text-[#171917] hover:bg-white"
+                }`}
+              >
+                <Heart size={18} className={isWishlisted ? "fill-current text-[#d2042d]" : ""} />
+              </button>
+
+              {/* Share Button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                aria-label="Share product"
+                className="absolute top-16 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border bg-white/90 text-[#77776F] border-[#E6E4DE] hover:text-[#171917] hover:bg-white shadow-sm transition-all"
+              >
+                {copiedLink ? <Check size={16} className="text-[#46513B]" /> : <Share2 size={16} />}
+              </button>
             </div>
-          )}
-        </div>
-        <div className="space-y-6">
-          <span className="eyebrow">{product.brand.name}</span>
-          <h1 className="font-serif text-4xl sm:text-5xl">
-            {c(product.nameEn, product.nameAr)}
-          </h1>
-          <p className="text-sm leading-relaxed">
-            {product.concentration.replaceAll("_", " ")}
-          </p>
-          <p className="text-sm leading-7">
-            {c(product.descriptionEn, product.descriptionAr)}
-          </p>
-          {variant && (
-            <PriceDisplay
-              price={variant.price}
-              compareAtPrice={variant.compareAtPrice}
-              locale={locale}
-              size="lg"
-            />
-          )}
-          <fieldset>
-            <legend className="text-sm mb-3">
-              {c("Choose your size", "اختر الحجم")}
-            </legend>
-            <div className="flex flex-wrap gap-3">
-              {product.variants
-                .filter((v) => !v.isSampleVial)
-                .map((v) => (
-                  <label
-                    key={v.id}
-                    className="flex gap-2 items-center border border-luxury-border p-3"
+
+            {/* Thumbnail Row (Desktop & Tablet) */}
+            {images.length > 1 && (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {images.map((src, idx) => (
+                  <button
+                    key={src + idx}
+                    type="button"
+                    onClick={() => setSelectedImageIndex(idx)}
+                    aria-label={`View image ${idx + 1}`}
+                    className={`relative w-20 h-24 aspect-[4/5] bg-[#F3F1EC] border transition-all flex-shrink-0 ${
+                      selectedImageIndex === idx
+                        ? "border-[#171917] ring-1 ring-[#171917]"
+                        : "border-[#E6E4DE] opacity-75 hover:opacity-100"
+                    }`}
                   >
-                    <input
-                      type="radio"
-                      name="variant"
-                      value={v.id}
-                      checked={v.id === variantId}
-                      onChange={() => {
-                        setVariantId(v.id);
-                        setQuantity(1);
-                      }}
+                    <Image
+                      src={src}
+                      alt={`View ${idx + 1}`}
+                      fill
+                      sizes="80px"
+                      className="object-contain p-2"
                     />
-                    {c(v.sizeLabelEn, v.sizeLabelAr)}
-                  </label>
-                ))}
-            </div>
-          </fieldset>
-          <div>
-            <label htmlFor="product-quantity" className="block text-sm mb-2">
-              {c("Quantity", "الكمية")}
-            </label>
-            <input
-              id="product-quantity"
-              type="number"
-              min={1}
-              max={Math.min(99, variant?.availableQuantity || 1)}
-              value={quantity}
-              onChange={(e) =>
-                setQuantity(
-                  Math.max(1, Math.min(99, Number(e.target.value) || 1)),
-                )
-              }
-              className="glass-input p-3 w-24"
-            />
-          </div>
-          <button
-            type="button"
-            onClick={add}
-            disabled={!available}
-            className="editorial-button w-full disabled:opacity-50"
-          >
-            {preview
-              ? c("Online purchasing coming soon", "الشراء عبر الإنترنت قريباً")
-              : available
-                ? c("Add to bag", "أضف إلى الحقيبة")
-                : c("Currently unavailable", "غير متاح حالياً")}
-          </button>
-          <p className="text-xs leading-6">
-            {c(
-              "Availability and prices are verified at checkout. Delivery details depend on your destination.",
-              "يتم التحقق من التوفر والأسعار عند إتمام الشراء. تعتمد تفاصيل التوصيل على وجهتك.",
-            )}
-          </p>
-          <Link href="/delivery" className="editorial-text-link">
-            {c("Delivery information", "معلومات التوصيل")}
-          </Link>
-          {!!product.notes.length && (
-            <section className="border-t border-luxury-border pt-5">
-              <h2 className="font-serif text-2xl mb-4">
-                {c("The scent notes", "نوتات العطر")}
-              </h2>
-              <div className="flex flex-wrap gap-3">
-                {product.notes.map((note) => (
-                  <Link
-                    key={note.slug + note.position}
-                    className="border border-luxury-border p-3 text-sm"
-                    href={`/notes/${note.slug}`}
-                  >
-                    {c(note.nameEn, note.nameAr)} · {note.position}
-                  </Link>
+                  </button>
                 ))}
               </div>
-            </section>
-          )}
+            )}
+          </div>
+        </div>
+
+        {/* Right Column: Product Info & Commerce (5 Cols Desktop) */}
+        <div className="lg:col-span-5 flex flex-col justify-between">
+          <div className="space-y-6">
+            {/* Brand & Title Header */}
+            <div>
+              <Link
+                href={`/brands/${brandSlug}`}
+                className="inline-block text-[12px] font-sans font-medium uppercase tracking-[0.16em] text-[#77776F] hover:text-[#171917] transition-colors"
+              >
+                {product.brand.name}
+              </Link>
+              <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal leading-tight mt-1.5">
+                {c(product.nameEn, product.nameAr)}
+              </h1>
+              <p className="text-[13px] text-[#77776F] mt-1 tracking-wide">
+                {product.concentration.replaceAll("_", " ")}
+              </p>
+            </div>
+
+            {/* Price Display */}
+            {selectedVariant && (
+              <div className="pt-2 border-t border-[#E6E4DE]">
+                <PriceDisplay
+                  price={selectedVariant.price}
+                  compareAtPrice={selectedVariant.compareAtPrice}
+                  locale={locale}
+                  size="xl"
+                />
+              </div>
+            )}
+
+            {/* Volume / Size Variant Selection (Level Shoes Style Pills) */}
+            {product.variants.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-medium uppercase tracking-wider text-[#171917]">
+                    {c("Select Volume", "اختر الحجم")}
+                  </span>
+                  <span className="text-[#77776F]">
+                    {c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-2.5">
+                  {product.variants.map((v) => {
+                    const isSelected = v.id === selectedVariantId;
+                    return (
+                      <button
+                        key={v.id}
+                        type="button"
+                        onClick={() => setSelectedVariantId(v.id)}
+                        className={`volume-pill ${isSelected ? "selected" : ""}`}
+                      >
+                        {c(v.sizeLabelEn, v.sizeLabelAr)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Truthful Preview / Availability Banner */}
+            {preview && (
+              <div className="p-4 bg-[#F3F1EC] border border-[#E6E4DE] text-xs leading-relaxed text-[#171917]">
+                <div className="flex items-center gap-2 font-medium text-[#46513B] mb-1">
+                  <Sparkles size={14} />
+                  <span>{c("Maison Collection Preview", "معاينة مجموعة الميزون")}</span>
+                </div>
+                <p className="text-[#77776F]">
+                  {c(
+                    "This creation is part of our verified olfactory catalog. Online self-checkout is currently in preview mode. To reserve this flacon or request private consultation, contact our fragrance concierge.",
+                    "هذا العطر جزء من مجموعتنا المعتمدة. الشراء الإلكتروني المباشر في وضع المعاينة حالياً. لحجز الزجاجة أو الاستشارة الخاصة، يُرجى التواصل مع مستشار العطور.",
+                  )}
+                </p>
+              </div>
+            )}
+
+            {/* Primary Action Button */}
+            <div className="space-y-3 pt-2">
+              <Link
+                href="/discover/ai"
+                className="editorial-button w-full text-center justify-center"
+              >
+                {c("Consult Scent Sommelier", "استشر خبير العطور")}
+              </Link>
+              <Link
+                href="/delivery"
+                className="editorial-button-secondary w-full text-center justify-center"
+              >
+                {c("GCC White-Glove Delivery Info", "معلومات التوصيل في الخليج")}
+              </Link>
+            </div>
+
+            {/* Service Badges (Authentic, GCC Delivery, Sealed Guarantee) */}
+            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-[#E6E4DE] text-center">
+              <div className="flex flex-col items-center gap-1.5 p-2">
+                <ShieldCheck size={18} className="text-[#46513B]" />
+                <span className="text-[11px] font-medium text-[#171917]">
+                  {c("100% Authentic", "أصلي ١٠٠٪")}
+                </span>
+                <span className="text-[10px] text-[#77776F]">
+                  {c("Direct from Houses", "مباشرة من الدور")}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 p-2 border-x border-[#E6E4DE]">
+                <Truck size={18} className="text-[#46513B]" />
+                <span className="text-[11px] font-medium text-[#171917]">
+                  {c("GCC Express", "توصيل سريع")}
+                </span>
+                <span className="text-[10px] text-[#77776F]">
+                  {c("Complimentary >500 AED", "مجاني فوق ٥٠٠ د.إ")}
+                </span>
+              </div>
+              <div className="flex flex-col items-center gap-1.5 p-2">
+                <Package size={18} className="text-[#46513B]" />
+                <span className="text-[11px] font-medium text-[#171917]">
+                  {c("2ml Sample Included", "عينة ٢ مل مرفقة")}
+                </span>
+                <span className="text-[10px] text-[#77776F]">
+                  {c("Test Before Opening", "جرّب قبل الفتح")}
+                </span>
+              </div>
+            </div>
+
+            {/* Description Paragraph */}
+            <div className="pt-4 border-t border-[#E6E4DE]">
+              <p className="text-sm leading-relaxed text-[#171917]">
+                {c(product.descriptionEn, product.descriptionAr)}
+              </p>
+            </div>
+
+            {/* 3. Level Shoes Style Accordions */}
+            <div className="border-b border-[#E6E4DE]">
+              {/* Accordion 1: Olfactory Pyramid & Scent Notes */}
+              {(topNotes.length > 0 || heartNotes.length > 0 || baseNotes.length > 0) && (
+                <div className="pdp-accordion-item">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion("pyramid")}
+                    className="pdp-accordion-header"
+                    aria-expanded={openAccordion === "pyramid"}
+                  >
+                    <span>{c("Olfactory Notes & Pyramid", "الهرم العطري والنوتات")}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        openAccordion === "pyramid" ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {openAccordion === "pyramid" && (
+                    <div className="pdp-accordion-content space-y-4">
+                      {topNotes.length > 0 && (
+                        <div>
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                            {c("Top Notes", "الافتتاحية")}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {topNotes.map((n) => (
+                              <Link
+                                key={n.id}
+                                href={`/notes/${n.slug}`}
+                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                              >
+                                {n.name}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {heartNotes.length > 0 && (
+                        <div>
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                            {c("Heart Notes", "قلب العطر")}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {heartNotes.map((n) => (
+                              <Link
+                                key={n.id}
+                                href={`/notes/${n.slug}`}
+                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                              >
+                                {n.name}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {baseNotes.length > 0 && (
+                        <div>
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                            {c("Base Notes", "القاعدة العطرية")}
+                          </span>
+                          <div className="flex flex-wrap gap-2">
+                            {baseNotes.map((n) => (
+                              <Link
+                                key={n.id}
+                                href={`/notes/${n.slug}`}
+                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                              >
+                                {n.name}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Accordion 2: Maison Heritage & Perfumer */}
+              <div className="pdp-accordion-item">
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion("maison")}
+                  className="pdp-accordion-header"
+                  aria-expanded={openAccordion === "maison"}
+                >
+                  <span>{c("Maison & Perfumer Details", "دار العطور والأنف العطري")}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      openAccordion === "maison" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openAccordion === "maison" && (
+                  <div className="pdp-accordion-content space-y-3">
+                    <div className="grid grid-cols-2 gap-4 text-xs">
+                      <div>
+                        <span className="text-[#77776F] block">{c("Fragrance House", "دار العطور")}</span>
+                        <span className="font-medium text-[#171917]">{product.brand.name}</span>
+                      </div>
+                      {product.origin && (
+                        <div>
+                          <span className="text-[#77776F] block">{c("Country of Origin", "بلد المنشأ")}</span>
+                          <span className="font-medium text-[#171917]">{product.origin}</span>
+                        </div>
+                      )}
+                      {product.perfumer && (
+                        <div>
+                          <span className="text-[#77776F] block">{c("Master Perfumer", "الأنف العطري")}</span>
+                          <span className="font-medium text-[#171917]">{product.perfumer}</span>
+                        </div>
+                      )}
+                      {product.longevity && (
+                        <div>
+                          <span className="text-[#77776F] block">{c("Longevity", "الثبات")}</span>
+                          <span className="font-medium text-[#171917]">{product.longevity}</span>
+                        </div>
+                      )}
+                    </div>
+                    {product.perfumerBio && (
+                      <p className="text-xs text-[#77776F] pt-2 border-t border-[#E6E4DE]">
+                        {product.perfumerBio}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Accordion 3: Scent Care & Gulf Climate Rituals */}
+              <div className="pdp-accordion-item">
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion("ritual")}
+                  className="pdp-accordion-header"
+                  aria-expanded={openAccordion === "ritual"}
+                >
+                  <span>{c("Rituals & Gulf Climate Wear", "طقوس الاستخدام وطقس الخليج")}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      openAccordion === "ritual" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openAccordion === "ritual" && (
+                  <div className="pdp-accordion-content text-xs space-y-2">
+                    <p>
+                      {c(
+                        "Extrait de Parfum concentrations are uniquely resilient in high-heat and air-conditioned GCC environments. Apply directly to pulse points (wrist, collarbones, nape of neck).",
+                        "تتميز تراكيز إكستري دي بارفان بثبات استثنائي في أجواء الخليج الصيفية والبيئات المكيفة. يُنصح برشها مباشرة على نقاط النبض.",
+                      )}
+                    </p>
+                    <p>
+                      {c(
+                        "For traditional layering rituals, mist over an authentic Cambodian or Hindi oud base to create an opulent royal sillage.",
+                        "لمزج العطور التقليدي، يمكن رش العطر فوق دهن العود الكمبودي أو الهندي لإضفاء بصمة عطرية مهيبة وفريدة.",
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Accordion 4: White-Glove Delivery & Returns */}
+              <div className="pdp-accordion-item">
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion("shipping")}
+                  className="pdp-accordion-header"
+                  aria-expanded={openAccordion === "shipping"}
+                >
+                  <span>{c("Delivery, Samples & Guarantees", "التوصيل والعينات والضمان")}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      openAccordion === "shipping" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openAccordion === "shipping" && (
+                  <div className="pdp-accordion-content text-xs space-y-2">
+                    <p>
+                      {c(
+                        "• Express courier dispatch across the United Arab Emirates (1–2 business days) and Kingdom of Saudi Arabia (2–4 business days).",
+                        "• شحن سريع داخل الإمارات (١-٢ يوم عمل) والمملكة العربية السعودية (٢-٤ أيام عمل).",
+                      )}
+                    </p>
+                    <p>
+                      {c(
+                        "• Every full bottle includes an official 2ml discovery vial. Please test the sample first; returns are accepted on unopened, sealed flacons within 14 days.",
+                        "• تتضمن كل زجاجة عينة تجريبية ٢ مل رسمية. يُرجى اختبار العينة أولاً؛ تُقبل الإرجاعات للزجاجات المغلفة وغير المفتوحة خلال ١٤ يوماً.",
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* 4. More From This House Section */}
+      {houseProducts.length > 0 && (
+        <section className="py-14 border-b border-[#E6E4DE]">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="eyebrow">{c("FROM THE SAME MAISON", "من الدار نفسها")}</span>
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#171917] mt-1">
+                {c(`More from ${product.brand.name}`, `عطور أخرى من ${product.brand.name}`)}
+              </h2>
+            </div>
+            <Link
+              href={`/brands/${brandSlug}`}
+              className="editorial-text-link"
+            >
+              {c("View Maison", "عرض الدار")} ↗
+            </Link>
+          </div>
+          <div className="product-grid">
+            {houseProducts.slice(0, 4).map((p) => (
+              <ProductCard
+                key={p.slug}
+                slug={p.slug}
+                nameEn={p.nameEn}
+                nameAr={p.nameAr}
+                brand={p.brand?.name || p.brand || product.brand.name}
+                concentration={p.concentration}
+                price={p.price || p.variants?.[0]?.price || 0}
+                compareAtPrice={p.compareAtPrice || p.variants?.[0]?.compareAtPrice}
+                image={p.images?.[0] || p.image || "/product-placeholder.svg"}
+                locale={locale}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* 5. You May Also Like Section (Level Shoes Recommendation Style) */}
+      {relatedProducts.length > 0 && (
+        <section className="py-14">
+          <div className="flex items-end justify-between mb-8">
+            <div>
+              <span className="eyebrow">{c("CURATED RECOMMENDATIONS", "ترشيحات مختارة")}</span>
+              <h2 className="font-serif text-2xl sm:text-3xl text-[#171917] mt-1">
+                {c("You May Also Appreciate", "قد ينال إعجابك أيضاً")}
+              </h2>
+            </div>
+            <Link href="/shop" className="editorial-text-link">
+              {c("Shop All Fragrances", "تسوق كل العطور")} ↗
+            </Link>
+          </div>
+          <div className="product-grid">
+            {relatedProducts.slice(0, 4).map((p) => (
+              <ProductCard
+                key={p.slug}
+                slug={p.slug}
+                nameEn={p.nameEn}
+                nameAr={p.nameAr}
+                brand={p.brand?.name || p.brand}
+                concentration={p.concentration}
+                price={p.price || p.variants?.[0]?.price || 0}
+                compareAtPrice={p.compareAtPrice || p.variants?.[0]?.compareAtPrice}
+                image={p.images?.[0] || p.image || "/product-placeholder.svg"}
+                locale={locale}
+              />
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

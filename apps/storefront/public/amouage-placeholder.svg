@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
+  <rect width="400" height="500" fill="#F8F7F3"/>
+  <g transform="translate(200, 245)">
+    <!-- Aura shadow -->
+    <ellipse cx="0" cy="180" rx="95" ry="14" fill="#E6E4DE" opacity="0.6"/>
+    
+    <!-- Amouage Royal Midnight Blue Heavy Glass Flacon -->
+    <rect x="-72" y="-70" width="144" height="220" rx="4" fill="#0D1E3A" stroke="#091426" stroke-width="2"/>
+    <!-- Subtle Glass Edge Highlights -->
+    <path d="M-68,-66 L-68,146" stroke="#254373" stroke-width="2" opacity="0.7"/>
+    <path d="M68,-66 L68,146" stroke="#254373" stroke-width="2" opacity="0.7"/>
+    
+    <!-- Amouage Sunburst Royal Crest / Seal -->
+    <circle cx="0" cy="10" r="26" fill="none" stroke="#D4AF37" stroke-width="1.5"/>
+    <circle cx="0" cy="10" r="20" fill="#0B1930" stroke="#D4AF37" stroke-width="0.8"/>
+    <!-- Blue Swarovski Crystal Center -->
+    <circle cx="0" cy="10" r="5" fill="#3B82F6" stroke="#D4AF37" stroke-width="0.8"/>
+    <!-- Sunburst Rays -->
+    <line x1="0" y1="-14" x2="0" y2="-23" stroke="#D4AF37" stroke-width="1.2"/>
+    <line x1="0" y1="34" x2="0" y2="43" stroke="#D4AF37" stroke-width="1.2"/>
+    <line x1="-24" y1="10" x2="-33" y2="10" stroke="#D4AF37" stroke-width="1.2"/>
+    <line x1="24" y1="10" x2="33" y2="10" stroke="#D4AF37" stroke-width="1.2"/>
+    
+    <!-- Gold Inscription -->
+    <text x="0" y="66" font-family="'Inter', sans-serif" font-size="8.5" font-weight="600" letter-spacing="3" fill="#EADFC9" text-anchor="middle">AMOUAGE</text>
+    <text x="0" y="84" font-family="'Cormorant Garamond', serif" font-size="11" font-style="italic" letter-spacing="1" fill="#FFFFFF" text-anchor="middle">Interlude 53</text>
+    <text x="0" y="100" font-family="'Inter', sans-serif" font-size="6" font-weight="500" letter-spacing="1.5" fill="#B0A894" text-anchor="middle">EXTRAIT DE PARFUM</text>
+    
+    <!-- Golden Shoulder Plate -->
+    <path d="M-72,-70 L-26,-92 L26,-92 L72,-70 Z" fill="#C5A059" stroke="#9A7B3E" stroke-width="1"/>
+    <!-- Heavy Gold Collar -->
+    <rect x="-20" y="-115" width="40" height="23" fill="#D4AF37" stroke="#A68326" stroke-width="1"/>
+    
+    <!-- Iconic Amouage Omani Khanjar / Dome Stopper -->
+    <path d="M-34,-115 C-34,-145 -18,-175 0,-185 C18,-175 34,-145 34,-115 Z" fill="#D4AF37" stroke="#A68326" stroke-width="1.5"/>
+    <circle cx="0" cy="-148" r="4.5" fill="#1D4ED8" stroke="#FFFFFF" stroke-width="0.8"/>
+  </g>
+</svg>

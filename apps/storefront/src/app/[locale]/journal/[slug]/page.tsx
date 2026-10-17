@@ -1,8 +1,8 @@
 import React from "react";
 import Image from "next/image";
 import { Link } from "../../../../navigation";
-import { Button, Badge, PriceDisplay } from "@muschio/ui";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ProductCard } from "../../../../components/product-card";
+import { ArrowLeft, Clock, User } from "lucide-react";
 
 export default function JournalDetailPage({
   params: { locale },
@@ -10,80 +10,114 @@ export default function JournalDetailPage({
   params: { locale: "en" | "ar"; slug: string };
 }) {
   const isAr = locale === "ar";
+  const c = (en: string, ar: string) => (isAr ? ar : en);
+
+  const featuredPerfume = {
+    slug: "amouage-interlude-53-man",
+    nameEn: "Interlude 53 Man Extrait de Parfum",
+    nameAr: "إنترلود 53 إكستري دي بارفان",
+    brand: "Amouage",
+    concentration: "Extrait de Parfum (53%)",
+    price: 1850,
+    compareAtPrice: 2100,
+    image: "/amouage-placeholder.svg",
+    badge: "Extrait (53%)",
+  };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-14 space-y-10">
+      {/* 1. Back link */}
       <Link
         href="/journal"
-        className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-widest text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+        className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-widest text-[#77776F] hover:text-[#171917] transition-colors"
       >
-        <ArrowLeft size={14} />
-        <span>{isAr ? "العودة للمجلة" : "Back to Journal"}</span>
+        <ArrowLeft size={14} className="rtl:rotate-180" />
+        <span>{c("Back to Journal", "العودة للمجلة")}</span>
       </Link>
 
-      <div className="space-y-6">
-        <Badge variant="gold">{isAr ? "فن المزج والتعطير" : "Haute Technique"}</Badge>
-        <h1 className="font-serif text-3xl sm:text-5xl text-zinc-900 dark:text-zinc-100 font-light leading-tight">
-          {isAr
-            ? "الكيمياء المقدسة: فن مزج العود العُماني المعتق مع ورد الطائف الجبلي"
-            : "The Sacred Alchemy: Layering Aged Omani Oud with Mountain Taif Rose"}
+      {/* 2. Article Header */}
+      <div className="space-y-4">
+        <span className="eyebrow text-[#46513B]">
+          {c("HAUTE LAYERING RITUALS", "فن المزج والطقوس العطرية")}
+        </span>
+        <h1 className="font-serif text-3xl sm:text-5xl text-[#171917] font-normal leading-tight">
+          {c(
+            "The Sacred Alchemy: Layering Aged Omani Oud with Mountain Taif Rose",
+            "الكيمياء المقدسة: فن مزج العود العُماني المعتق مع ورد الطائف الجبلي",
+          )}
         </h1>
 
-        <div className="flex items-center gap-6 text-xs text-zinc-500 font-sans border-y border-zinc-200 dark:border-zinc-800 py-3">
-          <span>By Salim Al-Harthy</span>
-          <span>6 min read</span>
-          <span>Published in Haute Parfumerie Review</span>
+        <div className="flex items-center gap-6 text-xs text-[#77776F] font-sans border-y border-[#E6E4DE] py-3">
+          <span className="flex items-center gap-1.5">
+            <User size={13} />
+            <span>Salim Al-Harthy</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Clock size={13} />
+            <span>{c("6 min read", "٦ دقائق قراءة")}</span>
+          </span>
+          <span>{c("Muschio Editorial", "تحرير موسكيو")}</span>
         </div>
       </div>
 
-      <div className="relative h-96 w-full bg-zinc-950 overflow-hidden">
+      {/* 3. Hero Visual */}
+      <div className="relative aspect-[16/9] w-full bg-[#F3F1EC] border border-[#E6E4DE] overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85"
-          alt="Layering Perfumes"
+          src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=85"
+          alt="Layering Perfumes in the Gulf"
           fill
           priority
-          className="object-cover object-center"
+          sizes="(max-width: 896px) 100vw, 896px"
+          className="object-cover"
         />
       </div>
 
-      {/* Editorial Content */}
-      <div className="prose dark:prose-invert max-w-none text-zinc-700 dark:text-zinc-300 font-sans text-sm sm:text-base leading-relaxed space-y-6">
+      {/* 4. Essay Copy */}
+      <div className="text-[#171917] font-sans text-sm sm:text-base leading-relaxed space-y-6">
         <p>
-          {isAr
-            ? "في المجالس والقصور الملكية بالخليج العربي، ليس العطر مجرد زينة أو لمسة عابرة، بل هو لغة كرم وهيبة وأصالة متوارثة عبر الأجيال."
-            : "Across the royal courts of the Arabian Gulf, perfumery is neither an accessory nor an afterthought; it is an intimate language of hospitality, majesty, and devotion."}
+          {c(
+            "Across the royal majalis of the Arabian Gulf, perfumery is neither a cosmetic accessory nor an afterthought; it is an intimate language of hospitality, majesty, and enduring cultural devotion.",
+            "في المجالس والقصور الملكية بالخليج العربي، ليس العطر مجرد زينة أو لمسة عابرة، بل هو لغة كرم وهيبة وأصالة متوارثة عبر الأجيال تعبر عن أرفع درجات الحفاوة والترحيب.",
+          )}
         </p>
         <p>
-          {isAr
-            ? "عند مزج خلاصات العطور النقية، ابدأ دائماً بالقاعدة الأعمق: دع دهن العود أو العنبر يدفأ على المعصم ونقاط النبض قبل رش أريج ورد الطائف النبيل على الياقة لإضفاء لمسة زهرية عسلية لا تُقاوم."
-            : "When layering high-concentration extraits, always begin with the deepest base: warm the wild Cambodian agarwood or golden ambergris between your wrists and pulse points before misting the regal petals of Taif rose across your collar to create an irresistible sillage."}
+          {c(
+            "When orchestrating high-concentration extraits de parfum, the secret lies in molecular weight and thermal evaporation. Always begin with your architectural anchor: warm a single drop of wild Cambodian agarwood or resinous Silver Frankincense between your wrists and at the hollow of your neck.",
+            "عند مزج خلاصات العطور النقية، يكمن السر في الوزن الجزيئي ومعدل التبخر الحراري. ابدأ دائماً بالقاعدة العميقة: دع دهن العود الكمبودي البري أو اللبان الفضي الصمغي يدفأ على نقاط النبض ومفترق الياقة.",
+          )}
+        </p>
+        <p>
+          {c(
+            "Once the resinous base has fused with the skin's warmth, mist the crystalline petals of dawn-harvested Taif rose across your garments. The heat of the Arabian climate will gently elevate the floral heart while the agarwood anchor preserves its monolithic sillage through the evening.",
+            "وبعد اندماج القاعدة الصمغية مع دفء البشرة، انثر أريج ورد الطائف المقطوف عند الفجر على الثوب أو الرداء. سيتولى دفء المناخ الخليجي تصعيد قلب العطر الزهري بنعومة بينما تضمن قاعدة العود ثباتاً ملكياً مهيباً يرافقك طوال الأمسية.",
+          )}
         </p>
       </div>
 
-      {/* Featured in this story / Shoppable Card */}
-      <div className="border border-gold/40 bg-luxury-surface p-8 space-y-6">
-        <div className="flex items-center gap-2 text-xs font-serif italic text-gold-dark dark:text-gold font-semibold">
-          <Sparkles size={14} />
-          <span>{isAr ? "عطور مميزة ذُكرت في هذا المقال" : "Featured In This Masterpiece"}</span>
+      {/* 5. Featured Shoppable Fragrance Card (Level Shoes Style) */}
+      <div className="border border-[#E6E4DE] bg-white p-6 sm:p-8 space-y-6">
+        <div>
+          <span className="eyebrow mb-1">
+            {c("FEATURED IN THIS STORY", "عطور مذكورة في هذا المقال")}
+          </span>
+          <h3 className="font-serif text-2xl text-[#171917] font-normal">
+            {c("The Incense & Agarwood Anchor", "القاعدة البخورية والعود")}
+          </h3>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="space-y-1 text-center sm:text-start">
-            <span className="text-[10px] uppercase font-sans tracking-widest text-zinc-400">Amouage</span>
-            <h4 className="font-serif text-xl text-zinc-900 dark:text-zinc-100">
-              Interlude 53 Man Extrait de Parfum
-            </h4>
-            <p className="text-xs text-zinc-500 font-sans">
-              Formulated at 53% perfume oil with aged Silver Frankincense and Cambodian Oud.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <PriceDisplay price={1850} locale={locale} />
-            <Button asChild variant="accent" size="sm">
-              <Link href="/product/amouage-interlude-53-man">{isAr ? "اقتنِ العطر" : "Acquire Scent"}</Link>
-            </Button>
-          </div>
+        <div className="max-w-xs">
+          <ProductCard
+            slug={featuredPerfume.slug}
+            nameEn={featuredPerfume.nameEn}
+            nameAr={featuredPerfume.nameAr}
+            brand={featuredPerfume.brand}
+            concentration={featuredPerfume.concentration}
+            price={featuredPerfume.price}
+            compareAtPrice={featuredPerfume.compareAtPrice}
+            image={featuredPerfume.image}
+            badge={featuredPerfume.badge}
+            locale={locale}
+          />
         </div>
       </div>
     </div>

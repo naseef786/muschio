@@ -1,19 +1,45 @@
 import React from "react";
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Link } from "../../../../navigation";
-import { Badge, Button, PriceDisplay, NoteChip } from "@muschio/ui";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { ProductCard } from "../../../../components/product-card";
 
-// Mock catalog lookup fallback for server component demo
-const NOTE_DETAILS: Record<string, any> = {
+interface NoteDetailData {
+  nameEn: string;
+  nameAr: string;
+  slug: string;
+  familyEn: string;
+  familyAr: string;
+  originEn: string;
+  originAr: string;
+  descriptionEn: string;
+  descriptionAr: string;
+  relatedNotes: Array<{ nameEn: string; nameAr: string; slug: string }>;
+  perfumes: Array<{
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    brand: string;
+    concentration: string;
+    price: number;
+    compareAtPrice?: number | null;
+    image: string;
+    badge?: string;
+  }>;
+}
+
+const NOTE_DETAILS: Record<string, NoteDetailData> = {
   "taif-rose": {
     nameEn: "Royal Taif Rose",
     nameAr: "ورد الطائف الملكي",
-    slugEn: "taif-rose",
-    descriptionEn: "Harvested at dawn in the high-altitude mountains of Saudi Arabia, Royal Taif Rose is celebrated for its honeyed, intensely deep, and regal floral aroma. Highly prized in royal Arabian perfumery as both a majestic heart note and an aristocratic opening.",
-    descriptionAr: "يُحصد عند بزوغ الفجر في أعالي جبال الطائف بالمملكة العربية السعودية، ويشتهر الورد الطائفي بنفحاته العسلية الغنية وأريجه الزهري الملكي الفواح.",
-    heroImage: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1600&q=85",
+    slug: "taif-rose",
+    familyEn: "Rare Floral",
+    familyAr: "زهور نادرة",
+    originEn: "Taif Mountains, Saudi Arabia",
+    originAr: "جبال الطائف، السعودية",
+    descriptionEn:
+      "Harvested at dawn in the high-altitude mountains of Saudi Arabia, Royal Taif Rose is celebrated for its honeyed, intensely deep, and regal floral aroma. Highly prized in royal Arabian perfumery as both a majestic heart note and an aristocratic opening.",
+    descriptionAr:
+      "يُحصد عند بزوغ الفجر في أعالي جبال الطائف بالمملكة العربية السعودية، ويشتهر الورد الطائفي بنفحاته العسلية الغنية وأريجه الزهري الملكي الفواح.",
     relatedNotes: [
       { nameEn: "Cambodian Oud", nameAr: "دهن عود كمبودي", slug: "cambodian-oud" },
       { nameEn: "Silver Frankincense", nameAr: "لبان فضي", slug: "silver-frankincense" },
@@ -27,30 +53,37 @@ const NOTE_DETAILS: Record<string, any> = {
         brand: "Xerjoff",
         concentration: "Eau de Parfum",
         price: 2200,
-        position: "HEART" as const,
-        prominence: 9,
-        image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+        compareAtPrice: 2450,
+        image:
+          "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+        badge: "Heart Note",
       },
       {
         slug: "roja-parfums-elysium-pour-homme-parfum",
         nameEn: "Elysium Pour Homme Parfum",
         nameAr: "إليزيوم بور هوم بارفان",
         brand: "Roja Parfums",
-        concentration: "Extrait de Parfum",
+        concentration: "Pure Parfum",
         price: 1950,
-        position: "HEART" as const,
-        prominence: 6,
-        image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=85",
+        compareAtPrice: 2200,
+        image:
+          "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=85",
+        badge: "Heart Note",
       },
     ],
   },
   "silver-frankincense": {
     nameEn: "Silver Frankincense (Hojari)",
     nameAr: "اللبان الحوجري الفضي",
-    slugEn: "silver-frankincense",
-    descriptionEn: "Exclusively harvested from Boswellia sacra trees in the Dhofar mountains of Oman. The highest grade of frankincense in the world, radiating balsamic, ethereal incense and citrusy nuances.",
-    descriptionAr: "يُحصد حصرياً من أشجار اللبان في جبال ظفار بسلطنة عُمان. أرقى درجات اللبان في العالم، يمنح العطر طابعاً بخورياً ملكياً مقدساً.",
-    heroImage: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=85",
+    slug: "silver-frankincense",
+    familyEn: "Sacred Resin",
+    familyAr: "صمغ وبخور مقدس",
+    originEn: "Dhofar Mountains, Sultanate of Oman",
+    originAr: "جبال ظفار، سلطنة عُمان",
+    descriptionEn:
+      "Exclusively harvested from Boswellia sacra trees in the Dhofar mountains of Oman. The highest grade of frankincense in the world, radiating balsamic, ethereal incense and citrusy nuances.",
+    descriptionAr:
+      "يُحصد حصرياً من أشجار اللبان في جبال ظفار بسلطنة عُمان. أرقى درجات اللبان في العالم، يمنح العطر طابعاً بخورياً ملكياً مقدساً.",
     relatedNotes: [
       { nameEn: "Cambodian Oud", nameAr: "دهن عود كمبودي", slug: "cambodian-oud" },
       { nameEn: "Golden Ambergris", nameAr: "عنبر أشهب", slug: "golden-ambergris" },
@@ -64,19 +97,24 @@ const NOTE_DETAILS: Record<string, any> = {
         brand: "Amouage",
         concentration: "Extrait de Parfum (53%)",
         price: 1850,
-        position: "HEART" as const,
-        prominence: 10,
-        image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
+        compareAtPrice: 2100,
+        image: "/amouage-placeholder.svg",
+        badge: "Heart Note",
       },
     ],
   },
   "cambodian-oud": {
     nameEn: "Cambodian Agarwood (Oud)",
     nameAr: "دهن عود كمبودي معتق",
-    slugEn: "cambodian-oud",
-    descriptionEn: "Aged wild heartwood distilled to yield resinous, dark, leathery, and deeply balsamic complexity. The cornerstone of Gulf high perfumery and royal hospitality.",
-    descriptionAr: "خشب عود بري معتق مقطر ليمنح تعقيداً بلسمياً وجلدياً داكناً. الركيزة الأساسية في العطور الخليجية الملكية.",
-    heroImage: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85",
+    slug: "cambodian-oud",
+    familyEn: "Precious Wood",
+    familyAr: "أخشاب وعود نادر",
+    originEn: "Pursat, Cambodia",
+    originAr: "بورسات، كمبوديا",
+    descriptionEn:
+      "Aged wild heartwood distilled to yield resinous, dark, leathery, and deeply balsamic complexity. The cornerstone of Gulf high perfumery and royal hospitality.",
+    descriptionAr:
+      "خشب عود بري معتق مقطر ليمنح تعقيداً بلسمياً وجلدياً داكناً. الركيزة الأساسية في العطور الخليجية الملكية.",
     relatedNotes: [
       { nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose" },
       { nameEn: "Silver Frankincense", nameAr: "لبان فضي", slug: "silver-frankincense" },
@@ -90,9 +128,9 @@ const NOTE_DETAILS: Record<string, any> = {
         brand: "Amouage",
         concentration: "Extrait de Parfum (53%)",
         price: 1850,
-        position: "BASE" as const,
-        prominence: 10,
-        image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
+        compareAtPrice: 2100,
+        image: "/amouage-placeholder.svg",
+        badge: "Base Note",
       },
       {
         slug: "xerjoff-alexandria-ii",
@@ -101,9 +139,53 @@ const NOTE_DETAILS: Record<string, any> = {
         brand: "Xerjoff",
         concentration: "Eau de Parfum",
         price: 2200,
-        position: "BASE" as const,
-        prominence: 10,
-        image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+        compareAtPrice: 2450,
+        image:
+          "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+        badge: "Base Note",
+      },
+    ],
+  },
+  "florentine-iris": {
+    nameEn: "Florentine Iris (Orris)",
+    nameAr: "سوسن فلورنسا المخملي",
+    slug: "florentine-iris",
+    familyEn: "Powdery Floral",
+    familyAr: "زهور بودرية",
+    originEn: "Tuscany, Italy",
+    originAr: "توسكانا، إيطاليا",
+    descriptionEn:
+      "Aged for three full years before distillation. Powdery, violet-like, sophisticated, and aristocratically soft.",
+    descriptionAr:
+      "تُعتق جذوره لثلاث سنوات كاملة قبل التقطير. نوتة بودرية مخملية مترفة تفيض بالنقاء.",
+    relatedNotes: [
+      { nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose" },
+      { nameEn: "Golden Ambergris", nameAr: "عنبر أشهب", slug: "golden-ambergris" },
+    ],
+    perfumes: [
+      {
+        slug: "mfk-baccarat-rouge-540-extrait",
+        nameEn: "Baccarat Rouge 540 Extrait de Parfum",
+        nameAr: "باكارات روج 540 إكستري دي بارفان",
+        brand: "Maison Francis Kurkdjian",
+        concentration: "Extrait de Parfum",
+        price: 1650,
+        compareAtPrice: null,
+        image:
+          "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
+        badge: "Heart Note",
+      },
+      {
+        slug: "xerjoff-alexandria-ii",
+        nameEn: "Alexandria II Eau de Parfum",
+        nameAr: "ألكسندريا 2 أو دي بارفان",
+        brand: "Xerjoff",
+        concentration: "Eau de Parfum",
+        price: 2200,
+        compareAtPrice: 2450,
+        image:
+          "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
+        badge: "Heart Note",
       },
     ],
   },
@@ -115,143 +197,107 @@ export default function NoteDetailPage({
   params: { locale: "en" | "ar"; slug: string };
 }) {
   const isAr = locale === "ar";
-  const note = NOTE_DETAILS[slug] || NOTE_DETAILS["taif-rose"];
+  const c = (en: string, ar: string) => (isAr ? ar : en);
 
+  const note = NOTE_DETAILS[slug] || NOTE_DETAILS["taif-rose"];
   if (!note) notFound();
 
   return (
-    <div className="space-y-16 pb-24">
-      {/* 1. NOTE HERO */}
-      <section className="relative min-h-[50vh] flex items-end bg-zinc-950 text-white px-4 sm:px-6 lg:px-8 pb-12 pt-20">
-        <div className="absolute inset-0 z-0 opacity-40">
-          <Image
-            src={note.heroImage}
-            alt={note.nameEn}
-            fill
-            priority
-            className="object-cover object-center"
-          />
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/60 to-transparent z-0" />
-
-        <div className="relative z-10 max-w-5xl mx-auto w-full space-y-4">
-          <div className="flex items-center gap-2">
-            <Link
-              href="/notes"
-              className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-widest text-zinc-300 hover:text-white"
-            >
-              <ArrowLeft size={14} />
-              <span>{isAr ? "دليل النوتات" : "All Notes"}</span>
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
+      {/* 1. Breadcrumbs */}
+      <nav aria-label="Breadcrumb" className="text-xs text-[#77776F]">
+        <ol className="flex items-center gap-2">
+          <li>
+            <Link href="/" className="hover:text-[#171917] transition-colors">
+              {c("Home", "الرئيسية")}
             </Link>
-          </div>
+          </li>
+          <li>/</li>
+          <li>
+            <Link href="/notes" className="hover:text-[#171917] transition-colors">
+              {c("Scent Notes", "نوتات العطر")}
+            </Link>
+          </li>
+          <li>/</li>
+          <li className="text-[#171917] font-medium">{c(note.nameEn, note.nameAr)}</li>
+        </ol>
+      </nav>
 
-          <div className="inline-flex items-center gap-2 px-3 py-1 bg-gold/10 text-gold text-[10px] uppercase font-sans tracking-[0.2em]">
-            <Sparkles size={12} />
-            <span>{isAr ? "خلاصة أولية نادرة" : "Authoritative Raw Essence"}</span>
-          </div>
-
-          <h1 className="font-serif text-4xl sm:text-6xl text-white font-light">
-            {isAr ? note.nameAr : note.nameEn}
-          </h1>
-
-          <p className="max-w-2xl text-xs sm:text-sm text-zinc-300 font-sans leading-relaxed">
-            {isAr ? note.descriptionAr : note.descriptionEn}
-          </p>
-        </div>
-      </section>
-
-      {/* 2. RELATED NOTES CHIPS */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="space-y-1 text-center md:text-start">
-            <h4 className="font-serif text-base text-zinc-900 dark:text-zinc-100">
-              {isAr ? "نوتات تتناغم بامتياز مع هذه الخلاصة" : "Harmonious Companion Notes"}
-            </h4>
-            <p className="text-xs text-zinc-500 font-sans">
-              {isAr ? "خلاصات شائعة في التراكيب الملكية جنباً إلى جنب" : "Essences frequently orchestrated alongside this accord"}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {note.relatedNotes.map((rn: any, idx: number) => (
-              <Link key={idx} href={`/notes/${rn.slug}`}>
-                <NoteChip name={isAr ? rn.nameAr : rn.nameEn} locale={locale} />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 3. PERFUMES FEATURING THIS NOTE (Authoritative ProductNote relations) */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between border-b border-zinc-200 dark:border-zinc-800 pb-4 gap-4">
-          <div>
-            <span className="text-[10px] font-sans uppercase tracking-[0.2em] text-accent font-medium">
-              {isAr ? "عطور أصلية مسجلة" : "Authoritative Catalog"}
-            </span>
-            <h2 className="font-serif text-3xl text-zinc-900 dark:text-zinc-100">
-              {isAr ? `عطور تتضمن نوتة ${note.nameAr}` : `Perfumes Featuring ${note.nameEn}`}
-            </h2>
-          </div>
-          <span className="text-xs text-zinc-500 font-sans">
-            {isAr ? `${note.perfumes.length} عطور منشورة` : `${note.perfumes.length} published fragrances`}
+      {/* 2. Compact Note Editorial Header */}
+      <div className="border border-[#E6E4DE] bg-white p-6 sm:p-10 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-[#E6E4DE]">
+          <span className="text-[11px] font-sans font-medium uppercase tracking-[0.16em] text-[#46513B] px-2.5 py-1 bg-[#F3F1EC] border border-[#E6E4DE]">
+            {c(note.familyEn, note.familyAr)}
+          </span>
+          <span className="text-xs text-[#77776F] font-sans">
+            {c(note.originEn, note.originAr)}
           </span>
         </div>
 
-        {note.perfumes.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {note.perfumes.map((perfume: any, idx: number) => (
-              <div
-                key={idx}
-                className="group border border-zinc-200 dark:border-zinc-800 bg-luxury-surface hover:border-zinc-400 dark:hover:border-zinc-600 transition-all duration-300 flex flex-col justify-between"
+        <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal">
+          {c(note.nameEn, note.nameAr)}
+        </h1>
+
+        <p className="text-xs sm:text-sm text-[#77776F] leading-relaxed max-w-3xl">
+          {c(note.descriptionEn, note.descriptionAr)}
+        </p>
+
+        {/* Companion Notes */}
+        {note.relatedNotes.length > 0 && (
+          <div className="pt-3 border-t border-[#E6E4DE] flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-[#77776F] me-2">
+              {c("Harmonious Companion Notes:", "نوتات تتناغم مع هذه الخلاصة:")}
+            </span>
+            {note.relatedNotes.map((rn) => (
+              <Link
+                key={rn.slug}
+                href={`/notes/${rn.slug}`}
+                className="px-2.5 py-1 text-xs border border-[#E6E4DE] bg-[#F8F7F3] hover:border-[#171917] transition-colors"
               >
-                <div className="relative h-80 w-full overflow-hidden bg-zinc-950">
-                  <Image
-                    src={perfume.image}
-                    alt={perfume.nameEn}
-                    fill
-                    className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute top-3 start-3">
-                    <Badge variant="niche">{perfume.brand}</Badge>
-                  </div>
-                  <div className="absolute bottom-3 start-3">
-                    <Badge variant="accent">
-                      {isAr ? `موضع النوتة: ${perfume.position}` : `Position: ${perfume.position}`}
-                    </Badge>
-                  </div>
-                </div>
-
-                <div className="p-6 space-y-4 flex-1 flex flex-col justify-between">
-                  <div className="space-y-2">
-                    <span className="text-[10px] font-sans uppercase tracking-widest text-zinc-400">
-                      {perfume.concentration}
-                    </span>
-                    <Link href={`/product/${perfume.slug}`} className="block">
-                      <h3 className="font-serif text-xl text-zinc-900 dark:text-zinc-100 group-hover:text-accent transition-colors">
-                        {isAr ? perfume.nameAr : perfume.nameEn}
-                      </h3>
-                    </Link>
-                  </div>
-
-                  <div className="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                    <PriceDisplay price={perfume.price} locale={locale} />
-                    <Button asChild size="sm" variant="outline">
-                      <Link href={`/product/${perfume.slug}`}>{isAr ? "اكتشف" : "Discover"}</Link>
-                    </Button>
-                  </div>
-                </div>
-              </div>
+                {c(rn.nameEn, rn.nameAr)}
+              </Link>
             ))}
           </div>
-        ) : (
-          <div className="p-12 text-center border border-zinc-200 dark:border-zinc-800 bg-luxury-surface space-y-2">
-            <p className="text-sm text-zinc-600 dark:text-zinc-400 font-sans">
-              {isAr
-                ? "لا توجد عطور منشورة تحتوي على هذه النوتة حالياً في الخزانة."
-                : "No published fragrances featuring this note are currently available in the vault."}
-            </p>
-          </div>
         )}
+      </div>
+
+      {/* 3. Perfumes Section with Shared ProductCard Grid */}
+      <section className="space-y-6 pt-4">
+        <div className="flex items-end justify-between pb-4 border-b border-[#E6E4DE]">
+          <div>
+            <span className="eyebrow mb-1">
+              {c("AUTHENTICATED FLACONS", "العطور المسجلة")}
+            </span>
+            <h2 className="font-serif text-2xl text-[#171917] font-normal">
+              {c(
+                `Perfumes Featuring ${note.nameEn}`,
+                `عطور تتضمن نوتة ${note.nameAr}`,
+              )}
+            </h2>
+          </div>
+          <span className="text-xs text-[#77776F]">
+            {note.perfumes.length} {c("Available", "متوفر")}
+          </span>
+        </div>
+
+        {/* Level Shoes 2-col mobile / 3-col tablet / 4-col desktop product grid */}
+        <div className="product-grid">
+          {note.perfumes.map((perfume) => (
+            <ProductCard
+              key={perfume.slug}
+              slug={perfume.slug}
+              nameEn={perfume.nameEn}
+              nameAr={perfume.nameAr}
+              brand={perfume.brand}
+              concentration={perfume.concentration}
+              price={perfume.price}
+              compareAtPrice={perfume.compareAtPrice}
+              image={perfume.image}
+              badge={perfume.badge}
+              locale={locale}
+            />
+          ))}
+        </div>
       </section>
     </div>
   );

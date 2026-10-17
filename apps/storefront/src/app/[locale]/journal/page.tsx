@@ -1,8 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
-import { Badge } from "@muschio/ui";
-import { ArrowRight, Clock, User } from "lucide-react";
+import { ArrowUpRight, Clock, User } from "lucide-react";
 
 export default function JournalIndexPage({
   params: { locale },
@@ -10,6 +9,7 @@ export default function JournalIndexPage({
   params: { locale: "en" | "ar" };
 }) {
   const isAr = locale === "ar";
+  const c = (en: string, ar: string) => (isAr ? ar : en);
 
   const articles = [
     {
@@ -22,71 +22,79 @@ export default function JournalIndexPage({
         "اكتشف التقاليد الخليجية الأصيلة في مزج العود البري البلسمي مع الورد المقطوف عند بزوغ الفجر في المناسبات الملكية.",
       author: "Salim Al-Harthy",
       readingTime: 6,
-      category: isAr ? "فن المزج والتعطير" : "Layering & Haute Technique",
-      image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=80",
+      categoryEn: "Layering & Haute Technique",
+      categoryAr: "فن المزج والطقوس العطرية",
+      image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
     },
   ];
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-12">
-      <div className="max-w-3xl space-y-4">
-        <span className="text-[10px] font-sans uppercase tracking-[0.3em] text-accent font-medium">
-          {isAr ? "مجلة العطار" : "The Perfumer's Journal"}
-        </span>
-        <h1 className="font-serif text-4xl sm:text-5xl md:text-6xl text-zinc-900 dark:text-zinc-100 font-light">
-          {isAr ? "مقالات وفنون صناعة العطور النيش" : "Haute Perfumery Essays"}
-        </h1>
-        <p className="text-xs sm:text-sm text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-          {isAr
-            ? "استكشف أسرار الخلاصات النادرة، وتاريخ دور العطور الملكية، وفنون التعطير الخليجية المتوارثة."
-            : "Editorial narratives exploring rare natural harvests, master perfumer interviews, and the rich heritage of olfactory art across the Middle East."}
-        </p>
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-10">
+      {/* 1. Header */}
+      <div className="pb-6 border-b border-[#E6E4DE] flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <span className="eyebrow mb-1">
+            {c("HAUTE PERFUMERY ESSAYS", "مقالات وتاريخ العطور")}
+          </span>
+          <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal">
+            {c("The Muschio Journal", "مجلة موسكيو")}
+          </h1>
+          <p className="text-xs sm:text-sm text-[#77776F] mt-1 max-w-xl">
+            {c(
+              "Editorial essays on rare natural harvests, master perfumer philosophies, and traditional Gulf layering rituals.",
+              "مقالات عطرية تستكشف أسرار الخلاصات الطبيعية النادرة، وفلسفة كبار صناع العطور، وطقوس التعطير الخليجية العريقة.",
+            )}
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+      {/* 2. Articles Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {articles.map((article) => (
           <Link
             key={article.slug}
             href={`/journal/${article.slug}`}
-            className="group border border-zinc-200 dark:border-zinc-800 bg-luxury-surface hover:border-zinc-400 dark:hover:border-zinc-600 transition-all duration-300 flex flex-col justify-between overflow-hidden"
+            className="group border border-[#E6E4DE] bg-white flex flex-col justify-between hover:border-[#171917] transition-all overflow-hidden"
           >
-            <div className="relative h-80 w-full bg-zinc-950 overflow-hidden">
+            <div className="relative aspect-[16/9] w-full bg-[#F3F1EC] overflow-hidden">
               <Image
                 src={article.image}
-                alt={article.titleEn}
+                alt={c(article.titleEn, article.titleAr)}
                 fill
-                className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
+                sizes="(max-width: 768px) 100vw, 50vw"
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <div className="absolute top-4 start-4">
-                <Badge variant="gold">{article.category}</Badge>
-              </div>
+              <span className="absolute top-3 inset-inline-start-3 text-[10px] font-sans uppercase tracking-[0.14em] px-2.5 py-1 bg-white/95 text-[#171917] border border-[#E6E4DE]">
+                {c(article.categoryEn, article.categoryAr)}
+              </span>
             </div>
 
-            <div className="p-8 space-y-4 flex-1 flex flex-col justify-between">
+            <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
               <div className="space-y-3">
-                <div className="flex items-center gap-4 text-[11px] text-zinc-400 font-sans">
+                <div className="flex items-center gap-4 text-xs text-[#77776F]">
                   <span className="flex items-center gap-1">
-                    <User size={12} />
+                    <User size={13} />
                     <span>{article.author}</span>
                   </span>
+                  <span>·</span>
                   <span className="flex items-center gap-1">
-                    <Clock size={12} />
-                    <span>{article.readingTime} {isAr ? "دقائق قراءة" : "min read"}</span>
+                    <Clock size={13} />
+                    <span>{article.readingTime} {c("min read", "دقائق قراءة")}</span>
                   </span>
                 </div>
 
-                <h2 className="font-serif text-2xl text-zinc-900 dark:text-zinc-100 group-hover:text-accent transition-colors">
-                  {isAr ? article.titleAr : article.titleEn}
+                <h2 className="font-serif text-2xl text-[#171917] font-normal group-hover:underline leading-snug">
+                  {c(article.titleEn, article.titleAr)}
                 </h2>
 
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 font-sans leading-relaxed">
-                  {isAr ? article.excerptAr : article.excerptEn}
+                <p className="text-xs text-[#77776F] leading-relaxed line-clamp-2">
+                  {c(article.excerptEn, article.excerptAr)}
                 </p>
               </div>
 
-              <div className="pt-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs font-sans uppercase tracking-wider text-accent font-semibold">
-                <span>{isAr ? "قراءة المقال الكامل" : "Read Full Story"}</span>
-                <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+              <div className="pt-4 border-t border-[#E6E4DE] flex items-center justify-between text-xs text-[#171917] font-medium group-hover:text-[#46513B]">
+                <span>{c("Read Essay", "اقرأ المقال")}</span>
+                <ArrowUpRight size={15} />
               </div>
             </div>
           </Link>
