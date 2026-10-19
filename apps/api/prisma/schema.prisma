@@ -1158,3 +1158,73 @@ model ExchangeRate {
   rate      Decimal  @db.Decimal(10, 4)
   updatedAt DateTime @updatedAt
 }
+
+// -------------------------------------------------------------
+// 9. BANNERS, SLIDERS & HOMEPAGE CMS
+// -------------------------------------------------------------
+
+enum BannerSlot {
+  HERO_SLIDER
+  CAMPAIGN_MID
+  PROMO_STRIP
+  ANNOUNCEMENT_BAR
+}
+
+enum HomepageSectionType {
+  HERO_BANNER
+  DISCOVERY_STRIP
+  FEATURED_PRODUCTS
+  HOUSES_GRID
+  NOTES_GRID
+  DISCOVERY_SETS
+  JOURNAL_FEATURE
+  TRUST_INDICATORS
+  CUSTOM_BANNER
+}
+
+model Banner {
+  id              String     @id @default(uuid())
+  slot            BannerSlot @default(HERO_SLIDER)
+  eyebrowEn       String?
+  eyebrowAr       String?
+  titleEn         String
+  titleAr         String
+  subtitleEn      String?    @db.Text
+  subtitleAr      String?    @db.Text
+  ctaTextEn       String?
+  ctaTextAr       String?
+  ctaUrl          String?
+  secondaryCtaTextEn String?
+  secondaryCtaTextAr String?
+  secondaryCtaUrl String?
+  imageUrl        String
+  mobileImageUrl  String?
+  overlayLabelEn  String?
+  overlayLabelAr  String?
+  sortOrder       Int        @default(0)
+  isActive        Boolean    @default(true)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  @@index([slot, isActive, sortOrder])
+  @@index([startsAt, endsAt])
+}
+
+model HomepageSection {
+  id            String              @id @default(uuid())
+  sectionType   HomepageSectionType
+  titleEn       String?
+  titleAr       String?
+  subtitleEn    String?
+  subtitleAr    String?
+  sortOrder     Int                 @default(0)
+  isVisible     Boolean             @default(true)
+  config        Json?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@unique([sectionType])
+  @@index([isVisible, sortOrder])
+}

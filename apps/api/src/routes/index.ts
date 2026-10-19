@@ -29,6 +29,7 @@ import { ReturnsService } from "../services/returns.service";
 import { ReviewsService } from "../services/reviews.service";
 import { ContentService } from "../services/content.service";
 import { SearchService } from "../services/search.service";
+import { BannerService } from "../services/banner.service";
 import { requireAdminAuth, requireRoles } from "../middleware/auth";
 import {
   ProductFilterSchema,
@@ -39,7 +40,7 @@ import {
   AIScentConsultationInputSchema,
   CreateReviewInputSchema,
 } from "@muschio/types";
-import { AdminRole } from "@prisma/client";
+import { AdminRole, BannerSlot, HomepageSectionType } from "@prisma/client";
 
 const router: Router = Router();
 const sessionLimiter = rateLimit({
@@ -824,6 +825,177 @@ router.patch(
         req.admin!.id,
       );
       res.json({ success: true, data: updated, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// -------------------------------------------------------------
+// 14. BANNERS, SLIDERS & HOMEPAGE CMS
+// -------------------------------------------------------------
+
+// Public: get active banners (storefront SSR fetch)
+router.get("/content/banners", async (req, res, next) => {
+  try {
+    const slot = req.query.slot as BannerSlot | undefined;
+    const banners = await BannerService.getActiveBanners(
+      slot && Object.values(BannerSlot).includes(slot) ? slot : undefined,
+    );
+    res.json({
+      success: true,
+      data: banners,
+      meta: { count: banners.length, requestId: req.id },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Public: get visible homepage sections (storefront SSR fetch)
+router.get("/content/sections", async (req, res, next) => {
+  try {
+    const sections = await BannerService.getVisibleSections();
+    res.json({
+      success: true,
+      data: sections,
+      meta: { count: sections.length, requestId: req.id },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Admin: list ALL banners (including inactive/scheduled)
+router.get("/admin/banners", requireAdminAuth, async (req, res, next) => {
+  try {
+    const banners = await BannerService.getAllBanners();
+    res.json({ success: true, data: banners, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Admin: create a banner
+router.post(
+  "/admin/banners",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const banner = await BannerService.createBanner(req.body);
+      res
+        .status(201)
+        .json({ success: true, data: banner, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: update a banner
+router.patch(
+  "/admin/banners/:id",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const banner = await BannerService.updateBanner(req.params.id as string, req.body);
+      res.json({ success: true, data: banner, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: toggle banner active/inactive
+router.post(
+  "/admin/banners/:id/toggle",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const banner = await BannerService.toggleBanner(req.params.id as string);
+      res.json({ success: true, data: banner, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: delete a banner
+router.delete(
+  "/admin/banners/:id",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN]),
+  async (req, res, next) => {
+    try {
+      await BannerService.deleteBanner(req.params.id as string);
+      res.json({
+        success: true,
+        data: { deleted: true },
+        meta: { requestId: req.id },
+      });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: list ALL homepage sections (including hidden)
+router.get(
+  "/admin/sections",
+  requireAdminAuth,
+  async (req, res, next) => {
+    try {
+      const sections = await BannerService.getAllSections();
+      res.json({ success: true, data: sections, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: upsert a homepage section
+router.put(
+  "/admin/sections",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const section = await BannerService.upsertSection(req.body);
+      res.json({ success: true, data: section, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: reorder homepage sections
+router.post(
+  "/admin/sections/reorder",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const sections = await BannerService.reorderSections(req.body.ordering);
+      res.json({ success: true, data: sections, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
+// Admin: toggle section visibility
+router.post(
+  "/admin/sections/:sectionType/toggle",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const sectionType = req.params.sectionType as HomepageSectionType;
+      const section = await BannerService.toggleSection(sectionType);
+      res.json({ success: true, data: section, meta: { requestId: req.id } });
     } catch (err) {
       next(err);
     }

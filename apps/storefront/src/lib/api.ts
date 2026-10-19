@@ -215,4 +215,14 @@ export const muschioApi = {
       body: JSON.stringify({ variantIds }),
     });
   },
+
+  // Banners & Homepage CMS
+  async getActiveBanners(slot?: string): Promise<any[] | null> {
+    const query = slot ? `?slot=${encodeURIComponent(slot)}` : "";
+    return apiRequest<any[]>(`/content/banners${query}`);
+  },
+
+  async getHomepageSections(): Promise<any[] | null> {
+    return apiRequest<any[]>("/content/sections");
+  },
 };

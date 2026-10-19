@@ -43,3 +43,4 @@ logs/
 .vercel
 .env*
 !.env.example
+.neon

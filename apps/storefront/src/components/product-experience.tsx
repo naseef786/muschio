@@ -98,39 +98,39 @@ export function ProductExperience({
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10">
       {/* 1. Breadcrumbs (Level Shoes Compact Pattern) */}
-      <nav aria-label="Breadcrumb" className="text-[11px] sm:text-[12px] text-[#77776F] mb-6 md:mb-8">
+      <nav aria-label="Breadcrumb" className="text-[11px] sm:text-[12px] text-luxury-muted mb-6 md:mb-8">
         <ol className="flex items-center gap-2 flex-wrap">
           <li>
-            <Link href="/" className="hover:text-[#171917] transition-colors">
+            <Link href="/" className="hover:text-luxury-text transition-colors">
               {c("Home", "الرئيسية")}
             </Link>
           </li>
           <li>/</li>
           <li>
-            <Link href="/shop" className="hover:text-[#171917] transition-colors">
+            <Link href="/shop" className="hover:text-luxury-text transition-colors">
               {c("Fragrance", "العطور")}
             </Link>
           </li>
           <li>/</li>
           <li>
-            <Link href={`/brands/${brandSlug}`} className="hover:text-[#171917] transition-colors">
+            <Link href={`/brands/${brandSlug}`} className="hover:text-luxury-text transition-colors">
               {product.brand.name}
             </Link>
           </li>
           <li>/</li>
-          <li className="text-[#171917] font-medium truncate max-w-[200px] sm:max-w-none">
+          <li className="text-luxury-text font-medium truncate max-w-[200px] sm:max-w-none">
             {c(product.nameEn, product.nameAr)}
           </li>
         </ol>
       </nav>
 
       {/* 2. Main Product Section (2-Column Desktop Grid) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 pb-16 border-b border-[#E6E4DE]">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-14 pb-16 border-b border-luxury-border">
         {/* Left Column: Gallery (7 Cols Desktop) */}
         <div className="lg:col-span-7">
           <div className="lg:sticky lg:top-24 space-y-4">
             {/* Primary Main Image Canvas (4:5 Ratio, Contain, Never Cropped) */}
-            <div className="relative aspect-[4/5] w-full bg-[#F3F1EC] border border-[#E6E4DE] overflow-hidden flex items-center justify-center">
+            <div className="relative aspect-[4/5] w-full bg-luxury-surface2 border border-luxury-border overflow-hidden flex items-center justify-center">
               <Image
                 src={currentImage}
                 alt={c(product.nameEn, product.nameAr)}
@@ -147,8 +147,8 @@ export function ProductExperience({
                 aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
                 className={`absolute top-4 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border shadow-sm transition-all ${
                   isWishlisted
-                    ? "bg-white text-[#d2042d] border-[#E6E4DE]"
-                    : "bg-white/90 text-[#77776F] border-[#E6E4DE] hover:text-[#171917] hover:bg-white"
+                    ? "bg-luxury-surface text-[#d2042d] border-luxury-border"
+                    : "bg-luxury-surface/90 text-luxury-muted border-luxury-border hover:text-luxury-text hover:bg-luxury-surface"
                 }`}
               >
                 <Heart size={18} className={isWishlisted ? "fill-current text-[#d2042d]" : ""} />
@@ -159,9 +159,9 @@ export function ProductExperience({
                 type="button"
                 onClick={handleShare}
                 aria-label="Share product"
-                className="absolute top-16 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border bg-white/90 text-[#77776F] border-[#E6E4DE] hover:text-[#171917] hover:bg-white shadow-sm transition-all"
+                className="absolute top-16 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border bg-luxury-surface/90 text-luxury-muted border-luxury-border hover:text-luxury-text hover:bg-luxury-surface shadow-sm transition-all"
               >
-                {copiedLink ? <Check size={16} className="text-[#46513B]" /> : <Share2 size={16} />}
+                {copiedLink ? <Check size={16} className="text-accent" /> : <Share2 size={16} />}
               </button>
             </div>
 
@@ -174,10 +174,10 @@ export function ProductExperience({
                     type="button"
                     onClick={() => setSelectedImageIndex(idx)}
                     aria-label={`View image ${idx + 1}`}
-                    className={`relative w-20 h-24 aspect-[4/5] bg-[#F3F1EC] border transition-all flex-shrink-0 ${
+                    className={`relative w-20 h-24 aspect-[4/5] bg-luxury-surface2 border transition-all flex-shrink-0 ${
                       selectedImageIndex === idx
-                        ? "border-[#171917] ring-1 ring-[#171917]"
-                        : "border-[#E6E4DE] opacity-75 hover:opacity-100"
+                        ? "border-luxury-borderBold ring-1 ring-luxury-borderBold"
+                        : "border-luxury-border opacity-75 hover:opacity-100"
                     }`}
                   >
                     <Image
@@ -201,21 +201,21 @@ export function ProductExperience({
             <div>
               <Link
                 href={`/brands/${brandSlug}`}
-                className="inline-block text-[12px] font-sans font-medium uppercase tracking-[0.16em] text-[#77776F] hover:text-[#171917] transition-colors"
+                className="inline-block text-[12px] font-sans font-medium uppercase tracking-[0.16em] text-luxury-muted hover:text-luxury-text transition-colors"
               >
                 {product.brand.name}
               </Link>
-              <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal leading-tight mt-1.5">
+              <h1 className="font-serif text-3xl sm:text-4xl text-luxury-text font-normal leading-tight mt-1.5">
                 {c(product.nameEn, product.nameAr)}
               </h1>
-              <p className="text-[13px] text-[#77776F] mt-1 tracking-wide">
+              <p className="text-[13px] text-luxury-muted mt-1 tracking-wide">
                 {product.concentration.replaceAll("_", " ")}
               </p>
             </div>
 
             {/* Price Display */}
             {selectedVariant && (
-              <div className="pt-2 border-t border-[#E6E4DE]">
+              <div className="pt-2 border-t border-luxury-border">
                 <PriceDisplay
                   price={selectedVariant.price}
                   compareAtPrice={selectedVariant.compareAtPrice}
@@ -229,10 +229,10 @@ export function ProductExperience({
             {product.variants.length > 0 && (
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between text-xs">
-                  <span className="font-medium uppercase tracking-wider text-[#171917]">
+                  <span className="font-medium uppercase tracking-wider text-luxury-text">
                     {c("Select Volume", "اختر الحجم")}
                   </span>
-                  <span className="text-[#77776F]">
+                  <span className="text-luxury-muted">
                     {c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
                   </span>
                 </div>
@@ -256,12 +256,12 @@ export function ProductExperience({
 
             {/* Truthful Preview / Availability Banner */}
             {preview && (
-              <div className="p-4 bg-[#F3F1EC] border border-[#E6E4DE] text-xs leading-relaxed text-[#171917]">
-                <div className="flex items-center gap-2 font-medium text-[#46513B] mb-1">
+              <div className="p-4 bg-luxury-surface2 border border-luxury-border text-xs leading-relaxed text-luxury-text">
+                <div className="flex items-center gap-2 font-medium text-accent mb-1">
                   <Sparkles size={14} />
                   <span>{c("Maison Collection Preview", "معاينة مجموعة الميزون")}</span>
                 </div>
-                <p className="text-[#77776F]">
+                <p className="text-luxury-muted">
                   {c(
                     "This creation is part of our verified olfactory catalog. Online self-checkout is currently in preview mode. To reserve this flacon or request private consultation, contact our fragrance concierge.",
                     "هذا العطر جزء من مجموعتنا المعتمدة. الشراء الإلكتروني المباشر في وضع المعاينة حالياً. لحجز الزجاجة أو الاستشارة الخاصة، يُرجى التواصل مع مستشار العطور.",
@@ -287,45 +287,45 @@ export function ProductExperience({
             </div>
 
             {/* Service Badges (Authentic, GCC Delivery, Sealed Guarantee) */}
-            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-[#E6E4DE] text-center">
+            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-luxury-border text-center">
               <div className="flex flex-col items-center gap-1.5 p-2">
-                <ShieldCheck size={18} className="text-[#46513B]" />
-                <span className="text-[11px] font-medium text-[#171917]">
+                <ShieldCheck size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-luxury-text">
                   {c("100% Authentic", "أصلي ١٠٠٪")}
                 </span>
-                <span className="text-[10px] text-[#77776F]">
+                <span className="text-[10px] text-luxury-muted">
                   {c("Direct from Houses", "مباشرة من الدور")}
                 </span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 p-2 border-x border-[#E6E4DE]">
-                <Truck size={18} className="text-[#46513B]" />
-                <span className="text-[11px] font-medium text-[#171917]">
+              <div className="flex flex-col items-center gap-1.5 p-2 border-x border-luxury-border">
+                <Truck size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-luxury-text">
                   {c("GCC Express", "توصيل سريع")}
                 </span>
-                <span className="text-[10px] text-[#77776F]">
+                <span className="text-[10px] text-luxury-muted">
                   {c("Complimentary >500 AED", "مجاني فوق ٥٠٠ د.إ")}
                 </span>
               </div>
               <div className="flex flex-col items-center gap-1.5 p-2">
-                <Package size={18} className="text-[#46513B]" />
-                <span className="text-[11px] font-medium text-[#171917]">
+                <Package size={18} className="text-accent" />
+                <span className="text-[11px] font-medium text-luxury-text">
                   {c("2ml Sample Included", "عينة ٢ مل مرفقة")}
                 </span>
-                <span className="text-[10px] text-[#77776F]">
+                <span className="text-[10px] text-luxury-muted">
                   {c("Test Before Opening", "جرّب قبل الفتح")}
                 </span>
               </div>
             </div>
 
             {/* Description Paragraph */}
-            <div className="pt-4 border-t border-[#E6E4DE]">
-              <p className="text-sm leading-relaxed text-[#171917]">
+            <div className="pt-4 border-t border-luxury-border">
+              <p className="text-sm leading-relaxed text-luxury-text">
                 {c(product.descriptionEn, product.descriptionAr)}
               </p>
             </div>
 
             {/* 3. Level Shoes Style Accordions */}
-            <div className="border-b border-[#E6E4DE]">
+            <div className="border-b border-luxury-border">
               {/* Accordion 1: Olfactory Pyramid & Scent Notes */}
               {(topNotes.length > 0 || heartNotes.length > 0 || baseNotes.length > 0) && (
                 <div className="pdp-accordion-item">
@@ -347,7 +347,7 @@ export function ProductExperience({
                     <div className="pdp-accordion-content space-y-4">
                       {topNotes.length > 0 && (
                         <div>
-                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-luxury-text block mb-1.5">
                             {c("Top Notes", "الافتتاحية")}
                           </span>
                           <div className="flex flex-wrap gap-2">
@@ -355,7 +355,7 @@ export function ProductExperience({
                               <Link
                                 key={n.id}
                                 href={`/notes/${n.slug}`}
-                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                                className="px-3 py-1 text-xs border border-luxury-border bg-luxury-surface text-luxury-text hover:border-luxury-borderBold transition-colors"
                               >
                                 {n.name}
                               </Link>
@@ -365,7 +365,7 @@ export function ProductExperience({
                       )}
                       {heartNotes.length > 0 && (
                         <div>
-                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-luxury-text block mb-1.5">
                             {c("Heart Notes", "قلب العطر")}
                           </span>
                           <div className="flex flex-wrap gap-2">
@@ -373,7 +373,7 @@ export function ProductExperience({
                               <Link
                                 key={n.id}
                                 href={`/notes/${n.slug}`}
-                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                                className="px-3 py-1 text-xs border border-luxury-border bg-luxury-surface text-luxury-text hover:border-luxury-borderBold transition-colors"
                               >
                                 {n.name}
                               </Link>
@@ -383,7 +383,7 @@ export function ProductExperience({
                       )}
                       {baseNotes.length > 0 && (
                         <div>
-                          <span className="text-[11px] font-medium uppercase tracking-wider text-[#171917] block mb-1.5">
+                          <span className="text-[11px] font-medium uppercase tracking-wider text-luxury-text block mb-1.5">
                             {c("Base Notes", "القاعدة العطرية")}
                           </span>
                           <div className="flex flex-wrap gap-2">
@@ -391,7 +391,7 @@ export function ProductExperience({
                               <Link
                                 key={n.id}
                                 href={`/notes/${n.slug}`}
-                                className="px-3 py-1 text-xs border border-[#E6E4DE] bg-white hover:border-[#171917] transition-colors"
+                                className="px-3 py-1 text-xs border border-luxury-border bg-luxury-surface text-luxury-text hover:border-luxury-borderBold transition-colors"
                               >
                                 {n.name}
                               </Link>
@@ -424,30 +424,30 @@ export function ProductExperience({
                   <div className="pdp-accordion-content space-y-3">
                     <div className="grid grid-cols-2 gap-4 text-xs">
                       <div>
-                        <span className="text-[#77776F] block">{c("Fragrance House", "دار العطور")}</span>
-                        <span className="font-medium text-[#171917]">{product.brand.name}</span>
+                        <span className="text-luxury-muted block">{c("Fragrance House", "دار العطور")}</span>
+                        <span className="font-medium text-luxury-text">{product.brand.name}</span>
                       </div>
                       {product.origin && (
                         <div>
-                          <span className="text-[#77776F] block">{c("Country of Origin", "بلد المنشأ")}</span>
-                          <span className="font-medium text-[#171917]">{product.origin}</span>
+                          <span className="text-luxury-muted block">{c("Country of Origin", "بلد المنشأ")}</span>
+                          <span className="font-medium text-luxury-text">{product.origin}</span>
                         </div>
                       )}
                       {product.perfumer && (
                         <div>
-                          <span className="text-[#77776F] block">{c("Master Perfumer", "الأنف العطري")}</span>
-                          <span className="font-medium text-[#171917]">{product.perfumer}</span>
+                          <span className="text-luxury-muted block">{c("Master Perfumer", "الأنف العطري")}</span>
+                          <span className="font-medium text-luxury-text">{product.perfumer}</span>
                         </div>
                       )}
                       {product.longevity && (
                         <div>
-                          <span className="text-[#77776F] block">{c("Longevity", "الثبات")}</span>
-                          <span className="font-medium text-[#171917]">{product.longevity}</span>
+                          <span className="text-luxury-muted block">{c("Longevity", "الثبات")}</span>
+                          <span className="font-medium text-luxury-text">{product.longevity}</span>
                         </div>
                       )}
                     </div>
                     {product.perfumerBio && (
-                      <p className="text-xs text-[#77776F] pt-2 border-t border-[#E6E4DE]">
+                      <p className="text-xs text-luxury-muted pt-2 border-t border-luxury-border">
                         {product.perfumerBio}
                       </p>
                     )}
@@ -529,11 +529,11 @@ export function ProductExperience({
 
       {/* 4. More From This House Section */}
       {houseProducts.length > 0 && (
-        <section className="py-14 border-b border-[#E6E4DE]">
+        <section className="py-14 border-b border-luxury-border">
           <div className="flex items-end justify-between mb-8">
             <div>
               <span className="eyebrow">{c("FROM THE SAME MAISON", "من الدار نفسها")}</span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#171917] mt-1">
+              <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text mt-1">
                 {c(`More from ${product.brand.name}`, `عطور أخرى من ${product.brand.name}`)}
               </h2>
             </div>
@@ -569,7 +569,7 @@ export function ProductExperience({
           <div className="flex items-end justify-between mb-8">
             <div>
               <span className="eyebrow">{c("CURATED RECOMMENDATIONS", "ترشيحات مختارة")}</span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-[#171917] mt-1">
+              <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text mt-1">
                 {c("You May Also Appreciate", "قد ينال إعجابك أيضاً")}
               </h2>
             </div>

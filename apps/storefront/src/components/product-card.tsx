@@ -49,15 +49,15 @@ export function ProductCard({
 
   return (
     <div
-      className="group flex flex-col h-full bg-[#F8F7F3] transition-transform duration-200"
+      className="group flex flex-col h-full bg-luxury-canvas transition-transform duration-200"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* 4:5 Aspect Ratio Image Canvas with Discreet Wishlist & Badge */}
-      <div className="relative aspect-[4/5] w-full bg-[#F3F1EC] border border-[#E6E4DE] overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[4/5] w-full bg-luxury-surface2 border border-luxury-border overflow-hidden flex items-center justify-center">
         {/* Subtle Badge */}
         {badge && (
-          <span className="absolute top-2.5 inset-inline-start-2.5 z-10 text-[9px] md:text-[10px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-white/95 text-[#171917] border border-[#E6E4DE]">
+          <span className="absolute top-2.5 inset-inline-start-2.5 z-10 text-[9px] md:text-[10px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
             {badge}
           </span>
         )}
@@ -69,8 +69,8 @@ export function ProductCard({
           aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
           className={`absolute top-2.5 inset-inline-end-2.5 z-10 w-8 h-8 rounded-full flex items-center justify-center border transition-all duration-150 ${
             isWishlisted
-              ? "bg-white text-[#d2042d] border-[#E6E4DE]"
-              : "bg-white/80 text-[#77776F] border-[#E6E4DE] hover:text-[#171917] hover:bg-white"
+              ? "bg-luxury-surface text-[#d2042d] border-luxury-border"
+              : "bg-luxury-surface/80 text-luxury-muted border-luxury-border hover:text-luxury-text hover:bg-luxury-surface"
           }`}
         >
           <Heart
@@ -100,7 +100,7 @@ export function ProductCard({
           {/* Brand */}
           <Link
             href={`/brands/${brand.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`}
-            className="block text-[11px] font-sans font-medium uppercase tracking-[0.14em] text-[#77776F] hover:text-[#171917] transition-colors"
+            className="block text-[11px] font-sans font-medium uppercase tracking-[0.14em] text-luxury-muted hover:text-luxury-text transition-colors"
           >
             {brand}
           </Link>
@@ -108,14 +108,14 @@ export function ProductCard({
           {/* Product Name */}
           <Link
             href={`/product/${slug}`}
-            className="block text-[13px] sm:text-[14px] font-normal text-[#171917] hover:underline leading-snug line-clamp-2"
+            className="block text-[13px] sm:text-[14px] font-normal text-luxury-text hover:underline leading-snug line-clamp-2"
           >
             {title}
           </Link>
 
           {/* Concentration or Subtitle */}
           {concentration && (
-            <p className="text-[12px] text-[#77776F] line-clamp-1">
+            <p className="text-[12px] text-luxury-muted line-clamp-1">
               {concentration}
             </p>
           )}

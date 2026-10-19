@@ -183,29 +183,29 @@ export default function NotesIndexPage({
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
       {/* 1. Header (Level Shoes Architectural Pattern) */}
-      <div className="pb-6 border-b border-[#E6E4DE] flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="pb-6 border-b border-luxury-border flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <span className="eyebrow mb-1">
             {c("THE OLFACTORY LIBRARY", "المكتبة العطرية والمكونات")}
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl text-[#171917] font-normal">
+          <h1 className="font-serif text-3xl sm:text-4xl text-luxury-text font-normal">
             {c("Scent Notes & Raw Essences", "نوتات العطور والمكونات النادرة")}
           </h1>
-          <p className="text-xs sm:text-sm text-[#77776F] mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-luxury-muted mt-1 max-w-xl">
             {c(
               "Explore master perfumery through verified raw extracts, from Taif Mountain Rose to sacred Omani Frankincense.",
               "اكتشف أسرار تركيب العطور من خلال المواد الطبيعية النادرة المستخرجة من أخصب بيئات العالم.",
             )}
           </p>
         </div>
-        <div className="text-xs text-[#77776F]">
-          <span className="font-medium text-[#171917]">{filteredNotes.length}</span>{" "}
+        <div className="text-xs text-luxury-muted">
+          <span className="font-medium text-luxury-text">{filteredNotes.length}</span>{" "}
           {c("Notes", "نوتة")}
         </div>
       </div>
 
       {/* 2. Scent Family Navigation & Search Toolbar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-[#E6E4DE]">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-luxury-border">
         {/* Scent Family Filter Pills */}
         <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
           {FAMILIES.map((fam) => (
@@ -215,8 +215,8 @@ export default function NotesIndexPage({
               onClick={() => setSelectedFamily(fam.id)}
               className={`px-3 py-1.5 text-xs font-sans whitespace-nowrap transition-colors ${
                 selectedFamily === fam.id
-                  ? "bg-[#171917] text-white font-medium"
-                  : "bg-white border border-[#E6E4DE] text-[#77776F] hover:text-[#171917] hover:border-[#171917]"
+                  ? "bg-luxury-text text-luxury-canvas font-medium"
+                  : "bg-luxury-surface border border-luxury-border text-luxury-muted hover:text-luxury-text hover:border-luxury-borderBold"
               }`}
             >
               {c(fam.labelEn, fam.labelAr)}
@@ -231,15 +231,15 @@ export default function NotesIndexPage({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={c("Search notes (e.g. Oud, Rose)…", "ابحث عن نوتة (عود، لبان)…")}
-            className="w-full h-9 ps-8 pe-3 text-xs bg-white border border-[#E6E4DE] text-[#171917] focus:outline-none focus:border-[#171917]"
+            className="w-full h-9 ps-8 pe-3 text-xs bg-luxury-surface border border-luxury-border text-luxury-text focus:outline-none focus:border-luxury-borderBold"
           />
-          <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-[#77776F]" />
+          <Search size={14} className="absolute start-2.5 top-1/2 -translate-y-1/2 text-luxury-muted" />
         </div>
       </div>
 
       {/* 3. Notes Grid (Level Shoes Clean Card Hierarchy) */}
       {filteredNotes.length === 0 ? (
-        <div className="py-16 text-center text-xs text-[#77776F]">
+        <div className="py-16 text-center text-xs text-luxury-muted">
           {c("No scent notes found matching your search.", "لم يتم العثور على نوتات مطابقة للبحث.")}
         </div>
       ) : (
@@ -248,9 +248,9 @@ export default function NotesIndexPage({
             <Link
               key={note.slug}
               href={`/notes/${note.slug}`}
-              className="group border border-[#E6E4DE] bg-white flex flex-col justify-between hover:border-[#171917] transition-all"
+              className="group border border-luxury-border bg-luxury-surface flex flex-col justify-between hover:border-luxury-borderBold transition-all"
             >
-              <div className="relative aspect-[4/3] w-full bg-[#F3F1EC] border-b border-[#E6E4DE] overflow-hidden">
+              <div className="relative aspect-[4/3] w-full bg-luxury-surface2 border-b border-luxury-border overflow-hidden">
                 <Image
                   src={note.image}
                   alt={c(note.nameEn, note.nameAr)}
@@ -258,29 +258,29 @@ export default function NotesIndexPage({
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <span className="absolute top-2.5 inset-inline-start-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-white/95 text-[#171917] border border-[#E6E4DE]">
+                <span className="absolute top-2.5 inset-inline-start-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
                   {c(note.familyEn, note.familyAr)}
                 </span>
               </div>
 
               <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
                 <div>
-                  <span className="text-[10px] font-sans uppercase tracking-[0.12em] text-[#77776F] block">
+                  <span className="text-[10px] font-sans uppercase tracking-[0.12em] text-luxury-muted block">
                     {c(note.originEn, note.originAr)}
                   </span>
-                  <h3 className="font-serif text-lg text-[#171917] font-normal group-hover:underline mt-1">
+                  <h3 className="font-serif text-lg text-luxury-text font-normal group-hover:underline mt-1">
                     {c(note.nameEn, note.nameAr)}
                   </h3>
-                  <p className="text-xs text-[#77776F] leading-relaxed line-clamp-2 mt-2">
+                  <p className="text-xs text-luxury-muted leading-relaxed line-clamp-2 mt-2">
                     {c(note.descriptionEn, note.descriptionAr)}
                   </p>
                 </div>
 
-                <div className="pt-3 border-t border-[#E6E4DE] flex items-center justify-between text-xs">
-                  <span className="text-[#46513B] font-medium">
+                <div className="pt-3 border-t border-luxury-border flex items-center justify-between text-xs">
+                  <span className="text-accent font-medium">
                     {note.perfumeCount} {c("Perfumes", "عطور")}
                   </span>
-                  <span className="text-[#171917] group-hover:underline flex items-center gap-1">
+                  <span className="text-luxury-text group-hover:underline flex items-center gap-1">
                     <span>{c("Explore", "استكشف")}</span>
                     <ArrowUpRight size={13} />
                   </span>

@@ -29,7 +29,7 @@ export default function JournalDetailPage({
       {/* 1. Back link */}
       <Link
         href="/journal"
-        className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-widest text-[#77776F] hover:text-[#171917] transition-colors"
+        className="inline-flex items-center gap-1.5 text-xs font-sans uppercase tracking-widest text-luxury-muted hover:text-luxury-text transition-colors"
       >
         <ArrowLeft size={14} className="rtl:rotate-180" />
         <span>{c("Back to Journal", "العودة للمجلة")}</span>
@@ -37,17 +37,17 @@ export default function JournalDetailPage({
 
       {/* 2. Article Header */}
       <div className="space-y-4">
-        <span className="eyebrow text-[#46513B]">
+        <span className="eyebrow text-accent">
           {c("HAUTE LAYERING RITUALS", "فن المزج والطقوس العطرية")}
         </span>
-        <h1 className="font-serif text-3xl sm:text-5xl text-[#171917] font-normal leading-tight">
+        <h1 className="font-serif text-3xl sm:text-5xl text-luxury-text font-normal leading-tight">
           {c(
             "The Sacred Alchemy: Layering Aged Omani Oud with Mountain Taif Rose",
             "الكيمياء المقدسة: فن مزج العود العُماني المعتق مع ورد الطائف الجبلي",
           )}
         </h1>
 
-        <div className="flex items-center gap-6 text-xs text-[#77776F] font-sans border-y border-[#E6E4DE] py-3">
+        <div className="flex items-center gap-6 text-xs text-luxury-muted font-sans border-y border-luxury-border py-3">
           <span className="flex items-center gap-1.5">
             <User size={13} />
             <span>Salim Al-Harthy</span>
@@ -61,7 +61,7 @@ export default function JournalDetailPage({
       </div>
 
       {/* 3. Hero Visual */}
-      <div className="relative aspect-[16/9] w-full bg-[#F3F1EC] border border-[#E6E4DE] overflow-hidden">
+      <div className="relative aspect-[16/9] w-full bg-luxury-surface2 border border-luxury-border overflow-hidden">
         <Image
           src="https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=85"
           alt="Layering Perfumes in the Gulf"
@@ -73,7 +73,7 @@ export default function JournalDetailPage({
       </div>
 
       {/* 4. Essay Copy */}
-      <div className="text-[#171917] font-sans text-sm sm:text-base leading-relaxed space-y-6">
+      <div className="text-luxury-text font-sans text-sm sm:text-base leading-relaxed space-y-6">
         <p>
           {c(
             "Across the royal majalis of the Arabian Gulf, perfumery is neither a cosmetic accessory nor an afterthought; it is an intimate language of hospitality, majesty, and enduring cultural devotion.",
@@ -95,12 +95,12 @@ export default function JournalDetailPage({
       </div>
 
       {/* 5. Featured Shoppable Fragrance Card (Level Shoes Style) */}
-      <div className="border border-[#E6E4DE] bg-white p-6 sm:p-8 space-y-6">
+      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 space-y-6">
         <div>
           <span className="eyebrow mb-1">
             {c("FEATURED IN THIS STORY", "عطور مذكورة في هذا المقال")}
           </span>
-          <h3 className="font-serif text-2xl text-[#171917] font-normal">
+          <h3 className="font-serif text-2xl text-luxury-text font-normal">
             {c("The Incense & Agarwood Anchor", "القاعدة البخورية والعود")}
           </h3>
         </div>

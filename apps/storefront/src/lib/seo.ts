@@ -168,6 +168,13 @@ export function generateOrganizationJsonLd() {
     logo: "https://muschio.luxury/images/logo.png",
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85",
     description: "Dubai's premier destination for rare niche extraits de parfum, artisanal aged attars, and bespoke olfactory consultation in the Arabian Gulf.",
+    sameAs: [
+      "https://www.instagram.com/muschio.parfums",
+      "https://www.tiktok.com/@muschio.haute",
+      "https://twitter.com/muschio_haute",
+      "https://wa.me/97148006872",
+      "https://www.youtube.com/@muschiohaute",
+    ],
     address: {
       "@type": "PostalAddress",
       streetAddress: "Fashion Avenue, The Dubai Mall",
@@ -193,3 +200,4 @@ export function generateOrganizationJsonLd() {
     ],
   };
 }
+

@@ -185,6 +185,99 @@
   backdrop-filter: blur(2px);
 }
 
+/* Luxury Slide-in Drawers */
+.drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(18, 20, 18, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 60;
+  animation: fadeIn 0.25s ease forwards;
+}
+
+.drawer-panel-start {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-start: 0;
+  width: min(420px, 88vw);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  border-inline-end: 1px solid var(--border-subtle);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+}
+
+.drawer-panel-end {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  inset-inline-end: 0;
+  width: min(460px, 92vw);
+  background: var(--bg-canvas);
+  color: var(--text-primary);
+  border-inline-start: 1px solid var(--border-subtle);
+  z-index: 70;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.35);
+  overflow-y: auto;
+}
+
+[dir="ltr"] .drawer-panel-start {
+  animation: slideDrawerStartLtr 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[dir="rtl"] .drawer-panel-start {
+  animation: slideDrawerStartRtl 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[dir="ltr"] .drawer-panel-end {
+  animation: slideDrawerEndLtr 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+[dir="rtl"] .drawer-panel-end {
+  animation: slideDrawerEndRtl 0.28s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes slideDrawerStartLtr {
+  from { transform: translateX(-100%); opacity: 0.85; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideDrawerStartRtl {
+  from { transform: translateX(100%); opacity: 0.85; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideDrawerEndLtr {
+  from { transform: translateX(100%); opacity: 0.85; }
+  to { transform: translateX(0); opacity: 1; }
+}
+@keyframes slideDrawerEndRtl {
+  from { transform: translateX(-100%); opacity: 0.85; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+/* Mega Menu Dropdowns */
+.mega-menu-panel {
+  position: absolute;
+  top: 100%;
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  background: var(--bg-canvas);
+  border: 1px solid var(--border-subtle);
+  box-shadow: 0 16px 36px -8px rgba(0, 0, 0, 0.12);
+  padding: 24px;
+  z-index: 55;
+}
+
+[dir="rtl"] .mega-menu-panel {
+  transform: translateX(50%);
+}
+
+.dark .mega-menu-panel {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
+}
+
 .dialog-heading {
   display: flex;
   justify-content: space-between;
@@ -481,6 +574,11 @@
   background: #171917;
   color: #F8F7F3;
   border-top: 1px solid var(--border-subtle);
+  transition: background-color 0.3s ease;
+}
+
+.dark .site-footer {
+  background: #0d0f0d;
 }
 
 .footer-grid {
@@ -536,7 +634,7 @@
 }
 
 /* Mobile Responsiveness */
-@media (max-width: 768px) {
+@media (max-width: 860px) {
   .site-nav,
   .desktop-utility {
     display: none !important;
@@ -557,7 +655,7 @@
   }
 }
 
-@media (min-width: 769px) {
+@media (min-width: 861px) {
   .mobile-trigger {
     display: none !important;
   }
@@ -582,4 +680,140 @@ input,
 select,
 textarea {
   font-size: 15px;
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border-color: var(--border-subtle);
+}
+
+/* =========================================================
+   2. EDITORIAL & DELIBERATE GLASSMORPHISM SYSTEM
+   ========================================================= */
+
+.editorial-section {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 64px 24px;
+}
+
+@media (min-width: 768px) {
+  .editorial-section {
+    padding: 80px 40px;
+  }
+}
+
+.delivery-panel {
+  border: 1px solid var(--border-subtle);
+  padding: 28px;
+  background: var(--bg-surface);
+  border-radius: 2px;
+}
+
+.delivery-panel h2 {
+  font-family: var(--font-serif), 'Cormorant Garamond', Georgia, serif;
+  font-size: 26px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+}
+
+.delivery-status {
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  padding: 16px 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-top: 16px;
+  border-radius: 2px;
+}
+
+.glass-input {
+  background-color: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 2px;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.glass-input:focus {
+  border-color: var(--text-primary);
+  outline: none;
+}
+
+.glass-pill {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 9999px;
+  transition: all 0.15s ease;
+}
+
+.glass-panel,
+.glass-card {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  color: var(--text-primary);
+  border-radius: 2px;
+}
+
+/* =========================================================
+   3. UNIVERSAL DARK THEME SYSTEM FOR HARDCODED UTILITIES
+   ========================================================= */
+
+.dark .bg-white {
+  background-color: var(--bg-surface) !important;
+}
+
+.dark .bg-white\/95,
+.dark .bg-white\/90,
+.dark .bg-white\/80 {
+  background-color: rgba(26, 29, 26, 0.92) !important;
+}
+
+.dark .border-\[\#E6E4DE\] {
+  border-color: var(--border-subtle) !important;
+}
+
+.dark .divide-\[\#E6E4DE\] > :not([hidden]) ~ :not([hidden]) {
+  border-color: var(--border-subtle) !important;
+}
+
+.dark .text-\[\#171917\] {
+  color: var(--text-primary) !important;
+}
+
+.dark .text-\[\#77776F\] {
+  color: var(--text-muted) !important;
+}
+
+.dark .bg-\[\#F8F7F3\] {
+  background-color: var(--bg-canvas) !important;
+}
+
+.dark .bg-\[\#F3F1EC\] {
+  background-color: var(--bg-surface-2) !important;
+}
+
+.dark .border-\[\#171917\] {
+  border-color: var(--border-bold) !important;
+}
+
+.dark .bg-\[\#171917\] {
+  background-color: var(--text-primary) !important;
+  color: var(--bg-canvas) !important;
+}
+
+.dark .hover\:bg-\[\#F8F7F3\]:hover {
+  background-color: var(--bg-surface-2) !important;
+}
+
+.dark .hover\:border-\[\#171917\]:hover {
+  border-color: var(--text-primary) !important;
+}
+
+.dark .hover\:text-\[\#171917\]:hover {
+  color: var(--text-primary) !important;
+}
+
+.dark .ring-\[\#171917\] {
+  --tw-ring-color: var(--text-primary) !important;
 }

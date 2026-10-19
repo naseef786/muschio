@@ -231,7 +231,6 @@ export class PaymentService {
     } else {
       const body = new URLSearchParams({
         mode: "payment",
-        "payment_method_types[0]": "card",
         success_url: request.returnUrl,
         cancel_url: request.cancelUrl,
         customer_email: order.guestEmail!,

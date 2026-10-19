@@ -172,53 +172,53 @@ export default function BrandDetailPage({
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
       {/* 1. Breadcrumbs */}
-      <nav aria-label="Breadcrumb" className="text-xs text-[#77776F]">
+      <nav aria-label="Breadcrumb" className="text-xs text-luxury-muted">
         <ol className="flex items-center gap-2">
           <li>
-            <Link href="/" className="hover:text-[#171917] transition-colors">
+            <Link href="/" className="hover:text-luxury-text transition-colors">
               {c("Home", "الرئيسية")}
             </Link>
           </li>
           <li>/</li>
           <li>
-            <Link href="/brands" className="hover:text-[#171917] transition-colors">
+            <Link href="/brands" className="hover:text-luxury-text transition-colors">
               {c("The Houses", "دور العطور")}
             </Link>
           </li>
           <li>/</li>
-          <li className="text-[#171917] font-medium">{brand.name}</li>
+          <li className="text-luxury-text font-medium">{brand.name}</li>
         </ol>
       </nav>
 
       {/* 2. Compact Maison Editorial Header (No Oversized Blocks) */}
-      <div className="border border-[#E6E4DE] bg-white p-6 sm:p-10 space-y-5">
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-[#E6E4DE]">
+      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-10 space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-4 border-b border-luxury-border">
           <div className="flex items-center gap-3">
-            <span className="text-[11px] font-sans font-medium uppercase tracking-[0.16em] text-[#46513B] px-2.5 py-1 bg-[#F3F1EC] border border-[#E6E4DE]">
+            <span className="text-[11px] font-sans font-medium uppercase tracking-[0.16em] text-accent px-2.5 py-1 bg-luxury-surface2 border border-luxury-border">
               {brand.type === "NICHE" ? "Haute Niche" : "Designer Privé"}
             </span>
-            <span className="flex items-center gap-1.5 text-xs text-[#77776F]">
-              <Globe size={13} className="text-[#46513B]" />
+            <span className="flex items-center gap-1.5 text-xs text-luxury-muted">
+              <Globe size={13} className="text-accent" />
               <span>{isAr ? brand.countryAr : brand.countryEn}</span>
               <span>·</span>
               <span>Est. {brand.year}</span>
             </span>
           </div>
-          <div className="flex items-center gap-1 text-xs text-[#46513B]">
+          <div className="flex items-center gap-1 text-xs text-accent">
             <ShieldCheck size={14} />
             <span>{c("Authorized Stockist", "موزع رسمي معتمد")}</span>
           </div>
         </div>
 
         <div className="max-w-3xl space-y-3">
-          <h1 className="font-serif text-3xl sm:text-5xl text-[#171917] font-normal">
+          <h1 className="font-serif text-3xl sm:text-5xl text-luxury-text font-normal">
             {brand.name}
           </h1>
-          <p className="text-xs sm:text-sm text-[#77776F] leading-relaxed">
+          <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
             {isAr ? brand.storyAr : brand.storyEn}
           </p>
-          <div className="pt-2 text-xs text-[#171917]">
-            <span className="text-[#77776F] me-2">{c("Master Noses:", "صناع العطور:")}</span>
+          <div className="pt-2 text-xs text-luxury-text">
+            <span className="text-luxury-muted me-2">{c("Master Noses:", "صناع العطور:")}</span>
             <span className="font-medium">{brand.perfumer}</span>
           </div>
         </div>
@@ -226,16 +226,16 @@ export default function BrandDetailPage({
 
       {/* 3. Products by This House Section */}
       <section className="space-y-6 pt-4">
-        <div className="flex items-end justify-between pb-4 border-b border-[#E6E4DE]">
+        <div className="flex items-end justify-between pb-4 border-b border-luxury-border">
           <div>
             <span className="eyebrow mb-1">
               {c("AUTHORIZED FLACONS", "العطور المتوفرة")}
             </span>
-            <h2 className="font-serif text-2xl text-[#171917] font-normal">
+            <h2 className="font-serif text-2xl text-luxury-text font-normal">
               {c(`Creations by ${brand.name}`, `إصدارات دار ${brand.name}`)}
             </h2>
           </div>
-          <span className="text-xs text-[#77776F]">
+          <span className="text-xs text-luxury-muted">
             {brand.perfumes.length} {c("Available", "متوفر")}
           </span>
         </div>
