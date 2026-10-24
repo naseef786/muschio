@@ -19,6 +19,7 @@ import {
   User,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
+import { useWishlist } from "../context/wishlist-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -96,6 +97,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
   const cart = useCart();
+  const wishlist = useWishlist();
 
   // Scroll lock when side drawer is open
   useEffect(() => {
@@ -196,11 +198,22 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
 
             {/* Wishlist */}
             <Link
-              className="desktop-utility text-luxury-text hover:text-accent transition-colors"
+              className="desktop-utility relative flex items-center text-luxury-text hover:text-accent transition-colors"
               href="/wishlist"
-              aria-label={c("Wishlist", "المفضلة")}
+              aria-label={c(
+                `Wishlist, ${wishlist.itemCount} items`,
+                `المفضلة، ${wishlist.itemCount} عناصر`,
+              )}
             >
-              <Heart size={20} />
+              <Heart
+                size={20}
+                className={wishlist.itemCount > 0 ? "fill-accent/20 text-accent" : ""}
+              />
+              {wishlist.itemCount > 0 && (
+                <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none">
+                  {wishlist.itemCount}
+                </span>
+              )}
             </Link>
 
             {/* Cart Trigger */}
@@ -356,28 +369,34 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             </div>
           </div>
 
-          {/* Flat Links */}
-          <Link
-            href="/discover/sets"
-            aria-current={pathname === "/discover/sets" ? "page" : undefined}
-            className="hover:text-accent transition-colors"
-          >
-            {c("Discovery Sets", "مجموعات الاكتشاف")}
-          </Link>
-          <Link
-            href="/guide"
-            aria-current={pathname === "/guide" ? "page" : undefined}
-            className="hover:text-accent transition-colors"
-          >
-            {c("The Guide", "دليل العطور")}
-          </Link>
-          <Link
-            href="/journal"
-            aria-current={pathname.startsWith("/journal") ? "page" : undefined}
-            className="hover:text-accent transition-colors"
-          >
-            {c("Journal", "المجلة")}
-          </Link>
+          {/* Flat Links with Identical Sizing and Alignment */}
+          <div className="relative group py-1">
+            <Link
+              href="/discover/sets"
+              aria-current={pathname === "/discover/sets" ? "page" : undefined}
+              className="inline-flex items-center gap-1 font-medium transition-colors hover:text-accent"
+            >
+              {c("Discovery Sets", "مجموعات الاكتشاف")}
+            </Link>
+          </div>
+          <div className="relative group py-1">
+            <Link
+              href="/guide"
+              aria-current={pathname === "/guide" ? "page" : undefined}
+              className="inline-flex items-center gap-1 font-medium transition-colors hover:text-accent"
+            >
+              {c("The Guide", "دليل العطور")}
+            </Link>
+          </div>
+          <div className="relative group py-1">
+            <Link
+              href="/journal"
+              aria-current={pathname.startsWith("/journal") ? "page" : undefined}
+              className="inline-flex items-center gap-1 font-medium transition-colors hover:text-accent"
+            >
+              {c("Journal", "المجلة")}
+            </Link>
+          </div>
         </nav>
       </header>
 
@@ -516,8 +535,18 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                   onClick={() => setMenu(false)}
                   className="flex items-center justify-between p-2.5 text-xs text-luxury-text hover:text-accent font-medium transition-colors"
                 >
-                  <span>{c("Wishlist", "قائمة المفضلة")}</span>
-                  <Heart size={15} className="opacity-60" />
+                  <span className="flex items-center gap-2">
+                    <span>{c("Wishlist", "قائمة المفضلة")}</span>
+                    {wishlist.itemCount > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.2 bg-accent/20 text-accent font-semibold rounded-full">
+                        {wishlist.itemCount}
+                      </span>
+                    )}
+                  </span>
+                  <Heart
+                    size={15}
+                    className={wishlist.itemCount > 0 ? "fill-accent text-accent" : "opacity-60"}
+                  />
                 </Link>
               </div>
 
@@ -624,7 +653,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
               <button
                 type="submit"
                 aria-label="Submit search"
-                className="absolute inset-y-0 inset-inline-end-0 px-3 flex items-center justify-center text-luxury-muted hover:text-luxury-text"
+                className="absolute inset-y-0 end-0 right-0 rtl:right-auto rtl:left-0 px-3 flex items-center justify-center text-luxury-muted hover:text-luxury-text"
               >
                 <Search size={18} />
               </button>

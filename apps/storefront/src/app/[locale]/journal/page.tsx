@@ -64,7 +64,7 @@ export default function JournalIndexPage({
                 sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              <span className="absolute top-3 inset-inline-start-3 text-[10px] font-sans uppercase tracking-[0.14em] px-2.5 py-1 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
+              <span className="absolute top-3 start-3 left-3 rtl:left-auto rtl:right-3 text-[10px] font-sans uppercase tracking-[0.14em] px-2.5 py-1 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
                 {c(article.categoryEn, article.categoryAr)}
               </span>
             </div>

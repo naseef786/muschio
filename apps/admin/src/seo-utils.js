@@ -1,0 +1,88 @@
+// Pro SEO Utility functions, CSV Parser, and Meta Generators for Muschio Admin
+export function slugify(text) {
+    return text
+        .toLowerCase()
+        .trim()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/[\s_-]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+}
+export function generateProductMetaTitle(nameEn, brand) {
+    return `${nameEn} by ${brand} | Authentic Luxury Fragrance UAE & GCC`;
+}
+export function generateProductMetaDescription(nameEn, brand, concentration = "Extrait de Parfum", topNotes = []) {
+    const notesStr = topNotes.length > 0 ? ` with opening notes of ${topNotes.join(", ")}` : "";
+    return `Shop authentic ${nameEn} by ${brand} (${concentration})${notesStr} at Muschio. 100% genuine guaranteed with complimentary white-glove GCC express delivery.`;
+}
+export function generateBrandMetaTitle(name) {
+    return `${name} Fragrances & Extraits | Authentic Niche Haute Parfumerie`;
+}
+export function generateBrandMetaDescription(name, country = "Europe") {
+    return `Discover the royal olfactory heritage of ${name} (${country}). Hand-curated flacons, aged attars, and limited extraits with verified provenance at Muschio.`;
+}
+export function generateNoteMetaTitle(nameEn, family = "Noble Essence") {
+    return `${nameEn} Olfactory Essence (${family}) | Luxury Scent Notes Guide`;
+}
+export function generateNoteMetaDescription(nameEn, originEn = "the Middle East") {
+    return `Explore luxury perfumes featuring ${nameEn}, prized from ${originEn}. Discover noble flacons composed around this timeless essence at Muschio.`;
+}
+export function parseCsvLine(line) {
+    const values = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            }
+            else {
+                inQuotes = !inQuotes;
+            }
+        }
+        else if (char === "," && !inQuotes) {
+            values.push(current.trim());
+            current = "";
+        }
+        else {
+            current += char;
+        }
+    }
+    values.push(current.trim());
+    return values;
+}
+export function parseCsvContent(content) {
+    const lines = content
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+    if (lines.length === 0)
+        return { headers: [], rows: [] };
+    const lineZero = lines[0];
+    if (!lineZero)
+        return { headers: [], rows: [] };
+    const rawHeaders = parseCsvLine(lineZero);
+    const headers = rawHeaders.map((h) => h.replace(/^["']|["']$/g, "").trim());
+    const rows = [];
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line)
+            continue;
+        const vals = parseCsvLine(line);
+        if (vals.length === 0 || (vals.length === 1 && !vals[0]))
+            continue;
+        const rowObj = {};
+        headers.forEach((h, index) => {
+            rowObj[h] = vals[index] ? vals[index].replace(/^["']|["']$/g, "").trim() : "";
+        });
+        rows.push(rowObj);
+    }
+    return { headers, rows };
+}
+export const PRO_SEO_CSV_TEMPLATE = `sku,nameEn,nameAr,slug,brand,scentFamily,concentration,gender,volumeMl,priceAed,costPriceAed,sealedStock,testerStock,warehouseCode,topNotes,heartNotes,baseNotes,taglineEn,taglineAr,descriptionEn,descriptionAr,metaTitle,metaDescription,imageUrl,imageAlt,status
+AMO-INT53-100,"Interlude 53 Man Extrait","إنترلود 53 إكستريت دي بارفان",amouage-interlude-53-man-extrait,Amouage,"Woody Amber",EXTRAIT_DE_PARFUM,MEN,100,1850,950,28,5,DXB-MAIN,"Oregano, Pimento Berry, Bergamot","Amber, Frankincense, Cistus, Opoponax","Leather, Agarwood Smoke, Patchouli, Sandalwood","The Monumental Expression of Spicy Smoky Amber","التعبير المهيب عن العنبر الدخاني الحار","Formulated at a monumental 53% concentration and aged for six months in Oman, Interlude 53 reveals hidden facets of the iconic spicy harmony.","بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان، يكشف إنترلود 53 عن أبعاد استثنائية من التناغم الخشبي الحار.","Interlude 53 Man Extrait by Amouage | Authentic Luxury Fragrance UAE","Shop authentic Interlude 53 Man Extrait by Amouage (53% Extrait) at Muschio. Opening with oregano and pimento. 100% genuine with white-glove GCC shipping.",https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85,"Amouage Interlude 53 Man Extrait luxury flacon",PUBLISHED
+MFK-BR540E-70,"Baccarat Rouge 540 Extrait","باكارات روج 540 إكستريت",mfk-baccarat-rouge-540-extrait,"Maison Francis Kurkdjian","Amber Floral",EXTRAIT_DE_PARFUM,UNISEX,70,1650,820,34,4,DXB-MAIN,"Bitter Almond, Saffron","Egyptian Jasmine Grandiflorum, Cedarwood","Ambergris, Woody Musk","Luminous Amber Crystal and Floral Radiance","إشراقة الكريستال العنبري والزهور الساحرة","Augments the strength and radiance of the perfume's amber woody floral aura. In this exalted version, jasmine blossoms and woody musks engage in an alchemy of the senses.","يعزز هذا الإصدار الاستثنائي قوة وإشراقة النفحات الخشبية العنبرية والزهرية لدار فرانسيس كوركدجيان.","Baccarat Rouge 540 Extrait by MFK | Authentic UAE","Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed with white-glove GCC delivery.",https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85,"Baccarat Rouge 540 Extrait flacon",PUBLISHED
+ROJA-ELY-100,"Elysium Pour Homme Parfum","إليسيوم بور أوم بارفان",roja-elysium-pour-homme-parfum,"Roja Parfums","Fresh Aromatic Citrus",PARFUM,MEN,100,1950,980,25,2,RUH-HUB,"Grapefruit, Lemon, Bergamot, Lime","Lily of the Valley, Rose de Mai, Jasmin de Grasse, Apple","Galbanum, Pink Pepper, Cypriol, Vetiver, Cedarwood, Labdanum, Ambergris, Benzoin, Vanilla","Heroic Elysian Freshness and Royal Musk","الانتعاش الأسطوري والمسك الملكي","An ultra-fresh citrus blend of lemon, bergamot, grapefruit, and lime is further refreshed by thyme and lavender, enriched by an opulent base of ambergris and cedar.","مزيج منعش وفائق الفخامة من الحمضيات النادرة والزعتر واللافندر مع قاعدة ثرية من العنبر الأشهب وخشب الأرز.","Elysium Pour Homme Parfum by Roja Parfums | UAE GCC","Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio. 100% genuine luxury flacons with fast GCC delivery.",https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85,"Roja Parfums Elysium luxury flacon",PUBLISHED
+XER-ALEX2-100,"Alexandria II Eau de Parfum","ألكسندريا 2 أو دي بارفان",xerjoff-alexandria-ii-eau-de-parfum,Xerjoff,"Woody Amber Oud",EAU_DE_PARFUM,UNISEX,100,2200,1100,19,3,DXB-MAIN,"Apple, Cinnamon, Rosewood, Lavender","Cedarwood, Lily of the Valley, Bulgarian Rose","Amber, Sandalwood, Musk, Vanilla, Laotian Oud","Aristocratic Laotian Oud and Cinnamon Majesty","فخامة العود اللاوسي والقرفة الملكية","Alexandria II by Xerjoff is an olfactory legend inspired by ancient millennium capitals, opening with cinnamon and apple wrapped in rare Laotian agarwood.","ألكسندريا 2 من زيرجوف أسطورة عطرية مستوحاة من العواصم التاريخية القديمة، يمتزج فيها العود اللاوسي النادر مع نفحات الورد والقرفة.", "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE","Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose. 100% authentic with white-glove GCC delivery.",https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85,"Xerjoff Alexandria II luxury flacon",PUBLISHED`;
+//# sourceMappingURL=seo-utils.js.map

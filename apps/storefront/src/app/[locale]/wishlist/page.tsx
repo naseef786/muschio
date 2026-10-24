@@ -1,26 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
 import { Button, Badge, PriceDisplay } from "@muschio/ui";
 import { useCart } from "../../../context/cart-context";
+import { useWishlist, WishlistItem } from "../../../context/wishlist-context";
 import { Heart, ShoppingBag, Trash2, ArrowLeft, Sparkles } from "lucide-react";
-
-interface WishlistItem {
-  slug: string;
-  nameEn: string;
-  nameAr: string;
-  brand: string;
-  brandType: "NICHE" | "DESIGNER";
-  concentration: string;
-  price: number;
-  compareAtPrice?: number | null;
-  image: string;
-  variantId: string;
-}
-
-const DEFAULT_WISHLIST: WishlistItem[] = [];
 
 export default function WishlistPage({
   params: { locale },
@@ -29,38 +15,15 @@ export default function WishlistPage({
 }) {
   const isAr = locale === "ar";
   const { addItem } = useCart();
-  const [items, setItems] = useState<WishlistItem[]>(DEFAULT_WISHLIST);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("muschio_wishlist");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          setItems(parsed);
-        }
-      }
-    } catch (e) {
-      // Local storage fallback
-    }
-  }, []);
-
-  const removeItem = (slug: string) => {
-    const updated = items.filter((item) => item.slug !== slug);
-    setItems(updated);
-    try {
-      localStorage.setItem("muschio_wishlist", JSON.stringify(updated));
-    } catch (e) {
-      // Ignore
-    }
-  };
+  const { items, removeItem, clearWishlist } = useWishlist();
 
   const handleAddToCart = async (item: WishlistItem) => {
+    if (!item.variantId) return;
     await addItem({
       variantId: item.variantId,
       slug: item.slug,
       title: item.nameEn,
-      titleAr: item.nameAr,
+      titleAr: item.nameAr || item.nameEn,
       brand: item.brand,
       price: item.price,
       compareAtPrice: item.compareAtPrice,
@@ -100,10 +63,18 @@ export default function WishlistPage({
           </p>
         </div>
 
-        <div className="text-xs font-sans text-zinc-500">
+        <div className="flex items-center gap-4 text-xs font-sans text-zinc-500">
           <span>
             {items.length} {isAr ? "عطور محفوظة" : "saved fragrances"}
           </span>
+          {items.length > 0 && (
+            <button
+              onClick={clearWishlist}
+              className="text-zinc-400 hover:text-rose-400 transition-colors underline underline-offset-4"
+            >
+              {isAr ? "تفريغ القائمة" : "Clear Vault"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -143,7 +114,7 @@ export default function WishlistPage({
                   fill
                   className="object-cover object-center group-hover:scale-105 transition-transform duration-700"
                 />
-                <div className="absolute top-3 start-3">
+                <div className="absolute top-3.5 start-3.5">
                   <Badge
                     variant={item.brandType === "NICHE" ? "niche" : "default"}
                   >
@@ -152,10 +123,11 @@ export default function WishlistPage({
                 </div>
                 <button
                   onClick={() => removeItem(item.slug)}
-                  className="absolute top-3 end-3 p-2 rounded-full bg-black/60 text-zinc-300 hover:text-accent hover:bg-black transition-colors"
-                  aria-label="Remove item"
+                  className="absolute top-3.5 end-3.5 w-9 h-9 rounded-full bg-black/60 backdrop-blur-md border border-white/10 text-zinc-300 hover:text-rose-400 hover:bg-black/90 hover:border-rose-500/30 flex items-center justify-center transition-all duration-200 active:scale-90 shadow-sm"
+                  aria-label={isAr ? "إزالة من المفضلة" : "Remove item"}
+                  title={isAr ? "إزالة من المفضلة" : "Remove from Private Vault"}
                 >
-                  <Trash2 size={16} />
+                  <Trash2 size={15} />
                 </button>
               </div>
 
@@ -189,6 +161,7 @@ export default function WishlistPage({
                     <Button
                       onClick={() => handleAddToCart(item)}
                       disabled={
+                        !item.variantId ||
                         !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
                           item.variantId,
                         )

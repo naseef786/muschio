@@ -25,11 +25,28 @@ import {
   CheckCircle2,
   Search,
   ExternalLink,
+  Award,
+  FileSpreadsheet,
+  Download,
+  Edit3,
 } from "lucide-react";
+import {
+  BrandItem,
+  NoteItem,
+  ProductItem,
+  slugify,
+  generateProductMetaTitle,
+  generateProductMetaDescription,
+  PRO_SEO_CSV_TEMPLATE,
+} from "./seo-utils";
+import { BulkCsvModal } from "./components/BulkCsvModal";
+import { BrandModal } from "./components/BrandModal";
+import { NoteModal } from "./components/NoteModal";
 
 type AdminTab =
   | "dashboard"
   | "products"
+  | "brands"
   | "notes"
   | "inventory"
   | "purchasing"
@@ -40,6 +57,38 @@ type AdminTab =
   | "banners"
   | "settings"
   | "audit";
+
+const TAB_TITLES: Record<AdminTab, string> = {
+  dashboard: "Dashboard",
+  products: "Products",
+  brands: "Brands",
+  notes: "Notes",
+  inventory: "Inventory",
+  purchasing: "Purchasing",
+  returns: "Returns",
+  orders: "Orders",
+  reviews: "Reviews",
+  markets: "Markets",
+  banners: "Banners",
+  settings: "Settings",
+  audit: "Audit Log",
+};
+
+const TAB_SUBTITLES: Record<AdminTab, string> = {
+  dashboard: "Store operations, inventory, and order activity",
+  products: "Manage catalog products, pricing, and stock",
+  brands: "Manage perfume brands and brand profiles",
+  notes: "Manage scent notes and fragrance notes pyramid",
+  inventory: "Warehouse locations and stock allocation",
+  purchasing: "Supplier purchase orders and incoming stock",
+  returns: "Customer returns and product inspection",
+  orders: "Customer orders and fulfillment status",
+  reviews: "Moderate customer product ratings and reviews",
+  markets: "GCC countries, currencies, and VAT rates",
+  banners: "Homepage hero sliders, promos, and announcements",
+  settings: "Social media links, contact info, and store settings",
+  audit: "System security log and admin user activity",
+};
 
 type BannerSlot = "HERO_SLIDER" | "CAMPAIGN_MID" | "PROMO_STRIP" | "ANNOUNCEMENT_BAR";
 
@@ -75,29 +124,6 @@ interface HomepageSectionItem {
   titleAr: string;
   sortOrder: number;
   isVisible: boolean;
-}
-
-interface ProductItem {
-  id: string;
-  sku: string;
-  name: string;
-  brand: string;
-  price: string;
-  stock: number;
-  testerStock: number;
-  reserved: number;
-  warehouse: string;
-  status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
-}
-
-interface NoteItem {
-  id: string;
-  nameEn: string;
-  nameAr: string;
-  slug: string;
-  family: string;
-  status: "PUBLISHED" | "DRAFT";
-  perfumesCount: number;
 }
 
 interface AuditLogItem {
@@ -176,88 +202,367 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
 export function App() {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
 
-  // 1. PRODUCTS
+  // 1. PRODUCTS (PRO SEO ENHANCED)
   const [products, setProducts] = usePersistentState<ProductItem[]>("products", [
     {
       id: "p1",
       sku: "AMO-INT53-100",
       name: "Interlude 53 Man Extrait de Parfum",
+      nameAr: "إنترلود 53 إكستريت دي بارفان",
+      slug: "amouage-interlude-53-man-extrait",
       brand: "Amouage",
+      brandSlug: "amouage",
+      scentFamily: "Woody Amber",
+      concentration: "EXTRAIT_DE_PARFUM",
+      gender: "MEN",
+      volumeMl: 100,
       price: "1,850 AED",
+      costPrice: "950 AED",
       stock: 28,
       testerStock: 5,
       reserved: 2,
       warehouse: "DXB-MAIN",
+      topNotes: ["Oregano", "Pimento Berry", "Bergamot"],
+      heartNotes: ["Amber", "Frankincense", "Cistus", "Opoponax"],
+      baseNotes: ["Leather", "Agarwood Smoke", "Patchouli", "Sandalwood"],
+      taglineEn: "The Monumental Expression of Spicy Smoky Amber",
+      taglineAr: "التعبير المهيب عن العنبر الدخاني الحار",
+      descriptionEn: "Formulated at a monumental 53% concentration and aged for six months in Oman.",
+      descriptionAr: "بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان.",
+      metaTitle: "Interlude 53 Man Extrait by Amouage | Authentic Luxury Fragrance UAE",
+      metaDescription: "Shop authentic Interlude 53 Man Extrait by Amouage (53% Extrait) at Muschio. Opening with oregano and pimento.",
+      imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
       status: "PUBLISHED",
     },
     {
       id: "p2",
       sku: "MFK-BR540E-70",
       name: "Baccarat Rouge 540 Extrait",
+      nameAr: "باكارات روج 540 إكستريت",
+      slug: "mfk-baccarat-rouge-540-extrait",
       brand: "Maison Francis Kurkdjian",
+      brandSlug: "maison-francis-kurkdjian",
+      scentFamily: "Amber Floral",
+      concentration: "EXTRAIT_DE_PARFUM",
+      gender: "UNISEX",
+      volumeMl: 70,
       price: "1,650 AED",
+      costPrice: "820 AED",
       stock: 34,
       testerStock: 4,
       reserved: 1,
       warehouse: "DXB-MAIN",
+      topNotes: ["Bitter Almond", "Saffron"],
+      heartNotes: ["Egyptian Jasmine Grandiflorum", "Cedarwood"],
+      baseNotes: ["Ambergris", "Woody Musk"],
+      taglineEn: "Luminous Amber Crystal and Floral Radiance",
+      taglineAr: "إشراقة الكريستال العنبري والزهور الساحرة",
+      descriptionEn: "Augments the strength and radiance of the perfume's amber woody floral aura.",
+      descriptionAr: "يعزز هذا الإصدار الاستثنائي قوة وإشراقة النفحات الخشبية العنبرية والزهرية.",
+      metaTitle: "Baccarat Rouge 540 Extrait by MFK | Authentic UAE",
+      metaDescription: "Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed.",
+      imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      imageAlt: "Baccarat Rouge 540 Extrait flacon",
       status: "PUBLISHED",
     },
     {
       id: "p3",
       sku: "ROJA-ELY-100",
       name: "Elysium Pour Homme Parfum",
+      nameAr: "إليسيوم بور أوم بارفان",
+      slug: "roja-elysium-pour-homme-parfum",
       brand: "Roja Parfums",
+      brandSlug: "roja-parfums",
+      scentFamily: "Fresh Aromatic Citrus",
+      concentration: "PARFUM",
+      gender: "MEN",
+      volumeMl: 100,
       price: "1,950 AED",
+      costPrice: "980 AED",
       stock: 25,
       testerStock: 2,
       reserved: 0,
       warehouse: "RUH-HUB",
+      topNotes: ["Grapefruit", "Lemon", "Bergamot", "Lime"],
+      heartNotes: ["Lily of the Valley", "Rose de Mai", "Jasmin de Grasse", "Apple"],
+      baseNotes: ["Galbanum", "Pink Pepper", "Cypriol", "Vetiver", "Cedarwood", "Ambergris"],
+      taglineEn: "Heroic Elysian Freshness and Royal Musk",
+      taglineAr: "الانتعاش الأسطوري والمسك الملكي",
+      descriptionEn: "An ultra-fresh citrus blend enriched by an opulent base of ambergris and cedar.",
+      descriptionAr: "مزيج منعش وفائق الفخامة من الحمضيات النادرة مع قاعدة ثرية من العنبر وخشب الأرز.",
+      metaTitle: "Elysium Pour Homme Parfum by Roja Parfums | UAE GCC",
+      metaDescription: "Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio with fast GCC delivery.",
+      imageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
+      imageAlt: "Roja Parfums Elysium luxury flacon",
       status: "PUBLISHED",
     },
     {
       id: "p4",
       sku: "XER-ALEX2-100",
       name: "Alexandria II Eau de Parfum",
+      nameAr: "ألكسندريا 2 أو دي بارفان",
+      slug: "xerjoff-alexandria-ii-eau-de-parfum",
       brand: "Xerjoff",
+      brandSlug: "xerjoff",
+      scentFamily: "Woody Amber Oud",
+      concentration: "EAU_DE_PARFUM",
+      gender: "UNISEX",
+      volumeMl: 100,
       price: "2,200 AED",
+      costPrice: "1,100 AED",
       stock: 19,
       testerStock: 3,
       reserved: 0,
       warehouse: "DXB-MAIN",
+      topNotes: ["Apple", "Cinnamon", "Rosewood", "Lavender"],
+      heartNotes: ["Cedarwood", "Lily of the Valley", "Bulgarian Rose"],
+      baseNotes: ["Amber", "Sandalwood", "Musk", "Vanilla", "Laotian Oud"],
+      taglineEn: "Aristocratic Laotian Oud and Cinnamon Majesty",
+      taglineAr: "فخامة العود اللاوسي والقرفة الملكية",
+      descriptionEn: "Alexandria II by Xerjoff is an olfactory legend wrapped in rare Laotian agarwood.",
+      descriptionAr: "ألكسندريا 2 من زيرجوف أسطورة عطرية يمتزج فيها العود اللاوسي النادر مع نفحات الورد والقرفة.",
+      metaTitle: "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE",
+      metaDescription: "Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose.",
+      imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      imageAlt: "Xerjoff Alexandria II luxury flacon",
       status: "PUBLISHED",
     },
   ]);
 
   const [productSearch, setProductSearch] = useState("");
   const [showProductModal, setShowProductModal] = useState(false);
+  const [showCsvModal, setShowCsvModal] = useState(false);
   const [productForm, setProductForm] = useState({
     sku: "",
     name: "",
+    nameAr: "",
     brand: "Amouage",
+    scentFamily: "Woody Amber",
+    concentration: "EXTRAIT_DE_PARFUM",
     price: "",
     stock: 20,
     testerStock: 2,
     warehouse: "DXB-MAIN",
+    topNotes: "",
+    heartNotes: "",
+    baseNotes: "",
     status: "PUBLISHED" as const,
   });
 
-  // 2. SCENT NOTES
-  const [notes, setNotes] = usePersistentState<NoteItem[]>("notes", [
-    { id: "n1", nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose", family: "Floral", status: "PUBLISHED", perfumesCount: 4 },
-    { id: "n2", nameEn: "Silver Frankincense", nameAr: "اللبان الحوجري الفضي", slug: "silver-frankincense", family: "Resin", status: "PUBLISHED", perfumesCount: 3 },
-    { id: "n3", nameEn: "Cambodian Agarwood (Oud)", nameAr: "دهن عود كمبودي", slug: "cambodian-oud", family: "Woody", status: "PUBLISHED", perfumesCount: 5 },
-    { id: "n4", nameEn: "Florentine Iris", nameAr: "سوسن فلورنسا", slug: "florentine-iris", family: "Powdery", status: "PUBLISHED", perfumesCount: 3 },
-    { id: "n5", nameEn: "Golden Ambergris", nameAr: "العنبر الأشهب", slug: "golden-ambergris", family: "Amber", status: "PUBLISHED", perfumesCount: 4 },
+  // 2. BRANDS & PRESTIGE MAISONS (PRO SEO)
+  const [brands, setBrands] = usePersistentState<BrandItem[]>("brands", [
+    {
+      id: "b1",
+      name: "Amouage",
+      slug: "amouage",
+      type: "NICHE",
+      countryEn: "Sultanate of Oman",
+      countryAr: "سلطنة عُمان",
+      year: 1983,
+      perfumer: "Pierre Negrin, Renaud Salmon, Karine Vinchon",
+      storyEn:
+        "Established in 1983 in the Sultanate of Oman at the request of the Royal Family, Amouage is revered as 'The Gift of Kings'. The house defines royal Arabian haute parfumerie by fusing precious Omani Silver Frankincense, wild rock rose, and aged Cambodian agarwood at monumental concentrations.",
+      storyAr:
+        "تأسست عام 1983 في سلطنة عُمان بطلب ملكي سامٍ، وتُعرف دار أمواج بلقب 'هدية الملوك'. تعيد الدار صياغة الفخامة العطرية الملكية بدمج اللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتراكيز أسطورية.",
+      metaTitle: "Amouage Fragrances & Extraits | Authentic Royal Omani Perfumery",
+      metaDescription:
+        "Discover authentic royal flacons from Amouage (Sultanate of Oman). Hand-curated extraits, Silver Frankincense, and aged attars at Muschio.",
+      perfumesCount: 4,
+    },
+    {
+      id: "b2",
+      name: "Maison Francis Kurkdjian",
+      slug: "maison-francis-kurkdjian",
+      type: "NICHE",
+      countryEn: "Paris, France",
+      countryAr: "باريس، فرنسا",
+      year: 2009,
+      perfumer: "Francis Kurkdjian",
+      storyEn:
+        "Co-founded in 2009 by master perfumer Francis Kurkdjian, the Maison envisions a contemporary luxury fragrance wardrobe celebrating French elegance, crystalline amber accords, and monumental sillage.",
+      storyAr:
+        "تأسست عام 2009 على يد العطار البارع فرانسيس كوركدجيان، وتجسد الدار مفهوم الخزانة العطرية الفرنسية المعاصرة الجامعة بين الأناقة والانتشار المهيب.",
+      metaTitle: "Maison Francis Kurkdjian | Authentic French Haute Parfumerie UAE",
+      metaDescription:
+        "Shop authentic Baccarat Rouge 540 and Grand Soir extraits by Maison Francis Kurkdjian at Muschio. 100% verified genuine with GCC express shipping.",
+      perfumesCount: 3,
+    },
+    {
+      id: "b3",
+      name: "Roja Parfums",
+      slug: "roja-parfums",
+      type: "NICHE",
+      countryEn: "United Kingdom",
+      countryAr: "المملكة المتحدة",
+      year: 2011,
+      perfumer: "Roja Dove",
+      storyEn:
+        "Crafted by the world's most respected perfumer, Roja Dove, Roja Parfums uses only the rarest raw materials on earth to sculpt fragrances of uncompromising opulence.",
+      storyAr:
+        "ابتكرها العطار العالمي روجا دوف باستخدام أندر المواد الأولية على وجه الأرض لصياغة عطور فائقة الفخامة.",
+      metaTitle: "Roja Parfums | Haute Luxe & Elysium Extrait Parfums UAE",
+      metaDescription:
+        "Explore Roja Parfums by Roja Dove at Muschio. Uncompromising luxury flacons with complimentary white-glove GCC delivery.",
+      perfumesCount: 2,
+    },
+    {
+      id: "b4",
+      name: "Xerjoff",
+      slug: "xerjoff",
+      type: "NICHE",
+      countryEn: "Turin, Italy",
+      countryAr: "تورينو، إيطاليا",
+      year: 2003,
+      perfumer: "Sergio Momo, Christian Carbonnel",
+      storyEn:
+        "Founded in Turin, Xerjoff merges ancient Italian artistry with the most decadent oriental essences, hand-carved quartz bottles, and certified meteorites.",
+      storyAr:
+        "تأسست في تورينو بإيطاليا، وتمزج زيرجوف بين الحرفية الإيطالية العريقة وأرقى الخلاصات الشرقية والعود الطبيعي النادر.",
+      metaTitle: "Xerjoff Perfumes | Alexandria II & Shooting Stars UAE",
+      metaDescription:
+        "Discover Xerjoff Italian haute parfumerie at Muschio. Featuring Alexandria II and Oud Stars collections with white-glove GCC shipping.",
+      perfumesCount: 2,
+    },
+    {
+      id: "b5",
+      name: "Tom Ford",
+      slug: "tom-ford",
+      type: "DESIGNER",
+      countryEn: "USA",
+      countryAr: "الولايات المتحدة",
+      year: 2006,
+      perfumer: "Various Master Noses",
+      storyEn:
+        "Tom Ford Private Blend represents the artisan perfumer's private laboratory, crafting provocative and timeless scent architectures.",
+      storyAr:
+        "يمثل خط توم فورد برايفت بليند المختبر الإبداعي لصياغة أجرأ وأرقى العطور العالمية الأيقونية.",
+      metaTitle: "Tom Ford Private Blend | Authentic Fragrances UAE",
+      metaDescription:
+        "Explore Tom Ford Private Blend fragrances at Muschio with authentic verified provenance and GCC shipping.",
+      perfumesCount: 1,
+    },
+    {
+      id: "b6",
+      name: "Clive Christian",
+      slug: "clive-christian",
+      type: "NICHE",
+      countryEn: "United Kingdom",
+      countryAr: "المملكة المتحدة",
+      year: 1872,
+      perfumer: "Crown Perfumery Artisans",
+      storyEn:
+        "The heir to the Crown Perfumery established in 1872, Clive Christian crafts the world's most concentrated royal perfumes with Queen Victoria's royal crown crest.",
+      storyAr:
+        "وريث دار كراون العريقة لعام 1872، تقدم كلايف كريستيان أرقى العطور بتراكيز فائقة وشعار التاج الملكي المعتمد من الملكة فيكتوريا.",
+      metaTitle: "Clive Christian Perfumes | The World's Finest Perfumery UAE",
+      metaDescription:
+        "Shop Clive Christian pure perfume extraits at Muschio. Guaranteed royal provenance with luxury GCC shipping.",
+      perfumesCount: 1,
+    },
   ]);
 
+  const [brandSearch, setBrandSearch] = useState("");
+  const [showBrandModal, setShowBrandModal] = useState(false);
+  const [brandToEdit, setBrandToEdit] = useState<BrandItem | null>(null);
+
+  // 3. SCENT NOTES (PRO SEO)
+  const [notes, setNotes] = usePersistentState<NoteItem[]>("notes", [
+    {
+      id: "n1",
+      nameEn: "Royal Taif Rose",
+      nameAr: "ورد الطائف الملكي",
+      slug: "taif-rose",
+      family: "Floral",
+      originEn: "Taif Mountains, Saudi Arabia",
+      originAr: "جبال الطائف، السعودية",
+      descriptionEn:
+        "Harvested at dawn in the high-altitude mountains of Saudi Arabia, celebrated for its honeyed, intensely deep, and regal floral aroma.",
+      descriptionAr:
+        "يُحصد عند بزوغ الفجر في أعالي جبال الطائف بالمملكة العربية السعودية، ويشتهر بنفحاته العسلية الغنية وأريجه الزهري الملكي الفواح.",
+      metaTitle: "Royal Taif Rose Essence | Luxury Scent Notes Guide",
+      metaDescription:
+        "Explore luxury perfumes composed with Royal Taif Rose harvested from the mountains of Saudi Arabia at Muschio.",
+      status: "PUBLISHED",
+      perfumesCount: 4,
+    },
+    {
+      id: "n2",
+      nameEn: "Silver Frankincense",
+      nameAr: "اللبان الحوجري الفضي",
+      slug: "silver-frankincense",
+      family: "Resin",
+      originEn: "Dhofar, Sultanate of Oman",
+      originAr: "ظفار، سلطنة عُمان",
+      descriptionEn:
+        "The world's highest grade of Boswellia sacra harvested from the arid cliffs of Dhofar, exuding a luminous balsamic, citrus-peel, and sacred resinous warmth.",
+      descriptionAr:
+        "أندر وأجود أنواع اللبان الحوجري العُماني المنحدر من جبال ظفار، بنفحات بلسمية حمضية مقدسة.",
+      metaTitle: "Omani Silver Frankincense Essence | Muschio Scent Notes",
+      metaDescription:
+        "Discover luxury perfumes featuring sacred Omani Silver Frankincense from Dhofar. 100% genuine niche extraits at Muschio.",
+      status: "PUBLISHED",
+      perfumesCount: 3,
+    },
+    {
+      id: "n3",
+      nameEn: "Cambodian Agarwood (Oud)",
+      nameAr: "دهن عود كمبودي",
+      slug: "cambodian-oud",
+      family: "Woody",
+      originEn: "Koh Kong, Cambodia",
+      originAr: "كوه كونغ، كمبوديا",
+      descriptionEn:
+        "Rare wild-harvested agarwood oil aged for decades, delivering deep animalic leather, sweet dried fruits, and royal smoky resonance.",
+      descriptionAr:
+        "دهن عود كمبودي بري معتق، يتميز بنفحاته العميقة من الجلود والفاكهة المجففة والعمق الخشبي الدخاني.",
+      metaTitle: "Cambodian Oud (Agarwood) | Pure Niche Fragrance Guide",
+      metaDescription:
+        "Explore fine perfumes featuring aged Cambodian Oud at Muschio. Pure artisanal distillation and royal provenance guaranteed.",
+      status: "PUBLISHED",
+      perfumesCount: 5,
+    },
+    {
+      id: "n4",
+      nameEn: "Florentine Iris",
+      nameAr: "سوسن فلورنسا",
+      slug: "florentine-iris",
+      family: "Powdery",
+      originEn: "Tuscany, Italy",
+      originAr: "توسكانا، إيطاليا",
+      descriptionEn:
+        "Extracted from Iris pallida rhizomes aged for three years in Tuscany, Iris butter is one of perfumery's most precious materials, radiating noble powdery violet sophistication.",
+      descriptionAr:
+        "يُستخلص من جذامير السوسن الإيطالي المعتقة لثلاث سنوات في توسكانا، ويعد من أغلى المواد العطرية بنفحات بودرية أرستقراطية.",
+      metaTitle: "Florentine Iris Butter Note | Haute Parfumerie Encyclopedia",
+      metaDescription:
+        "Discover aristocratic perfumes formulated with precious Florentine Iris butter from Tuscany at Muschio.",
+      status: "PUBLISHED",
+      perfumesCount: 3,
+    },
+    {
+      id: "n5",
+      nameEn: "Golden Ambergris",
+      nameAr: "العنبر الأشهب",
+      slug: "golden-ambergris",
+      family: "Amber",
+      originEn: "Arabian Sea Coastlines",
+      originAr: "سواحل بحر العرب",
+      descriptionEn:
+        "Naturally cured by sun and saltwater for decades, ocean-drifted ambergris provides unmatched crystalline radiance, oceanic warmth, and legendary sillage fixative power.",
+      descriptionAr:
+        "عنبر أشهب طبيعي معتق بأشعة الشمس وأمواج المحيط، يمنح العطور انتشاراً وثباتاً أسطورياً وإشراقة ساحلية ساحرة.",
+      metaTitle: "Golden Ambergris Essence | Royal Arabian Scent Notes",
+      metaDescription:
+        "Explore extraits crafted with ocean-cured golden ambergris at Muschio. Legendary fixative power and crystalline warmth.",
+      status: "PUBLISHED",
+      perfumesCount: 4,
+    },
+  ]);
+
+  const [noteSearch, setNoteSearch] = useState("");
   const [showNoteModal, setShowNoteModal] = useState(false);
-  const [noteForm, setNoteForm] = useState({
-    nameEn: "",
-    nameAr: "",
-    slug: "",
-    family: "Floral",
-    status: "PUBLISHED" as const,
-  });
+  const [noteToEdit, setNoteToEdit] = useState<NoteItem | null>(null);
 
   // 3. ORDERS
   const [orders, setOrders] = usePersistentState("orders", [
@@ -556,22 +861,57 @@ export function App() {
   const handleSaveProduct = () => {
     if (!productForm.name || !productForm.sku) return;
     const priceFormatted = productForm.price.includes("AED") ? productForm.price : `${productForm.price} AED`;
+    const prodSlug = slugify(`${productForm.brand}-${productForm.name}`);
+    const topNotesArr = productForm.topNotes ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const heartNotesArr = productForm.heartNotes ? productForm.heartNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const baseNotesArr = productForm.baseNotes ? productForm.baseNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
+
     const newP: ProductItem = {
       id: `p-${Date.now()}`,
       sku: productForm.sku,
       name: productForm.name,
+      nameAr: productForm.nameAr || productForm.name,
+      slug: prodSlug,
       brand: productForm.brand,
+      brandSlug: slugify(productForm.brand),
+      scentFamily: productForm.scentFamily || "Woody Amber",
+      concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
+      gender: "UNISEX",
+      volumeMl: 100,
       price: priceFormatted,
+      costPrice: "0 AED",
       stock: Number(productForm.stock) || 0,
       testerStock: Number(productForm.testerStock) || 0,
       reserved: 0,
       warehouse: productForm.warehouse,
+      topNotes: topNotesArr,
+      heartNotes: heartNotesArr,
+      baseNotes: baseNotesArr,
+      metaTitle: generateProductMetaTitle(productForm.name, productForm.brand),
+      metaDescription: generateProductMetaDescription(productForm.name, productForm.brand, productForm.concentration, topNotesArr),
+      imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
     };
     setProducts((prev) => [newP, ...prev]);
-    addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name})`);
+    addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name}) [SEO: /product/${newP.slug}]`);
     setShowProductModal(false);
-    setProductForm({ sku: "", name: "", brand: "Amouage", price: "", stock: 20, testerStock: 2, warehouse: "DXB-MAIN", status: "PUBLISHED" });
+    setProductForm({
+      sku: "",
+      name: "",
+      nameAr: "",
+      brand: "Amouage",
+      scentFamily: "Woody Amber",
+      concentration: "EXTRAIT_DE_PARFUM",
+      price: "",
+      stock: 20,
+      testerStock: 2,
+      warehouse: "DXB-MAIN",
+      topNotes: "",
+      heartNotes: "",
+      baseNotes: "",
+      status: "PUBLISHED",
+    });
   };
 
   const handleDeleteProduct = (id: string, name: string) => {
@@ -579,27 +919,88 @@ export function App() {
     addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
   };
 
+  // Brand Actions
+  const handleSaveBrand = (brand: BrandItem) => {
+    setBrands((prev) => {
+      const idx = prev.findIndex((b) => b.id === brand.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = brand;
+        return next;
+      }
+      return [brand, ...prev];
+    });
+    addAuditLog("BRAND_SAVED", `Maison ${brand.name} [SEO: /brands/${brand.slug}]`);
+  };
+
+  const handleDeleteBrand = (id: string, name: string) => {
+    setBrands((prev) => prev.filter((b) => b.id !== id));
+    addAuditLog("BRAND_DELETED", `Maison ${id} (${name})`);
+  };
+
   // Note Actions
-  const handleSaveNote = () => {
-    if (!noteForm.nameEn || !noteForm.slug) return;
-    const newN: NoteItem = {
-      id: `n-${Date.now()}`,
-      nameEn: noteForm.nameEn,
-      nameAr: noteForm.nameAr || noteForm.nameEn,
-      slug: noteForm.slug.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
-      family: noteForm.family,
-      status: noteForm.status,
-      perfumesCount: 1,
-    };
-    setNotes((prev) => [...prev, newN]);
-    addAuditLog("NOTE_CREATED", `${newN.slug} (${newN.nameEn})`);
-    setShowNoteModal(false);
-    setNoteForm({ nameEn: "", nameAr: "", slug: "", family: "Floral", status: "PUBLISHED" });
+  const handleSaveNoteModal = (note: NoteItem) => {
+    setNotes((prev) => {
+      const idx = prev.findIndex((n) => n.id === note.id);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = note;
+        return next;
+      }
+      return [note, ...prev];
+    });
+    addAuditLog("NOTE_SAVED", `Note ${note.nameEn} [SEO: /notes/${note.slug}]`);
   };
 
   const handleDeleteNote = (id: string, name: string) => {
     setNotes((prev) => prev.filter((n) => n.id !== id));
     addAuditLog("NOTE_DELETED", `Note ${id} (${name})`);
+  };
+
+  // Bulk CSV Import Action
+  const handleBulkCsvImportSuccess = (
+    newProducts: ProductItem[],
+    newBrands: BrandItem[],
+    newNotes: NoteItem[]
+  ) => {
+    setProducts((prev) => {
+      const existingSkus = new Set(prev.map((p) => p.sku));
+      const filteredNew = newProducts.filter((p) => !existingSkus.has(p.sku));
+      return [...filteredNew, ...prev];
+    });
+
+    if (newBrands.length > 0) {
+      setBrands((prev) => {
+        const existingSlugs = new Set(prev.map((b) => b.slug));
+        const filteredNew = newBrands.filter((b) => !existingSlugs.has(b.slug));
+        return [...prev, ...filteredNew];
+      });
+    }
+
+    if (newNotes.length > 0) {
+      setNotes((prev) => {
+        const existingSlugs = new Set(prev.map((n) => n.slug));
+        const filteredNew = newNotes.filter((n) => !existingSlugs.has(n.slug));
+        return [...prev, ...filteredNew];
+      });
+    }
+
+    addAuditLog(
+      "BULK_CSV_SEO_IMPORT",
+      `Imported ${newProducts.length} flacons, created ${newBrands.length} brands, resolved ${newNotes.length} scent notes`
+    );
+  };
+
+  const handleDownloadTemplateDirect = () => {
+    const blob = new Blob([PRO_SEO_CSV_TEMPLATE], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", "muschio_pro_seo_catalog_template.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   // Order Actions
@@ -653,7 +1054,7 @@ export function App() {
             </div>
             <div>
               <span className="font-serif tracking-widest text-lg font-bold text-white block">MUSCHIO</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-accent block">Enterprise Portal</span>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-accent block">Admin Panel</span>
             </div>
           </div>
 
@@ -666,7 +1067,7 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <LayoutDashboard size={16} />
-                <span>Executive Dashboard</span>
+                <span>Dashboard</span>
               </span>
             </button>
 
@@ -678,9 +1079,22 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <Package size={16} />
-                <span>Products & Vault</span>
+                <span>Products</span>
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">{products.length}</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("brands")}
+              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
+                activeTab === "brands" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <span className="flex items-center gap-3">
+                <Award size={16} />
+                <span>Brands</span>
+              </span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{brands.length}</span>
             </button>
 
             <button
@@ -691,9 +1105,9 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <Layers size={16} />
-                <span>Scent Notes Explorer</span>
+                <span>Notes</span>
               </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">{notes.length}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">{notes.length}</span>
             </button>
 
             <button
@@ -703,7 +1117,7 @@ export function App() {
               }`}
             >
               <Warehouse size={16} />
-              <span>Warehouses & Stock</span>
+              <span>Inventory</span>
             </button>
 
             <button
@@ -713,7 +1127,7 @@ export function App() {
               }`}
             >
               <FileText size={16} />
-              <span>Suppliers & POs</span>
+              <span>Purchasing</span>
             </button>
 
             <button
@@ -724,7 +1138,7 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <RotateCcw size={16} />
-                <span>Returns & Quarantine</span>
+                <span>Returns</span>
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">{returns.length}</span>
             </button>
@@ -737,7 +1151,7 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <ShoppingBag size={16} />
-                <span>Orders & Fulfillment</span>
+                <span>Orders</span>
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{orders.length}</span>
             </button>
@@ -750,7 +1164,7 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <Star size={16} />
-                <span>Reviews Moderation</span>
+                <span>Reviews</span>
               </span>
               {pendingReviewsCount > 0 && (
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">{pendingReviewsCount}</span>
@@ -764,7 +1178,7 @@ export function App() {
               }`}
             >
               <Globe size={16} />
-              <span>Markets & GCC VAT</span>
+              <span>Markets</span>
             </button>
 
             <button
@@ -775,12 +1189,11 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <ImageIcon size={16} />
-                <span>Banners & Homepage CMS</span>
+                <span>Banners</span>
               </span>
               <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">{banners.length}</span>
             </button>
 
-            {/* NEW 11. SOCIAL & STOREFRONT SETTINGS */}
             <button
               onClick={() => setActiveTab("settings")}
               className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
@@ -789,7 +1202,7 @@ export function App() {
             >
               <span className="flex items-center gap-3">
                 <Share2 size={16} />
-                <span>Social & Store Settings</span>
+                <span>Settings</span>
               </span>
               <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
             </button>
@@ -801,17 +1214,17 @@ export function App() {
               }`}
             >
               <ShieldCheck size={16} />
-              <span>Security & Audit Log</span>
+              <span>Audit Log</span>
             </button>
           </nav>
         </div>
 
         <div className="p-3 bg-slate-900 border border-slate-800 text-[11px] space-y-1.5 rounded">
-          <div className="font-semibold text-slate-200">Director of Operations</div>
+          <div className="font-semibold text-slate-200">Administrator</div>
           <div className="text-slate-400 font-mono text-[10px]">superadmin@muschio.luxury</div>
           <div className="text-[10px] text-emerald-400 flex items-center gap-1.5 pt-1 border-t border-slate-800">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Vault Online • Live State Persistent</span>
+            <span>System Online</span>
           </div>
         </div>
       </aside>
@@ -822,10 +1235,10 @@ export function App() {
         <header className="flex items-center justify-between pb-6 border-b border-slate-800">
           <div>
             <h1 className="font-serif text-2xl font-light text-white capitalize">
-              {activeTab === "settings" ? "Social Media & Storefront Settings" : activeTab.replace("-", " ")}
+              {TAB_TITLES[activeTab] || activeTab}
             </h1>
             <p className="text-xs text-slate-400 font-sans mt-0.5">
-              Muschio Luxury Enterprise Portal • Live State Persistence & Multi-Market Compliant
+              {TAB_SUBTITLES[activeTab] || "Muschio Fragrance Store Management"}
             </p>
           </div>
 
@@ -859,21 +1272,21 @@ export function App() {
               </div>
 
               <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Active Orders in Queue</span>
+                <span className="text-[11px] uppercase tracking-wider text-slate-400">Pending Orders</span>
                 <div className="font-serif text-3xl text-amber-400 font-light">{activeOrdersCount} Orders</div>
-                <div className="text-slate-400 text-xs font-mono">GCC Express Track Active</div>
+                <div className="text-slate-400 text-xs font-mono">In processing & dispatch</div>
               </div>
 
               <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Physical Stock in Vaults</span>
-                <div className="font-serif text-3xl text-emerald-400 font-light">{totalStockUnits} Flacons</div>
-                <div className="text-slate-400 text-xs font-mono">+{totalTesterUnits} Tester Units</div>
+                <span className="text-[11px] uppercase tracking-wider text-slate-400">Total Stock</span>
+                <div className="font-serif text-3xl text-emerald-400 font-light">{totalStockUnits} Units</div>
+                <div className="text-slate-400 text-xs font-mono">+{totalTesterUnits} Testers</div>
               </div>
 
               <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Returns in Inspection</span>
+                <span className="text-[11px] uppercase tracking-wider text-slate-400">Pending Returns</span>
                 <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Units</div>
-                <div className="text-slate-400 text-xs">Quarantine Isolation Active</div>
+                <div className="text-slate-400 text-xs">Awaiting inspection</div>
               </div>
             </div>
 
@@ -897,40 +1310,62 @@ export function App() {
           </div>
         )}
 
-        {/* 2. PRODUCTS & CATALOG */}
+        {/* 2. PRODUCTS */}
         {activeTab === "products" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-sm">
                 <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Filter by SKU, product name, or house..."
+                  placeholder="Search by SKU, product name, or brand..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
                   className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
                 />
               </div>
-              <button
-                onClick={() => setShowProductModal(true)}
-                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
-              >
-                <Plus size={14} />
-                <span>Add New Flacon</span>
-              </button>
+
+              <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  onClick={handleDownloadTemplateDirect}
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded flex items-center gap-1.5 border border-slate-700 transition-colors"
+                  title="Download clean CSV template for bulk import"
+                >
+                  <Download size={14} />
+                  <span>Download CSV Template</span>
+                </button>
+
+                <button
+                  onClick={() => setShowCsvModal(true)}
+                  className="px-3.5 py-2 bg-gradient-to-r from-accent to-red-700 hover:from-accent-hover hover:to-red-600 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-all shadow-md shadow-red-950/40"
+                  title="Upload products in bulk via CSV"
+                >
+                  <FileSpreadsheet size={14} />
+                  <span className="font-semibold">Bulk CSV Upload</span>
+                </button>
+
+                <button
+                  onClick={() => setShowProductModal(true)}
+                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                >
+                  <Plus size={14} />
+                  <span>Add Product</span>
+                </button>
+              </div>
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
+            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
                 <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
                   <tr>
-                    <th className="p-4 text-start">SKU / Product</th>
-                    <th className="p-4 text-start">House / Brand</th>
-                    <th className="p-4 text-start">Base Price</th>
-                    <th className="p-4 text-start">Warehouse Stock</th>
-                    <th className="p-4 text-start">Tester Units</th>
+                    <th className="p-4 text-start">Product (EN / AR)</th>
+                    <th className="p-4 text-start">URL Slug</th>
+                    <th className="p-4 text-start">Brand</th>
+                    <th className="p-4 text-start">Notes</th>
+                    <th className="p-4 text-start">Price</th>
+                    <th className="p-4 text-start">Stock</th>
                     <th className="p-4 text-start">Status</th>
-                    <th className="p-4 text-end">Action</th>
+                    <th className="p-4 text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
@@ -938,31 +1373,89 @@ export function App() {
                     .filter((p) => {
                       if (!productSearch.trim()) return true;
                       const q = productSearch.toLowerCase();
-                      return p.name.toLowerCase().includes(q) || p.sku.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q);
+                      return (
+                        p.name.toLowerCase().includes(q) ||
+                        p.sku.toLowerCase().includes(q) ||
+                        p.brand.toLowerCase().includes(q) ||
+                        (p.nameAr && p.nameAr.includes(q))
+                      );
                     })
                     .map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/30">
+                      <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
                           <span className="font-semibold text-white block">{p.name}</span>
-                          <span className="text-slate-400 font-mono text-[11px]">{p.sku}</span>
+                          {p.nameAr && (
+                            <span className="text-slate-400 text-xs" dir="rtl">
+                              {p.nameAr}
+                            </span>
+                          )}
+                          <span className="text-slate-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
                         </td>
-                        <td className="p-4 text-slate-300">{p.brand}</td>
-                        <td className="p-4 font-mono font-medium text-slate-100">{p.price}</td>
-                        <td className="p-4 font-mono text-emerald-400">{p.stock} sealed ({p.warehouse})</td>
-                        <td className="p-4 font-mono text-purple-400">{p.testerStock} testers</td>
+                        <td className="p-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-slate-400">
+                            <span className="text-slate-500">/product/</span>
+                            <span className="text-emerald-400 font-medium">{p.slug}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500 font-sans block mt-0.5">
+                            {p.concentration || "Extrait de Parfum"}
+                          </span>
+                        </td>
                         <td className="p-4">
-                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded">
-                            {p.status}
+                          <button
+                            onClick={() => {
+                              setActiveTab("brands");
+                              setBrandSearch(p.brand);
+                            }}
+                            className="text-slate-200 font-medium hover:text-accent hover:underline flex items-center gap-1"
+                            title="View brand details"
+                          >
+                            <span>{p.brand}</span>
+                            <Award size={11} className="text-amber-400" />
+                          </button>
+                          <span className="text-[10px] text-slate-500 block">{p.scentFamily || "Woody"}</span>
+                        </td>
+                        <td className="p-4 text-[11px]">
+                          <div className="space-y-0.5">
+                            <span className="text-slate-300 block">
+                              Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
+                            </span>
+                            {p.topNotes && p.topNotes.length > 0 && (
+                              <span className="text-slate-500 text-[10px] block truncate max-w-xs">
+                                Opening: {p.topNotes.slice(0, 2).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="p-4 font-mono font-medium text-slate-100">{p.price}</td>
+                        <td className="p-4 font-mono">
+                          <span className="text-emerald-400 block">{p.stock} sealed ({p.warehouse})</span>
+                          <span className="text-purple-400 text-[11px]">+{p.testerStock} testers</span>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                            <CheckCircle2 size={11} />
+                            <span>SEO Ready</span>
                           </span>
                         </td>
                         <td className="p-4 text-end">
-                          <button
-                            onClick={() => handleDeleteProduct(p.id, p.name)}
-                            className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                            title="Delete Product"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <a
+                              href={`http://localhost:3000/en/product/${p.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              title="View Storefront Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteProduct(p.id, p.name)}
+                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -973,64 +1466,137 @@ export function App() {
             {/* Add Product Modal */}
             {showProductModal && (
               <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                <div className="bg-[#111622] border border-slate-800 w-full max-w-lg p-6 space-y-4 rounded">
+                <div className="bg-[#111622] border border-slate-800 w-full max-w-xl p-6 space-y-4 rounded max-h-[90vh] overflow-y-auto">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <h3 className="font-serif text-lg text-white font-light">Add New Luxury Flacon to Vault</h3>
+                    <div>
+                      <h3 className="font-serif text-lg text-white font-light">Add Product</h3>
+                      <p className="text-[11px] text-slate-400">Product details, pricing, and scent notes</p>
+                    </div>
                     <button onClick={() => setShowProductModal(false)} className="text-slate-400 hover:text-white">
                       <X size={18} />
                     </button>
                   </div>
                   <div className="space-y-3 text-xs">
-                    <div>
-                      <label className="block text-slate-400 mb-1">SKU Code</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. AMO-INT53-100"
-                        value={productForm.sku}
-                        onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                      />
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">SKU Code *</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. AMO-INT53-100"
+                          value={productForm.sku}
+                          onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Brand *</label>
+                        <select
+                          value={productForm.brand}
+                          onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        >
+                          {brands.map((b) => (
+                            <option key={b.id} value={b.name}>
+                              {b.name} ({b.countryEn})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
                     </div>
+
                     <div>
-                      <label className="block text-slate-400 mb-1">Product Title</label>
+                      <label className="block text-slate-400 mb-1">Product Name (English) *</label>
                       <input
                         type="text"
                         placeholder="e.g. Royal Taif Extrait de Parfum"
                         value={productForm.name}
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
                         className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        required
                       />
                     </div>
+
+                    <div>
+                      <label className="block text-slate-400 mb-1">Product Name (Arabic)</label>
+                      <input
+                        type="text"
+                        dir="rtl"
+                        placeholder="e.g. ورد الطائف إكستريت دي بارفان"
+                        value={productForm.nameAr}
+                        onChange={(e) => setProductForm({ ...productForm, nameAr: e.target.value })}
+                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                      />
+                    </div>
+
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-400 mb-1">Maison / House</label>
+                        <label className="block text-slate-400 mb-1">Concentration</label>
                         <select
-                          value={productForm.brand}
-                          onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
+                          value={productForm.concentration}
+                          onChange={(e) => setProductForm({ ...productForm, concentration: e.target.value })}
                           className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
                         >
-                          <option value="Amouage">Amouage</option>
-                          <option value="Maison Francis Kurkdjian">Maison Francis Kurkdjian</option>
-                          <option value="Roja Parfums">Roja Parfums</option>
-                          <option value="Xerjoff">Xerjoff</option>
-                          <option value="Tom Ford">Tom Ford</option>
-                          <option value="Clive Christian">Clive Christian</option>
+                          <option value="EXTRAIT_DE_PARFUM">Extrait de Parfum (30-53%)</option>
+                          <option value="PARFUM">Parfum Pure (20-30%)</option>
+                          <option value="EAU_DE_PARFUM">Eau de Parfum (15-20%)</option>
+                          <option value="PARFUM_OIL">Pure Attar / Perfume Oil</option>
                         </select>
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Base Price (AED)</label>
+                        <label className="block text-slate-400 mb-1">Price (AED) *</label>
                         <input
                           type="text"
                           placeholder="e.g. 1,850"
                           value={productForm.price}
                           onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
                           className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                          required
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+
+                    {/* Scent Notes Pyramid */}
+                    <div className="p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                      <span className="text-[11px] font-medium text-purple-400 flex items-center gap-1">
+                        <Layers size={13} />
+                        <span>Scent Notes (comma-separated, auto-linked to note pages)</span>
+                      </span>
                       <div>
-                        <label className="block text-slate-400 mb-1">Sealed Stock (Units)</label>
+                        <label className="block text-slate-500 text-[10px]">Top Notes</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Bergamot, Pink Pepper, Taif Rose"
+                          value={productForm.topNotes}
+                          onChange={(e) => setProductForm({ ...productForm, topNotes: e.target.value })}
+                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 text-[10px]">Heart Notes</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Silver Frankincense, Jasmine, Cedarwood"
+                          value={productForm.heartNotes}
+                          onChange={(e) => setProductForm({ ...productForm, heartNotes: e.target.value })}
+                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-500 text-[10px]">Base Notes</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Cambodian Oud, Ambergris, Sandalwood"
+                          value={productForm.baseNotes}
+                          onChange={(e) => setProductForm({ ...productForm, baseNotes: e.target.value })}
+                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">Sealed Stock</label>
                         <input
                           type="number"
                           value={productForm.stock}
@@ -1039,7 +1605,7 @@ export function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Tester Units</label>
+                        <label className="block text-slate-400 mb-1">Testers</label>
                         <input
                           type="number"
                           value={productForm.testerStock}
@@ -1047,17 +1613,17 @@ export function App() {
                           className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
                         />
                       </div>
-                    </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Fulfillment Warehouse</label>
-                      <select
-                        value={productForm.warehouse}
-                        onChange={(e) => setProductForm({ ...productForm, warehouse: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-                      >
-                        <option value="DXB-MAIN">DXB-MAIN (Dubai Central Hub)</option>
-                        <option value="RUH-HUB">RUH-HUB (Riyadh GCC Hub)</option>
-                      </select>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Warehouse</label>
+                        <select
+                          value={productForm.warehouse}
+                          onChange={(e) => setProductForm({ ...productForm, warehouse: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        >
+                          <option value="DXB-MAIN">DXB-MAIN (Dubai)</option>
+                          <option value="RUH-HUB">RUH-HUB (Riyadh)</option>
+                        </select>
+                      </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
@@ -1069,9 +1635,10 @@ export function App() {
                     </button>
                     <button
                       onClick={handleSaveProduct}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded flex items-center gap-1.5"
                     >
-                      Save to Vault
+                      <CheckCircle2 size={14} />
+                      <span>Save Product</span>
                     </button>
                   </div>
                 </div>
@@ -1080,151 +1647,269 @@ export function App() {
           </div>
         )}
 
-        {/* 3. DEDICATED NOTES & ACCORDS GRAPH */}
-        {activeTab === "notes" && (
+        {/* 2.5. BRANDS */}
+        {activeTab === "brands" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
-              <span className="text-xs text-slate-400">Total verified olfactory raw essences: {notes.length}</span>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search by brand name, country, or perfumer..."
+                  value={brandSearch}
+                  onChange={(e) => setBrandSearch(e.target.value)}
+                  className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
+                />
+              </div>
+
               <button
-                onClick={() => setShowNoteModal(true)}
-                className="px-3.5 py-2 bg-accent hover:bg-accent-hover text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                onClick={() => {
+                  setBrandToEdit(null);
+                  setShowBrandModal(true);
+                }}
+                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-amber-950/40"
               >
                 <Plus size={14} />
-                <span>Add Scent Note</span>
+                <span>Add Brand</span>
               </button>
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
+            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
                 <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
                   <tr>
-                    <th className="p-4 text-start">Note (EN / AR)</th>
-                    <th className="p-4 text-start">Canonical Slug</th>
-                    <th className="p-4 text-start">Scent Family</th>
-                    <th className="p-4 text-start">Linked Perfumes</th>
-                    <th className="p-4 text-start">Status</th>
-                    <th className="p-4 text-end">Action</th>
+                    <th className="p-4 text-start">Brand Name</th>
+                    <th className="p-4 text-start">URL Slug</th>
+                    <th className="p-4 text-start">Category</th>
+                    <th className="p-4 text-start">Country & Year</th>
+                    <th className="p-4 text-start">Products</th>
+                    <th className="p-4 text-start">Description</th>
+                    <th className="p-4 text-end">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
-                  {notes.map((n) => (
-                    <tr key={n.id} className="hover:bg-slate-800/30">
-                      <td className="p-4">
-                        <span className="font-semibold text-white block">{n.nameEn}</span>
-                        <span className="text-slate-400 text-xs" dir="rtl">{n.nameAr}</span>
-                      </td>
-                      <td className="p-4 font-mono text-slate-400">{n.slug}</td>
-                      <td className="p-4 text-slate-300">{n.family}</td>
-                      <td className="p-4 font-mono text-slate-200">{n.perfumesCount} products joined</td>
-                      <td className="p-4">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[10px] font-bold rounded">
-                          {n.status}
-                        </span>
-                      </td>
-                      <td className="p-4 text-end">
-                        <button
-                          onClick={() => handleDeleteNote(n.id, n.nameEn)}
-                          className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
-                          title="Delete Note"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {brands
+                    .filter((b) => {
+                      if (!brandSearch.trim()) return true;
+                      const q = brandSearch.toLowerCase();
+                      return (
+                        b.name.toLowerCase().includes(q) ||
+                        b.countryEn.toLowerCase().includes(q) ||
+                        b.slug.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((b) => (
+                      <tr key={b.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="p-4">
+                          <span className="font-semibold text-white block text-sm">{b.name}</span>
+                          <span className="text-slate-400 text-[11px] font-mono">{b.perfumer}</span>
+                        </td>
+                        <td className="p-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-slate-400">
+                            <span className="text-slate-500">/brands/</span>
+                            <span className="text-amber-400 font-medium">{b.slug}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                              b.type === "NICHE"
+                                ? "bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                                : "bg-blue-500/10 text-blue-300 border border-blue-500/30"
+                            }`}
+                          >
+                            {b.type === "NICHE" ? "Niche Brand" : "Designer"}
+                          </span>
+                        </td>
+                        <td className="p-4">
+                          <span className="text-slate-200 block">{b.countryEn}</span>
+                          <span className="text-slate-500 text-[10px]">Est. {b.year}</span>
+                        </td>
+                        <td className="p-4 font-mono">
+                          <span className="text-emerald-400 font-medium">
+                            {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-400 max-w-sm truncate text-[11px]">
+                          {b.storyEn || "Brand description available."}
+                        </td>
+                        <td className="p-4 text-end">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setBrandToEdit(b);
+                                setShowBrandModal(true);
+                              }}
+                              className="p-1 text-slate-400 hover:text-amber-400 transition-colors"
+                              title="Edit Brand"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <a
+                              href={`http://localhost:3000/en/brands/${b.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              title="View Brand Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteBrand(b.id, b.name)}
+                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              title="Delete Brand"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
-
-            {/* Add Note Modal */}
-            {showNoteModal && (
-              <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                <div className="bg-[#111622] border border-slate-800 w-full max-w-lg p-6 space-y-4 rounded">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-                    <h3 className="font-serif text-lg text-white font-light">Add Rare Olfactory Essence</h3>
-                    <button onClick={() => setShowNoteModal(false)} className="text-slate-400 hover:text-white">
-                      <X size={18} />
-                    </button>
-                  </div>
-                  <div className="space-y-3 text-xs">
-                    <div>
-                      <label className="block text-slate-400 mb-1">Name (English)</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Royal Taif Rose"
-                        value={noteForm.nameEn}
-                        onChange={(e) => setNoteForm({ ...noteForm, nameEn: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Name (Arabic)</label>
-                      <input
-                        type="text"
-                        dir="rtl"
-                        placeholder="e.g. ورد الطائف الملكي"
-                        value={noteForm.nameAr}
-                        onChange={(e) => setNoteForm({ ...noteForm, nameAr: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Canonical Slug</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. taif-rose"
-                        value={noteForm.slug}
-                        onChange={(e) => setNoteForm({ ...noteForm, slug: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Scent Family</label>
-                      <select
-                        value={noteForm.family}
-                        onChange={(e) => setNoteForm({ ...noteForm, family: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-                      >
-                        <option value="Floral">Floral (Rare Flowers)</option>
-                        <option value="Resin">Resin & Sacred Incense</option>
-                        <option value="Woody">Woody & Aged Oud</option>
-                        <option value="Amber">Amber & Animalic</option>
-                        <option value="Citrus">Citrus & Sparkling</option>
-                        <option value="Spice">Opulent Spice</option>
-                        <option value="Gourmand">Gourmand & Vanilla</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button onClick={() => setShowNoteModal(false)} className="px-4 py-2 border border-slate-800 text-slate-300 rounded">
-                      Cancel
-                    </button>
-                    <button onClick={handleSaveNote} className="px-4 py-2 bg-accent hover:bg-accent-hover text-white font-medium rounded">
-                      Publish Note
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
         )}
 
-        {/* 4. WAREHOUSES & STOCK LEDGER */}
+        {/* 3. NOTES */}
+        {activeTab === "notes" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+                <input
+                  type="text"
+                  placeholder="Search by note name, Arabic title, or family..."
+                  value={noteSearch}
+                  onChange={(e) => setNoteSearch(e.target.value)}
+                  className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-400 font-mono">
+                  {notes.length} notes
+                </span>
+                <button
+                  onClick={() => {
+                    setNoteToEdit(null);
+                    setShowNoteModal(true);
+                  }}
+                  className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-purple-950/40"
+                >
+                  <Plus size={14} />
+                  <span>Add Note</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
+              <table className="w-full text-start text-xs font-sans">
+                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                  <tr>
+                    <th className="p-4 text-start">Note Name (EN / AR)</th>
+                    <th className="p-4 text-start">URL Slug</th>
+                    <th className="p-4 text-start">Family</th>
+                    <th className="p-4 text-start">Origin</th>
+                    <th className="p-4 text-start">Products</th>
+                    <th className="p-4 text-start">Description</th>
+                    <th className="p-4 text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800">
+                  {notes
+                    .filter((n) => {
+                      if (!noteSearch.trim()) return true;
+                      const q = noteSearch.toLowerCase();
+                      return (
+                        n.nameEn.toLowerCase().includes(q) ||
+                        n.nameAr.includes(q) ||
+                        n.family.toLowerCase().includes(q) ||
+                        n.slug.toLowerCase().includes(q)
+                      );
+                    })
+                    .map((n) => (
+                      <tr key={n.id} className="hover:bg-slate-800/30 transition-colors">
+                        <td className="p-4">
+                          <span className="font-semibold text-white block text-sm">{n.nameEn}</span>
+                          <span className="text-slate-400 text-xs" dir="rtl">
+                            {n.nameAr}
+                          </span>
+                        </td>
+                        <td className="p-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-slate-400">
+                            <span className="text-slate-500">/notes/</span>
+                            <span className="text-purple-400 font-medium">{n.slug}</span>
+                          </div>
+                        </td>
+                        <td className="p-4">
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
+                            {n.family}
+                          </span>
+                        </td>
+                        <td className="p-4 text-slate-300 text-[11px]">
+                          {n.originEn || "Middle East"}
+                        </td>
+                        <td className="p-4 font-mono text-emerald-400 font-medium">
+                          {n.perfumesCount} products
+                        </td>
+                        <td className="p-4 text-slate-400 max-w-xs truncate text-[11px]">
+                          {n.descriptionEn || "Sensory description available."}
+                        </td>
+                        <td className="p-4 text-end">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setNoteToEdit(n);
+                                setShowNoteModal(true);
+                              }}
+                              className="p-1 text-slate-400 hover:text-purple-400 transition-colors"
+                              title="Edit Note"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <a
+                              href={`http://localhost:3000/en/notes/${n.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              title="View Note Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteNote(n.id, n.nameEn)}
+                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              title="Delete Note"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* 4. INVENTORY & WAREHOUSES */}
         {activeTab === "inventory" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-[#111622] border border-slate-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-white">DXB-MAIN (Dubai Central Hub)</span>
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">DEFAULT VAULT</span>
+                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">DEFAULT WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-slate-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "DXB-MAIN").reduce((a, b) => a + b.stock, 0)}</p>
-                <div className="text-[11px] font-mono text-slate-500">Same-Day White-Glove Dispatch: Dubai, Abu Dhabi, Sharjah</div>
+                <div className="text-[11px] font-mono text-slate-500">Express Delivery: Dubai, Abu Dhabi, Sharjah</div>
               </div>
               <div className="p-4 bg-[#111622] border border-slate-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-white">RUH-HUB (Riyadh GCC Hub)</span>
-                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">REGIONAL NODE</span>
+                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">REGIONAL WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-slate-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "RUH-HUB").reduce((a, b) => a + b.stock, 0)}</p>
                 <div className="text-[11px] font-mono text-slate-500">Express Delivery: Riyadh, Jeddah, Khobar, GCC</div>
@@ -1233,12 +1918,12 @@ export function App() {
           </div>
         )}
 
-        {/* 5. SUPPLIERS & POs */}
+        {/* 5. PURCHASING */}
         {activeTab === "purchasing" && (
           <div className="space-y-6">
             <div className="border border-slate-800 bg-[#111622] p-6 space-y-3 rounded">
-              <h3 className="font-serif text-lg text-white font-light">Official Maison Allocation Purchase Orders</h3>
-              <p className="text-xs text-slate-400">Active agreements with authorized master distributor networks in France, Oman, and Italy.</p>
+              <h3 className="font-serif text-lg text-white font-light">Supplier Purchase Orders</h3>
+              <p className="text-xs text-slate-400">Active purchase orders with official brand distributors in France, Oman, and Italy.</p>
               <div className="divide-y divide-slate-800 text-xs font-mono pt-3">
                 <div className="py-2.5 flex items-center justify-between">
                   <span className="text-slate-200">PO-2026-081 • Amouage Luxury LLC (Oman)</span>
@@ -1253,17 +1938,17 @@ export function App() {
           </div>
         )}
 
-        {/* 6. RETURNS & QUARANTINE */}
+        {/* 6. RETURNS */}
         {activeTab === "returns" && (
           <div className="space-y-6">
             <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
               <table className="w-full text-start text-xs font-sans">
                 <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
                   <tr>
-                    <th className="p-4 text-start">RMA # / Customer</th>
+                    <th className="p-4 text-start">Return # / Customer</th>
                     <th className="p-4 text-start">Returned Item</th>
-                    <th className="p-4 text-start">Inspection Condition</th>
-                    <th className="p-4 text-start">Disposition Allocation</th>
+                    <th className="p-4 text-start">Condition</th>
+                    <th className="p-4 text-start">Restock Action</th>
                     <th className="p-4 text-start">Status</th>
                     <th className="p-4 text-end">Action</th>
                   </tr>
@@ -1301,7 +1986,7 @@ export function App() {
           </div>
         )}
 
-        {/* 7. ORDERS & MULTI-SHIPMENTS */}
+        {/* 7. ORDERS */}
         {activeTab === "orders" && (
           <div className="space-y-6">
             <div className="flex items-center justify-between gap-4">
@@ -1316,13 +2001,13 @@ export function App() {
                         : "bg-[#111622] border-slate-800 text-slate-400 hover:text-white"
                     }`}
                   >
-                    {mkt === "ALL" ? "All GCC Markets" : `Market: ${mkt}`}
+                    {mkt === "ALL" ? "All Markets" : `Market: ${mkt}`}
                   </button>
                 ))}
               </div>
               <input
                 type="text"
-                placeholder="Search order or client..."
+                placeholder="Search by order # or customer..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
                 className="bg-[#111622] border border-slate-800 text-xs text-white px-3 py-1.5 rounded focus:outline-none"
@@ -1935,6 +2620,35 @@ export function App() {
           </div>
         )}
       </main>
+
+      {/* PRO SEO MODALS */}
+      <BulkCsvModal
+        isOpen={showCsvModal}
+        onClose={() => setShowCsvModal(false)}
+        existingBrands={brands}
+        existingNotes={notes}
+        onImportSuccess={handleBulkCsvImportSuccess}
+      />
+
+      <BrandModal
+        isOpen={showBrandModal}
+        onClose={() => {
+          setShowBrandModal(false);
+          setBrandToEdit(null);
+        }}
+        brandToEdit={brandToEdit}
+        onSave={handleSaveBrand}
+      />
+
+      <NoteModal
+        isOpen={showNoteModal}
+        onClose={() => {
+          setShowNoteModal(false);
+          setNoteToEdit(null);
+        }}
+        noteToEdit={noteToEdit}
+        onSave={handleSaveNoteModal}
+      />
     </div>
   );
 }

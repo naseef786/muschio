@@ -6,6 +6,7 @@ import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package } from "lucide-react";
 import { PriceDisplay } from "@muschio/ui";
 import { ProductCard } from "./product-card";
+import { useWishlist } from "../context/wishlist-context";
 
 export interface ProductDetailProps {
   product: {
@@ -60,7 +61,8 @@ export function ProductExperience({
     product.variants.find((v) => !v.isSampleVial)?.id || product.variants[0]?.id,
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isWishlisted, setIsWishlisted] = useState(false);
+  const { isInWishlist, toggleWishlist } = useWishlist();
+  const isWishlisted = isInWishlist(product.slug);
   const [copiedLink, setCopiedLink] = useState(false);
 
   // Accordion open states
@@ -75,6 +77,21 @@ export function ProductExperience({
 
   const images = product.images.length > 0 ? product.images : ["/product-placeholder.svg"];
   const currentImage: string = images[selectedImageIndex] || images[0] || "/product-placeholder.svg";
+
+  const handleToggleWishlist = () => {
+    toggleWishlist({
+      slug: product.slug,
+      nameEn: product.nameEn,
+      nameAr: product.nameAr,
+      brand: product.brand.name,
+      brandType: product.brand.type as "NICHE" | "DESIGNER",
+      concentration: product.concentration.replaceAll("_", " "),
+      price: selectedVariant?.price || 0,
+      compareAtPrice: selectedVariant?.compareAtPrice,
+      image: currentImage,
+      variantId: selectedVariant?.id || "",
+    });
+  };
 
   const handleShare = async () => {
     if (typeof window !== "undefined") {
@@ -140,29 +157,56 @@ export function ProductExperience({
                 className="object-contain p-6 sm:p-10 md:p-14"
               />
 
-              {/* Wishlist Button on Gallery Canvas */}
-              <button
-                type="button"
-                onClick={() => setIsWishlisted((prev) => !prev)}
-                aria-label={isWishlisted ? "Remove from wishlist" : "Add to wishlist"}
-                className={`absolute top-4 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border shadow-sm transition-all ${
-                  isWishlisted
-                    ? "bg-luxury-surface text-[#d2042d] border-luxury-border"
-                    : "bg-luxury-surface/90 text-luxury-muted border-luxury-border hover:text-luxury-text hover:bg-luxury-surface"
-                }`}
-              >
-                <Heart size={18} className={isWishlisted ? "fill-current text-[#d2042d]" : ""} />
-              </button>
+              {/* Floating Luxury Action Dock (Wishlist & Share) */}
+              <div className="absolute top-4 end-4 right-4 rtl:right-auto rtl:left-4 z-20 flex flex-col items-center gap-1 p-1.5 rounded-full bg-luxury-surface/85 backdrop-blur-md border border-luxury-border/70 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-luxury-surface/95">
+                {/* Wishlist Action */}
+                <button
+                  type="button"
+                  onClick={handleToggleWishlist}
+                  title={
+                    isWishlisted
+                      ? c("Remove from Private Vault", "إزالة من المفضلة")
+                      : c("Save to Private Vault", "إضافة إلى المفضلة")
+                  }
+                  aria-label={
+                    isWishlisted
+                      ? c("Remove from Private Vault", "إزالة من المفضلة")
+                      : c("Save to Private Vault", "إضافة إلى المفضلة")
+                  }
+                  className={`group/wishlist w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                    isWishlisted
+                      ? "text-accent bg-accent/10"
+                      : "text-luxury-muted hover:text-luxury-text hover:bg-luxury-surface2/80"
+                  }`}
+                >
+                  <Heart
+                    size={18}
+                    className={`transition-all duration-300 ${
+                      isWishlisted
+                        ? "fill-accent text-accent scale-110 drop-shadow-[0_2px_4px_rgba(197,168,128,0.35)]"
+                        : "group-hover/wishlist:scale-110 group-hover/wishlist:text-luxury-text"
+                    }`}
+                  />
+                </button>
 
-              {/* Share Button */}
-              <button
-                type="button"
-                onClick={handleShare}
-                aria-label="Share product"
-                className="absolute top-16 inset-inline-end-4 w-10 h-10 rounded-full flex items-center justify-center border bg-luxury-surface/90 text-luxury-muted border-luxury-border hover:text-luxury-text hover:bg-luxury-surface shadow-sm transition-all"
-              >
-                {copiedLink ? <Check size={16} className="text-accent" /> : <Share2 size={16} />}
-              </button>
+                {/* Micro Divider */}
+                <div className="w-4 h-[1px] bg-luxury-border/60 my-0.5" />
+
+                {/* Share Action */}
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  title={copiedLink ? c("Link Copied!", "تم نسخ الرابط!") : c("Share Fragrance", "مشاركة العطر")}
+                  aria-label={copiedLink ? c("Link Copied!", "تم نسخ الرابط!") : c("Share Fragrance", "مشاركة العطر")}
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-luxury-muted hover:text-luxury-text hover:bg-luxury-surface2/80 active:scale-90 transition-all duration-200"
+                >
+                  {copiedLink ? (
+                    <Check size={16} className="text-emerald-500 animate-in fade-in" />
+                  ) : (
+                    <Share2 size={16} className="transition-transform group-hover:scale-110" />
+                  )}
+                </button>
+              </div>
             </div>
 
             {/* Thumbnail Row (Desktop & Tablet) */}
@@ -270,20 +314,48 @@ export function ProductExperience({
               </div>
             )}
 
-            {/* Primary Action Button */}
+            {/* Primary Action Buttons */}
             <div className="space-y-3 pt-2">
               <Link
                 href="/discover/ai"
-                className="editorial-button w-full text-center justify-center"
+                className="editorial-button w-full text-center justify-center shadow-sm hover:shadow-md"
               >
                 {c("Consult Scent Sommelier", "استشر خبير العطور")}
               </Link>
-              <Link
-                href="/delivery"
-                className="editorial-button-secondary w-full text-center justify-center"
-              >
-                {c("GCC White-Glove Delivery Info", "معلومات التوصيل في الخليج")}
-              </Link>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Pro Luxury Wishlist Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleWishlist}
+                  className={`py-3.5 px-4 flex items-center justify-center gap-2.5 text-xs font-sans uppercase tracking-[0.14em] font-medium border transition-all duration-200 group active:scale-[0.99] ${
+                    isWishlisted
+                      ? "bg-accent/10 border-accent/60 text-accent shadow-sm"
+                      : "bg-luxury-surface/70 border-luxury-border hover:border-luxury-borderBold hover:bg-luxury-surface text-luxury-text"
+                  }`}
+                >
+                  <Heart
+                    size={16}
+                    className={`transition-all duration-300 ${
+                      isWishlisted
+                        ? "fill-accent text-accent scale-110"
+                        : "text-luxury-muted group-hover:text-luxury-text group-hover:scale-110"
+                    }`}
+                  />
+                  <span>
+                    {isWishlisted
+                      ? c("Saved in Vault", "محفوظ في المفضلة")
+                      : c("Add to Wishlist", "إضافة إلى المفضلة")}
+                  </span>
+                </button>
+
+                <Link
+                  href="/delivery"
+                  className="editorial-button-secondary w-full text-center justify-center"
+                >
+                  {c("White-Glove Delivery", "التوصيل الفاخر")}
+                </Link>
+              </div>
             </div>
 
             {/* Service Badges (Authentic, GCC Delivery, Sealed Guarantee) */}

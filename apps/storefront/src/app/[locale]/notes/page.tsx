@@ -258,7 +258,7 @@ export default function NotesIndexPage({
                   sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <span className="absolute top-2.5 inset-inline-start-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
+                <span className="absolute top-2.5 start-2.5 left-2.5 rtl:left-auto rtl:right-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
                   {c(note.familyEn, note.familyAr)}
                 </span>
               </div>
