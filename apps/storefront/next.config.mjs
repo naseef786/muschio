@@ -12,7 +12,7 @@ const nextConfig = {
       { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
-  transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api"],
+  transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api", "@muschio/admin"],
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client", "prisma"],
   },

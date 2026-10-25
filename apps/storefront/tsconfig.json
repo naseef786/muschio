@@ -12,6 +12,9 @@
     "paths": {
       "@/*": [
         "./src/*"
+      ],
+      "@muschio/admin": [
+        "../admin/src/App.tsx"
       ]
     },
     "declaration": false,

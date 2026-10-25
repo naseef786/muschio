@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@muschio/admin": "workspace:*",
     "@muschio/api": "workspace:*",
     "@muschio/config": "workspace:*",
     "@muschio/types": "workspace:*",
