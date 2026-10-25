@@ -18,7 +18,11 @@ const API_BASE = API_ORIGIN
   ? API_ORIGIN.endsWith("/api/v1")
     ? API_ORIGIN
     : `${API_ORIGIN}/api/v1`
-  : "http://localhost:4000/api/v1";
+  : typeof window !== "undefined"
+    ? "/api/v1"
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}/api/v1`
+      : "http://localhost:3000/api/v1";
 let sessionRequest: Promise<string | null> | null = null;
 async function guestToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
@@ -52,7 +56,6 @@ async function apiRequest<T>(
   options?: RequestInit,
 ): Promise<T | null> {
   try {
-    if (!API_ORIGIN && process.env.NODE_ENV === "production") return null;
     const secured = /^\/(cart|checkout|orders|payments\/session|auth\/(me|profile)|customers\/addresses)(\/|\?|$)/.test(
       endpoint,
     );

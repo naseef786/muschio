@@ -95,7 +95,7 @@ app.get("/internal/reconcile-inventory", async (req, res, next) => {
 app.use(errorHandler);
 
 // Background reconciliation for expired 15-minute inventory reservations
-if (process.env.NODE_ENV !== "test" && !process.env.VERCEL)
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL && !process.env.NEXT_PHASE && require.main === module)
   setInterval(async () => {
     try {
       const result = await InventoryService.reconcileExpiredReservations();
@@ -109,7 +109,7 @@ if (process.env.NODE_ENV !== "test" && !process.env.VERCEL)
     }
   }, 60 * 1000); // Check every 60 seconds
 
-if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
+if (process.env.NODE_ENV !== "test" && !process.env.VERCEL && !process.env.NEXT_PHASE && require.main === module) {
   app.listen(PORT, () => {
     console.log(`✨ Muschio Haute Parfumerie API running on port ${PORT}`);
     console.log(`📍 Endpoint: http://localhost:${PORT}/api/v1`);
@@ -117,3 +117,17 @@ if (process.env.NODE_ENV !== "test" && !process.env.VERCEL) {
 }
 
 export default app;
+export { app };
+export { prisma } from "./prisma";
+export { CatalogService } from "./services/catalog.service";
+export { NotesService } from "./services/notes.service";
+export { DiscoverySetService } from "./services/discovery-set.service";
+export { CustomerService } from "./services/customer.service";
+export { AIScentDiscoveryService } from "./services/ai-discovery.service";
+export { BannerService } from "./services/banner.service";
+export { JournalService } from "./services/journal.service";
+export { storefrontProduct } from "./services/storefront-catalog";
+export { CartService } from "./services/cart.service";
+export { CheckoutService } from "./services/checkout.service";
+export { PaymentService } from "./services/payment.service";
+export { storefrontOrder } from "./services/storefront-order";

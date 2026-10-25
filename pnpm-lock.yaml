@@ -152,6 +152,9 @@ importers:
 
   apps/storefront:
     dependencies:
+      '@muschio/api':
+        specifier: workspace:*
+        version: link:../api
       '@muschio/config':
         specifier: workspace:*
         version: link:../../packages/config
