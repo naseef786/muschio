@@ -15,8 +15,12 @@ export type AIScentConsultationInput = z.infer<typeof AIScentConsultationInputSc
 
 export const AIScentRecommendationItemSchema = z.object({
   sku: z.string(),
+  slug: z.string().optional(),
   productName: z.string(),
   brandName: z.string(),
+  concentration: z.string().optional(),
+  price: z.number().optional(),
+  image: z.string().optional(),
   matchReasonEn: z.string(),
   matchReasonAr: z.string(),
   accordOverlap: z.array(z.string()),

@@ -4,91 +4,7 @@ import React, { useEffect, useState, useMemo } from "react";
 import { muschioApi } from "../../../lib/api";
 import { StorefrontProduct } from "@muschio/types";
 import { ProductCard } from "../../../components/product-card";
-import { SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
-
-const CATALOG_PRODUCTS = [
-  {
-    slug: "amouage-interlude-53-man",
-    nameEn: "Interlude 53 Man Extrait de Parfum",
-    nameAr: "إنترلود 53 إكستري دي بارفان",
-    brand: "Amouage",
-    brandType: "NICHE",
-    family: "oriental-amber",
-    gender: "MEN",
-    concentration: "Extrait de Parfum (53%)",
-    price: 1850,
-    compareAtPrice: 2100,
-    image: "/amouage-placeholder.svg",
-    badge: "Extrait (53%)",
-    notes: ["Silver Frankincense", "Cambodian Oud", "Bergamot"],
-  },
-  {
-    slug: "mfk-baccarat-rouge-540-extrait",
-    nameEn: "Baccarat Rouge 540 Extrait de Parfum",
-    nameAr: "باكارات روج 540 إكستري دي بارفان",
-    brand: "Maison Francis Kurkdjian",
-    brandType: "NICHE",
-    family: "oriental-amber",
-    gender: "UNISEX",
-    concentration: "Extrait de Parfum",
-    price: 1650,
-    compareAtPrice: null,
-    image:
-      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
-    secondaryImage:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    badge: "Haute Niche",
-    notes: ["Kashmiri Saffron", "Ambergris", "Bitter Almond"],
-  },
-  {
-    slug: "roja-parfums-elysium-pour-homme-parfum",
-    nameEn: "Elysium Pour Homme Parfum",
-    nameAr: "إليزيوم بور هوم بارفان",
-    brand: "Roja Parfums",
-    brandType: "NICHE",
-    family: "fresh-citrus-aquatic",
-    gender: "MEN",
-    concentration: "Pure Parfum",
-    price: 1950,
-    compareAtPrice: 2200,
-    image:
-      "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=85",
-    badge: "Pure Parfum",
-    notes: ["Calabrian Bergamot", "Tuscan Leather", "Pink Pepper"],
-  },
-  {
-    slug: "xerjoff-alexandria-ii",
-    nameEn: "Alexandria II Eau de Parfum",
-    nameAr: "ألكسندريا 2 أو دي بارفان",
-    brand: "Xerjoff",
-    brandType: "NICHE",
-    family: "woody-smoky",
-    gender: "UNISEX",
-    concentration: "Eau de Parfum",
-    price: 2200,
-    compareAtPrice: 2450,
-    image:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    badge: "Rare Batch",
-    notes: ["Laos Oud", "Bulgarian Rose", "Cinnamon"],
-  },
-  {
-    slug: "tom-ford-tobacco-vanille",
-    nameEn: "Tobacco Vanille Eau de Parfum",
-    nameAr: "توباكو فانيلا أو دي بارفان",
-    brand: "Tom Ford",
-    brandType: "DESIGNER",
-    family: "gourmand-leather",
-    gender: "UNISEX",
-    concentration: "Eau de Parfum",
-    price: 1720,
-    compareAtPrice: 1950,
-    image:
-      "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=800&q=85",
-    badge: "Private Blend",
-    notes: ["Bourbon Vanilla", "Tobacco Accord", "Tonka Bean"],
-  },
-];
+import { SlidersHorizontal, ArrowUpDown, X, Check, Loader2 } from "lucide-react";
 
 export default function ShopCatalogPage({
   params: { locale },
@@ -112,6 +28,8 @@ export default function ShopCatalogPage({
   const [search, setSearch] = useState(searchParams.search ?? "");
   const [sort, setSort] = useState("curated");
   const [live, setLive] = useState<StorefrontProduct[] | null>(null);
+  const [families, setFamilies] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // Mobile Filter & Sort Drawer states
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
@@ -119,10 +37,18 @@ export default function ShopCatalogPage({
 
   useEffect(() => {
     let active = true;
-    muschioApi.getProducts({ limit: 100 }).then((products) => {
-      if (active && products && products.length > 0) {
+    Promise.all([
+      muschioApi.getProducts({ limit: 100 }),
+      muschioApi.getScentFamilies(),
+    ]).then(([products, fams]) => {
+      if (!active) return;
+      if (products) {
         setLive(products);
       }
+      if (fams) {
+        setFamilies(fams);
+      }
+      setLoading(false);
     });
     return () => {
       active = false;
@@ -130,30 +56,28 @@ export default function ShopCatalogPage({
   }, []);
 
   const catalog = useMemo(() => {
-    if (live && live.length > 0) {
-      return live.map((product) => {
-        const variant =
-          product.variants.find((v) => !v.isSampleVial) || product.variants[0];
-        const isAmouage = product.slug === "amouage-interlude-53-man";
-        return {
-          slug: product.slug,
-          nameEn: product.nameEn,
-          nameAr: product.nameAr,
-          brand: product.brand.name,
-          brandType: product.brand.type,
-          family: product.scentFamily?.slug || "",
-          gender: product.gender,
-          concentration: product.concentration.replaceAll("_", " "),
-          price: variant?.price || 0,
-          compareAtPrice: variant?.compareAtPrice,
-          image: isAmouage ? "/amouage-placeholder.svg" : (product.images[0] || "/product-placeholder.svg"),
-          secondaryImage: product.images[1],
-          badge: product.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
-          notes: product.notes.map((note) => (isAr ? note.nameAr : note.nameEn)),
-        };
-      });
-    }
-    return CATALOG_PRODUCTS;
+    if (!live || live.length === 0) return [];
+    return live.map((product) => {
+      const variant =
+        product.variants.find((v) => !v.isSampleVial) || product.variants[0];
+      const isAmouage = product.slug === "amouage-interlude-53-man";
+      return {
+        slug: product.slug,
+        nameEn: product.nameEn,
+        nameAr: product.nameAr,
+        brand: product.brand.name,
+        brandType: product.brand.type,
+        family: product.scentFamily?.slug || "",
+        gender: product.gender,
+        concentration: product.concentration.replaceAll("_", " "),
+        price: variant?.price || 0,
+        compareAtPrice: variant?.compareAtPrice,
+        image: isAmouage ? "/amouage-placeholder.svg" : (product.images[0] || "/product-placeholder.svg"),
+        secondaryImage: product.images[1],
+        badge: product.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
+        notes: product.notes.map((note) => (isAr ? note.nameAr : note.nameEn)),
+      };
+    });
   }, [live, isAr]);
 
   const filtered = useMemo(() => {
@@ -272,10 +196,11 @@ export default function ShopCatalogPage({
             className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-luxury-text text-xs focus:outline-none focus:border-luxury-borderBold"
           >
             <option value="">{c("All Scent Families", "جميع العائلات العطرية")}</option>
-            <option value="oriental-amber">{c("Amber & Oriental", "عنبر وشرقي")}</option>
-            <option value="woody-smoky">{c("Woods & Smoke", "خشبي ودخاني")}</option>
-            <option value="fresh-citrus-aquatic">{c("Fresh & Citrus", "منعش وحمضي")}</option>
-            <option value="gourmand-leather">{c("Gourmand & Leather", "حلو وجلدي")}</option>
+            {families.map((fam) => (
+              <option key={fam.slug} value={fam.slug}>
+                {isAr ? fam.nameAr : fam.nameEn}
+              </option>
+            ))}
           </select>
         </div>
 
@@ -373,7 +298,12 @@ export default function ShopCatalogPage({
 
       {/* 5. Product Grid (2 Columns Mobile, 3 Tablet, 4 Desktop) */}
       <div className="pt-6">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-28 flex flex-col items-center justify-center text-xs text-luxury-muted space-y-3">
+            <Loader2 size={24} className="animate-spin text-accent" />
+            <span>{c("Loading haute parfumerie collection…", "جاري تحميل مجموعة العطور الفاخرة…")}</span>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="py-20 text-center space-y-4">
             <p className="font-serif text-2xl text-luxury-text">
               {c("No fragrances found", "لم يتم العثور على عطور")}
@@ -473,25 +403,31 @@ export default function ShopCatalogPage({
                   {c("Scent Family", "العائلة العطرية")}
                 </span>
                 <div className="space-y-2">
-                  {[
-                    { label: c("All Scent Families", "جميع العائلات العطرية"), value: "" },
-                    { label: c("Amber & Oriental", "عنبر وشرقي"), value: "oriental-amber" },
-                    { label: c("Woods & Smoke", "خشبي ودخاني"), value: "woody-smoky" },
-                    { label: c("Fresh & Citrus", "منعش وحمضي"), value: "fresh-citrus-aquatic" },
-                    { label: c("Gourmand & Leather", "حلو وجلدي"), value: "gourmand-leather" },
-                  ].map((option) => (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedFamily("")}
+                    className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
+                      selectedFamily === ""
+                        ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
+                        : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
+                    }`}
+                  >
+                    <span>{c("All Scent Families", "جميع العائلات العطرية")}</span>
+                    {selectedFamily === "" && <Check size={14} />}
+                  </button>
+                  {families.map((fam) => (
                     <button
-                      key={option.value}
+                      key={fam.slug}
                       type="button"
-                      onClick={() => setSelectedFamily(option.value)}
+                      onClick={() => setSelectedFamily(fam.slug)}
                       className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                        selectedFamily === option.value
+                        selectedFamily === fam.slug
                           ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                           : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
                       }`}
                     >
-                      <span>{option.label}</span>
-                      {selectedFamily === option.value && <Check size={14} />}
+                      <span>{isAr ? fam.nameAr : fam.nameEn}</span>
+                      {selectedFamily === fam.slug && <Check size={14} />}
                     </button>
                   ))}
                 </div>

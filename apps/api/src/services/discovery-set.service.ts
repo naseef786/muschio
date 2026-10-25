@@ -12,14 +12,28 @@ export class DiscoverySetService {
         volumeMl: 2,
         product: { isPublished: true },
         inventory: {
-          testerQuantity: { gt: 0 },
+          OR: [
+            { sealedQuantity: { gt: 0 } },
+            { testerQuantity: { gt: 0 } },
+          ],
         },
       },
       include: {
         product: {
-          include: { brand: true, scentFamily: true },
+          include: {
+            brand: true,
+            scentFamily: true,
+            notes: {
+              include: { note: true },
+            },
+          },
         },
         inventory: true,
+      },
+      orderBy: {
+        product: {
+          nameEn: "asc",
+        },
       },
     });
   }

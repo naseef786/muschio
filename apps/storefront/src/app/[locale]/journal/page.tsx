@@ -2,8 +2,9 @@ import React from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
 import { ArrowUpRight, Clock, User } from "lucide-react";
+import { muschioApi } from "../../../lib/api";
 
-export default function JournalIndexPage({
+export default async function JournalIndexPage({
   params: { locale },
 }: {
   params: { locale: "en" | "ar" };
@@ -11,22 +12,7 @@ export default function JournalIndexPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const articles = [
-    {
-      slug: "art-of-layering-oud-and-taif-rose",
-      titleEn: "The Sacred Alchemy: Layering Aged Omani Oud with Mountain Taif Rose",
-      titleAr: "الكيمياء المقدسة: فن مزج العود العُماني المعتق مع ورد الطائف الجبلي",
-      excerptEn:
-        "Discover the centuries-old Gulf tradition of combining wild balsamic agarwood with fresh, honeyed dawn-harvested roses for royal occasions.",
-      excerptAr:
-        "اكتشف التقاليد الخليجية الأصيلة في مزج العود البري البلسمي مع الورد المقطوف عند بزوغ الفجر في المناسبات الملكية.",
-      author: "Salim Al-Harthy",
-      readingTime: 6,
-      categoryEn: "Layering & Haute Technique",
-      categoryAr: "فن المزج والطقوس العطرية",
-      image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
-    },
-  ];
+  const posts = await muschioApi.getBlogPosts(1, 20);
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-10">
@@ -49,57 +35,65 @@ export default function JournalIndexPage({
       </div>
 
       {/* 2. Articles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {articles.map((article) => (
-          <Link
-            key={article.slug}
-            href={`/journal/${article.slug}`}
-            className="group border border-luxury-border bg-luxury-surface flex flex-col justify-between hover:border-luxury-borderBold transition-all overflow-hidden"
-          >
-            <div className="relative aspect-[16/9] w-full bg-luxury-surface2 overflow-hidden">
-              <Image
-                src={article.image}
-                alt={c(article.titleEn, article.titleAr)}
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover group-hover:scale-105 transition-transform duration-500"
-              />
-              <span className="absolute top-3 start-3 left-3 rtl:left-auto rtl:right-3 text-[10px] font-sans uppercase tracking-[0.14em] px-2.5 py-1 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
-                {c(article.categoryEn, article.categoryAr)}
-              </span>
-            </div>
+      {!posts || posts.length === 0 ? (
+        <div className="py-20 text-center text-xs text-luxury-muted">
+          {c("No journal essays published yet.", "لا توجد مقالات منشورة حالياً.")}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {posts.map((article: any) => (
+            <Link
+              key={article.slug}
+              href={`/journal/${article.slug}`}
+              className="group border border-luxury-border bg-luxury-surface flex flex-col justify-between hover:border-luxury-borderBold transition-all overflow-hidden"
+            >
+              <div className="relative aspect-[16/9] w-full bg-luxury-surface2 overflow-hidden">
+                <Image
+                  src={article.coverImageUrl || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80"}
+                  alt={c(article.titleEn, article.titleAr)}
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                {article.category && (
+                  <span className="absolute top-3 start-3 left-3 rtl:left-auto rtl:right-3 text-[10px] font-sans uppercase tracking-[0.14em] px-2.5 py-1 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
+                    {c(article.category.nameEn, article.category.nameAr)}
+                  </span>
+                )}
+              </div>
 
-            <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
-              <div className="space-y-3">
-                <div className="flex items-center gap-4 text-xs text-luxury-muted">
-                  <span className="flex items-center gap-1">
-                    <User size={13} />
-                    <span>{article.author}</span>
-                  </span>
-                  <span>·</span>
-                  <span className="flex items-center gap-1">
-                    <Clock size={13} />
-                    <span>{article.readingTime} {c("min read", "دقائق قراءة")}</span>
-                  </span>
+              <div className="p-6 sm:p-8 flex-1 flex flex-col justify-between space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center gap-4 text-xs text-luxury-muted">
+                    <span className="flex items-center gap-1">
+                      <User size={13} />
+                      <span>{article.authorName}</span>
+                    </span>
+                    <span>·</span>
+                    <span className="flex items-center gap-1">
+                      <Clock size={13} />
+                      <span>{article.readingTimeMinutes} {c("min read", "دقائق قراءة")}</span>
+                    </span>
+                  </div>
+
+                  <h2 className="font-serif text-2xl text-luxury-text font-normal group-hover:underline leading-snug">
+                    {c(article.titleEn, article.titleAr)}
+                  </h2>
+
+                  <p className="text-xs text-luxury-muted leading-relaxed line-clamp-2">
+                    {c(article.excerptEn, article.excerptAr)}
+                  </p>
                 </div>
 
-                <h2 className="font-serif text-2xl text-luxury-text font-normal group-hover:underline leading-snug">
-                  {c(article.titleEn, article.titleAr)}
-                </h2>
-
-                <p className="text-xs text-luxury-muted leading-relaxed line-clamp-2">
-                  {c(article.excerptEn, article.excerptAr)}
-                </p>
+                <div className="pt-4 border-t border-luxury-border flex items-center justify-between text-xs text-luxury-text font-medium group-hover:text-accent">
+                  <span>{c("Read Essay", "اقرأ المقال")}</span>
+                  <ArrowUpRight size={15} />
+                </div>
               </div>
-
-              <div className="pt-4 border-t border-luxury-border flex items-center justify-between text-xs text-luxury-text font-medium group-hover:text-accent">
-                <span>{c("Read Essay", "اقرأ المقال")}</span>
-                <ArrowUpRight size={15} />
-              </div>
-            </div>
-          </Link>
-        ))}
-      </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

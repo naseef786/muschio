@@ -165,15 +165,18 @@ export default function AIScentDiscoveryPage({
                   : "Your Bespoke Olfactory Aura",
           analysis: isAr ? apiRes.analysisAr : apiRes.analysisEn,
           recommendations: apiRes.recommendations.map((rec) => ({
-            slug: rec.sku.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+            slug: rec.slug || rec.sku.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
             nameEn: rec.productName,
             nameAr: rec.productName,
             brand: rec.brandName,
-            concentration: "Extrait de Parfum",
-            price: 1850,
+            concentration: rec.concentration || "Extrait de Parfum",
+            price: rec.price || 1850,
             matchPercentage: rec.matchPercentage,
             image:
-              "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85",
+              rec.image ||
+              (rec.slug === "amouage-interlude-53-man"
+                ? "/amouage-placeholder.svg"
+                : "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85"),
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
             accords: rec.accordOverlap,
           })),
@@ -182,7 +185,7 @@ export default function AIScentDiscoveryPage({
         return;
       }
     } catch {
-      // Graceful offline fallback
+      // Offline fallback
     }
 
     setTimeout(() => {

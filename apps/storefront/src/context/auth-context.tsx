@@ -47,43 +47,7 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const INITIAL_DEMO_ADDRESSES: SavedAddress[] = [
-  {
-    id: "addr-dubai-1",
-    label: "Palm Jumeirah Villa",
-    fullName: "Sultan Al-Nuaimi",
-    phone: "+971501234567",
-    email: "sultan@muschio.client",
-    country: "AE",
-    city: "Dubai",
-    stateOrEmirate: "Dubai",
-    addressLine1: "Villa 14, Frond N, Palm Jumeirah",
-    isDefault: true,
-  },
-  {
-    id: "addr-riyadh-2",
-    label: "Riyadh Residence",
-    fullName: "Sultan Al-Nuaimi",
-    phone: "+966509876543",
-    email: "sultan@muschio.client",
-    country: "SA",
-    city: "Riyadh",
-    stateOrEmirate: "Riyadh Province",
-    addressLine1: "Al-Hada District, King Khalid Road",
-    isDefault: false,
-  },
-];
 
-const INITIAL_DEMO_USER: ClientProfile = {
-  id: "client-vip-889",
-  name: "Sultan Al-Nuaimi",
-  email: "sultan@muschio.client",
-  phone: "+971 50 123 4567",
-  tier: "GOLD_SILLAGE",
-  loyaltyPoints: 1450,
-  loyaltyCreditsAed: 150, // 150 AED redeemable loyalty credits
-  joinedDate: "January 2026",
-};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ClientProfile | null>(null);
@@ -102,10 +66,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const storedAddresses = localStorage.getItem("muschio_client_addresses");
       if (storedAddresses) {
         setSavedAddresses(JSON.parse(storedAddresses));
-      } else {
-        // Provide sample initial GCC addresses for seamless testing
-        setSavedAddresses(INITIAL_DEMO_ADDRESSES);
-        localStorage.setItem("muschio_client_addresses", JSON.stringify(INITIAL_DEMO_ADDRESSES));
       }
     } catch {
       // Ignore local storage parse errors
@@ -210,32 +170,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         return true;
       }
+      return false;
     } catch {
-      // Graceful offline fallback below
+      return false;
     }
-
-    // Local fallback for offline/preview environments
-    const nameFromEmail = email.split("@")[0]?.replace(/[._-]/g, " ") || "Private Client";
-    const capitalizedName = nameFromEmail
-      .split(" ")
-      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-      .join(" ");
-
-    const client: ClientProfile = email.includes("sultan")
-      ? INITIAL_DEMO_USER
-      : {
-          id: `client-${Date.now()}`,
-          name: capitalizedName,
-          email,
-          phone: "+971 50 800 6872",
-          tier: "PRIVILEGE",
-          loyaltyPoints: 350,
-          loyaltyCreditsAed: 50,
-          joinedDate: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-        };
-
-    setUser(client);
-    return true;
   }, []);
 
   const signup = useCallback(
@@ -256,23 +194,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(client);
           return true;
         }
+        return false;
       } catch {
-        // Fallback below
+        return false;
       }
-
-      const client: ClientProfile = {
-        id: `client-${Date.now()}`,
-        name: data.name,
-        email: data.email,
-        phone: data.phone || "+971 50 000 0000",
-        tier: "PRIVILEGE",
-        loyaltyPoints: 100, // Welcome gift of 100 points
-        loyaltyCreditsAed: 25, // 25 AED welcome voucher
-        joinedDate: new Date().toLocaleDateString("en-US", { month: "long", year: "numeric" }),
-      };
-
-      setUser(client);
-      return true;
     },
     [],
   );

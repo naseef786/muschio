@@ -62,7 +62,7 @@ async function apiRequest<T>(
       ...options,
       headers: {
         "Content-Type": "application/json",
-        ...(token ? { "x-storefront-session": token } : {}),
+        ...(token ? { "x-storefront-session": token, Authorization: `Bearer ${token}` } : {}),
         ...(options?.headers || {}),
       },
       ...(secured ||
@@ -137,6 +137,16 @@ export const muschioApi = {
   // Brands
   async getBrands(): Promise<any[] | null> {
     return apiRequest<any[]>("/brands");
+  },
+
+  async getBrandBySlug(slug: string): Promise<any | null> {
+    return apiRequest<any>(`/brands/${encodeURIComponent(slug)}`);
+  },
+
+
+  // Scent Families
+  async getScentFamilies(): Promise<any[] | null> {
+    return apiRequest<any[]>("/scent-families");
   },
 
   // Cart
@@ -348,6 +358,15 @@ export const muschioApi = {
 
   async getHomepageSections(): Promise<any[] | null> {
     return apiRequest<any[]>("/content/sections");
+  },
+
+  // Editorial Journal
+  async getBlogPosts(page = 1, limit = 10): Promise<any[] | null> {
+    return apiRequest<any[]>(`/blog?page=${page}&limit=${limit}`);
+  },
+
+  async getBlogPostBySlug(slug: string): Promise<any | null> {
+    return apiRequest<any>(`/blog/${encodeURIComponent(slug)}`);
   },
 };
 

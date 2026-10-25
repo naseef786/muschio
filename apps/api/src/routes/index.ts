@@ -262,6 +262,23 @@ router.get("/brands", async (req, res, next) => {
   }
 });
 
+router.get("/brands/:slug", async (req, res, next) => {
+  try {
+    const brand = await CatalogService.getBrandBySlug(req.params.slug);
+    if (!brand) {
+      res.status(404).json({
+        success: false,
+        error: { code: "BRAND_NOT_FOUND", message: "Brand not found" },
+      });
+      return;
+    }
+    res.json({ success: true, data: brand, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+
 router.get("/scent-families", async (req, res, next) => {
   try {
     const families = await CatalogService.getScentFamilies();

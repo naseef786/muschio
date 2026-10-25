@@ -1,111 +1,22 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "../../../navigation";
-import { Search, ArrowUpRight, Globe } from "lucide-react";
+import { Search, ArrowUpRight, Globe, Loader2 } from "lucide-react";
+import { muschioApi } from "../../../lib/api";
 
-const BRAND_DIRECTORY = [
-  {
-    slug: "amouage",
-    name: "Amouage",
-    type: "NICHE",
-    letter: "A",
-    countryEn: "Sultanate of Oman",
-    countryAr: "سلطنة عُمان",
-    year: 1983,
-    descriptionEn: "The Gift of Kings. Celebrated for royal Silver Frankincense, wild mountain rock rose, and aged Cambodian Oud formulated at up to 53% concentration.",
-    descriptionAr: "هدية الملوك. تشتهر باللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتركيز يصل إلى 53%.",
-    image: "/amouage-placeholder.svg",
-    perfumesCount: 14,
-    featuredPerfume: "Interlude 53 Man Extrait",
-  },
-  {
-    slug: "clive-christian",
-    name: "Clive Christian",
-    type: "NICHE",
-    letter: "C",
-    countryEn: "London, United Kingdom",
-    countryAr: "لندن، المملكة المتحدة",
-    year: 1872,
-    descriptionEn: "Custodian of the Crown Perfumery Company, bearing royal warrant and Queen Victoria's crown on each crystal stopper.",
-    descriptionAr: "وريثة دار العطور الملكية البريطانية، الممنوحة إذناً ملكياً بوضع تاج الملكة فيكتوريا على زجاجاتها.",
-    image: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 6,
-    featuredPerfume: "No. 1 Masculine Edition",
-  },
-  {
-    slug: "creed",
-    name: "Creed",
-    type: "NICHE",
-    letter: "C",
-    countryEn: "Paris, France",
-    countryAr: "باريس، فرنسا",
-    year: 1760,
-    descriptionEn: "Royal legacy perfumery renowned for artisanal infusion methods and legendary historical royal clientele.",
-    descriptionAr: "إرث عطري ملكي ممتد منذ 1760، يشتهر بأساليب التعتيق اليدوية وخدمة البلاط الملكي الأوروبي.",
-    image: "/product-placeholder.svg",
-    perfumesCount: 10,
-    featuredPerfume: "Aventus Millésime",
-  },
-  {
-    slug: "maison-francis-kurkdjian",
-    name: "Maison Francis Kurkdjian",
-    type: "NICHE",
-    letter: "M",
-    countryEn: "Paris, France",
-    countryAr: "باريس، فرنسا",
-    year: 2009,
-    descriptionEn: "L'art du parfum. Parisian craftsmanship expressing contemporary luxury with exceptional materials and crystal-clear olfactory architecture.",
-    descriptionAr: "فن العطور الباريسي الرفيع يجسد الفخامة المعاصرة بمكونات استثنائية وبناء عطري بلوري متقن.",
-    image: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 11,
-    featuredPerfume: "Baccarat Rouge 540 Extrait",
-  },
-  {
-    slug: "roja-parfums",
-    name: "Roja Parfums",
-    type: "NICHE",
-    letter: "R",
-    countryEn: "London, United Kingdom",
-    countryAr: "لندن، المملكة المتحدة",
-    year: 2011,
-    descriptionEn: "The finest fragrances in the world. Master Perfumer Roja Dove crafts unapologetic extraits using natural absolutes without cost constraints.",
-    descriptionAr: "أرقى عطور العالم بإمضاء صانع العطور روجا دوف، صُنعت بأندر الخلاصات الطبيعية دون أي قيود على التكلفة.",
-    image: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 9,
-    featuredPerfume: "Elysium Pour Homme Parfum",
-  },
-  {
-    slug: "tom-ford",
-    name: "Tom Ford",
-    type: "DESIGNER",
-    letter: "T",
-    countryEn: "New York, USA",
-    countryAr: "نيويورك، الولايات المتحدة",
-    year: 2005,
-    descriptionEn: "The Private Blend Collection. Artisanal scent lab creations designed for true connoisseurs with opulent amber and spice accords.",
-    descriptionAr: "مجموعة برايفيت بليند الخاصة. ابتكارات عطرية استثنائية صُممت لعشاق التميز بنفحات العنبر والتوابل الغنية.",
-    image: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 8,
-    featuredPerfume: "Tobacco Vanille Eau de Parfum",
-  },
-  {
-    slug: "xerjoff",
-    name: "Xerjoff",
-    type: "NICHE",
-    letter: "X",
-    countryEn: "Turin, Italy",
-    countryAr: "تورينو، إيطاليا",
-    year: 2003,
-    descriptionEn: "Italian luxury perfumes combining classical craftsmanship, aged oud absolutes, and breathtaking sculptural flacons.",
-    descriptionAr: "دار العطور الإيطالية الفاخرة التي تجمع بين الحرفية العريقة وأندر خلاصات العود في زجاجات منحوتة ساحرة.",
-    image: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    perfumesCount: 12,
-    featuredPerfume: "Alexandria II Eau de Parfum",
-  },
-];
-
-const ALPHABET = ["ALL", "A", "C", "M", "R", "T", "X"];
+interface LiveBrand {
+  id: string;
+  name: string;
+  slug: string;
+  type: string;
+  countryOfOrigin?: string | null;
+  descriptionEn?: string | null;
+  descriptionAr?: string | null;
+  _count?: {
+    products?: number;
+  };
+}
 
 export default function BrandsDirectoryPage({
   params: { locale },
@@ -115,21 +26,48 @@ export default function BrandsDirectoryPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
+  const [brands, setBrands] = useState<LiveBrand[]>([]);
+  const [loading, setLoading] = useState(true);
   const [selectedLetter, setSelectedLetter] = useState<string>("ALL");
   const [search, setSearch] = useState("");
 
+  useEffect(() => {
+    let active = true;
+    muschioApi.getBrands().then((data) => {
+      if (!active) return;
+      if (Array.isArray(data)) {
+        setBrands(data);
+      }
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const alphabet = useMemo(() => {
+    const letters = new Set<string>();
+    brands.forEach((b) => {
+      const first = b.name.charAt(0).toUpperCase();
+      if (first >= "A" && first <= "Z") letters.add(first);
+    });
+    return ["ALL", ...Array.from(letters).sort()];
+  }, [brands]);
+
   const filtered = useMemo(() => {
-    return BRAND_DIRECTORY.filter((brand) => {
-      if (selectedLetter !== "ALL" && brand.letter !== selectedLetter) return false;
+    return brands.filter((brand) => {
+      const firstLetter = brand.name.charAt(0).toUpperCase();
+      if (selectedLetter !== "ALL" && firstLetter !== selectedLetter) return false;
       if (search.trim()) {
         const q = search.toLowerCase();
         const matchName = brand.name.toLowerCase().includes(q);
-        const matchCountry = (brand.countryEn + brand.countryAr).toLowerCase().includes(q);
-        if (!matchName && !matchCountry) return false;
+        const matchCountry = (brand.countryOfOrigin || "").toLowerCase().includes(q);
+        const matchDesc = (brand.descriptionEn || "").toLowerCase().includes(q) || (brand.descriptionAr || "").includes(q);
+        if (!matchName && !matchCountry && !matchDesc) return false;
       }
       return true;
     });
-  }, [selectedLetter, search]);
+  }, [brands, selectedLetter, search]);
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
@@ -160,7 +98,7 @@ export default function BrandsDirectoryPage({
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-luxury-border">
           {/* Alphabet Index */}
           <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0">
-            {ALPHABET.map((letter) => (
+            {alphabet.map((letter) => (
               <button
                 key={letter}
                 type="button"
@@ -191,54 +129,57 @@ export default function BrandsDirectoryPage({
       </div>
 
       {/* 3. Brands Grid (Clean Luxury Presentation) */}
-      {filtered.length === 0 ? (
+      {loading ? (
+        <div className="py-24 flex flex-col items-center justify-center text-xs text-luxury-muted space-y-3">
+          <Loader2 size={24} className="animate-spin text-accent" />
+          <span>{c("Loading fragrance houses from atelier directory…", "جاري تحميل دور العطور من السجل المعتمد…")}</span>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="py-16 text-center text-xs text-luxury-muted">
           {c("No fragrance houses found matching your search.", "لم يتم العثور على دور عطور مطابقة للبحث.")}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-          {filtered.map((brand) => (
-            <Link
-              key={brand.slug}
-              href={`/brands/${brand.slug}`}
-              className="group border border-luxury-border bg-luxury-surface p-4 sm:p-6 flex flex-col justify-between hover:border-luxury-borderBold transition-all"
-            >
-              <div>
-                <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted pb-3 border-b border-luxury-border">
-                  <span className="flex items-center gap-1.5">
-                    <Globe size={11} className="text-accent" />
-                    <span>{isAr ? brand.countryAr : brand.countryEn}</span>
-                  </span>
-                  <span>Est. {brand.year}</span>
-                </div>
-
-                <div className="py-6 flex items-center justify-between">
-                  <h3 className="font-serif text-2xl text-luxury-text font-normal group-hover:underline">
-                    {brand.name}
-                  </h3>
-                  <ArrowUpRight size={18} className="text-luxury-muted group-hover:text-luxury-text transition-colors" />
-                </div>
-
-                <p className="text-xs text-luxury-muted leading-relaxed line-clamp-3">
-                  {isAr ? brand.descriptionAr : brand.descriptionEn}
-                </p>
-              </div>
-
-              <div className="pt-4 mt-6 border-t border-luxury-border flex items-center justify-between text-xs">
+          {filtered.map((brand) => {
+            const perfumesCount = brand._count?.products ?? 0;
+            return (
+              <Link
+                key={brand.slug}
+                href={`/shop?brand=${encodeURIComponent(brand.name)}`}
+                className="group border border-luxury-border bg-luxury-surface p-4 sm:p-6 flex flex-col justify-between hover:border-luxury-borderBold transition-all"
+              >
                 <div>
-                  <span className="text-[10px] uppercase text-luxury-muted block">
-                    {c("Signature Creation", "العطر الأيقوني")}
+                  <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted pb-3 border-b border-luxury-border">
+                    <span className="flex items-center gap-1.5">
+                      <Globe size={11} className="text-accent" />
+                      <span>{brand.countryOfOrigin || c("International", "عالمي")}</span>
+                    </span>
+                    <span>{brand.type === "NICHE" ? c("Haute Niche", "نيش فاخر") : c("Designer Privé", "ديزاينر")}</span>
+                  </div>
+
+                  <div className="py-6 flex items-center justify-between">
+                    <h3 className="font-serif text-2xl text-luxury-text font-normal group-hover:underline">
+                      {brand.name}
+                    </h3>
+                    <ArrowUpRight size={18} className="text-luxury-muted group-hover:text-luxury-text transition-colors" />
+                  </div>
+
+                  <p className="text-xs text-luxury-muted leading-relaxed line-clamp-3">
+                    {isAr ? (brand.descriptionAr || brand.descriptionEn) : (brand.descriptionEn || brand.descriptionAr)}
+                  </p>
+                </div>
+
+                <div className="pt-4 mt-6 border-t border-luxury-border flex items-center justify-between text-xs">
+                  <span className="text-[10px] uppercase text-luxury-muted">
+                    {c("Official Haute Partner", "شريك رسمي معتمد")}
                   </span>
-                  <span className="font-medium text-luxury-text">
-                    {brand.featuredPerfume}
+                  <span className="text-[11px] text-accent font-medium">
+                    {perfumesCount > 0 ? `${perfumesCount} ${c("Creations", "إصدارات")}` : c("View Collection", "عرض المجموعة")} →
                   </span>
                 </div>
-                <span className="text-[11px] text-accent font-medium">
-                  {brand.perfumesCount} {c("Creations", "إصدارات")} →
-                </span>
-              </div>
-            </Link>
-          ))}
+              </Link>
+            );
+          })}
         </div>
       )}
     </div>

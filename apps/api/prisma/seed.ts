@@ -7,14 +7,13 @@ import {
   NoteStatus,
   AdminRole,
   ProductRelationType,
-  PaymentMethodType,
 } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("🌱 Seeding Muschio Enterprise Luxury Fragrance Database...");
+  console.log("🌱 Seeding Muschio Enterprise Luxury Fragrance Database with Complete Catalog...");
 
   // 1. Clean existing records in dependency order
   await prisma.auditLog.deleteMany();
@@ -98,19 +97,8 @@ async function main() {
       nameEn: "United Arab Emirates",
       nameAr: "الإمارات العربية المتحدة",
       currency: "AED",
-      defaultLanguage: "ar",
       taxRatePercent: 5.0,
-      freeShippingThreshold: 500,
-      standardShippingFee: 30,
       isEnabled: true,
-      supportedPaymentTypes: [
-        PaymentMethodType.TABBY,
-        PaymentMethodType.TAMARA,
-        PaymentMethodType.CREDIT_CARD,
-        PaymentMethodType.APPLE_PAY,
-        PaymentMethodType.GOOGLE_PAY,
-        PaymentMethodType.CASH_ON_DELIVERY,
-      ],
     },
   });
 
@@ -120,18 +108,8 @@ async function main() {
       nameEn: "Kingdom of Saudi Arabia",
       nameAr: "المملكة العربية السعودية",
       currency: "SAR",
-      defaultLanguage: "ar",
       taxRatePercent: 15.0,
-      freeShippingThreshold: 600,
-      standardShippingFee: 45,
       isEnabled: true,
-      supportedPaymentTypes: [
-        PaymentMethodType.TABBY,
-        PaymentMethodType.TAMARA,
-        PaymentMethodType.CREDIT_CARD,
-        PaymentMethodType.APPLE_PAY,
-        PaymentMethodType.GOOGLE_PAY,
-      ],
     },
   });
 
@@ -139,20 +117,10 @@ async function main() {
   const supplierAmouage = await prisma.supplier.create({
     data: {
       code: "SUP-AMO-01",
-      name: "Amouage Royal Attars & Parfums LLC",
-      contactEmail: "allocations@amouage.com",
+      name: "Amouage SAOC Muscat Headquarters",
+      contactEmail: "concierge@amouage.com",
       country: "Oman",
       paymentTerms: "Net 30",
-    },
-  });
-
-  const supplierMfk = await prisma.supplier.create({
-    data: {
-      code: "SUP-MFK-02",
-      name: "Maison Francis Kurkdjian Paris Distribution",
-      contactEmail: "orders@franciskurkdjian.com",
-      country: "France",
-      paymentTerms: "Net 45",
     },
   });
 
@@ -209,6 +177,39 @@ async function main() {
       descriptionEn: "Noble woods, dry cedarwood, smoky incense, and aristocratic depth.",
       descriptionAr: "أخشاب نبيلة وأرز جاف وبخور دخاني بعمق أرستقراطي.",
       imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
+    },
+  });
+
+  const familyFresh = await prisma.scentFamily.create({
+    data: {
+      nameEn: "Fresh & Citrus",
+      nameAr: "حمضي ومنعش",
+      slug: "fresh-citrus-aquatic",
+      descriptionEn: "Sun-drenched Calabrian bergamot, crisp citrus zest, and Mediterranean elegance.",
+      descriptionAr: "برغموت كالابريا المشمس ونفحات حمضية منعشة بأناقة متوسطية.",
+      imageUrl: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1200&q=80",
+    },
+  });
+
+  const familyFloral = await prisma.scentFamily.create({
+    data: {
+      nameEn: "Rare Florals",
+      nameAr: "زهور نادرة",
+      slug: "rare-florals",
+      descriptionEn: "Imperial Taif roses, Florentine orris root, and noble jasmine grandiflorum.",
+      descriptionAr: "ورد الطائف الملكي وسوسن فلورنسا المخملي وياسمين غرانديفلوروم النبيل.",
+      imageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=1200&q=80",
+    },
+  });
+
+  const familyGourmand = await prisma.scentFamily.create({
+    data: {
+      nameEn: "Gourmand & Leather",
+      nameAr: "غورماند وجلدي",
+      slug: "gourmand-leather",
+      descriptionEn: "Bourbon vanilla, aromatic spices, and warm saddle leather accords.",
+      descriptionAr: "فانيليا بوربون وتوابل عطرية ونفحات جلدية دافئة وفاخرة.",
+      imageUrl: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=80",
     },
   });
 
@@ -299,17 +300,17 @@ async function main() {
     },
   });
 
-  // 12. Brands
+  // 12. Complete 7 Haute Maisons (Brands)
   const brandAmouage = await prisma.brand.create({
     data: {
       name: "Amouage",
       slug: "amouage",
       type: BrandType.NICHE,
-      descriptionEn: "The Gift of Kings. Founded in the Sultanate of Oman in 1983, Amouage crafts the finest haute perfumery using rare Silver Frankincense, Mountain Rock Rose, and aged Oud.",
-      descriptionAr: "هدية الملوك. تأسست في سلطنة عُمان عام 1983، وتصنع أرقى العطور النيش باستخدام اللبان الحوجري الفضي والورد الجبلي والعود المعتق.",
+      descriptionEn: "The Gift of Kings. Celebrated for royal Silver Frankincense, wild mountain rock rose, and aged Cambodian Oud formulated at up to 53% concentration.",
+      descriptionAr: "هدية الملوك. تشتهر باللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتركيز يصل إلى 53%.",
       logoUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=400&q=80",
       heroImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85",
-      countryOfOrigin: "Oman",
+      countryOfOrigin: "Sultanate of Oman",
       isFeatured: true,
     },
   });
@@ -323,12 +324,82 @@ async function main() {
       descriptionAr: "فن العطور الباريسي الرفيع يجسد الفخامة المعاصرة بمكونات استثنائية وبناء عطري متقن.",
       logoUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80",
       heroImageUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1600&q=85",
-      countryOfOrigin: "France",
+      countryOfOrigin: "Paris, France",
       isFeatured: true,
     },
   });
 
-  // 13. Dedicated Notes
+  const brandRoja = await prisma.brand.create({
+    data: {
+      name: "Roja Parfums",
+      slug: "roja-parfums",
+      type: BrandType.NICHE,
+      descriptionEn: "The finest fragrances in the world. Master Perfumer Roja Dove crafts unapologetic extraits using natural absolutes without cost constraints.",
+      descriptionAr: "أرقى عطور العالم بإمضاء صانع العطور روجا دوف، صُنعت بأندر الخلاصات الطبيعية دون أي قيود على التكلفة.",
+      logoUrl: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=400&q=80",
+      heroImageUrl: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1600&q=85",
+      countryOfOrigin: "London, United Kingdom",
+      isFeatured: true,
+    },
+  });
+
+  const brandXerjoff = await prisma.brand.create({
+    data: {
+      name: "Xerjoff",
+      slug: "xerjoff",
+      type: BrandType.NICHE,
+      descriptionEn: "Italian luxury perfumes combining classical craftsmanship, aged oud absolutes, and breathtaking sculptural flacons.",
+      descriptionAr: "دار العطور الإيطالية الفاخرة التي تجمع بين الحرفية العريقة وأندر خلاصات العود في زجاجات منحوتة ساحرة.",
+      logoUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=400&q=80",
+      heroImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1600&q=85",
+      countryOfOrigin: "Turin, Italy",
+      isFeatured: true,
+    },
+  });
+
+  const brandTomFord = await prisma.brand.create({
+    data: {
+      name: "Tom Ford",
+      slug: "tom-ford",
+      type: BrandType.DESIGNER,
+      descriptionEn: "The Private Blend Collection. Artisanal scent lab creations designed for true connoisseurs with opulent amber, spice, and leather accords.",
+      descriptionAr: "مجموعة برايفيت بليند الخاصة. ابتكارات عطرية استثنائية صُممت لعشاق التميز بنفحات العنبر والتوابل والجلود الغنية.",
+      logoUrl: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=400&q=80",
+      heroImageUrl: "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1600&q=85",
+      countryOfOrigin: "New York, USA",
+      isFeatured: true,
+    },
+  });
+
+  const brandClive = await prisma.brand.create({
+    data: {
+      name: "Clive Christian",
+      slug: "clive-christian",
+      type: BrandType.NICHE,
+      descriptionEn: "Custodian of the Crown Perfumery Company, bearing royal warrant and Queen Victoria's crown on each crystal stopper.",
+      descriptionAr: "وريثة دار العطور الملكية البريطانية، الممنوحة إذناً ملكياً بوضع تاج الملكة فيكتوريا على زجاجاتها.",
+      logoUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=400&q=80",
+      heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=85",
+      countryOfOrigin: "London, United Kingdom",
+      isFeatured: true,
+    },
+  });
+
+  const brandCreed = await prisma.brand.create({
+    data: {
+      name: "Creed",
+      slug: "creed",
+      type: BrandType.NICHE,
+      descriptionEn: "Royal legacy perfumery renowned for artisanal infusion methods and legendary historical royal clientele.",
+      descriptionAr: "إرث عطري ملكي ممتد منذ 1760، يشتهر بأساليب التعتيق اليدوية وخدمة البلاط الملكي الأوروبي.",
+      logoUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=400&q=80",
+      heroImageUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1600&q=85",
+      countryOfOrigin: "Paris, France",
+      isFeatured: true,
+    },
+  });
+
+  // 13. Dedicated Raw Notes Compendium
   const noteFrankincense = await prisma.note.create({
     data: {
       nameEn: "Silver Frankincense",
@@ -337,8 +408,8 @@ async function main() {
       slugAr: "silver-frankincense-ar",
       categoryEn: "Resins & Incense",
       categoryAr: "الراتنجات والبخور",
-      descriptionEn: "Harvested exclusively from Boswellia sacra trees in the Dhofar mountains of Oman. Radiating balsamic, ethereal incense and citrusy nuances.",
-      descriptionAr: "يُحصد حصرياً من أشجار اللبان الحوجري في جبال ظفار بسلطنة عُمان. يمنح العطر طابعاً بخورياً مقدساً ونقاءً استثنائياً.",
+      descriptionEn: "Harvested exclusively from Boswellia sacra trees in the Dhofar mountains of Oman. Sacred, ethereal, and balsamic with radiant citrus undertones.",
+      descriptionAr: "يُستخرج حصرياً من أشجار اللبان في ظفار العمانية. نوتة بخورية نقية مع لمحات بلسمية حمضية مضيئة.",
       heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1600&q=85",
       status: NoteStatus.PUBLISHED,
     },
@@ -365,7 +436,7 @@ async function main() {
       nameAr: "ورد الطائف الملكي",
       slugEn: "taif-rose",
       slugAr: "taif-rose-ar",
-      categoryEn: "Floral",
+      categoryEn: "Rare Florals",
       categoryAr: "الزهور الملكية",
       descriptionEn: "Harvested at dawn in the high-altitude mountains of Saudi Arabia. Celebrated for honeyed, intensely deep, and regal floral aroma.",
       descriptionAr: "يُقطف عند بزوغ الفجر في أعالي جبال الطائف بالمملكة العربية السعودية، ويشتهر بأريجه العسلي والزهري الملكي الفواح.",
@@ -374,7 +445,82 @@ async function main() {
     },
   });
 
-  // 14. Products
+  const noteIris = await prisma.note.create({
+    data: {
+      nameEn: "Florentine Iris (Orris)",
+      nameAr: "سوسن فلورنسا المخملي",
+      slugEn: "florentine-iris",
+      slugAr: "florentine-iris-ar",
+      categoryEn: "Rare Florals",
+      categoryAr: "الزهور الملكية",
+      descriptionEn: "Aged for three full years before slow artisan distillation. Powdery, violet-like, sophisticated, and aristocratically soft.",
+      descriptionAr: "تُعتق جذوره لثلاث سنوات كاملة قبل التقطير. نوتة بودرية مخملية مترفة تفيض بالنقاء.",
+      heroImageUrl: "https://images.unsplash.com/photo-1528722828814-77b9b83aafb2?auto=format&fit=crop&w=1600&q=85",
+      status: NoteStatus.PUBLISHED,
+    },
+  });
+
+  const noteAmbergris = await prisma.note.create({
+    data: {
+      nameEn: "Golden Ambergris",
+      nameAr: "العنبر الأشهب الذهبي",
+      slugEn: "golden-ambergris",
+      slugAr: "golden-ambergris-ar",
+      categoryEn: "Amber",
+      categoryAr: "العنبر",
+      descriptionEn: "Oceanic, salty-warm, and solar natural fixative conferring monolithic longevity and crystalline radiance.",
+      descriptionAr: "عنبر بحري شمسي أصيل يمنح التكوين العطري ثباتاً ممتداً وإشراقة بلورية جذابة.",
+      heroImageUrl: "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1600&q=85",
+      status: NoteStatus.PUBLISHED,
+    },
+  });
+
+  const noteBergamot = await prisma.note.create({
+    data: {
+      nameEn: "Calabrian Bergamot",
+      nameAr: "برغموت كالابريا النقي",
+      slugEn: "calabrian-bergamot",
+      slugAr: "calabrian-bergamot-ar",
+      categoryEn: "Citrus",
+      categoryAr: "الحمضيات",
+      descriptionEn: "Cold-pressed in Southern Italy. Sparkling, sun-drenched, crisp, and aristocratic citrus opening.",
+      descriptionAr: "معصور على البارد في مزارع جنوب إيطاليا. افتتاحية حمضية مبهجة ومشرقة كشمس الصباح.",
+      heroImageUrl: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1600&q=85",
+      status: NoteStatus.PUBLISHED,
+    },
+  });
+
+  const noteVanilla = await prisma.note.create({
+    data: {
+      nameEn: "Madagascar Bourbon Vanilla",
+      nameAr: "فانيليا بوربون مدغشقر",
+      slugEn: "bourbon-vanilla",
+      slugAr: "bourbon-vanilla-ar",
+      categoryEn: "Gourmand",
+      categoryAr: "غورماند",
+      descriptionEn: "Aged black vanilla bean absolute delivering creamy, woody, and liquor-like sweetness.",
+      descriptionAr: "خلاصة حبوب الفانيليا المعتقة تمنح حلاوة بلسمية خشبية كريمية ساحرة.",
+      heroImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1600&q=85",
+      status: NoteStatus.PUBLISHED,
+    },
+  });
+
+  const noteSaffron = await prisma.note.create({
+    data: {
+      nameEn: "Kashmiri Saffron",
+      nameAr: "زعفران كشمير الأحمر",
+      slugEn: "kashmiri-saffron",
+      slugAr: "kashmiri-saffron-ar",
+      categoryEn: "Spices",
+      categoryAr: "التوابل",
+      descriptionEn: "The red gold of spices. Bittersweet, metallic, warm-leathery, and distinctly opulent.",
+      descriptionAr: "ذهب التوابل الأحمر. نوتة دافئة ذات طابع جلدي حلو تضفي عمقاً ملكياً آسراً.",
+      heroImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85",
+      status: NoteStatus.PUBLISHED,
+    },
+  });
+
+  // 14. Master Products Catalog (7 Iconic Creations)
   const prodInterlude53 = await prisma.product.create({
     data: {
       slug: "amouage-interlude-53-man",
@@ -394,7 +540,7 @@ async function main() {
       longevity: "24+ Hours",
       styleCharacter: "Imperial & Dominant",
       images: [
-        "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=85",
+        "/amouage-placeholder.svg",
         "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
       ],
       isPublished: true,
@@ -435,143 +581,377 @@ async function main() {
     },
   });
 
-  // 15. Product Notes, Accords, Perfumers & Relations
+  const prodElysium = await prisma.product.create({
+    data: {
+      slug: "roja-parfums-elysium-pour-homme-parfum",
+      nameEn: "Elysium Pour Homme Parfum",
+      nameAr: "إليزيوم بور هوم بارفان",
+      taglineEn: "The paradise of aristocratic citrus and amber depth.",
+      taglineAr: "فردوس الحمضيات الأرستقراطية وعمق العنبر النادر.",
+      descriptionEn: "A heroic blend of sparkling Calabrian citrus accords, pink pepper, juniper berry, and a deep leather-amber base crafted without compromise.",
+      descriptionAr: "مزيج بطولي من أرقى حمضيات كالابريا والفلفل الوردي وحبوب العرعر مع قاعدة جلدية عنبرية مهيبة صُنعت بدون أي قيود.",
+      brandId: brandRoja.id,
+      scentFamilyId: familyFresh.id,
+      concentration: Concentration.PARFUM,
+      gender: GenderCategory.MEN,
+      releaseYear: 2017,
+      countryOfOrigin: "United Kingdom",
+      sillage: "Radiant & Commanding",
+      longevity: "16-20 Hours",
+      styleCharacter: "Noble & Invigorating",
+      images: [
+        "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
+      ],
+      isPublished: true,
+      isFeatured: true,
+      isBestSeller: true,
+      ratingAverage: 4.92,
+      ratingCount: 198,
+    },
+  });
+
+  const prodAlexandria = await prisma.product.create({
+    data: {
+      slug: "xerjoff-alexandria-ii",
+      nameEn: "Alexandria II Eau de Parfum",
+      nameAr: "ألكسندريا 2 أو دي بارفان",
+      taglineEn: "Ancient royal Alexandrian libraries rendered in aged Laos oud.",
+      taglineAr: "مكتبات الإسكندرية الملكية القديمة مجسدة بعود لاوس المعتق.",
+      descriptionEn: "Sublime combination of sweet lavender, crisp green apple, rosewood, and aged wild Laotian agarwood. Enclosed in an exquisite sculptural flacon.",
+      descriptionAr: "مزيج أسطوري يجمع اللافندر النقي والتفاح الأخضر وخشب الورد مع أندر خلاصات عود لاوس البري في زجاجة منحوتة فائقة الجمال.",
+      brandId: brandXerjoff.id,
+      scentFamilyId: familyWoody.id,
+      concentration: Concentration.EAU_DE_PARFUM,
+      gender: GenderCategory.UNISEX,
+      releaseYear: 2012,
+      countryOfOrigin: "Italy",
+      sillage: "Enveloping & Majestic",
+      longevity: "20+ Hours",
+      styleCharacter: "Aristocratic & Timeless",
+      images: [
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85",
+      ],
+      isPublished: true,
+      isFeatured: true,
+      isBestSeller: true,
+      ratingAverage: 4.96,
+      ratingCount: 175,
+    },
+  });
+
+  const prodTobaccoVanille = await prisma.product.create({
+    data: {
+      slug: "tom-ford-tobacco-vanille",
+      nameEn: "Tobacco Vanille Eau de Parfum",
+      nameAr: "توباكو فانيلا أو دي بارفان",
+      taglineEn: "The iconic private club aroma of tobacco leaf and rich spices.",
+      taglineAr: "رائحة أندية النخبة الخاصة من أوراق التبغ والتوابل الغنية.",
+      descriptionEn: "Opulent, warm, and iconic. Tom Ford reinvents classic tobacco with creamy tonka bean, Madagascar vanilla, cocoa, dry fruit accords, and sweet wood sap.",
+      descriptionAr: "عطر مترف ومميز يعيد فيه توم فورد ابتكار التبغ الكلاسيكي بحبوب التونكا الكريمية وفانيليا مدغشقر والكاكاو والأخشاب الحلوة.",
+      brandId: brandTomFord.id,
+      scentFamilyId: familyGourmand.id,
+      concentration: Concentration.EAU_DE_PARFUM,
+      gender: GenderCategory.UNISEX,
+      releaseYear: 2007,
+      countryOfOrigin: "USA",
+      sillage: "Warm & Powerful",
+      longevity: "18+ Hours",
+      styleCharacter: "Decadent & Warm",
+      images: [
+        "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=85",
+      ],
+      isPublished: true,
+      isFeatured: true,
+      isBestSeller: true,
+      ratingAverage: 4.88,
+      ratingCount: 310,
+    },
+  });
+
+  const prodNo1 = await prisma.product.create({
+    data: {
+      slug: "clive-christian-no-1-masculine",
+      nameEn: "No. 1 Masculine Edition",
+      nameAr: "نمبر 1 الإصدار الرجالي الفاخر",
+      taglineEn: "The culmination of rare ingredients and royal heritage.",
+      taglineAr: "قمة الفخامة العطرية بأندر المكونات والإرث الملكي البريطاني.",
+      descriptionEn: "Created without reference to cost. Contains 50-year-old aged Indian sandalwood, powdery Florentine orris, and royal Tahitian vanilla.",
+      descriptionAr: "صُنع دون أي اعتبار للتكلفة، ويحتوي على خشب الصندل الهندي المعتق لخمسين عاماً، وسوسن فلورنسا البودري، وفانيليا تاهيتي الملكية.",
+      brandId: brandClive.id,
+      scentFamilyId: familyFloral.id,
+      concentration: Concentration.PARFUM,
+      gender: GenderCategory.MEN,
+      releaseYear: 2001,
+      countryOfOrigin: "United Kingdom",
+      sillage: "Sublime Royal Presence",
+      longevity: "20+ Hours",
+      styleCharacter: "Sovereign & Rare",
+      images: [
+        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=85",
+      ],
+      isPublished: true,
+      isFeatured: true,
+      isBestSeller: false,
+      ratingAverage: 4.97,
+      ratingCount: 88,
+    },
+  });
+
+  const prodAventus = await prisma.product.create({
+    data: {
+      slug: "creed-aventus-millesime",
+      nameEn: "Aventus Millésime",
+      nameAr: "أفنتوس ميليزيم الفاخر",
+      taglineEn: "Celebrating strength, power, and success with smoky pineapple and birch.",
+      taglineAr: "احتفال بالقوة والنجاح بنفحات الأناناس المدخن والبتولا الملكي.",
+      descriptionEn: "A legendary creation infused with blackcurrant, Italian bergamot, French apple, birch smoke, patchouli, and rare grey ambergris.",
+      descriptionAr: "عطر أسطوري بنفحات الكشمش الأسود وبرغموت إيطاليا والتفاح الفرنسي ودخان البتولا والعنبر الأشهب النادر.",
+      brandId: brandCreed.id,
+      scentFamilyId: familyFresh.id,
+      concentration: Concentration.EAU_DE_PARFUM,
+      gender: GenderCategory.MEN,
+      releaseYear: 2010,
+      countryOfOrigin: "France",
+      sillage: "Iconic & Magnetic",
+      longevity: "14-18 Hours",
+      styleCharacter: "Triumphant & Iconic",
+      images: [
+        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85",
+        "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1200&q=85",
+      ],
+      isPublished: true,
+      isFeatured: true,
+      isBestSeller: true,
+      ratingAverage: 4.91,
+      ratingCount: 420,
+    },
+  });
+
+  // 15. Product Notes Connections
   await prisma.productNote.createMany({
     data: [
       { productId: prodInterlude53.id, noteId: noteFrankincense.id, position: NotePosition.HEART, prominence: 10 },
       { productId: prodInterlude53.id, noteId: noteOud.id, position: NotePosition.BASE, prominence: 10 },
+      { productId: prodInterlude53.id, noteId: noteBergamot.id, position: NotePosition.TOP, prominence: 7 },
+      { productId: prodBaccaratExtrait.id, noteId: noteSaffron.id, position: NotePosition.TOP, prominence: 10 },
+      { productId: prodBaccaratExtrait.id, noteId: noteAmbergris.id, position: NotePosition.BASE, prominence: 10 },
       { productId: prodBaccaratExtrait.id, noteId: noteTaifRose.id, position: NotePosition.HEART, prominence: 8 },
+      { productId: prodElysium.id, noteId: noteBergamot.id, position: NotePosition.TOP, prominence: 10 },
+      { productId: prodElysium.id, noteId: noteAmbergris.id, position: NotePosition.BASE, prominence: 8 },
+      { productId: prodAlexandria.id, noteId: noteOud.id, position: NotePosition.BASE, prominence: 10 },
+      { productId: prodAlexandria.id, noteId: noteTaifRose.id, position: NotePosition.HEART, prominence: 9 },
+      { productId: prodTobaccoVanille.id, noteId: noteVanilla.id, position: NotePosition.BASE, prominence: 10 },
+      { productId: prodNo1.id, noteId: noteIris.id, position: NotePosition.HEART, prominence: 10 },
+      { productId: prodNo1.id, noteId: noteVanilla.id, position: NotePosition.BASE, prominence: 8 },
+      { productId: prodAventus.id, noteId: noteBergamot.id, position: NotePosition.TOP, prominence: 9 },
+      { productId: prodAventus.id, noteId: noteAmbergris.id, position: NotePosition.BASE, prominence: 8 },
     ],
   });
 
-  await prisma.productAccord.createMany({
-    data: [
-      { productId: prodInterlude53.id, accordId: accordSmoky.id, prominence: 10 },
-      { productId: prodInterlude53.id, accordId: accordBalsamic.id, prominence: 8 },
-      { productId: prodBaccaratExtrait.id, accordId: accordAmbery.id, prominence: 10 },
-    ],
-  });
+  // 16. Product Variants & Sample Vials with Inventory for ALL 7 Creations
+  const productDefinitions = [
+    {
+      product: prodInterlude53,
+      skuBase: "AMO-INT53",
+      flaconVolume: 100,
+      flaconLabelEn: "100ml Extrait Bottle",
+      flaconLabelAr: "زجاجة 100 مل إكستري",
+      flaconCost: 750,
+      flaconPrice: 1850,
+      flaconCompareAt: 2100,
+      flaconQty: 28,
+      samplePrice: 65,
+      sampleQty: 120,
+    },
+    {
+      product: prodBaccaratExtrait,
+      skuBase: "MFK-BR540-EXT",
+      flaconVolume: 70,
+      flaconLabelEn: "70ml Extrait Bottle",
+      flaconLabelAr: "زجاجة 70 مل إكستري",
+      flaconCost: 820,
+      flaconPrice: 1950,
+      flaconCompareAt: 2250,
+      flaconQty: 34,
+      samplePrice: 65,
+      sampleQty: 140,
+    },
+    {
+      product: prodElysium,
+      skuBase: "ROJ-ELY-PARFUM",
+      flaconVolume: 100,
+      flaconLabelEn: "100ml Pure Parfum Bottle",
+      flaconLabelAr: "زجاجة 100 مل بارفان نقي",
+      flaconCost: 880,
+      flaconPrice: 1950,
+      flaconCompareAt: 2200,
+      flaconQty: 25,
+      samplePrice: 65,
+      sampleQty: 110,
+    },
+    {
+      product: prodAlexandria,
+      skuBase: "XER-ALEX2-EDP",
+      flaconVolume: 100,
+      flaconLabelEn: "100ml Eau de Parfum Flacon",
+      flaconLabelAr: "زجاجة 100 مل أو دي بارفان",
+      flaconCost: 950,
+      flaconPrice: 2200,
+      flaconCompareAt: 2450,
+      flaconQty: 20,
+      samplePrice: 65,
+      sampleQty: 95,
+    },
+    {
+      product: prodTobaccoVanille,
+      skuBase: "TF-TOB-VAN",
+      flaconVolume: 100,
+      flaconLabelEn: "100ml Private Blend Flacon",
+      flaconLabelAr: "زجاجة 100 مل برايفيت بليند",
+      flaconCost: 780,
+      flaconPrice: 1720,
+      flaconCompareAt: 1950,
+      flaconQty: 30,
+      samplePrice: 65,
+      sampleQty: 130,
+    },
+    {
+      product: prodNo1,
+      skuBase: "CC-NO1-MASC",
+      flaconVolume: 50,
+      flaconLabelEn: "50ml Crown Flacon",
+      flaconLabelAr: "زجاجة 50 مل التاج الملكي",
+      flaconCost: 1250,
+      flaconPrice: 2850,
+      flaconCompareAt: 3200,
+      flaconQty: 15,
+      samplePrice: 85,
+      sampleQty: 80,
+    },
+    {
+      product: prodAventus,
+      skuBase: "CRD-AVENTUS",
+      flaconVolume: 100,
+      flaconLabelEn: "100ml Millésime Flacon",
+      flaconLabelAr: "زجاجة 100 مل ميليزيم",
+      flaconCost: 790,
+      flaconPrice: 1650,
+      flaconCompareAt: 1850,
+      flaconQty: 40,
+      samplePrice: 65,
+      sampleQty: 160,
+    },
+  ];
 
-  await prisma.productPerfumer.createMany({
-    data: [
-      { productId: prodInterlude53.id, perfumerId: perfumerPierre.id, isLead: true },
-      { productId: prodBaccaratExtrait.id, perfumerId: perfumerFrancis.id, isLead: true },
-    ],
-  });
+  for (const def of productDefinitions) {
+    // 1. Standard full bottle variant
+    const flaconVariant = await prisma.productVariant.create({
+      data: {
+        productId: def.product.id,
+        sku: `${def.skuBase}-${def.flaconVolume}ML`,
+        volumeMl: def.flaconVolume,
+        sizeLabelEn: def.flaconLabelEn,
+        sizeLabelAr: def.flaconLabelAr,
+        costPrice: def.flaconCost,
+        price: def.flaconPrice,
+        compareAtPrice: def.flaconCompareAt,
+        barcode: `7016${Math.floor(10000000 + Math.random() * 90000000)}`,
+        isSampleVial: false,
+      },
+    });
 
-  await prisma.productCollection.createMany({
-    data: [
-      { productId: prodInterlude53.id, collectionId: colRoyal2026.id, displayOrder: 1 },
-      { productId: prodBaccaratExtrait.id, collectionId: colRoyal2026.id, displayOrder: 2 },
-    ],
-  });
+    await prisma.inventory.create({
+      data: {
+        variantId: flaconVariant.id,
+        sealedQuantity: def.flaconQty,
+        testerQuantity: 5,
+        reservedQuantity: 0,
+      },
+    });
 
-  await prisma.productOccasion.createMany({
-    data: [
-      { productId: prodInterlude53.id, occasionId: occasionGala.id },
-      { productId: prodBaccaratExtrait.id, occasionId: occasionGala.id },
-    ],
-  });
+    // 2. Official 2ml sample vial for Discovery Sets
+    const sampleVariant = await prisma.productVariant.create({
+      data: {
+        productId: def.product.id,
+        sku: `${def.skuBase}-02ML`,
+        volumeMl: 2,
+        sizeLabelEn: "2ml Official Sample Vial",
+        sizeLabelAr: "عينة رسمية 2 مل",
+        costPrice: 15,
+        price: def.samplePrice,
+        isSampleVial: true,
+      },
+    });
 
-  await prisma.productSeason.createMany({
-    data: [
-      { productId: prodInterlude53.id, seasonId: seasonWinter.id },
-      { productId: prodBaccaratExtrait.id, seasonId: seasonWinter.id },
-    ],
-  });
+    await prisma.inventory.create({
+      data: {
+        variantId: sampleVariant.id,
+        sealedQuantity: def.sampleQty,
+        testerQuantity: 20,
+        reservedQuantity: 0,
+      },
+    });
+  }
 
-  await prisma.productRelation.create({
+  // 17. Editorial Journal Posts
+  const blogCat = await prisma.blogCategory.create({
     data: {
-      productId: prodInterlude53.id,
-      relatedProductId: prodBaccaratExtrait.id,
-      relationType: ProductRelationType.COMPLEMENTARY_LAYERING,
-      notes: "Layering Interlude 53 with Baccarat Rouge 540 Extrait creates the ultimate smoky-sweet royal trail.",
+      nameEn: "Haute Technique & Layering",
+      nameAr: "فن المزج والطقوس العطرية",
+      slug: "haute-technique",
     },
   });
 
-  // 16. Product Variants & Physical Inventory Lots
-  const varInterlude100 = await prisma.productVariant.create({
+  const postLayering = await prisma.blogPost.create({
     data: {
-      productId: prodInterlude53.id,
-      sku: "AMO-INT53-100ML",
-      volumeMl: 100,
-      sizeLabelEn: "100ml Extrait Bottle",
-      sizeLabelAr: "زجاجة 100 مل إكستري",
-      costPrice: 750,
-      price: 1850,
-      compareAtPrice: 2100,
-      barcode: "701666320141",
+      slug: "art-of-layering-oud-and-taif-rose",
+      titleEn: "The Sacred Alchemy: Layering Aged Omani Oud with Mountain Taif Rose",
+      titleAr: "الكيمياء المقدسة: فن مزج العود العُماني المعتق مع ورد الطائف الجبلي",
+      excerptEn: "Discover the centuries-old Gulf tradition of combining wild balsamic agarwood with fresh, honeyed dawn-harvested roses for royal occasions.",
+      excerptAr: "اكتشف التقاليد الخليجية الأصيلة في مزج العود البري البلسمي مع الورد المقطوف عند بزوغ الفجر في المناسبات الملكية.",
+      contentEn: "<p>The ritual of scent layering in Arabian culture is not merely cosmetic—it is an architectural craft passed through generations...</p>",
+      contentAr: "<p>إن طقس مزج العطور في الثقافة العربية الأصيلة ليس مجرد تجميل، بل هو فن معماري متوارث عبر الأجيال...</p>",
+      authorName: "Salim Al-Harthy",
+      coverImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=80",
+      readingTimeMinutes: 6,
+      categoryId: blogCat.id,
+      isPublished: true,
     },
   });
 
-  const varInterludeSample = await prisma.productVariant.create({
+  await prisma.blogPostProduct.create({
     data: {
+      postId: postLayering.id,
       productId: prodInterlude53.id,
-      sku: "AMO-INT53-02ML",
-      volumeMl: 2,
-      sizeLabelEn: "2ml Official Sample Extrait",
-      sizeLabelAr: "عينة 2 مل رسمية",
-      costPrice: 15,
-      price: 65,
-      isSampleVial: true,
     },
   });
 
-  const varBaccarat70 = await prisma.productVariant.create({
+  const postMaceration = await prisma.blogPost.create({
     data: {
+      slug: "architecture-of-extraits-maceration",
+      titleEn: "The Architecture of Extraits: Why 53% Concentration Requires 6 Months Maceration",
+      titleAr: "هندسة العطور المركزة: لماذا يتطلب تركيز 53% ستة أشهر من التعتيق",
+      excerptEn: "An inside look into high-concentration extraits and why aging raw perfume oils at controlled cellar temperatures transforms volatile top notes into seamless silk.",
+      excerptAr: "نظرة متعمقة في كواليس صناعة الخلاصات العطرية فائقة التركيز وكيف يحوّل التعتيق البطيء النوتات الحادة إلى حرير عطري منسجم.",
+      contentEn: "<p>When perfume oil exceeds 50% concentration, standard formulation principles cease to apply...</p>",
+      contentAr: "<p>عندما يتجاوز تركيز الزيت العطري حاجز الـ 50%، تتغير قواعد الصياغة العطرية التقليدية بالكامل...</p>",
+      authorName: "Dr. Elena Rostova",
+      coverImageUrl: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=80",
+      readingTimeMinutes: 8,
+      categoryId: blogCat.id,
+      isPublished: true,
+    },
+  });
+
+  await prisma.blogPostProduct.create({
+    data: {
+      postId: postMaceration.id,
       productId: prodBaccaratExtrait.id,
-      sku: "MFK-BR540-EXT-70ML",
-      volumeMl: 70,
-      sizeLabelEn: "70ml Extrait Bottle",
-      sizeLabelAr: "زجاجة 70 مل إكستري",
-      costPrice: 820,
-      price: 1950,
-      compareAtPrice: 2250,
-      barcode: "3700559605805",
     },
-  });
-
-  // Inventory Aggregate
-  await prisma.inventory.createMany({
-    data: [
-      { variantId: varInterlude100.id, sealedQuantity: 28, testerQuantity: 5, reservedQuantity: 0 },
-      { variantId: varInterludeSample.id, sealedQuantity: 120, testerQuantity: 0, reservedQuantity: 0 },
-      { variantId: varBaccarat70.id, sealedQuantity: 34, testerQuantity: 4, reservedQuantity: 0 },
-    ],
-  });
-
-  // Physical Inventory Lots & Stock Ledger
-  const lotInterlude = await prisma.inventoryLot.create({
-    data: {
-      warehouseId: warehouseDxb.id,
-      variantId: varInterlude100.id,
-      supplierId: supplierAmouage.id,
-      batchCode: "BATCH-AMO-2026-01",
-      purchaseCost: 750,
-      quantityReceived: 30,
-      quantityAvailable: 28,
-      quantityTester: 2,
-    },
-  });
-
-  await prisma.stockLedger.create({
-    data: {
-      warehouseId: warehouseDxb.id,
-      lotId: lotInterlude.id,
-      variantId: varInterlude100.id,
-      movementType: "GOODS_RECEIPT",
-      quantity: 30,
-      referenceType: "INITIAL_SEED_GRN",
-      notes: "Initial direct import allocation from Amouage Oman",
-    },
-  });
-
-  // 17. Multi-Market Pricing (KSA SAR pricing)
-  await prisma.marketPrice.createMany({
-    data: [
-      { marketId: marketKsa.id, variantId: varInterlude100.id, price: 1890, compareAtPrice: 2150 },
-      { marketId: marketKsa.id, variantId: varBaccarat70.id, price: 1990, compareAtPrice: 2300 },
-    ],
   });
 
   // 18. Customer & Verified Buyer Reviews
@@ -595,6 +975,62 @@ async function main() {
       },
     },
   });
+
+  await prisma.address.create({
+    data: {
+      customerId: customerAhmad.id,
+      fullName: "Ahmad Al Maktoum",
+      phone: "+971501234567",
+      streetAddress: "Villa 14, Frond N, Palm Jumeirah",
+      city: "Dubai",
+      emirateState: "Dubai",
+      countryCode: "AE",
+      isDefault: true,
+    },
+  });
+
+  const customerSultan = await prisma.customer.upsert({
+    where: { email: "sultan@muschio.client" },
+    update: {
+      firstName: "Sultan",
+      lastName: "Al-Nuaimi",
+      phone: "+971 50 123 4567",
+      isVip: true,
+      loyaltyPoints: 1450,
+    },
+    create: {
+      email: "sultan@muschio.client",
+      firstName: "Sultan",
+      lastName: "Al-Nuaimi",
+      phone: "+971 50 123 4567",
+      isVip: true,
+      loyaltyPoints: 1450,
+      fragranceProfile: {
+        create: {
+          preferredFamilies: ["Woody & Smoky", "Oriental & Amber"],
+          favoriteNotes: ["Silver Frankincense", "Cambodian Agarwood (Oud)", "Royal Taif Rose"],
+          dislikedNotes: [],
+          preferredSillage: "Strong & Enveloping",
+          preferredLongevity: "Eternal (12+ hours)",
+          signatureScentSlug: "amouage-interlude-53-man",
+        },
+      },
+    },
+  });
+
+  await prisma.address.create({
+    data: {
+      customerId: customerSultan.id,
+      fullName: "Sultan Al-Nuaimi",
+      phone: "+971 50 123 4567",
+      streetAddress: "Villa 42, Street 6, Sector E, Emirates Hills",
+      city: "Dubai",
+      emirateState: "Dubai",
+      countryCode: "AE",
+      isDefault: true,
+    },
+  });
+
 
   await prisma.review.create({
     data: {
@@ -629,7 +1065,7 @@ async function main() {
     },
   });
 
-  console.log("✅ Muschio Enterprise Database Seeded Successfully with All 19 Domain Specifications!");
+  console.log("✅ Muschio Enterprise Database Seeded Successfully with Complete 7-Brand Haute Catalog & Sample Vials!");
 }
 
 main()

@@ -82,13 +82,21 @@ export class AIScentDiscoveryService {
 
     const recommendations: AIScentRecommendationItem[] = topMatches.map((item) => {
       const p = item.product;
-      const topVariant = p.variants[0];
+      const topVariant = p.variants.find((v) => !v.isSampleVial) || p.variants[0];
       const sku = topVariant ? topVariant.sku : `SKU-${p.slug}`;
+      const isAmouage = p.slug === "amouage-interlude-53-man";
+      const image = isAmouage
+        ? "/amouage-placeholder.svg"
+        : (p.images[0] || "/product-placeholder.svg");
 
       return {
         sku,
-        productName: p.nameEn,
+        slug: p.slug,
+        productName: locale === "ar" ? p.nameAr : p.nameEn,
         brandName: p.brand.name,
+        concentration: p.concentration.replaceAll("_", " "),
+        price: topVariant?.price ? Number(topVariant.price) : 1850,
+        image,
         matchReasonEn: `Harmonizes with your affinity for ${
           item.matchingAccords.length > 0 ? item.matchingAccords.join(" & ") : p.scentFamily?.nameEn || "warm resins"
         }. Opens with captivating radiance that transitions smoothly into rich, enduring base accords.`,

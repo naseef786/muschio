@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { Button, PriceDisplay } from "@muschio/ui";
 import {
@@ -12,11 +12,13 @@ import {
   ShieldCheck,
   Truck,
   X,
+  Loader2,
 } from "lucide-react";
 import { useCart } from "../../../../context/cart-context";
+import { muschioApi } from "../../../../lib/api";
 
 interface SampleItem {
-  id: string;
+  id: string; // ProductVariant id
   nameEn: string;
   nameAr: string;
   brand: string;
@@ -26,97 +28,6 @@ interface SampleItem {
   notes: string[];
 }
 
-const SAMPLE_SELECTION: SampleItem[] = [
-  {
-    id: "sample-1",
-    nameEn: "Interlude 53 Man Extrait",
-    nameAr: "إنترلود 53 إكستري",
-    brand: "Amouage",
-    brandType: "NICHE",
-    concentration: "Extrait de Parfum (53%)",
-    image:
-      "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&q=85",
-    notes: ["Silver Frankincense", "Cambodian Oud", "Bergamot"],
-  },
-  {
-    id: "sample-2",
-    nameEn: "Baccarat Rouge 540 Extrait",
-    nameAr: "باكارات روج 540 إكستري",
-    brand: "Maison Francis Kurkdjian",
-    brandType: "NICHE",
-    concentration: "Extrait de Parfum",
-    image:
-      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=600&q=85",
-    notes: ["Kashmiri Saffron", "Golden Ambergris", "Bitter Almond"],
-  },
-  {
-    id: "sample-3",
-    nameEn: "Elysium Pour Homme Parfum",
-    nameAr: "إليزيوم بور هوم بارفان",
-    brand: "Roja Parfums",
-    brandType: "NICHE",
-    concentration: "Pure Parfum",
-    image:
-      "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=600&q=85",
-    notes: ["Calabrian Bergamot", "Tuscan Leather", "Pink Pepper"],
-  },
-  {
-    id: "sample-4",
-    nameEn: "Alexandria II Eau de Parfum",
-    nameAr: "ألكسندريا 2 أو دي بارفان",
-    brand: "Xerjoff",
-    brandType: "NICHE",
-    concentration: "Eau de Parfum",
-    image:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=600&q=85",
-    notes: ["Laos Oud", "Bulgarian Rose", "Cinnamon"],
-  },
-  {
-    id: "sample-5",
-    nameEn: "Tobacco Vanille Eau de Parfum",
-    nameAr: "توباكو فانيلا أو دي بارفان",
-    brand: "Tom Ford",
-    brandType: "DESIGNER",
-    concentration: "Eau de Parfum",
-    image:
-      "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=600&q=85",
-    notes: ["Bourbon Vanilla", "Tobacco Leaf", "Tonka Bean"],
-  },
-  {
-    id: "sample-6",
-    nameEn: "Royal Taif Rose Attar",
-    nameAr: "ورد الطائف الملكي الخالص",
-    brand: "Muschio Privé",
-    brandType: "NICHE",
-    concentration: "Pure Attar Absolute",
-    image:
-      "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=85",
-    notes: ["Taif Rose", "Honeyed Accord", "Clean Musk"],
-  },
-  {
-    id: "sample-7",
-    nameEn: "No. 1 Masculine Edition",
-    nameAr: "نمبر 1 ماسكيولين إديشن",
-    brand: "Clive Christian",
-    brandType: "NICHE",
-    concentration: "Pure Perfume",
-    image:
-      "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=600&q=85",
-    notes: ["50-Year Aged Sandalwood", "Pimento", "Florentine Iris"],
-  },
-  {
-    id: "sample-8",
-    nameEn: "Aventus Millésime",
-    nameAr: "أفينتوس ميليزيم",
-    brand: "Creed",
-    brandType: "NICHE",
-    concentration: "Eau de Parfum",
-    image:
-      "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=600&q=85",
-    notes: ["Blackcurrant", "French Birch", "Italian Bergamot"],
-  },
-];
-
 export default function DiscoverySetsPage({
   params: { locale },
 }: {
@@ -125,14 +36,52 @@ export default function DiscoverySetsPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const [selectedSamples, setSelectedSamples] = useState<string[]>([
-    "sample-1",
-    "sample-2",
-  ]);
+  const [samples, setSamples] = useState<SampleItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedSamples, setSelectedSamples] = useState<string[]>([]);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
   const { addItem, setCartDrawerOpen } = useCart();
+
+  useEffect(() => {
+    let active = true;
+    muschioApi.getDiscoverySamples().then((data) => {
+      if (!active) return;
+      if (Array.isArray(data) && data.length > 0) {
+        const mapped: SampleItem[] = data.map((v: any) => {
+          const prod = v.product;
+          const isAmouage = prod.slug === "amouage-interlude-53-man";
+          const img = isAmouage
+            ? "/amouage-placeholder.svg"
+            : (prod.images?.[0] || "/product-placeholder.svg");
+
+          const noteNames: string[] = prod.notes
+            ? prod.notes.map((pn: any) => (isAr ? pn.note.nameAr : pn.note.nameEn))
+            : [];
+
+          return {
+            id: v.id,
+            nameEn: prod.nameEn,
+            nameAr: prod.nameAr,
+            brand: prod.brand.name,
+            brandType: prod.brand.type,
+            concentration: prod.concentration.replaceAll("_", " "),
+            image: img,
+            notes: noteNames.slice(0, 3),
+          };
+        });
+        setSamples(mapped);
+        if (mapped.length >= 2 && mapped[0] && mapped[1]) {
+          setSelectedSamples([mapped[0].id, mapped[1].id]);
+        }
+      }
+      setLoading(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [isAr]);
 
   const toggleSample = (id: string) => {
     if (selectedSamples.includes(id)) {
@@ -144,8 +93,7 @@ export default function DiscoverySetsPage({
     }
   };
 
-  const removeSample = (id: string, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
+  const removeSlot = (id: string) => {
     setSelectedSamples(selectedSamples.filter((s) => s !== id));
   };
 
@@ -157,7 +105,7 @@ export default function DiscoverySetsPage({
     setIsAdding(true);
 
     const chosenSampleObjects = selectedSamples
-      .map((id) => SAMPLE_SELECTION.find((s) => s.id === id))
+      .map((id) => samples.find((s) => s.id === id))
       .filter(Boolean) as SampleItem[];
 
     const chosenNamesEn = chosenSampleObjects.map((s) => s.nameEn).join(", ");
@@ -242,7 +190,7 @@ export default function DiscoverySetsPage({
           {[0, 1, 2, 3, 4].map((slotIdx) => {
             const sampleId = selectedSamples[slotIdx];
             const sample = sampleId
-              ? SAMPLE_SELECTION.find((s) => s.id === sampleId)
+              ? samples.find((s) => s.id === sampleId)
               : null;
 
             return (
@@ -258,41 +206,43 @@ export default function DiscoverySetsPage({
                   <>
                     <button
                       type="button"
-                      onClick={(e) => removeSample(sample.id, e)}
-                      className="absolute top-1.5 end-1.5 z-10 w-5 h-5 rounded-full bg-luxury-surface border border-luxury-border text-luxury-muted hover:text-luxury-text hover:border-luxury-borderBold flex items-center justify-center transition-colors"
-                      title={c("Remove sample", "إزالة العينة")}
-                      aria-label={c(`Remove ${sample.nameEn}`, `إزالة ${sample.nameAr}`)}
+                      onClick={() => removeSlot(sample.id)}
+                      className="absolute top-1.5 end-1.5 right-1.5 rtl:right-auto rtl:left-1.5 z-10 w-6 h-6 bg-luxury-surface/90 border border-luxury-border flex items-center justify-center text-luxury-muted hover:text-luxury-text transition-colors rounded-full"
+                      aria-label="Remove sample"
                     >
-                      <X size={11} />
+                      <X size={12} />
                     </button>
-                    <div className="relative w-full flex-1 mb-2 bg-luxury-surface overflow-hidden">
+                    <div className="relative flex-1 w-full my-1">
                       <Image
                         src={sample.image}
                         alt={c(sample.nameEn, sample.nameAr)}
                         fill
-                        className="object-cover"
-                        sizes="(max-width: 640px) 45vw, 180px"
+                        sizes="(max-width: 640px) 120px, 160px"
+                        className="object-contain object-center p-1"
                       />
                     </div>
-                    <div>
-                      <span className="text-[9px] font-sans uppercase tracking-wider text-accent block truncate">
+                    <div className="text-center pt-1 border-t border-luxury-border/60">
+                      <span className="text-[9px] uppercase tracking-wider text-luxury-muted block truncate font-sans">
                         {sample.brand}
                       </span>
-                      <p className="font-serif text-xs text-luxury-text font-normal truncate">
+                      <span className="text-[11px] font-serif text-luxury-text line-clamp-1 leading-tight">
                         {c(sample.nameEn, sample.nameAr)}
-                      </p>
-                      <span className="text-[9px] text-luxury-muted font-mono block">
+                      </span>
+                      <span className="text-[9px] text-accent block font-mono">
                         2ml Extrait
                       </span>
                     </div>
                   </>
                 ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center text-center p-2">
-                    <span className="w-7 h-7 rounded-full border border-dashed border-luxury-border flex items-center justify-center text-xs mb-1.5 font-mono">
+                  <div className="flex-1 flex flex-col items-center justify-center text-center p-2">
+                    <span className="w-8 h-8 rounded-full border border-dashed border-luxury-border flex items-center justify-center text-xs font-serif text-luxury-muted mb-2">
                       {slotIdx + 1}
                     </span>
-                    <span className="text-[10px] font-sans uppercase tracking-wider text-luxury-muted">
+                    <span className="text-[11px] font-sans text-luxury-muted">
                       {c("Empty Slot", "خانة فارغة")}
+                    </span>
+                    <span className="text-[9px] text-luxury-muted/70 mt-0.5">
+                      {c("Choose below", "اختر من الأسفل")}
                     </span>
                   </div>
                 )}
@@ -302,57 +252,49 @@ export default function DiscoverySetsPage({
         </div>
       </div>
 
-      {/* 3. Desktop Sticky Action Bar (Hidden on Mobile) */}
-      <div className="hidden sm:flex sticky top-24 z-20 border border-luxury-border bg-luxury-surface/95 backdrop-blur-md p-5 shadow-sm items-center justify-between gap-6">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <span className="font-serif text-xl text-luxury-text font-normal">
+      {/* 3. Pricing Summary & Add to Cart Card */}
+      <div className="border border-luxury-border bg-luxury-surface p-4 sm:p-8 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-6">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <span className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
+              <PriceDisplay price={280} locale={locale} />
+            </span>
+            <span className="text-sm text-luxury-muted line-through">
+              350 AED
+            </span>
+            <span className="px-2 py-0.5 bg-accent/10 text-accent text-[11px] font-sans uppercase tracking-wider border border-accent/20">
+              {c("Complimentary Shipping", "شحن مجاني")}
+            </span>
+          </div>
+
+          <p className="text-xs text-luxury-muted font-sans flex items-center gap-2">
+            <Sparkles size={13} className="text-accent flex-shrink-0" />
+            <span>
               {c(
-                `Selected: ${selectedSamples.length} of 5 Samples`,
-                `المحدد: ${selectedSamples.length} من أصل ٥ عينات`,
+                "Includes 280 AED digital voucher valid for 60 days on any 50ml+ bottle purchase.",
+                "تشمل قسيمة رقمية بقيمة ٢٨٠ درهم صالحة لمدة ٦٠ يوماً على أي زجاجة بالحجم الكامل.",
               )}
             </span>
-            {isComplete && (
-              <CheckCircle2 size={18} className="text-emerald-600" />
-            )}
-          </div>
-          <p className="text-xs text-luxury-muted font-sans">
-            {isComplete
-              ? c(
-                  "Set is complete. Includes complimentary UAE delivery and 280 AED voucher.",
-                  "المجموعة مكتملة. تشمل توصيلاً مجانياً في الإمارات وقسيمة بقيمة ٢٨٠ درهم.",
-                )
-              : c(
-                  `Select ${remainingCount} more ${remainingCount === 1 ? "vial" : "vials"} to complete your box.`,
-                  `اختر ${remainingCount} عينات إضافية لإكمال الصندوق.`,
-                )}
           </p>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="text-end">
-            <PriceDisplay price={280} locale={locale} size="lg" />
-            <span className="text-[10px] text-accent block uppercase tracking-wider">
-              {c("100% Redeemable Voucher", "قسيمة مستردة ١٠٠٪")}
-            </span>
-          </div>
-
+        <div className="flex flex-col sm:flex-row items-center gap-3">
           <Button
-            onClick={handleAddBox}
-            disabled={!isComplete || isAdding}
-            variant="accent"
+            variant="primary"
             size="lg"
-            className="whitespace-nowrap px-8"
+            disabled={!isComplete || isAdding}
+            onClick={handleAddBox}
+            className="w-full sm:w-auto min-w-[240px] h-12 text-xs uppercase tracking-widest font-sans"
           >
-            {isAdding ? (
-              <span className="flex items-center gap-2">
-                <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>{c("Adding…", "جارٍ الإضافة…")}</span>
-              </span>
-            ) : addedToCart ? (
-              <span className="flex items-center gap-2">
+            {addedToCart ? (
+              <span className="flex items-center gap-2 text-emerald-400">
                 <Check size={16} />
-                <span>{c("Added to Bag ✓", "تمت الإضافة بنجاح ✓")}</span>
+                <span>{c("Added to Bag", "تمت الإضافة للحقيبة")}</span>
+              </span>
+            ) : isAdding ? (
+              <span className="flex items-center gap-2">
+                <Loader2 size={16} className="animate-spin" />
+                <span>{c("Adding to Bag…", "جاري الإضافة…")}</span>
               </span>
             ) : (
               <span className="flex items-center gap-2">
@@ -375,203 +317,182 @@ export default function DiscoverySetsPage({
             {c("OFFICIAL MAISON SAMPLES (2ML)", "العينات الرسمية المعتمدة (٢ مل)")}
           </span>
           <span className="text-xs text-luxury-muted">
-            {SAMPLE_SELECTION.length} {c("Creations Available", "عطور متاحة")}
+            {samples.length} {c("Creations Available", "عطور متاحة")}
           </span>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
-          {SAMPLE_SELECTION.map((sample) => {
-            const isSelected = selectedSamples.includes(sample.id);
-            const canSelect = isSelected || selectedSamples.length < 5;
+        {loading ? (
+          <div className="py-24 flex flex-col items-center justify-center text-xs text-luxury-muted space-y-3">
+            <Loader2 size={24} className="animate-spin text-accent" />
+            <span>{c("Retrieving official sample vials from catalog…", "جاري تحميل العينات الرسمية من الكتالوج…")}</span>
+          </div>
+        ) : samples.length === 0 ? (
+          <div className="py-16 text-center text-xs text-luxury-muted">
+            {c("No discovery vials available at this time.", "لا تتوفر عينات حالياً.")}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-6">
+            {samples.map((sample) => {
+              const isSelected = selectedSamples.includes(sample.id);
+              const canSelect = isSelected || selectedSamples.length < 5;
 
-            return (
-              <div
-                key={sample.id}
-                onClick={() => toggleSample(sample.id)}
-                role="button"
-                tabIndex={0}
-                aria-pressed={isSelected}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
-                    event.preventDefault();
-                    toggleSample(sample.id);
-                  }
-                }}
-                className={`group cursor-pointer border p-3.5 sm:p-5 transition-all duration-200 flex flex-row items-center gap-3.5 sm:gap-4 relative select-none ${
-                  isSelected
-                    ? "border-accent bg-accent/5 dark:bg-accent/10 shadow-sm"
-                    : canSelect
-                      ? "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                      : "border-luxury-border/60 bg-luxury-canvas opacity-60 cursor-not-allowed"
-                }`}
-              >
-                {/* Sample Bottle Thumbnail */}
-                <div className="relative h-20 w-16 sm:h-24 sm:w-20 bg-luxury-surface2 border border-luxury-border overflow-hidden flex-shrink-0">
-                  <Image
-                    src={sample.image}
-                    alt={c(sample.nameEn, sample.nameAr)}
-                    fill
-                    sizes="(max-width: 640px) 70px, 90px"
-                    className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <span className="absolute bottom-1 start-1 left-1 rtl:left-auto rtl:right-1 text-[8px] font-mono px-1 py-0.2 bg-luxury-surface/90 text-luxury-text border border-luxury-border">
-                    2ml
-                  </span>
-                </div>
-
-                {/* Sample Meta Details */}
-                <div className="space-y-1 flex-1 min-w-0">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-accent truncate max-w-[130px]">
-                      {sample.brand}
-                    </span>
-                    <span className="text-[9px] text-luxury-muted font-mono">
-                      · {sample.concentration.includes("53%") ? "53% Extrait" : "Extrait"}
-                    </span>
-                  </div>
-
-                  <h3 className="font-serif text-sm sm:text-base text-luxury-text font-normal truncate group-hover:text-accent transition-colors">
-                    {c(sample.nameEn, sample.nameAr)}
-                  </h3>
-
-                  <div className="flex flex-wrap gap-1 pt-0.5">
-                    {sample.notes.slice(0, 2).map((note, nIdx) => (
-                      <span
-                        key={nIdx}
-                        className="text-[10px] text-luxury-muted font-sans"
-                      >
-                        • {note}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Checkbox Selector (Touch friendly) */}
+              return (
                 <div
-                  className={`w-6 h-6 sm:w-7 sm:h-7 rounded-none border flex items-center justify-center transition-colors flex-shrink-0 ${
+                  key={sample.id}
+                  onClick={() => toggleSample(sample.id)}
+                  role="button"
+                  tabIndex={0}
+                  aria-pressed={isSelected}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      toggleSample(sample.id);
+                    }
+                  }}
+                  className={`group cursor-pointer border p-3.5 sm:p-5 transition-all duration-200 flex flex-row items-center gap-3.5 sm:gap-4 relative select-none ${
                     isSelected
-                      ? "bg-accent border-accent text-white"
-                      : "border-luxury-borderBold group-hover:border-luxury-text"
+                      ? "border-accent bg-accent/5 dark:bg-accent/10 shadow-sm"
+                      : canSelect
+                        ? "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                        : "border-luxury-border/60 bg-luxury-canvas opacity-60 cursor-not-allowed"
                   }`}
                 >
-                  {isSelected && <Check size={14} className="stroke-[2.5]" />}
+                  {/* Sample Bottle Thumbnail */}
+                  <div className="relative h-20 w-16 sm:h-24 sm:w-20 bg-luxury-surface2 border border-luxury-border overflow-hidden flex-shrink-0">
+                    <Image
+                      src={sample.image}
+                      alt={c(sample.nameEn, sample.nameAr)}
+                      fill
+                      sizes="(max-width: 640px) 70px, 90px"
+                      className="object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <span className="absolute bottom-1 start-1 left-1 rtl:left-auto rtl:right-1 text-[8px] font-mono px-1 py-0.2 bg-luxury-surface/90 text-luxury-text border border-luxury-border">
+                      2ml
+                    </span>
+                  </div>
+
+                  {/* Sample Copy */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-sans uppercase tracking-[0.12em] text-luxury-muted block truncate">
+                        {sample.brand}
+                      </span>
+                      {isSelected ? (
+                        <span className="w-5 h-5 rounded-full bg-accent text-luxury-canvas flex items-center justify-center flex-shrink-0">
+                          <Check size={11} strokeWidth={3} />
+                        </span>
+                      ) : (
+                        <span className="w-5 h-5 rounded-full border border-luxury-border flex-shrink-0 group-hover:border-luxury-text transition-colors" />
+                      )}
+                    </div>
+
+                    <h3 className="font-serif text-sm sm:text-base text-luxury-text font-normal truncate mt-0.5 group-hover:text-accent transition-colors">
+                      {c(sample.nameEn, sample.nameAr)}
+                    </h3>
+
+                    <span className="text-[10px] text-accent font-medium block mt-0.5 truncate font-sans">
+                      {sample.concentration}
+                    </span>
+
+                    {/* Key Notes Chips */}
+                    {sample.notes.length > 0 && (
+                      <div className="flex items-center gap-1 mt-2 overflow-hidden">
+                        {sample.notes.slice(0, 2).map((note, idx) => (
+                          <span
+                            key={idx}
+                            className="text-[9px] font-sans px-1.5 py-0.5 bg-luxury-surface2 border border-luxury-border text-luxury-muted truncate max-w-[85px]"
+                          >
+                            {note}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      {/* 5. Level Shoes Trust Guarantees Bar */}
-      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 grid grid-cols-1 md:grid-cols-3 gap-6 text-center md:text-start">
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 border border-luxury-border flex items-center justify-center flex-shrink-0 text-accent">
-            <Sparkles size={18} />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-serif text-base text-luxury-text font-normal">
-              {c("100% Redeemable Voucher", "قسيمة خصم مستردة ١٠٠٪")}
-            </h4>
-            <p className="text-xs text-luxury-muted leading-relaxed">
-              {c(
-                "Your 280 AED payment is fully credited towards any full flacon purchase from our vault within 60 days.",
-                "قيمة الصندوق (٢٨٠ درهم) تُخصم بالكامل عند شرائك أي زجاجة بالحجم الكامل من خزانة موسكيو خلال ٦٠ يوماً.",
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 border border-luxury-border flex items-center justify-center flex-shrink-0 text-accent">
-            <ShieldCheck size={18} />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-serif text-base text-luxury-text font-normal">
-              {c("100% Authentic Maison Vials", "عينات رسمية أصلية ١٠٠٪")}
-            </h4>
-            <p className="text-xs text-luxury-muted leading-relaxed">
-              {c(
-                "Filled directly from official maison batches in airtight glass atomizers with high-pressure micro-sprays.",
-                "معبأة مباشرة من تشغيلات الدور الرسمية في زجاجات محكمة مع مضخة رذاذ فائقة الدقة لفوحان مثالي.",
-              )}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex items-start gap-4">
-          <div className="w-10 h-10 border border-luxury-border flex items-center justify-center flex-shrink-0 text-accent">
-            <Truck size={18} />
-          </div>
-          <div className="space-y-1">
-            <h4 className="font-serif text-base text-luxury-text font-normal">
-              {c("Complimentary UAE Delivery", "توصيل سريع مجاني في الإمارات")}
-            </h4>
-            <p className="text-xs text-luxury-muted leading-relaxed">
-              {c(
-                "White-glove climate-controlled delivery within 24–48 hours across Dubai, Abu Dhabi, and the GCC.",
-                "توصيل سريع ومبرد في غضون ٢٤ إلى ٤٨ ساعة داخل دبي وأبوظبي وجميع مدن الخليج العربي.",
-              )}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 6. Mobile Fixed Bottom Floating Action Bar (Level Shoes Mobile E-Commerce Standard) */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-luxury-surface/95 backdrop-blur-md border-t border-luxury-border p-3 shadow-2xl flex items-center justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="font-serif text-base font-medium text-luxury-text">
-              {c(
-                `${selectedSamples.length}/5 Selected`,
-                `${selectedSamples.length}/٥ محددة`,
-              )}
-            </span>
-            {isComplete ? (
-              <CheckCircle2 size={14} className="text-emerald-600 flex-shrink-0" />
-            ) : (
-              <span className="text-[10px] text-luxury-muted font-sans">
-                ({c(`Add ${remainingCount}`, `تبقّى ${remainingCount}`)})
-              </span>
-            )}
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-serif text-xs font-semibold text-luxury-text">
+      {/* 5. Mobile Fixed Bottom Summary Bar */}
+      <div className="fixed bottom-0 inset-x-0 sm:hidden z-30 bg-luxury-surface/95 backdrop-blur-md border-t border-luxury-border p-3 px-4 flex items-center justify-between gap-3 shadow-2xl">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            <span className="font-serif text-lg font-medium text-luxury-text">
               280 AED
             </span>
-            <span className="text-[9px] text-accent uppercase tracking-wider truncate">
-              {c("Voucher included", "القسيمة متضمنة")}
+            <span className="text-[11px] text-emerald-600 font-sans font-medium">
+              {c("Voucher incl.", "القسيمة متضمنة")}
             </span>
           </div>
+          <span className="text-[11px] text-luxury-muted font-sans">
+            {isComplete
+              ? c("5 of 5 Selected", "٥ من ٥ محددة")
+              : c(`${remainingCount} more needed`, `متبقي ${remainingCount} عينات`)}
+          </span>
         </div>
 
         <Button
-          onClick={handleAddBox}
+          variant="primary"
+          size="sm"
           disabled={!isComplete || isAdding}
-          variant="accent"
-          size="md"
-          className="whitespace-nowrap px-5 flex-shrink-0"
+          onClick={handleAddBox}
+          className="h-10 px-4 text-xs font-sans uppercase tracking-wider flex-shrink-0 min-w-[140px]"
         >
-          {isAdding ? (
-            <span className="flex items-center gap-1.5">
-              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>{c("Adding…", "جارٍ الإضافة…")}</span>
-            </span>
-          ) : addedToCart ? (
-            <span className="flex items-center gap-1.5">
+          {addedToCart ? (
+            <span className="flex items-center gap-1.5 text-emerald-400">
               <Check size={14} />
-              <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
+              <span>{c("Added", "تمت الإضافة")}</span>
             </span>
+          ) : isAdding ? (
+            <Loader2 size={14} className="animate-spin" />
           ) : (
             <span className="flex items-center gap-1.5">
               <ShoppingBag size={14} />
-              <span>
-                {isComplete
-                  ? c("Add Box to Bag", "أضف للحقيبة")
-                  : c(`Pick ${remainingCount} More`, `اختر ${remainingCount}`)}
-              </span>
+              <span>{c("Add to Bag", "أضف للحقيبة")}</span>
             </span>
           )}
         </Button>
+      </div>
+
+      {/* 6. Assurance Badges Footer */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t border-luxury-border text-xs text-luxury-muted font-sans">
+        <div className="flex items-center gap-3 p-4 bg-luxury-surface border border-luxury-border">
+          <ShieldCheck size={18} className="text-accent flex-shrink-0" />
+          <div>
+            <span className="font-medium text-luxury-text block">
+              {c("100% Authentic Maison Vials", "عينات أصلية ١٠٠٪")}
+            </span>
+            <span className="text-[11px] text-luxury-muted">
+              {c("Filled by the master perfume houses", "معبأة مباشرة من دور العطور الرسمية")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-luxury-surface border border-luxury-border">
+          <Truck size={18} className="text-accent flex-shrink-0" />
+          <div>
+            <span className="font-medium text-luxury-text block">
+              {c("Same-Day GCC Courier", "توصيل سريع بنفس اليوم")}
+            </span>
+            <span className="text-[11px] text-luxury-muted">
+              {c("Climate-controlled transit", "نقل مبرد يحافظ على جودة العطور")}
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-3 p-4 bg-luxury-surface border border-luxury-border">
+          <Sparkles size={18} className="text-accent flex-shrink-0" />
+          <div>
+            <span className="font-medium text-luxury-text block">
+              {c("280 AED Full Value Refund", "استرداد كامل بقيمة ٢٨٠ درهم")}
+            </span>
+            <span className="text-[11px] text-luxury-muted">
+              {c("Applied on your next full flacon", "تُخصم فوراً عند طلب عطرك المفضل")}
+            </span>
+          </div>
+        </div>
       </div>
     </div>
   );

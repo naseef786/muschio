@@ -204,6 +204,60 @@ export class CatalogService {
     });
   }
 
+  static async getBrandBySlug(slug: string) {
+    const brand = await prisma.brand.findUnique({
+      where: { slug },
+      include: {
+        products: {
+          where: { isPublished: true },
+          include: {
+            brand: true,
+            scentFamily: true,
+            variants: {
+              include: {
+                inventory: true,
+              },
+              orderBy: { volumeMl: "asc" },
+            },
+            notes: {
+              include: {
+                note: true,
+              },
+              orderBy: { prominence: "desc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!brand) return null;
+
+    return {
+      id: brand.id,
+      name: brand.name,
+      slug: brand.slug,
+      type: brand.type,
+      descriptionEn: brand.descriptionEn,
+      descriptionAr: brand.descriptionAr,
+      logoUrl: brand.logoUrl,
+      heroImageUrl: brand.heroImageUrl,
+      countryOfOrigin: brand.countryOfOrigin,
+      isFeatured: brand.isFeatured,
+      products: brand.products.map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        nameEn: p.nameEn,
+        nameAr: p.nameAr,
+        concentration: p.concentration,
+        gender: p.gender,
+        images: p.images,
+        brand: brand.name,
+        price: Number(p.variants[0]?.price || 0),
+        compareAtPrice: p.variants[0]?.compareAtPrice ? Number(p.variants[0].compareAtPrice) : null,
+      })),
+    };
+  }
+
   static async getScentFamilies() {
     return prisma.scentFamily.findMany({
       orderBy: { nameEn: "asc" },
@@ -215,3 +269,4 @@ export class CatalogService {
     });
   }
 }
+

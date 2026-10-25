@@ -28,72 +28,7 @@ const DEFAULT_HERO = {
   overlayLabelEn: "MUSCHIO SELECTION / 2026",
   overlayLabelAr: "مختارات موسكيو / ٢٠٢٦",
 };
-const CURATED_FEATURED = [
-  {
-    slug: "amouage-interlude-53-man",
-    nameEn: "Interlude 53 Man Extrait",
-    nameAr: "إنترلود 53 إكستري",
-    brand: "Amouage",
-    concentration: "Extrait de Parfum (53%)",
-    price: 1850,
-    compareAtPrice: 2100,
-    image: "/amouage-placeholder.svg",
-    badge: "Extrait (53%)",
-  },
-  {
-    slug: "mfk-baccarat-rouge-540-extrait",
-    nameEn: "Baccarat Rouge 540 Extrait",
-    nameAr: "باكارات روج 540 إكستري",
-    brand: "Maison Francis Kurkdjian",
-    concentration: "Extrait de Parfum",
-    price: 1650,
-    compareAtPrice: null,
-    image:
-      "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
-    secondaryImage:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    badge: "Haute Niche",
-  },
-  {
-    slug: "roja-parfums-elysium-pour-homme-parfum",
-    nameEn: "Elysium Pour Homme Parfum",
-    nameAr: "إليزيوم بور هوم بارفان",
-    brand: "Roja Parfums",
-    concentration: "Pure Parfum",
-    price: 1950,
-    compareAtPrice: 2200,
-    image:
-      "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=800&q=85",
-    badge: "Pure Parfum",
-  },
-  {
-    slug: "xerjoff-alexandria-ii",
-    nameEn: "Alexandria II Eau de Parfum",
-    nameAr: "ألكسندريا 2 أو دي بارفان",
-    brand: "Xerjoff",
-    concentration: "Eau de Parfum",
-    price: 2200,
-    compareAtPrice: 2450,
-    image:
-      "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=800&q=85",
-    badge: "Rare Batch",
-  },
-];
 
-const PRESTIGE_HOUSES = [
-  { name: "Amouage", origin: "Sultanate of Oman", slug: "amouage", descEn: "The Gift of Kings", descAr: "هدية الملوك" },
-  { name: "Maison Francis Kurkdjian", origin: "Paris, France", slug: "maison-francis-kurkdjian", descEn: "Crystalline Modernity", descAr: "إشراقة عصرية" },
-  { name: "Roja Parfums", origin: "London, UK", slug: "roja-parfums", descEn: "Haute Luxe English Perfumery", descAr: "فخامة إنجليزية نادرة" },
-  { name: "Xerjoff", origin: "Turin, Italy", slug: "xerjoff", descEn: "Italian Royal Renaissance", descAr: "إبداع إيطالي استثنائي" },
-  { name: "Tom Ford", origin: "United States", slug: "tom-ford", descEn: "Private Blend Atelier", descAr: "مجموعة برايفيت بليند" },
-];
-
-const RAW_NOTES = [
-  { nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose", familyEn: "Floral", familyAr: "زهري" },
-  { nameEn: "Silver Frankincense", nameAr: "لبان حوجري فضي", slug: "silver-frankincense", familyEn: "Resinous", familyAr: "صمغي" },
-  { nameEn: "Cambodian Oud", nameAr: "عود كمبودي معتق", slug: "cambodian-oud", familyEn: "Oud & Woods", familyAr: "أخشاب وعود" },
-  { nameEn: "Golden Ambergris", nameAr: "عنبر أشهب نقي", slug: "golden-ambergris", familyEn: "Amber", familyAr: "عنبري" },
-];
 
 export default async function HomePage({
   params: { locale },
@@ -139,27 +74,45 @@ export default async function HomePage({
     ? c(hero.overlayLabelEn || "", hero.overlayLabelAr || "")
     : c(DEFAULT_HERO.overlayLabelEn, DEFAULT_HERO.overlayLabelAr);
 
-  // Dynamic products fetch with fallback
-  const liveProducts = await muschioApi.getProducts({ limit: 4 });
-  const featuredProducts =
-    liveProducts && liveProducts.length > 0
-      ? liveProducts.map((p) => {
-          const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
-          const isAmouage = p.slug === "amouage-interlude-53-man";
-          return {
-            slug: p.slug,
-            nameEn: p.nameEn,
-            nameAr: p.nameAr,
-            brand: p.brand.name,
-            concentration: p.concentration.replaceAll("_", " "),
-            price: v?.price || 0,
-            compareAtPrice: v?.compareAtPrice,
-            image: isAmouage ? "/amouage-placeholder.svg" : (p.images[0] || "/product-placeholder.svg"),
-            secondaryImage: p.images[1],
-            badge: p.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
-          };
-        })
-      : CURATED_FEATURED;
+  // Dynamic live data from backend API
+  const [liveProducts, liveBrands, liveNotes] = await Promise.all([
+    muschioApi.getProducts({ limit: 4 }),
+    muschioApi.getBrands(),
+    muschioApi.getNotes({ limit: 4 }),
+  ]);
+
+  const featuredProducts = (liveProducts || []).map((p) => {
+    const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
+    const isAmouage = p.slug === "amouage-interlude-53-man";
+    return {
+      slug: p.slug,
+      nameEn: p.nameEn,
+      nameAr: p.nameAr,
+      brand: p.brand.name,
+      concentration: p.concentration.replaceAll("_", " "),
+      price: v?.price || 0,
+      compareAtPrice: v?.compareAtPrice,
+      image: isAmouage ? "/amouage-placeholder.svg" : (p.images[0] || "/product-placeholder.svg"),
+      secondaryImage: p.images[1],
+      badge: p.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
+    };
+  });
+
+  const prestigeHouses = (liveBrands || []).slice(0, 5).map((b) => ({
+    name: b.name,
+    origin: b.countryOfOrigin || "Haute Parfumerie",
+    slug: b.slug,
+    descEn: b.descriptionEn || "Official Atelier Partner",
+    descAr: b.descriptionAr || "شريك رسمي معتمد",
+  }));
+
+  const rawNotes = (liveNotes || []).slice(0, 4).map((n: any) => ({
+    nameEn: n.nameEn,
+    nameAr: n.nameAr,
+    slug: n.slugEn,
+    familyEn: n.categoryEn || "Natural Note",
+    familyAr: n.categoryAr || "نوتة طبيعية",
+  }));
 
   return (
     <div className="space-y-16 md:space-y-24 pb-16">
@@ -295,7 +248,7 @@ export default async function HomePage({
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {PRESTIGE_HOUSES.map((house) => (
+          {prestigeHouses.map((house) => (
             <Link
               key={house.slug}
               href={`/brands/${house.slug}`}
@@ -335,7 +288,7 @@ export default async function HomePage({
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {RAW_NOTES.map((n) => (
+          {rawNotes.map((n) => (
             <Link
               key={n.slug}
               href={`/notes/${n.slug}`}
