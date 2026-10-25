@@ -10,7 +10,10 @@ const nextConfig = {
       { protocol: "https", hostname: "media.muschio.luxury" },
     ],
   },
-  transpilePackages: ["@muschio/ui", "@muschio/types"],
+  transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api"],
+  experimental: {
+    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
+  },
 };
 
 export default withNextIntl(nextConfig);
