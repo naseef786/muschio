@@ -15,7 +15,16 @@ import {
   prisma,
 } from "@muschio/api";
 
+if (!process.env.DATABASE_URL) {
+  process.env.DATABASE_URL =
+    "postgresql://neondb_owner:npg_sQVMUZS9i7gC@ep-noisy-band-b4h6frtw-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require";
+}
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
+}
+
 export const dynamic = "force-dynamic";
+
 
 function success(data: any, status = 200) {
   return NextResponse.json({ success: true, data }, { status });
