@@ -7,6 +7,7 @@ import { ThemeProvider } from "next-themes";
 import { Header } from "../../components/header";
 import { Footer } from "../../components/footer";
 import { FloatingWhatsApp } from "../../components/floating-whatsapp";
+import { AuthProvider } from "../../context/auth-context";
 import { CartProvider } from "../../context/cart-context";
 import { WishlistProvider } from "../../context/wishlist-context";
 import { generateOrganizationJsonLd } from "../../lib/seo";
@@ -81,15 +82,17 @@ export default async function RootLayout({
       <body className="min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300">
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
-            <CartProvider>
-              <WishlistProvider>
-                <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
-                <Header locale={locale as Locale} />
-                <main id="main-content" className="flex-1">{children}</main>
-                <Footer locale={locale as Locale} />
-                <FloatingWhatsApp locale={locale as Locale} />
-              </WishlistProvider>
-            </CartProvider>
+            <AuthProvider>
+              <CartProvider>
+                <WishlistProvider>
+                  <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
+                  <Header locale={locale as Locale} />
+                  <main id="main-content" className="flex-1">{children}</main>
+                  <Footer locale={locale as Locale} />
+                  <FloatingWhatsApp locale={locale as Locale} />
+                </WishlistProvider>
+              </CartProvider>
+            </AuthProvider>
           </ThemeProvider>
         </NextIntlClientProvider>
       </body>

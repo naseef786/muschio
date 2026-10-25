@@ -3,10 +3,11 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package } from "lucide-react";
+import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package, ShoppingBag } from "lucide-react";
 import { PriceDisplay } from "@muschio/ui";
 import { ProductCard } from "./product-card";
 import { useWishlist } from "../context/wishlist-context";
+import { useCart } from "../context/cart-context";
 
 export interface ProductDetailProps {
   product: {
@@ -64,6 +65,9 @@ export function ProductExperience({
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.slug);
   const [copiedLink, setCopiedLink] = useState(false);
+  const { addItem, setCartDrawerOpen } = useCart();
+  const [isAdding, setIsAdding] = useState(false);
+  const [addedSuccess, setAddedSuccess] = useState(false);
 
   // Accordion open states
   const [openAccordion, setOpenAccordion] = useState<string | null>("pyramid");
@@ -112,8 +116,34 @@ export function ProductExperience({
 
   const brandSlug = product.brand.slug || product.brand.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
+  const handleAddToCart = async () => {
+    if (!selectedVariant || isAdding) return;
+    setIsAdding(true);
+    try {
+      await addItem({
+        variantId: selectedVariant.id,
+        slug: product.slug,
+        title: product.nameEn,
+        titleAr: product.nameAr,
+        brand: product.brand.name,
+        price: selectedVariant.price,
+        compareAtPrice: selectedVariant.compareAtPrice,
+        quantity: 1,
+        image: currentImage,
+        sizeLabel: c(selectedVariant.sizeLabelEn, selectedVariant.sizeLabelAr),
+      });
+      setAddedSuccess(true);
+      setCartDrawerOpen(true);
+      setTimeout(() => setAddedSuccess(false), 3000);
+    } catch {
+      // ignore
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 pb-28 sm:pb-10">
       {/* 1. Breadcrumbs (Level Shoes Compact Pattern) */}
       <nav aria-label="Breadcrumb" className="text-[11px] sm:text-[12px] text-luxury-muted mb-6 md:mb-8">
         <ol className="flex items-center gap-2 flex-wrap">
@@ -314,14 +344,28 @@ export function ProductExperience({
               </div>
             )}
 
-            {/* Primary Action Buttons */}
+            {/* Primary Action Buttons (Level Shoes Add to Bag Standard) */}
             <div className="space-y-3 pt-2">
-              <Link
-                href="/discover/ai"
-                className="editorial-button w-full text-center justify-center shadow-sm hover:shadow-md"
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isAdding}
+                className="w-full py-4 px-6 bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 font-sans text-xs uppercase tracking-[0.16em] font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.99]"
               >
-                {c("Consult Scent Sommelier", "استشر خبير العطور")}
-              </Link>
+                {isAdding ? (
+                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : addedSuccess ? (
+                  <>
+                    <Check size={16} />
+                    <span>{c("Added to Bag ✓", "تمت الإضافة بنجاح ✓")}</span>
+                  </>
+                ) : (
+                  <>
+                    <ShoppingBag size={16} />
+                    <span>{c("Add to Bag", "أضف إلى حقيبة التسوق")}</span>
+                  </>
+                )}
+              </button>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Pro Luxury Wishlist Button */}
@@ -667,6 +711,39 @@ export function ProductExperience({
           </div>
         </section>
       )}
+
+      {/* 6. Mobile Sticky Bottom Action Bar (Level Shoes Mobile Standard) */}
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-luxury-surface/95 backdrop-blur-md border-t border-luxury-border p-3 shadow-2xl flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-serif text-base font-medium text-luxury-text truncate">
+            <PriceDisplay price={selectedVariant?.price || 0} locale={locale} size="sm" />
+          </div>
+          <span className="text-[10px] text-luxury-muted block truncate">
+            {c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          className="py-3 px-5 bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 flex-shrink-0"
+        >
+          {isAdding ? (
+            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : addedSuccess ? (
+            <>
+              <Check size={14} />
+              <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
+            </>
+          ) : (
+            <>
+              <ShoppingBag size={14} />
+              <span>{c("Add to Bag", "أضف للحقيبة")}</span>
+            </>
+          )}
+        </button>
+      </div>
     </div>
   );
 }

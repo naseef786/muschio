@@ -7,9 +7,11 @@ import { ApiError } from "../middleware/error-handler";
 import {
   createGuestSession,
   requireGuestSession,
+  requireCustomerAuth,
   assertCartOwner,
   assertOrderOwner,
 } from "../middleware/storefront-auth";
+import { CustomerService } from "../services/customer.service";
 import { DeliveryService } from "../services/delivery.service";
 import { DeliveryRequestSchema } from "@muschio/types";
 import { CatalogService } from "../services/catalog.service";
@@ -39,6 +41,9 @@ import {
   PaymentSessionRequestSchema,
   AIScentConsultationInputSchema,
   CreateReviewInputSchema,
+  CustomerLoginSchema,
+  CustomerRegisterSchema,
+  CreateSavedAddressSchema,
 } from "@muschio/types";
 import { AdminRole, BannerSlot, HomepageSectionType } from "@prisma/client";
 
@@ -64,6 +69,113 @@ router.post("/sessions/guest", sessionLimiter, (_req, res, next) => {
     next(error);
   }
 });
+
+// -------------------------------------------------------------
+// 0. AUTHENTICATION & PRIVATE CLIENT PRIVILEGE
+// -------------------------------------------------------------
+
+router.post("/auth/login", loginLimiter, async (req, res, next) => {
+  try {
+    const input = CustomerLoginSchema.parse(req.body);
+    const result = await CustomerService.login(input);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/auth/register", sessionLimiter, async (req, res, next) => {
+  try {
+    const input = CustomerRegisterSchema.parse(req.body);
+    const result = await CustomerService.register(input);
+    res.setHeader("Cache-Control", "no-store");
+    res.status(201).json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.get("/auth/me", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const result = await CustomerService.getProfile(req.customerId!);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/auth/profile", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const result = await CustomerService.updateProfile(req.customerId!, req.body);
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// -------------------------------------------------------------
+// 0.1 SAVED ADDRESS BOOK (PRIVATE CLIENT)
+// -------------------------------------------------------------
+
+router.get("/customers/addresses", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const addresses = await CustomerService.getAddresses(req.customerId!);
+    res.setHeader("Cache-Control", "no-store");
+    res.json({ success: true, data: addresses, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/customers/addresses", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const input = CreateSavedAddressSchema.parse(req.body);
+    const address = await CustomerService.addAddress(req.customerId!, input);
+    res.status(201).json({ success: true, data: address, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.patch("/customers/addresses/:id", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const address = await CustomerService.updateAddress(
+      req.customerId!,
+      req.params.id as string,
+      req.body,
+    );
+    res.json({ success: true, data: address, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete("/customers/addresses/:id", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const result = await CustomerService.deleteAddress(
+      req.customerId!,
+      req.params.id as string,
+    );
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.post("/customers/addresses/:id/default", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const address = await CustomerService.setDefaultAddress(
+      req.customerId!,
+      req.params.id as string,
+    );
+    res.json({ success: true, data: address, meta: { requestId: req.id } });
+  } catch (error) {
+    next(error);
+  }
+});
+
 
 router.post("/delivery/quote", async (req, res, next) => {
   try {
@@ -261,7 +373,10 @@ router.post("/markets/calculate", async (req, res, next) => {
 
 router.get("/cart", requireGuestSession, async (req, res, next) => {
   try {
-    const cart = await CartService.getOrCreateCart(req.guestSessionId!);
+    const cart = await CartService.getOrCreateCart(
+      req.guestSessionId!,
+      req.customerId,
+    );
     res.setHeader("Cache-Control", "no-store");
     res.json({ success: true, data: cart, meta: { requestId: req.id } });
   } catch (err) {
@@ -275,6 +390,7 @@ router.post("/cart/items", requireGuestSession, async (req, res, next) => {
     const cart = await CartService.addItem({
       ...body,
       guestSessionId: req.guestSessionId!,
+      customerId: req.customerId,
     });
     res.json({ success: true, data: cart, meta: { requestId: req.id } });
   } catch (err) {
@@ -294,6 +410,7 @@ router.patch(
         z.string().uuid().parse(req.params.itemId),
         quantity,
         req.guestSessionId!,
+        req.customerId,
       );
       res.json({
         success: true,
@@ -309,11 +426,12 @@ router.patch(
 router.post("/checkout", requireGuestSession, async (req, res, next) => {
   try {
     const payload = CheckoutPayloadSchema.parse(req.body);
-    await assertCartOwner(payload.cartId, req.guestSessionId!);
+    await assertCartOwner(payload.cartId, req.guestSessionId!, req.customerId);
     PaymentService.assertAvailable(payload.paymentMethod);
     const order = await CheckoutService.processCheckout(
       payload,
       req.guestSessionId!,
+      req.customerId,
     );
     res
       .status(201)
@@ -330,7 +448,7 @@ router.post("/checkout", requireGuestSession, async (req, res, next) => {
 router.get("/orders/:id", requireGuestSession, async (req, res, next) => {
   try {
     const orderId = z.string().uuid().parse(req.params.id);
-    await assertOrderOwner(orderId, req.guestSessionId!);
+    await assertOrderOwner(orderId, req.guestSessionId!, req.customerId);
     const order = await CheckoutService.getOrderById(orderId);
     res.setHeader("Cache-Control", "no-store");
     if (!order) {
@@ -354,7 +472,10 @@ router.get("/orders/:id", requireGuestSession, async (req, res, next) => {
 
 router.get("/orders", requireGuestSession, async (req, res, next) => {
   try {
-    const orders = await CheckoutService.getSessionOrders(req.guestSessionId!);
+    const orders = await CheckoutService.getSessionOrders(
+      req.guestSessionId!,
+      req.customerId,
+    );
     res.setHeader("Cache-Control", "no-store");
     res.json({
       success: true,
@@ -383,7 +504,17 @@ router.get(
           });
         return;
       }
-      await assertOrderOwner(order.id, req.guestSessionId!);
+
+      // Check access: customer ownership, session reservation, or email/phone verification
+      const verifyEmail = (req.query.email as string)?.trim().toLowerCase();
+      const verifyPhone = (req.query.phone as string)?.trim();
+      const matchesEmail = verifyEmail && order.guestEmail?.toLowerCase() === verifyEmail;
+      const matchesPhone = verifyPhone && order.shippingAddress?.phone === verifyPhone;
+
+      if (!matchesEmail && !matchesPhone) {
+        await assertOrderOwner(order.id, req.guestSessionId!, req.customerId);
+      }
+
       res.setHeader("Cache-Control", "no-store");
       res.json({
         success: true,
@@ -640,14 +771,20 @@ router.post(
 // 9. REVIEWS & VERIFIED BUYER FEEDBACK
 // -------------------------------------------------------------
 
-router.post("/reviews", async (_req, _res, next) => {
-  next(
-    new ApiError(
-      403,
-      "CUSTOMER_LOGIN_REQUIRED",
-      "Verified customer sign-in is required to submit reviews",
-    ),
-  );
+router.post("/reviews", requireCustomerAuth, async (req, res, next) => {
+  try {
+    const input = CreateReviewInputSchema.parse(req.body);
+    const review = await ReviewsService.submitReview({
+      ...input,
+      customerId: req.customerId!,
+      orderItemId: input.orderItemId || undefined,
+    });
+    res
+      .status(201)
+      .json({ success: true, data: review, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
 });
 router.post(
   "/admin/reviews",

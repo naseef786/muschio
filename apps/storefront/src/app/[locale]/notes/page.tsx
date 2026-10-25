@@ -207,7 +207,7 @@ export default function NotesIndexPage({
       {/* 2. Scent Family Navigation & Search Toolbar */}
       <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-luxury-border">
         {/* Scent Family Filter Pills */}
-        <div className="flex items-center gap-1.5 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0">
           {FAMILIES.map((fam) => (
             <button
               key={fam.id}
@@ -243,7 +243,7 @@ export default function NotesIndexPage({
           {c("No scent notes found matching your search.", "لم يتم العثور على نوتات مطابقة للبحث.")}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
           {filteredNotes.map((note) => (
             <Link
               key={note.slug}
@@ -255,23 +255,23 @@ export default function NotesIndexPage({
                   src={note.image}
                   alt={c(note.nameEn, note.nameAr)}
                   fill
-                  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw"
                   className="object-cover group-hover:scale-105 transition-transform duration-500"
                 />
-                <span className="absolute top-2.5 start-2.5 left-2.5 rtl:left-auto rtl:right-2.5 text-[9px] font-sans font-medium uppercase tracking-[0.14em] px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border">
+                <span className="absolute top-2 start-2 left-2 rtl:left-auto rtl:right-2 text-[8px] sm:text-[9px] font-sans font-medium uppercase tracking-[0.12em] px-1.5 sm:px-2 py-0.5 bg-luxury-surface/95 text-luxury-text border border-luxury-border truncate max-w-[100px]">
                   {c(note.familyEn, note.familyAr)}
                 </span>
               </div>
 
-              <div className="p-5 flex-1 flex flex-col justify-between space-y-4">
+              <div className="p-3.5 sm:p-5 flex-1 flex flex-col justify-between space-y-3 sm:space-y-4">
                 <div>
-                  <span className="text-[10px] font-sans uppercase tracking-[0.12em] text-luxury-muted block">
+                  <span className="text-[9px] sm:text-[10px] font-sans uppercase tracking-[0.12em] text-luxury-muted block truncate">
                     {c(note.originEn, note.originAr)}
                   </span>
-                  <h3 className="font-serif text-lg text-luxury-text font-normal group-hover:underline mt-1">
+                  <h3 className="font-serif text-sm sm:text-lg text-luxury-text font-normal group-hover:underline mt-1 line-clamp-1">
                     {c(note.nameEn, note.nameAr)}
                   </h3>
-                  <p className="text-xs text-luxury-muted leading-relaxed line-clamp-2 mt-2">
+                  <p className="text-xs text-luxury-muted leading-relaxed line-clamp-2 mt-1.5 hidden sm:block">
                     {c(note.descriptionEn, note.descriptionAr)}
                   </p>
                 </div>

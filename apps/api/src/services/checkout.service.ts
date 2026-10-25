@@ -8,30 +8,47 @@ import { randomUUID } from "node:crypto";
 import { InventoryService } from "./inventory.service";
 
 export class CheckoutService {
-  static async processCheckout(payload: CheckoutPayload, sessionId: string) {
+  static async processCheckout(
+    payload: CheckoutPayload,
+    sessionId: string,
+    customerId?: string,
+  ) {
     const {
       cartId,
       shippingAddress,
       currency = "AED",
       customerNotes,
+      loyaltyCreditsRedeemed = 0,
     } = payload;
 
-    if (currency !== "AED")
+    const effectiveCustomerId = customerId || payload.customerId;
+
+    if (currency !== "AED") {
       throw new ApiError(
         400,
         "UNSUPPORTED_CURRENCY",
         "Checkout currently supports AED only",
       );
-    if (!payload.deliveryServiceId && shippingAddress.country !== "AE")
+    }
+
+    if (!payload.deliveryServiceId && shippingAddress.country !== "AE") {
       throw new ApiError(
         400,
         "DELIVERY_UNAVAILABLE",
         "Configure delivery for this destination before checkout",
       );
+    }
+
     return prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Cart" WHERE id = ${cartId} FOR UPDATE`;
       const cart = await tx.cart.findFirst({
-        where: { id: cartId, guestSessionId: sessionId, customerId: null },
+        where: {
+          id: cartId,
+          OR: [
+            { guestSessionId: sessionId },
+            ...(effectiveCustomerId ? [{ customerId: effectiveCustomerId }] : []),
+          ],
+        },
         include: {
           items: {
             include: {
@@ -60,12 +77,13 @@ export class CheckoutService {
           item.variant.isSampleVial ||
           item.quantity < 1 ||
           item.quantity > 99
-        )
+        ) {
           throw new ApiError(
             409,
             "VARIANT_UNAVAILABLE",
             "An item in your bag is unavailable",
           );
+        }
         subtotal = subtotal.plus(item.variant.price.times(item.quantity));
         itemsToReserve.push({
           variantId: item.variantId,
@@ -84,12 +102,13 @@ export class CheckoutService {
         const service = quote.services.find(
           (service) => service.id === payload.deliveryServiceId,
         );
-        if (!quote.enabled || !service)
+        if (!quote.enabled || !service) {
           throw new ApiError(
             409,
             "DELIVERY_UNAVAILABLE",
             "Selected delivery service is unavailable",
           );
+        }
         shippingAmount = service.feeFils / 100;
       } else if (process.env.DELIVERY_ENABLED === "true") {
         throw new ApiError(
@@ -98,16 +117,46 @@ export class CheckoutService {
           "Select an available delivery service",
         );
       }
-      const taxAmount = subtotal
-        .minus(subtotal.dividedBy(1.05))
-        .toDecimalPlaces(2);
-      const totalAmount = subtotal.plus(shippingAmount);
+
+      // Loyalty credit deduction
+      let discountAmount = new Prisma.Decimal(0);
+      if (loyaltyCreditsRedeemed > 0) {
+        const maxApplicableDiscount = Math.min(
+          loyaltyCreditsRedeemed,
+          subtotal.toNumber(),
+        );
+        discountAmount = new Prisma.Decimal(maxApplicableDiscount);
+
+        if (effectiveCustomerId) {
+          const pointsToDeduct = Math.round(maxApplicableDiscount * 10);
+          await tx.customer.update({
+            where: { id: effectiveCustomerId },
+            data: {
+              loyaltyPoints: { decrement: pointsToDeduct },
+            },
+          });
+        }
+      }
+
+      const taxableBase = subtotal.minus(discountAmount);
+      const taxAmount = taxableBase.greaterThan(0)
+        ? taxableBase.minus(taxableBase.dividedBy(1.05)).toDecimalPlaces(2)
+        : new Prisma.Decimal(0);
+
+      const totalAmount = subtotal
+        .plus(shippingAmount)
+        .minus(discountAmount);
 
       // Generate Luxury Order Number
       const orderNumber = `MSC-${new Date().getFullYear()}-${randomUUID().slice(0, 18).toUpperCase()}`;
-      // 2. Create Address record
+
+      // 2. Create Address record (optionally link to Customer)
       const address = await tx.address.create({
         data: {
+          customerId:
+            payload.saveAddressToProfile && effectiveCustomerId
+              ? effectiveCustomerId
+              : null,
           fullName: shippingAddress.fullName,
           phone: shippingAddress.phone,
           streetAddress: shippingAddress.addressLine1 || "Dubai",
@@ -124,10 +173,11 @@ export class CheckoutService {
         data: {
           orderNumber,
           guestEmail: shippingAddress.email,
+          customerId: effectiveCustomerId || null,
           status: OrderStatus.PENDING,
           currency,
           subtotal,
-          discountAmount: 0,
+          discountAmount,
           taxAmount,
           shippingAmount,
           totalAmount,
@@ -153,7 +203,7 @@ export class CheckoutService {
         },
       });
 
-      // 4. Reserve inventory for 15 minutes
+      // 4. Reserve inventory for 35 minutes
       await InventoryService.reserveInventory(
         {
           items: itemsToReserve,
@@ -164,7 +214,20 @@ export class CheckoutService {
         tx,
       );
 
-      // 5. Clear cart items
+      // 5. Award loyalty points to customer (1 point per AED spent)
+      if (effectiveCustomerId) {
+        const pointsEarned = Math.floor(totalAmount.toNumber());
+        if (pointsEarned > 0) {
+          await tx.customer.update({
+            where: { id: effectiveCustomerId },
+            data: {
+              loyaltyPoints: { increment: pointsEarned },
+            },
+          });
+        }
+      }
+
+      // 6. Clear cart items
       await tx.cartItem.deleteMany({
         where: { cartId: cart.id },
       });
@@ -183,7 +246,8 @@ export class CheckoutService {
       },
     });
   }
-  static async getSessionOrders(sessionId: string) {
+
+  static async getSessionOrders(sessionId: string, customerId?: string) {
     const reservations = await prisma.inventoryReservation.findMany({
       where: { sessionId, orderId: { not: null } },
       distinct: ["orderId"],
@@ -191,14 +255,24 @@ export class CheckoutService {
       take: 20,
       select: { orderId: true },
     });
+
+    const reservedOrderIds = reservations.flatMap((res) =>
+      res.orderId ? [res.orderId] : [],
+    );
+
     return prisma.order.findMany({
       where: {
-        id: {
-          in: reservations.flatMap((res) => (res.orderId ? [res.orderId] : [])),
-        },
+        OR: [
+          ...(reservedOrderIds.length > 0 ? [{ id: { in: reservedOrderIds } }] : []),
+          ...(customerId ? [{ customerId }] : []),
+        ],
       },
       orderBy: { createdAt: "desc" },
-      include: { items: true, payments: { orderBy: { createdAt: "desc" } } },
+      include: {
+        items: true,
+        shippingAddress: true,
+        payments: { orderBy: { createdAt: "desc" } },
+      },
     });
   }
 

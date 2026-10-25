@@ -20,11 +20,11 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
 
   return (
     <div
-      className="fixed bottom-6 end-6 sm:bottom-8 sm:end-8 z-40 flex items-center gap-3 pointer-events-auto select-none"
+      className="fixed bottom-24 end-5 sm:bottom-8 sm:end-8 z-50 flex items-center gap-3 pointer-events-auto select-none"
       onMouseEnter={() => setIsOpen(true)}
       onMouseLeave={() => setIsOpen(false)}
     >
-      {/* Floating Glassmorphic Tooltip Card (Appears on Hover/Focus) */}
+      {/* Floating Tooltip Card (Appears on Hover/Focus) */}
       <div
         className={`transition-all duration-300 transform origin-bottom-right rtl:origin-bottom-left ${
           isOpen
@@ -32,8 +32,8 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
             : "opacity-0 translate-y-2 scale-95 pointer-events-none hidden sm:block"
         }`}
       >
-        <div className="ios-glass-card rounded-[20px] p-3.5 sm:p-4 w-64 sm:w-72 shadow-2xl border border-white/40 dark:border-white/10 text-start">
-          <div className="flex items-center justify-between pb-2 border-b border-black/[0.06] dark:border-white/[0.08]">
+        <div className="bg-luxury-surface/95 backdrop-blur-md border border-luxury-border shadow-2xl rounded-sm p-4 w-64 sm:w-72 text-start">
+          <div className="flex items-center justify-between pb-2 border-b border-luxury-border">
             <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-accent">
               {c("VIP OLFACTORY CONCIERGE", "المستشار العطري الخاص")}
             </span>
@@ -46,7 +46,7 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
             </span>
           </div>
 
-          <p className="text-xs text-luxury-muted mt-2 leading-relaxed">
+          <p className="text-xs text-luxury-muted mt-2.5 leading-relaxed">
             {c(
               "Direct white-glove fragrance curation, private batch reserves & GCC gift dispatch via WhatsApp.",
               "استشارة عطرية فورية، حجز الدفعات الخاصة، وتنسيق الإهداء الملكي لدول الخليج عبر واتساب.",
@@ -57,7 +57,7 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="mt-3 flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-medium tracking-wide shadow-md transition-all duration-200 active:scale-95 group/btn"
+            className="mt-3.5 flex items-center justify-center gap-2 w-full py-2.5 px-3 rounded-sm bg-[#128C7E] hover:bg-[#0c6b60] text-white text-xs font-medium tracking-wide shadow-md transition-all duration-200 active:scale-95 group/btn"
           >
             <span>{c("Start Private Consultation", "بدء المحادثة الفورية")}</span>
             <span className="group-hover/btn:translate-x-0.5 rtl:group-hover/btn:-translate-x-0.5 transition-transform">

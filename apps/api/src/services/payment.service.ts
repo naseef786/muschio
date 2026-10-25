@@ -156,12 +156,21 @@ export class PaymentService {
         include: { shippingAddress: true },
       });
       if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
-      if (!order.guestEmail)
+      const email = order.guestEmail || request.customerEmail;
+      if (!email)
         throw new ApiError(
           400,
           "ORDER_EMAIL_REQUIRED",
           "Order email is missing",
         );
+      if (!order.guestEmail && request.customerEmail) {
+        await tx.order.update({
+          where: { id: order.id },
+          data: { guestEmail: request.customerEmail },
+        });
+        order.guestEmail = request.customerEmail;
+      }
+
       if (
         ![OrderStatus.PENDING, OrderStatus.PAYMENT_PENDING].includes(
           order.status as "PENDING" | "PAYMENT_PENDING",

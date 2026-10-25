@@ -76,5 +76,9 @@ export const CheckoutPayloadSchema = z.object({
   currency: CurrencySchema.default("AED"),
   couponCode: z.string().optional(),
   customerNotes: z.string().optional(),
+  customerId: z.string().optional(),
+  saveAddressToProfile: z.boolean().optional(),
+  loyaltyCreditsRedeemed: z.number().nonnegative().optional(),
 });
 export type CheckoutPayload = z.infer<typeof CheckoutPayloadSchema>;
+

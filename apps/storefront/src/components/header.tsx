@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo } from "react";
+import Image from "next/image";
 import { Link, usePathname, useRouter } from "../navigation";
 import {
   Search,
@@ -20,6 +21,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
+import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
 
@@ -98,6 +100,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
   const [query, setQuery] = useState("");
   const cart = useCart();
   const wishlist = useWishlist();
+  const { user, isLoggedIn } = useAuth();
 
   // Scroll lock when side drawer is open
   useEffect(() => {
@@ -213,6 +216,27 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none">
                   {wishlist.itemCount}
                 </span>
+              )}
+            </Link>
+
+            {/* Private Client Suite & Loyalty */}
+            <Link
+              className="desktop-utility relative flex items-center text-luxury-text hover:text-accent transition-colors"
+              href="/account"
+              title={
+                isLoggedIn && user
+                  ? c(`Private Client: ${user.name}`, `حساب العميل: ${user.name}`)
+                  : c("Private Client Suite & Loyalty", "جناح العميل والمكافآت")
+              }
+              aria-label={
+                isLoggedIn && user
+                  ? c(`Private Client Suite, ${user.name}`, `حساب العميل، ${user.name}`)
+                  : c("Private Client Suite", "جناح العميل")
+              }
+            >
+              <User size={20} />
+              {isLoggedIn && (
+                <span className="absolute top-1 end-1 w-2 h-2 rounded-full bg-accent ring-2 ring-luxury-canvas" />
               )}
             </Link>
 
@@ -525,10 +549,21 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 <Link
                   href="/account"
                   onClick={() => setMenu(false)}
-                  className="flex items-center justify-between p-2.5 text-xs text-luxury-text hover:text-accent font-medium transition-colors"
+                  className="flex items-center justify-between p-2.5 rounded-sm border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:text-accent font-medium transition-colors"
                 >
-                  <span>{c("My Account & Concierge", "حسابي والمساعد الشخصي")}</span>
-                  <User size={15} className="opacity-60" />
+                  <span className="flex items-center gap-2">
+                    <User size={15} className="text-accent" />
+                    <span>
+                      {isLoggedIn && user
+                        ? c(`Private Client: ${user.name}`, `حساب العميل: ${user.name}`)
+                        : c("Private Client & Loyalty", "جناح العميل والمكافآت")}
+                    </span>
+                  </span>
+                  {isLoggedIn && (
+                    <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-accent/15 text-accent rounded-sm">
+                      {user?.tier === "GOLD_SILLAGE" ? "Gold Sillage" : "Privilege"}
+                    </span>
+                  )}
                 </Link>
                 <Link
                   href="/wishlist"
@@ -755,8 +790,33 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
               </button>
             </div>
 
+            {/* Complimentary White-Glove GCC Express Delivery Indicator */}
+            {cart.items.length > 0 && (
+              <div className="p-3.5 sm:p-4 bg-luxury-surface2 border-b border-luxury-border">
+                <div className="flex items-center justify-between text-xs mb-1.5">
+                  <span className="text-luxury-text font-medium text-[11px] sm:text-xs">
+                    {cart.subtotal >= 500
+                      ? c("Complimentary GCC White-Glove Delivery Unlocked", "الشحن السريع المبرد المجاني مفعل لطلبك")
+                      : c(
+                          `Add AED ${Math.max(0, 500 - cart.subtotal)} for Complimentary Delivery`,
+                          `أضف ${Math.max(0, 500 - cart.subtotal)} درهم للحصول على شحن مجاني`,
+                        )}
+                  </span>
+                  <span className="text-[10px] font-mono font-semibold text-accent">
+                    {Math.min(100, Math.round((cart.subtotal / 500) * 100))}%
+                  </span>
+                </div>
+                <div className="w-full h-1 bg-luxury-border overflow-hidden rounded-full">
+                  <div
+                    className="h-full bg-accent transition-all duration-300"
+                    style={{ width: `${Math.min(100, Math.round((cart.subtotal / 500) * 100))}%` }}
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Drawer Body */}
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 p-5 sm:p-6 overflow-y-auto">
               {!cart.items.length ? (
                 <div className="space-y-4 py-16 text-center">
                   <ShoppingBag size={40} className="mx-auto text-luxury-muted opacity-40" />
@@ -777,76 +837,100 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
               ) : (
                 <div className="divide-y divide-luxury-border">
                   {cart.items.map((item) => (
-                    <div className="py-4 flex gap-4" key={item.id}>
-                      <div className="flex-1">
-                        <p className="text-[11px] font-sans font-medium uppercase tracking-wider text-luxury-muted">
+                    <div className="py-4 flex gap-3.5 sm:gap-4 items-start" key={item.id}>
+                      <div className="relative w-16 h-20 bg-luxury-surface2 border border-luxury-border flex-shrink-0 overflow-hidden flex items-center justify-center">
+                        {item.image ? (
+                          <Image
+                            src={item.image}
+                            alt={ar ? item.titleAr : item.title}
+                            fill
+                            className="object-contain p-1"
+                            sizes="64px"
+                          />
+                        ) : (
+                          <Sparkles size={16} className="text-luxury-muted/40" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-sans font-medium uppercase tracking-wider text-accent truncate">
                           {item.brand}
                         </p>
                         <Link
                           href={`/product/${item.slug}`}
                           onClick={() => cart.setCartDrawerOpen(false)}
-                          className="font-serif text-lg text-luxury-text hover:underline block my-0.5"
+                          className="font-serif text-base text-luxury-text hover:underline block my-0.5 truncate"
                         >
                           {ar ? item.titleAr : item.title}
                         </Link>
-                        <p className="text-xs text-luxury-muted my-1">{item.sizeLabel}</p>
-                        <div className="flex items-center gap-3 mt-3">
+                        <p className="text-xs text-luxury-muted">{item.sizeLabel}</p>
+                        <div className="flex items-center gap-2.5 mt-2.5">
                           <button
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, -1)}
                             aria-label={c("Decrease quantity", "تقليل الكمية")}
-                            className="p-1 border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
+                            className="w-6 h-6 flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
                           >
-                            <Minus size={12} />
+                            <Minus size={11} />
                           </button>
-                          <span className="text-xs font-medium text-luxury-text">{item.quantity}</span>
+                          <span className="text-xs font-mono font-medium text-luxury-text">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, 1)}
                             aria-label={c("Increase quantity", "زيادة الكمية")}
-                            className="p-1 border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
+                            className="w-6 h-6 flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
                           >
-                            <Plus size={12} />
+                            <Plus size={11} />
                           </button>
                           <button
-                            className="text-xs text-luxury-muted hover:text-[#d2042d] ms-auto underline"
+                            className="text-[11px] text-luxury-muted hover:text-[#d2042d] ms-auto underline"
                             onClick={() => cart.removeItem(item.id)}
                           >
                             {c("Remove", "حذف")}
                           </button>
                         </div>
                       </div>
-                      <PriceDisplay
-                        price={item.price * item.quantity}
-                        locale={locale}
-                        size="sm"
-                      />
+                      <div className="text-end flex-shrink-0">
+                        <PriceDisplay
+                          price={item.price * item.quantity}
+                          locale={locale}
+                          size="sm"
+                        />
+                      </div>
                     </div>
                   ))}
                 </div>
               )}
             </div>
 
-            {/* Drawer Footer with Checkout CTA */}
+            {/* Drawer Footer with Dual Checkout / View Bag CTAs */}
             {cart.items.length > 0 && (
-              <div className="p-6 border-t border-luxury-border bg-luxury-surface space-y-4">
+              <div className="p-5 sm:p-6 border-t border-luxury-border bg-luxury-surface space-y-3.5">
                 <div className="flex justify-between text-sm font-medium text-luxury-text">
                   <span>{c("Subtotal", "المجموع الفرعي")}</span>
                   <PriceDisplay price={cart.subtotal} locale={locale} size="sm" />
                 </div>
-                <p className="text-[11px] text-luxury-muted">
+                <p className="text-[11px] text-luxury-muted leading-relaxed">
                   {c(
-                    "Taxes, delivery, and authenticity verified at checkout.",
-                    "يتم تأكيد التوصيل والضرائب والأصالة عند إتمام الطلب.",
+                    "Complimentary 2ml discovery vial & Certificate of Authenticity included.",
+                    "مرفق عينة ٢ مل مجانية للتجربة مع شهادة الأصالة الرسمية المعتمدة.",
                   )}
                 </p>
-                <Link
-                  href="/checkout"
-                  className="editorial-button w-full text-center block"
-                  onClick={() => cart.setCartDrawerOpen(false)}
-                >
-                  {c("Proceed to Checkout", "متابعة لإتمام الطلب")}
-                </Link>
+                <div className="space-y-2 pt-1">
+                  <Link
+                    href="/checkout"
+                    className="editorial-button w-full text-center block"
+                    onClick={() => cart.setCartDrawerOpen(false)}
+                  >
+                    {c("Proceed to Checkout", "متابعة لإتمام الطلب")}
+                  </Link>
+                  <Link
+                    href="/cart"
+                    className="editorial-button-secondary w-full text-center block text-xs"
+                    onClick={() => cart.setCartDrawerOpen(false)}
+                  >
+                    {c("View Full Shopping Bag", "عرض حقيبة التسوق بالتفصيل")}
+                  </Link>
+                </div>
               </div>
             )}
           </aside>

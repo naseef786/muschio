@@ -159,7 +159,7 @@ export default function BrandsDirectoryPage({
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row items-center justify-between gap-4 py-3 border-y border-luxury-border">
           {/* Alphabet Index */}
-          <div className="flex items-center gap-1 overflow-x-auto w-full md:w-auto pb-1 md:pb-0">
+          <div className="flex items-center gap-1 overflow-x-auto no-scrollbar w-full md:w-auto pb-1 md:pb-0">
             {ALPHABET.map((letter) => (
               <button
                 key={letter}
@@ -196,12 +196,12 @@ export default function BrandsDirectoryPage({
           {c("No fragrance houses found matching your search.", "لم يتم العثور على دور عطور مطابقة للبحث.")}
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filtered.map((brand) => (
             <Link
               key={brand.slug}
               href={`/brands/${brand.slug}`}
-              className="group border border-luxury-border bg-luxury-surface p-6 flex flex-col justify-between hover:border-luxury-borderBold transition-all"
+              className="group border border-luxury-border bg-luxury-surface p-4 sm:p-6 flex flex-col justify-between hover:border-luxury-borderBold transition-all"
             >
               <div>
                 <div className="flex items-center justify-between text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted pb-3 border-b border-luxury-border">

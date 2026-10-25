@@ -5,6 +5,9 @@ import {
   CheckoutPayload,
   AIScentConsultationInput,
   AIScentConsultationResponse,
+  ClientProfile,
+  SavedAddress,
+  CreateSavedAddress,
 } from "@muschio/types";
 import { z } from "zod";
 import { StorefrontProductSchema, StorefrontProduct } from "@muschio/types";
@@ -50,7 +53,7 @@ async function apiRequest<T>(
 ): Promise<T | null> {
   try {
     if (!API_ORIGIN && process.env.NODE_ENV === "production") return null;
-    const secured = /^\/(cart|checkout|orders|payments\/session)(\/|\?|$)/.test(
+    const secured = /^\/(cart|checkout|orders|payments\/session|auth\/(me|profile)|customers\/addresses)(\/|\?|$)/.test(
       endpoint,
     );
     const token = secured ? await guestToken() : null;
@@ -180,9 +183,17 @@ export const muschioApi = {
       cache: "no-store",
     });
   },
-  async getOrder(orderNumber: string): Promise<StorefrontOrder | null> {
+  async getOrder(
+    orderNumber: string,
+    options?: { email?: string; phone?: string },
+  ): Promise<StorefrontOrder | null> {
+    const params = new URLSearchParams();
+    if (options?.email) params.append("email", options.email);
+    if (options?.phone) params.append("phone", options.phone);
+    const queryString = params.toString();
+
     const result = await apiRequest<unknown>(
-      `/orders/lookup/${encodeURIComponent(orderNumber)}`,
+      `/orders/lookup/${encodeURIComponent(orderNumber)}${queryString ? `?${queryString}` : ""}`,
       { cache: "no-store" },
     );
     const parsed = StorefrontOrderSchema.safeParse(result);
@@ -192,6 +203,119 @@ export const muschioApi = {
     const result = await apiRequest<unknown>("/orders", { cache: "no-store" });
     const parsed = z.array(StorefrontOrderSchema).safeParse(result);
     return parsed.success ? parsed.data : null;
+  },
+
+  // Customer Authentication & Private Client Privilege
+  async loginCustomer(email: string, password?: string): Promise<{
+    customer: ClientProfile;
+    addresses: SavedAddress[];
+    token: string;
+  } | null> {
+    const res = await apiRequest<{
+      customer: ClientProfile;
+      addresses: SavedAddress[];
+      token: string;
+    }>("/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+      cache: "no-store",
+    });
+    if (res?.token && typeof window !== "undefined") {
+      localStorage.setItem("muschio_session_token", res.token);
+    }
+    return res;
+  },
+
+  async registerCustomer(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    password?: string;
+  }): Promise<{
+    customer: ClientProfile;
+    addresses: SavedAddress[];
+    token: string;
+  } | null> {
+    const res = await apiRequest<{
+      customer: ClientProfile;
+      addresses: SavedAddress[];
+      token: string;
+    }>("/auth/register", {
+      method: "POST",
+      body: JSON.stringify(data),
+      cache: "no-store",
+    });
+    if (res?.token && typeof window !== "undefined") {
+      localStorage.setItem("muschio_session_token", res.token);
+    }
+    return res;
+  },
+
+  async getCustomerProfile(): Promise<{
+    customer: ClientProfile;
+    addresses: SavedAddress[];
+  } | null> {
+    return apiRequest<{
+      customer: ClientProfile;
+      addresses: SavedAddress[];
+    }>("/auth/me", { cache: "no-store" });
+  },
+
+  async updateCustomerProfile(data: any): Promise<ClientProfile | null> {
+    return apiRequest<ClientProfile>("/auth/profile", {
+      method: "PATCH",
+      body: JSON.stringify(data),
+      cache: "no-store",
+    });
+  },
+
+  // Saved Addresses
+  async getSavedAddresses(): Promise<SavedAddress[] | null> {
+    return apiRequest<SavedAddress[]>("/customers/addresses", {
+      cache: "no-store",
+    });
+  },
+
+  async createSavedAddress(
+    input: CreateSavedAddress,
+  ): Promise<SavedAddress | null> {
+    return apiRequest<SavedAddress>("/customers/addresses", {
+      method: "POST",
+      body: JSON.stringify(input),
+      cache: "no-store",
+    });
+  },
+
+  async updateSavedAddress(
+    id: string,
+    input: Partial<CreateSavedAddress>,
+  ): Promise<SavedAddress | null> {
+    return apiRequest<SavedAddress>(`/customers/addresses/${encodeURIComponent(id)}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+      cache: "no-store",
+    });
+  },
+
+  async deleteSavedAddress(id: string): Promise<boolean> {
+    const res = await apiRequest<{ success: boolean }>(
+      `/customers/addresses/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        cache: "no-store",
+      },
+    );
+    return Boolean(res?.success);
+  },
+
+  async setDefaultSavedAddress(id: string): Promise<SavedAddress | null> {
+    return apiRequest<SavedAddress>(
+      `/customers/addresses/${encodeURIComponent(id)}/default`,
+      {
+        method: "POST",
+        cache: "no-store",
+      },
+    );
   },
 
   // AI Scent Discovery
@@ -226,3 +350,4 @@ export const muschioApi = {
     return apiRequest<any[]>("/content/sections");
   },
 };
+

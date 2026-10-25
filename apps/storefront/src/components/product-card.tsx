@@ -63,15 +63,15 @@ export function ProductCard({
 
   return (
     <div
-      className="group relative flex flex-col h-full rounded-[24px] p-3 sm:p-3.5 ios-glass-card transition-all duration-300"
+      className="group relative flex flex-col h-full border border-luxury-border bg-luxury-surface hover:border-luxury-muted p-2.5 sm:p-3.5 transition-all duration-300 rounded-sm"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* 4:5 Aspect Ratio Image Canvas with Discreet Wishlist & Badge */}
-      <div className="relative aspect-[4/5] w-full rounded-[18px] ios-glass-canvas overflow-hidden flex items-center justify-center">
+      <div className="relative aspect-[4/5] w-full bg-luxury-surface2 border border-luxury-border/60 overflow-hidden flex items-center justify-center rounded-sm">
         {/* Subtle Badge (pinned to top start/left) */}
         {badge && (
-          <span className="absolute top-3 start-3 left-3 rtl:left-auto rtl:right-3 z-10 max-w-[calc(100%-4.25rem)] truncate text-[9px] md:text-[10px] font-sans font-semibold uppercase tracking-[0.14em] px-3 py-1 rounded-full ios-glass-pill text-luxury-text pointer-events-none select-none">
+          <span className="absolute top-2.5 start-2.5 left-2.5 rtl:left-auto rtl:right-2.5 z-10 max-w-[calc(100%-3.5rem)] truncate text-[9px] md:text-[10px] font-sans font-semibold uppercase tracking-[0.14em] px-2.5 py-1 bg-luxury-surface/90 backdrop-blur-sm border border-luxury-border text-luxury-text pointer-events-none select-none">
             {badge}
           </span>
         )}
@@ -98,18 +98,18 @@ export function ProductCard({
               ? "إضافة للمفضلة"
               : "Save to Private Vault"
           }
-          className={`group/wishlist absolute top-3 end-3 right-3 rtl:right-auto rtl:left-3 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+          className={`group/wishlist absolute top-2.5 end-2.5 right-2.5 rtl:right-auto rtl:left-2.5 z-20 w-8 h-8 sm:w-9 sm:h-9 rounded-sm flex items-center justify-center transition-all duration-200 active:scale-90 ${
             isWishlisted
-              ? "bg-accent/15 text-accent border border-accent/40 ring-2 ring-accent/20 backdrop-blur-xl shadow-sm"
-              : "ios-glass-pill text-luxury-muted hover:text-luxury-text hover:scale-105"
+              ? "bg-accent/15 text-accent border border-accent/40 shadow-sm"
+              : "bg-luxury-surface/90 hover:bg-luxury-surface text-luxury-muted hover:text-luxury-text border border-luxury-border shadow-sm"
           }`}
         >
           <Heart
-            size={16}
+            size={15}
             className={`transition-all duration-200 ${
               isWishlisted
-                ? "fill-accent text-accent scale-105 drop-shadow-[0_1px_3px_rgba(197,168,128,0.45)]"
-                : "text-luxury-muted group-hover/wishlist:text-luxury-text group-hover/wishlist:scale-110"
+                ? "fill-accent text-accent scale-105"
+                : "text-luxury-muted group-hover/wishlist:text-luxury-text"
             }`}
           />
         </button>
@@ -157,7 +157,7 @@ export function ProductCard({
         </div>
 
         {/* Price */}
-        <div className="mt-2.5 pt-2 border-t border-black/[0.04] dark:border-white/[0.06] flex items-center justify-between">
+        <div className="mt-2.5 pt-2 border-t border-luxury-border flex items-center justify-between">
           <PriceDisplay
             price={price}
             compareAtPrice={compareAtPrice}

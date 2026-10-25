@@ -92,29 +92,31 @@ export default function FragranceGuidePage({
         </p>
       </section>
 
-      {/* 2. NAVIGATION PILLS */}
-      <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-4 flex flex-wrap gap-2">
-        {modules.map((m) => {
-          const Icon = m.icon;
-          return (
-            <button
-              key={m.id}
-              onClick={() => setActiveTab(m.id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-xs font-sans uppercase tracking-wider transition-all ${
-                activeTab === m.id
-                  ? "bg-accent text-white font-semibold shadow-sm"
-                  : "bg-luxury-canvas border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
-              }`}
-            >
-              <Icon size={14} />
-              <span>{isAr ? m.titleAr : m.titleEn}</span>
-            </button>
-          );
-        })}
+      {/* 2. NAVIGATION PILLS (Horizontal Scroll on Mobile) */}
+      <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-2 sm:p-4 overflow-x-auto no-scrollbar">
+        <div className="flex items-center gap-2 min-w-max">
+          {modules.map((m) => {
+            const Icon = m.icon;
+            return (
+              <button
+                key={m.id}
+                onClick={() => setActiveTab(m.id)}
+                className={`flex items-center gap-2 px-3.5 sm:px-4 py-2 sm:py-2.5 text-xs font-sans uppercase tracking-wider transition-all whitespace-nowrap ${
+                  activeTab === m.id
+                    ? "bg-accent text-white font-semibold shadow-sm"
+                    : "bg-luxury-canvas border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-zinc-400"
+                }`}
+              >
+                <Icon size={14} />
+                <span>{isAr ? m.titleAr : m.titleEn}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* 3. ACTIVE MODULE DISPLAY */}
-      <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-8 sm:p-12 space-y-12">
+      <div className="border border-zinc-200 dark:border-zinc-800 bg-luxury-surface p-5 sm:p-8 lg:p-12 space-y-10">
         {activeTab === "pyramid" && (
           <div className="space-y-10">
             <div className="space-y-3">
@@ -307,8 +309,8 @@ export default function FragranceGuidePage({
                 </h3>
                 <p className="text-xs text-zinc-500 font-sans max-w-lg">
                   {isAr
-                    ? "اختر 5 عينات نيش نادرة بقيمة 290 درهم واحصل على قسيمة خصم 100% مستردة عند شراء أي زجاجة كاملة."
-                    : "Choose 5 rare vials for 290 AED with a 100% redeemable voucher credited toward your next full-bottle purchase."}
+                    ? "اختر 5 عينات نيش نادرة بقيمة 280 درهم واحصل على قسيمة خصم 100% مستردة عند شراء أي زجاجة كاملة."
+                    : "Choose 5 rare vials for 280 AED with a 100% redeemable voucher credited toward your next full-bottle purchase."}
                 </p>
               </div>
 
@@ -321,22 +323,131 @@ export default function FragranceGuidePage({
           </div>
         )}
 
-        {/* Fallback for other tabs */}
-        {(activeTab === "families" || activeTab === "layering") && (
-          <div className="space-y-6">
-            <h2 className="font-serif text-3xl text-zinc-900 dark:text-zinc-100">
-              {activeTab === "families"
-                ? isAr ? "العائلات العطرية الخالدة" : "The Olfactory Families"
-                : isAr ? "فن المزج الملكي والطبقات" : "The Royal Art of Scent Layering"}
-            </h2>
-            <p className="text-xs sm:text-sm text-zinc-500 font-sans max-w-xl">
-              {isAr
-                ? "في التقاليد الخليجية، يتم مزج دهن العود المعتق على نقاط النبض مع رش خلاصة الورد الطائفي أو الفانيليا لتكوين بصمة عطرية فريدة لا تتكرر."
-                : "In Gulf tradition, aged agarwood attar is warmed on wrists and collar before layering with a regal rose or smoky incense extrait."}
-            </p>
-            <Button asChild variant="outline" size="sm">
-              <Link href="/notes">{isAr ? "استكشف مكتبة النوتات" : "Explore Notes Library"}</Link>
-            </Button>
+        {/* Scent Families Module */}
+        {activeTab === "families" && (
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <Badge variant="gold">{isAr ? "العائلات العطرية" : "Olfactory Pillars"}</Badge>
+              <h2 className="font-serif text-3xl sm:text-4xl text-zinc-900 dark:text-zinc-100">
+                {isAr ? "العائلات العطرية الكبرى في عالم النيش" : "The Great Scent Families of Haute Niche"}
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 font-sans max-w-2xl leading-relaxed">
+                {isAr
+                  ? "تُصنف العطور النيش إلى ركائز عطرية تعبر عن شخصية مرتديها وهالته في المكان."
+                  : "Authentic extraits are categorized into core olfactory pillars defining presence, mood, and seasonal harmony."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-2">
+                <span className="text-xs font-mono text-accent font-bold">01. ORIENTAL & AMBER</span>
+                <h4 className="font-serif text-lg text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "الشرقية والعنبرية" : "Amber & Oriental"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr ? "دفء اللبان، العنبر الأشهب والعود الملكي لأمسيات مهيبة." : "Resinous frankincense, ambergris, and rich balsam for regal occasions."}
+                </p>
+              </div>
+
+              <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-2">
+                <span className="text-xs font-mono text-accent font-bold">02. WOODS & SMOKE</span>
+                <h4 className="font-serif text-lg text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "الأخشاب والدخان" : "Woods & Smoke"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr ? "دهن العود الكمبودي المعتق وخشب الصندل العتيق والجلود." : "Aged wild Cambodian agarwood, Mysore sandalwood, and birch tar."}
+                </p>
+              </div>
+
+              <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-2">
+                <span className="text-xs font-mono text-accent font-bold">03. NOBLE FLORALS</span>
+                <h4 className="font-serif text-lg text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "الزهور النبيلة" : "Regal Florals"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr ? "ورد الطائف الجبلي وسوسن فلورنسا المخملي الفاخر." : "Dawn-harvested Taif rose and 3-year macerated Florentine orris."}
+                </p>
+              </div>
+
+              <div className="p-5 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-2">
+                <span className="text-xs font-mono text-accent font-bold">04. FRESH & CITRUS</span>
+                <h4 className="font-serif text-lg text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "الحمضيات والأخشاب المنعشة" : "Fresh & Solar"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr ? "برغموت كالابريا ونجيل الهند لإشراقة صباحية راقية." : "Calabrian bergamot, Haitian vetiver, and crisp solar notes."}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button asChild variant="outline" size="sm">
+                <Link href="/notes">{isAr ? "استكشف مكتبة النوتات" : "Explore Notes Compendium"} →</Link>
+              </Button>
+            </div>
+          </div>
+        )}
+
+        {/* Royal Layering Module */}
+        {activeTab === "layering" && (
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <Badge variant="gold">{isAr ? "فن التعطير الملكي" : "Gulf Heritage Art"}</Badge>
+              <h2 className="font-serif text-3xl sm:text-4xl text-zinc-900 dark:text-zinc-100">
+                {isAr ? "طقوس المزج والطبقات (The Art of Layering)" : "The Sacred Three-Step Gulf Layering Ritual"}
+              </h2>
+              <p className="text-xs sm:text-sm text-zinc-500 font-sans max-w-2xl leading-relaxed">
+                {isAr
+                  ? "في المجالس والقصور الخليجية، المزج ليس تجربة عشوائية بل هو هندسة جزيئية دقيقة تبدأ بالقاعدة الدهنية وتتوج بالرذاذ الخفيف."
+                  : "In royal Gulf majalis, layering is an architectural choreography of molecular weights: oil anchor, floral heart mist, and extrait sillage halo."}
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="p-6 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-3">
+                <span className="text-xs font-mono font-bold text-accent">STEP 1. THE ANCHOR</span>
+                <h4 className="font-serif text-xl text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "القاعدة الزيتية النبيلة" : "The Resinous Oil Anchor"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr
+                    ? "دفء قطرة واحدة من دهن العود المعتق أو اللبان الحوجري على المعصمين وجانبي العنق لتثبيت العطر على البشرة."
+                    : "Warm a single drop of aged agarwood attar between wrists and neck hollow. Natural oils bind to skin lipids to prevent heat flashoff."}
+                </p>
+              </div>
+
+              <div className="p-6 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-3">
+                <span className="text-xs font-mono font-bold text-accent">STEP 2. THE FABRIC MIST</span>
+                <h4 className="font-serif text-xl text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "نثر النفحات على الرداء" : "The Garment Floral Veil"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr
+                    ? "رش خلاصة ورد الطائف أو العنبر على الياقة وأطراف الأكمام لضمان فوحان بلوري نقي في القاعات المكيفة."
+                    : "Mist crisp Taif rose or saffron onto collar and cuff fabric. Fabrics insulate volatile notes from body heat, preserving crystal projection."}
+                </p>
+              </div>
+
+              <div className="p-6 border border-zinc-200 dark:border-zinc-800 bg-luxury-canvas space-y-3">
+                <span className="text-xs font-mono font-bold text-accent">STEP 3. THE EXTRAIT HALO</span>
+                <h4 className="font-serif text-xl text-zinc-900 dark:text-zinc-100">
+                  {isAr ? "الهالة العطرية الختامية" : "The Extrait Sillage Halo"}
+                </h4>
+                <p className="text-xs text-zinc-500 font-sans leading-relaxed">
+                  {isAr
+                    ? "رشتان من إكستري دو بارفان عالي التركيز في الهواء والعبور من خلاله ليحيط بك سحر عطري متكامل يدوم لأيام."
+                    : "A generous mist of 50%+ extrait de parfum overhead. The heavy droplets seal the layered notes into an unmistakable 24-hour signature."}
+                </p>
+              </div>
+            </div>
+
+            <div className="pt-2">
+              <Button asChild variant="accent" size="sm">
+                <Link href="/journal/art-of-layering-oud-and-taif-rose">
+                  {isAr ? "اقرأ المقال الكامل عن فن المزج" : "Read the Comprehensive Layering Essay"} →
+                </Link>
+              </Button>
+            </div>
           </div>
         )}
       </div>

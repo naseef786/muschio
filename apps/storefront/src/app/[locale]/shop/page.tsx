@@ -525,7 +525,7 @@ export default function ShopCatalogPage({
           onClick={() => setMobileSortOpen(false)}
         >
           <div
-            className="w-full bg-luxury-canvas p-6 rounded-t-lg shadow-2xl space-y-4"
+            className="w-full bg-luxury-canvas p-6 rounded-t-sm border-t border-luxury-border shadow-2xl space-y-4"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center justify-between pb-3 border-b border-luxury-border">

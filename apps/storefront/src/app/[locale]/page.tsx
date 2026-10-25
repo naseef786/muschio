@@ -227,7 +227,7 @@ export default async function HomePage({
             <Link
               key={href}
               href={href!}
-              className="ios-glass-card p-5 sm:p-6 flex flex-col justify-between group h-32"
+              className="border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 sm:p-6 flex flex-col justify-between group h-32 transition-all duration-300 rounded-sm"
             >
               <div className="flex items-center justify-between mb-2">
                 <span className="eyebrow text-[10px]">{subtitle}</span>
@@ -299,7 +299,7 @@ export default async function HomePage({
             <Link
               key={house.slug}
               href={`/brands/${house.slug}`}
-              className="ios-glass-card p-6 flex flex-col justify-between group h-44"
+              className="border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
             >
               <div>
                 <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted block">
@@ -309,7 +309,7 @@ export default async function HomePage({
                   {house.name}
                 </h3>
               </div>
-              <div className="flex items-center justify-between text-xs text-luxury-muted pt-4 border-t border-black/[0.04] dark:border-white/[0.06]">
+              <div className="flex items-center justify-between text-xs text-luxury-muted pt-4 border-t border-luxury-border">
                 <span>{c(house.descEn, house.descAr)}</span>
                 <ArrowUpRight size={14} className="text-luxury-text group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
               </div>
@@ -339,7 +339,7 @@ export default async function HomePage({
             <Link
               key={n.slug}
               href={`/notes/${n.slug}`}
-              className="ios-glass-card p-5 flex flex-col justify-between group h-36"
+              className="border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-accent font-medium">
@@ -362,7 +362,7 @@ export default async function HomePage({
 
       {/* 6. Bespoke Discovery Sets Feature */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid grid-cols-1 md:grid-cols-12 rounded-[28px] ios-glass-card overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-12 border border-luxury-border bg-luxury-surface overflow-hidden rounded-sm">
           <div className="md:col-span-5 relative min-h-[340px] bg-luxury-surface2">
             <Image
               src={photo("photo-1592945403244-b3fbafd7f539", 1000)}
@@ -411,7 +411,7 @@ export default async function HomePage({
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 rounded-[28px] ios-glass-card p-6 sm:p-10 overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border border-luxury-border bg-luxury-surface p-6 sm:p-10 lg:p-12 overflow-hidden rounded-sm">
           <div className="md:col-span-7 space-y-4 flex flex-col justify-center">
             <span className="eyebrow text-accent">{c("RITUALS OF THE GULF", "طقوس الخليج")}</span>
             <h3 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal leading-snug">
@@ -435,7 +435,7 @@ export default async function HomePage({
               </Link>
             </div>
           </div>
-          <div className="md:col-span-5 relative min-h-[260px] bg-luxury-surface2 rounded-[20px] overflow-hidden border border-black/[0.04] dark:border-white/[0.06]">
+          <div className="md:col-span-5 relative min-h-[260px] bg-luxury-surface2 border border-luxury-border overflow-hidden rounded-sm">
             <Image
               src={photo("photo-1594035910387-fea47794261f", 800)}
               alt="Fragrance Layering Ritual"
@@ -449,7 +449,7 @@ export default async function HomePage({
 
       {/* 8. Service Guarantees (Verified Level Shoes Client Trust Bar) */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-8 rounded-[28px] ios-glass-card text-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-8 border border-luxury-border bg-luxury-surface text-center rounded-sm">
           <div className="flex flex-col items-center space-y-2 p-4">
             <ShieldCheck size={24} className="text-accent" />
             <h4 className="text-xs font-sans font-medium uppercase tracking-wider text-luxury-text">
@@ -462,7 +462,7 @@ export default async function HomePage({
               )}
             </p>
           </div>
-          <div className="flex flex-col items-center space-y-2 p-4 border-t sm:border-t-0 sm:border-s border-black/[0.04] dark:border-white/[0.06]">
+          <div className="flex flex-col items-center space-y-2 p-4 border-t sm:border-t-0 sm:border-s border-luxury-border">
             <Truck size={24} className="text-accent" />
             <h4 className="text-xs font-sans font-medium uppercase tracking-wider text-luxury-text">
               {c("GCC White-Glove Delivery", "شحن سريع لكافة دول الخليج")}
@@ -474,7 +474,7 @@ export default async function HomePage({
               )}
             </p>
           </div>
-          <div className="flex flex-col items-center space-y-2 p-4 border-t lg:border-t-0 lg:border-s border-black/[0.04] dark:border-white/[0.06]">
+          <div className="flex flex-col items-center space-y-2 p-4 border-t lg:border-t-0 lg:border-s border-luxury-border">
             <Package size={24} className="text-accent" />
             <h4 className="text-xs font-sans font-medium uppercase tracking-wider text-luxury-text">
               {c("Complimentary 2ml Sample", "عينة ٢ مل مجانية مع كل طلب")}
@@ -486,7 +486,7 @@ export default async function HomePage({
               )}
             </p>
           </div>
-          <div className="flex flex-col items-center space-y-2 p-4 border-t sm:border-t-0 sm:border-s border-black/[0.04] dark:border-white/[0.06]">
+          <div className="flex flex-col items-center space-y-2 p-4 border-t sm:border-t-0 sm:border-s border-luxury-border">
             <Sparkles size={24} className="text-accent" />
             <h4 className="text-xs font-sans font-medium uppercase tracking-wider text-luxury-text">
               {c("Fragrance Concierge", "مستشار العطور الخاص")}
