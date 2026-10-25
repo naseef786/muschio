@@ -131,3 +131,4 @@ export { CartService } from "./services/cart.service";
 export { CheckoutService } from "./services/checkout.service";
 export { PaymentService } from "./services/payment.service";
 export { storefrontOrder } from "./services/storefront-order";
+export { CloudinaryService } from "./services/cloudinary.service";

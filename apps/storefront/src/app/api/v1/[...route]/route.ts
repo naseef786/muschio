@@ -13,6 +13,7 @@ import {
   storefrontProduct,
   storefrontOrder,
   prisma,
+  CloudinaryService,
 } from "@muschio/api";
 
 if (!process.env.DATABASE_URL) {
@@ -21,6 +22,15 @@ if (!process.env.DATABASE_URL) {
 }
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
+}
+if (!process.env.CLOUDINARY_CLOUD_NAME) {
+  process.env.CLOUDINARY_CLOUD_NAME = "zwkad4sz";
+}
+if (!process.env.CLOUDINARY_API_KEY) {
+  process.env.CLOUDINARY_API_KEY = "287343912324243";
+}
+if (!process.env.CLOUDINARY_API_SECRET) {
+  process.env.CLOUDINARY_API_SECRET = "YFAeE_1UdoL5Xlr05jOYspbNQnA";
 }
 
 export const dynamic = "force-dynamic";
@@ -312,6 +322,28 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(address);
     }
 
+    // 10. Media: Direct Upload
+    if (path === "media/upload") {
+      if (!body?.file || typeof body.file !== "string") {
+        return error("INVALID_INPUT", "file (string or data URI) is required", 400);
+      }
+      const result = await CloudinaryService.uploadImage({
+        file: body.file,
+        folder: body.folder,
+        publicId: body.publicId,
+        tags: body.tags,
+        overwrite: body.overwrite,
+      });
+      return success(result, 201);
+    }
+
+    // 11. Media: Upload Signature
+    if (path === "media/sign") {
+      const folder = body?.folder || "muschio/uploads";
+      const signature = CloudinaryService.generateSignature(folder);
+      return success(signature);
+    }
+
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route POST Error:", err);
@@ -380,6 +412,19 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
       const { customerId } = getAuth(req);
       if (!customerId) return error("UNAUTHORIZED", "Client session required", 401);
       const result = await CustomerService.deleteAddress(customerId, addressId);
+      return success(result);
+    }
+
+    // 3. Media: Delete Image
+    if (route[0] === "media") {
+      const url = new URL(req.url);
+      let body: any = {};
+      try {
+        body = await req.json();
+      } catch {}
+      const publicId = (url.searchParams.get("publicId") || body?.publicId) as string;
+      if (!publicId) return error("INVALID_INPUT", "publicId is required", 400);
+      const result = await CloudinaryService.deleteImage(publicId);
       return success(result);
     }
 

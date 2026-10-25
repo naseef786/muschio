@@ -22,6 +22,8 @@ import { PaymentService } from "../services/payment.service";
 import { AIScentDiscoveryService } from "../services/ai-discovery.service";
 import { DiscoverySetService } from "../services/discovery-set.service";
 import { JournalService } from "../services/journal.service";
+import { CloudinaryService } from "../services/cloudinary.service";
+
 import { AdminService } from "../services/admin.service";
 import { marketService } from "../services/market.service";
 import { InventoryService } from "../services/inventory.service";
@@ -1155,5 +1157,50 @@ router.post(
     }
   },
 );
+// -------------------------------------------------------------
+// 14. MEDIA & CLOUDINARY STORAGE
+// -------------------------------------------------------------
 
-export { router as apiRouter };
+router.post("/media/upload", sessionLimiter, async (req, res, next) => {
+  try {
+    const { file, folder, publicId, tags, overwrite } = req.body || {};
+    if (!file || typeof file !== "string") {
+      throw new ApiError(400, "INVALID_INPUT", "file (string or data URI) is required");
+    }
+    const result = await CloudinaryService.uploadImage({
+      file,
+      folder,
+      publicId,
+      tags,
+      overwrite,
+    });
+    res.status(201).json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.post("/media/sign", sessionLimiter, (req, res, next) => {
+  try {
+    const folder = req.body?.folder || "muschio/uploads";
+    const signatureData = CloudinaryService.generateSignature(folder);
+    res.json({ success: true, data: signatureData, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/media", async (req, res, next) => {
+  try {
+    const publicId = (req.body?.publicId || req.query.publicId) as string;
+    if (!publicId) {
+      throw new ApiError(400, "INVALID_INPUT", "publicId is required");
+    }
+    const result = await CloudinaryService.deleteImage(publicId);
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+export { router as apiRouter };

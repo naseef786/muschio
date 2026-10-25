@@ -371,5 +371,95 @@ export const muschioApi = {
   async getBlogPostBySlug(slug: string): Promise<any | null> {
     return apiRequest<any>(`/blog/${encodeURIComponent(slug)}`);
   },
+
+  // Media & Cloudinary Storage
+  async uploadMedia(
+    file: string,
+    folder = "muschio/general",
+    publicId?: string,
+  ): Promise<{
+    url: string;
+    secureUrl: string;
+    publicId: string;
+    width: number;
+    height: number;
+    format: string;
+  } | null> {
+    return apiRequest<{
+      url: string;
+      secureUrl: string;
+      publicId: string;
+      width: number;
+      height: number;
+      format: string;
+    }>("/media/upload", {
+      method: "POST",
+      body: JSON.stringify({ file, folder, publicId }),
+    });
+  },
+
+  async getUploadSignature(folder = "muschio/uploads"): Promise<{
+    signature: string;
+    timestamp: number;
+    apiKey: string;
+    cloudName: string;
+    folder: string;
+  } | null> {
+    return apiRequest<{
+      signature: string;
+      timestamp: number;
+      apiKey: string;
+      cloudName: string;
+      folder: string;
+    }>("/media/sign", {
+      method: "POST",
+      body: JSON.stringify({ folder }),
+    });
+  },
+
+  async deleteMedia(publicId: string): Promise<boolean> {
+    const res = await apiRequest<{ result: string }>("/media", {
+      method: "DELETE",
+      body: JSON.stringify({ publicId }),
+    });
+    return res?.result === "ok";
+  },
+
+  getOptimizedMediaUrl(
+    publicIdOrUrl: string,
+    options?: { width?: number; height?: number; crop?: string; quality?: string },
+  ): string {
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME || "zwkad4sz";
+    if (publicIdOrUrl.startsWith("http://") || publicIdOrUrl.startsWith("https://")) {
+      if (publicIdOrUrl.includes("res.cloudinary.com") && options) {
+        const parts = publicIdOrUrl.split("/image/upload/");
+        if (parts.length === 2) {
+          const transforms = [
+            options.width ? `w_${options.width}` : null,
+            options.height ? `h_${options.height}` : null,
+            options.crop ? `c_${options.crop}` : "c_limit",
+            options.quality || "q_auto",
+            "f_auto",
+          ]
+            .filter(Boolean)
+            .join(",");
+          return `${parts[0]}/image/upload/${transforms}/${parts[1]}`;
+        }
+      }
+      return publicIdOrUrl;
+    }
+
+    const transforms = [
+      options?.width ? `w_${options.width}` : null,
+      options?.height ? `h_${options.height}` : null,
+      options?.crop ? `c_${options.crop}` : "c_limit",
+      options?.quality || "q_auto",
+      "f_auto",
+    ]
+      .filter(Boolean)
+      .join(",");
+
+    return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms}/${publicIdOrUrl}`;
+  },
 };
 

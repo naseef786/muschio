@@ -9,6 +9,7 @@ const nextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "media.muschio.luxury" },
+      { protocol: "https", hostname: "res.cloudinary.com" },
     ],
   },
   transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api"],
