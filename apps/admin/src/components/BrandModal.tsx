@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Award, Globe, CheckCircle2 } from "lucide-react";
 import { BrandItem, slugify, generateBrandMetaTitle, generateBrandMetaDescription } from "../seo-utils";
+import { MediaUploadField } from "./MediaUploadField";
 
 interface BrandModalProps {
   isOpen: boolean;
@@ -217,6 +218,26 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
               value={formData.perfumer}
               onChange={(e) => setFormData({ ...formData, perfumer: e.target.value })}
               className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+            />
+          </div>
+
+          {/* Row 4.5: Maison Visual Identity */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800">
+            <MediaUploadField
+              label="Brand Logo"
+              value={formData.logoUrl}
+              onChange={(url) => setFormData({ ...formData, logoUrl: url })}
+              folder="muschio/brands/logos"
+              helperText="Upload transparent PNG/SVG maison crest"
+              placeholder="https://res.cloudinary.com/zwkad4sz/image/upload/..."
+            />
+            <MediaUploadField
+              label="Brand Hero Banner / Flacon Photography"
+              value={formData.heroImageUrl}
+              onChange={(url) => setFormData({ ...formData, heroImageUrl: url })}
+              folder="muschio/brands/heroes"
+              helperText="High-res banner for maison landing page"
+              placeholder="https://res.cloudinary.com/zwkad4sz/image/upload/..."
             />
           </div>
 

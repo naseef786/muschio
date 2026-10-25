@@ -29,6 +29,7 @@ import {
   FileSpreadsheet,
   Download,
   Edit3,
+  LogOut,
 } from "lucide-react";
 import {
   BrandItem,
@@ -42,6 +43,8 @@ import {
 import { BulkCsvModal } from "./components/BulkCsvModal";
 import { BrandModal } from "./components/BrandModal";
 import { NoteModal } from "./components/NoteModal";
+import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
+import { MediaUploadField } from "./components/MediaUploadField";
 
 type AdminTab =
   | "dashboard"
@@ -201,6 +204,28 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
 
 export function App() {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
+  const [adminTheme, setAdminTheme] = usePersistentState<"obsidian" | "executive">("theme", "obsidian");
+
+  // Admin Security Authentication Session
+  const [authSession, setAuthSession] = useState<AdminAuthSession | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved =
+        localStorage.getItem("muschio_admin_auth") ||
+        sessionStorage.getItem("muschio_admin_auth");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const handleLogout = () => {
+    try {
+      localStorage.removeItem("muschio_admin_auth");
+      sessionStorage.removeItem("muschio_admin_auth");
+    } catch {}
+    setAuthSession(null);
+  };
 
   // 1. PRODUCTS (PRO SEO ENHANCED)
   const [products, setProducts] = usePersistentState<ProductItem[]>("products", [
@@ -341,6 +366,7 @@ export function App() {
     scentFamily: "Woody Amber",
     concentration: "EXTRAIT_DE_PARFUM",
     price: "",
+    imageUrl: "",
     stock: 20,
     testerStock: 2,
     warehouse: "DXB-MAIN",
@@ -483,6 +509,8 @@ export function App() {
       metaTitle: "Royal Taif Rose Essence | Luxury Scent Notes Guide",
       metaDescription:
         "Explore luxury perfumes composed with Royal Taif Rose harvested from the mountains of Saudi Arabia at Muschio.",
+      heroImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
+      thumbnailUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=150&q=80",
       status: "PUBLISHED",
       perfumesCount: 4,
     },
@@ -501,6 +529,8 @@ export function App() {
       metaTitle: "Omani Silver Frankincense Essence | Muschio Scent Notes",
       metaDescription:
         "Discover luxury perfumes featuring sacred Omani Silver Frankincense from Dhofar. 100% genuine niche extraits at Muschio.",
+      heroImageUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=600&q=80",
+      thumbnailUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=150&q=80",
       status: "PUBLISHED",
       perfumesCount: 3,
     },
@@ -519,6 +549,8 @@ export function App() {
       metaTitle: "Cambodian Oud (Agarwood) | Pure Niche Fragrance Guide",
       metaDescription:
         "Explore fine perfumes featuring aged Cambodian Oud at Muschio. Pure artisanal distillation and royal provenance guaranteed.",
+      heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=600&q=80",
+      thumbnailUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=150&q=80",
       status: "PUBLISHED",
       perfumesCount: 5,
     },
@@ -537,6 +569,8 @@ export function App() {
       metaTitle: "Florentine Iris Butter Note | Haute Parfumerie Encyclopedia",
       metaDescription:
         "Discover aristocratic perfumes formulated with precious Florentine Iris butter from Tuscany at Muschio.",
+      heroImageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=600&q=80",
+      thumbnailUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=150&q=80",
       status: "PUBLISHED",
       perfumesCount: 3,
     },
@@ -555,6 +589,8 @@ export function App() {
       metaTitle: "Golden Ambergris Essence | Royal Arabian Scent Notes",
       metaDescription:
         "Explore extraits crafted with ocean-cured golden ambergris at Muschio. Legendary fixative power and crystalline warmth.",
+      heroImageUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=600&q=80",
+      thumbnailUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=150&q=80",
       status: "PUBLISHED",
       perfumesCount: 4,
     },
@@ -889,7 +925,9 @@ export function App() {
       baseNotes: baseNotesArr,
       metaTitle: generateProductMetaTitle(productForm.name, productForm.brand),
       metaDescription: generateProductMetaDescription(productForm.name, productForm.brand, productForm.concentration, topNotesArr),
-      imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      imageUrl:
+        productForm.imageUrl ||
+        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
       imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
     };
@@ -904,6 +942,7 @@ export function App() {
       scentFamily: "Woody Amber",
       concentration: "EXTRAIT_DE_PARFUM",
       price: "",
+      imageUrl: "",
       stock: 20,
       testerStock: 2,
       warehouse: "DXB-MAIN",
@@ -1043,8 +1082,16 @@ export function App() {
   const activeOrdersCount = useMemo(() => orders.filter((o) => o.status !== "CANCELLED").length, [orders]);
   const pendingReviewsCount = useMemo(() => reviews.filter((r) => r.status === "PENDING").length, [reviews]);
 
+  if (!authSession) {
+    return <AdminLoginGate onLoginSuccess={(session) => setAuthSession(session)} />;
+  }
+
   return (
-    <div className="min-h-screen bg-[#0A0D14] text-slate-200 flex">
+    <div
+      className={`min-h-screen ${
+        adminTheme === "obsidian" ? "bg-[#070A0F] text-slate-200" : "bg-[#0C1017] text-slate-100"
+      } flex font-sans antialiased selection:bg-amber-500 selection:text-black`}
+    >
       {/* SIDEBAR NAVIGATION */}
       <aside className="w-64 border-e border-slate-800 bg-[#0E1420] flex flex-col justify-between p-4 shrink-0">
         <div className="space-y-6">
@@ -1219,20 +1266,43 @@ export function App() {
           </nav>
         </div>
 
-        <div className="p-3 bg-slate-900 border border-slate-800 text-[11px] space-y-1.5 rounded">
-          <div className="font-semibold text-slate-200">Administrator</div>
-          <div className="text-slate-400 font-mono text-[10px]">superadmin@muschio.luxury</div>
-          <div className="text-[10px] text-emerald-400 flex items-center gap-1.5 pt-1 border-t border-slate-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>System Online</span>
+        <div className="p-3 bg-[#0A0D14] border border-slate-800/80 text-[11px] space-y-2 rounded-xl">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 min-w-0">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs shrink-0">
+                {authSession.user.name.charAt(0) || "A"}
+              </div>
+              <div className="min-w-0">
+                <div className="font-medium text-slate-200 truncate">{authSession.user.name}</div>
+                <div className="text-slate-400 font-mono text-[9px] truncate">{authSession.user.email}</div>
+              </div>
+            </div>
           </div>
+
+          <div className="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[10px]">
+            <span className="font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+              {authSession.user.role.replace("_", " ")}
+            </span>
+            <div className="text-emerald-400 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Active</span>
+            </div>
+          </div>
+
+          <button
+            onClick={handleLogout}
+            className="w-full py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-slate-800 text-slate-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
+          >
+            <LogOut size={12} />
+            <span>Sign Out Session</span>
+          </button>
         </div>
       </aside>
 
       {/* MAIN VIEWPORT */}
       <main className="flex-1 p-8 space-y-8 overflow-y-auto">
         {/* HEADER */}
-        <header className="flex items-center justify-between pb-6 border-b border-slate-800">
+        <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800">
           <div>
             <h1 className="font-serif text-2xl font-light text-white capitalize">
               {TAB_TITLES[activeTab] || activeTab}
@@ -1242,15 +1312,31 @@ export function App() {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="px-3 py-1 bg-slate-900 border border-slate-800 text-xs font-mono text-slate-300 rounded">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={() => setAdminTheme(adminTheme === "obsidian" ? "executive" : "obsidian")}
+              className="px-3 py-1.5 bg-[#0C101A] border border-slate-800 text-xs text-slate-300 hover:text-white rounded-lg flex items-center gap-2 transition-colors"
+              title="Toggle Console Appearance"
+            >
+              <span
+                className={`w-2 h-2 rounded-full transition-all ${
+                  adminTheme === "obsidian"
+                    ? "bg-amber-400 shadow-sm shadow-amber-400/80"
+                    : "bg-cyan-400 shadow-sm shadow-cyan-400/80"
+                }`}
+              />
+              <span className="capitalize">{adminTheme} Mode</span>
+            </button>
+
+            <div className="px-3 py-1.5 bg-[#0C101A] border border-slate-800 text-xs font-mono text-slate-300 rounded-lg">
               UAE VAT: 5.0% • KSA VAT: 15.0%
             </div>
+
             <a
-              href="http://localhost:3000"
+              href="/"
               target="_blank"
               rel="noreferrer"
-              className="px-3.5 py-1.5 bg-accent text-white text-xs font-sans hover:bg-accent-hover transition-colors flex items-center gap-1.5 rounded"
+              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-medium text-xs font-sans transition-all flex items-center gap-1.5 rounded-lg shadow-md shadow-amber-500/10"
             >
               <Sparkles size={14} />
               <span>Live Storefront ↗</span>
@@ -1383,13 +1469,28 @@ export function App() {
                     .map((p) => (
                       <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
-                          <span className="font-semibold text-white block">{p.name}</span>
-                          {p.nameAr && (
-                            <span className="text-slate-400 text-xs" dir="rtl">
-                              {p.nameAr}
-                            </span>
-                          )}
-                          <span className="text-slate-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded border border-slate-700 bg-slate-900/80 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <Package size={16} className="text-slate-600" />
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-white block">{p.name}</span>
+                              {p.nameAr && (
+                                <span className="text-slate-400 text-xs" dir="rtl">
+                                  {p.nameAr}
+                                </span>
+                              )}
+                              <span className="text-slate-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
                           <div className="flex items-center gap-1 text-slate-400">
@@ -1440,7 +1541,7 @@ export function App() {
                         <td className="p-4 text-end">
                           <div className="flex items-center justify-end gap-2">
                             <a
-                              href={`http://localhost:3000/en/product/${p.slug}`}
+                              href={`/en/product/${p.slug}`}
                               target="_blank"
                               rel="noreferrer"
                               className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
@@ -1594,6 +1695,14 @@ export function App() {
                       </div>
                     </div>
 
+                    <MediaUploadField
+                      label="Product Flacon Photography (Cloudinary)"
+                      value={productForm.imageUrl}
+                      onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
+                      folder="muschio/products"
+                      hint="Upload luxury bottle image on neutral or transparent background"
+                    />
+
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-slate-400 mb-1">Sealed Stock</label>
@@ -1701,8 +1810,25 @@ export function App() {
                     .map((b) => (
                       <tr key={b.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
-                          <span className="font-semibold text-white block text-sm">{b.name}</span>
-                          <span className="text-slate-400 text-[11px] font-mono">{b.perfumer}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center p-1">
+                              {b.logoUrl || b.heroImageUrl ? (
+                                <img
+                                  src={b.logoUrl || b.heroImageUrl}
+                                  alt={b.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <span className="font-serif text-amber-300 font-bold text-sm">
+                                  {b.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-white block text-sm">{b.name}</span>
+                              <span className="text-slate-400 text-[11px] font-mono">{b.perfumer}</span>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
                           <div className="flex items-center gap-1 text-slate-400">
@@ -1746,7 +1872,7 @@ export function App() {
                               <Edit3 size={14} />
                             </button>
                             <a
-                              href={`http://localhost:3000/en/brands/${b.slug}`}
+                              href={`/en/brands/${b.slug}`}
                               target="_blank"
                               rel="noreferrer"
                               className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
@@ -1831,10 +1957,27 @@ export function App() {
                     .map((n) => (
                       <tr key={n.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
-                          <span className="font-semibold text-white block text-sm">{n.nameEn}</span>
-                          <span className="text-slate-400 text-xs" dir="rtl">
-                            {n.nameAr}
-                          </span>
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center">
+                              {n.heroImageUrl || n.thumbnailUrl ? (
+                                <img
+                                  src={n.heroImageUrl || n.thumbnailUrl}
+                                  alt={n.nameEn}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="font-serif text-purple-400 font-bold text-sm">
+                                  {n.nameEn.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-white block text-sm">{n.nameEn}</span>
+                              <span className="text-slate-400 text-xs" dir="rtl">
+                                {n.nameAr}
+                              </span>
+                            </div>
+                          </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
                           <div className="flex items-center gap-1 text-slate-400">
@@ -1869,7 +2012,7 @@ export function App() {
                               <Edit3 size={14} />
                             </button>
                             <a
-                              href={`http://localhost:3000/en/notes/${n.slug}`}
+                              href={`/en/notes/${n.slug}`}
                               target="_blank"
                               rel="noreferrer"
                               className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
@@ -2253,16 +2396,21 @@ export function App() {
                         className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
                       />
                     </div>
-                    <div>
-                      <label className="block text-slate-400 mb-1">Banner Image URL</label>
-                      <input
-                        type="text"
-                        placeholder="https://images.unsplash.com/..."
-                        value={bannerForm.imageUrl}
-                        onChange={(e) => setBannerForm({ ...bannerForm, imageUrl: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                      />
-                    </div>
+                    <MediaUploadField
+                      label="Desktop Campaign Banner Artwork (1920x800)"
+                      value={bannerForm.imageUrl}
+                      onChange={(url) => setBannerForm({ ...bannerForm, imageUrl: url })}
+                      folder="muschio/banners/desktop"
+                      hint="Upload wide luxury campaign creative or hero visual"
+                    />
+
+                    <MediaUploadField
+                      label="Mobile Portrait Artwork (Optional - 800x1000)"
+                      value={bannerForm.mobileImageUrl}
+                      onChange={(url) => setBannerForm({ ...bannerForm, mobileImageUrl: url })}
+                      folder="muschio/banners/mobile"
+                      hint="Mobile-optimized portrait crop for smartphones"
+                    />
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-slate-400 mb-1">CTA Button Text (EN)</label>

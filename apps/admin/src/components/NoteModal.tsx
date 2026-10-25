@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { X, Layers, Globe, CheckCircle2 } from "lucide-react";
 import { NoteItem, slugify, generateNoteMetaTitle, generateNoteMetaDescription } from "../seo-utils";
+import { MediaUploadField } from "./MediaUploadField";
 
 interface NoteModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
     descriptionAr: "",
     metaTitle: "",
     metaDescription: "",
+    heroImageUrl: "",
     status: "PUBLISHED" as "PUBLISHED" | "DRAFT",
   });
 
@@ -37,6 +39,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
         descriptionAr: noteToEdit.descriptionAr || "",
         metaTitle: noteToEdit.metaTitle || "",
         metaDescription: noteToEdit.metaDescription || "",
+        heroImageUrl: noteToEdit.heroImageUrl || "",
         status: noteToEdit.status,
       });
     } else {
@@ -51,6 +54,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
         descriptionAr: "",
         metaTitle: "",
         metaDescription: "",
+        heroImageUrl: "",
         status: "PUBLISHED",
       });
     }
@@ -86,6 +90,8 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
       descriptionAr: formData.descriptionAr.trim(),
       metaTitle: finalMetaTitle,
       metaDescription: finalMetaDesc,
+      heroImageUrl: formData.heroImageUrl.trim() || undefined,
+      thumbnailUrl: formData.heroImageUrl.trim() || undefined,
       status: formData.status,
       perfumesCount: noteToEdit ? noteToEdit.perfumesCount : 0,
     };
@@ -211,6 +217,18 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
                 className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
               />
             </div>
+          </div>
+
+          {/* Row 3.5: Note Botanical & Flacon Artwork */}
+          <div className="pt-1 border-t border-slate-800">
+            <MediaUploadField
+              label="Scent Note Botanical / Hero Artwork"
+              value={formData.heroImageUrl}
+              onChange={(url) => setFormData({ ...formData, heroImageUrl: url })}
+              folder="muschio/notes"
+              helperText="Upload raw ingredient photography (Oud chips, Taif roses, Bergamot zest) to Cloudinary"
+              placeholder="https://res.cloudinary.com/zwkad4sz/image/upload/..."
+            />
           </div>
 
           {/* Row 4: Sensory Editorial Description */}

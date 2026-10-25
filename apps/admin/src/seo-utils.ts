@@ -30,6 +30,8 @@ export interface NoteItem {
   descriptionAr?: string;
   metaTitle?: string;
   metaDescription?: string;
+  heroImageUrl?: string;
+  thumbnailUrl?: string;
   status: "PUBLISHED" | "DRAFT";
   perfumesCount: number;
 }

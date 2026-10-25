@@ -14,6 +14,7 @@ import {
   storefrontOrder,
   prisma,
   CloudinaryService,
+  AdminService,
 } from "@muschio/api";
 
 if (!process.env.DATABASE_URL) {
@@ -22,6 +23,9 @@ if (!process.env.DATABASE_URL) {
 }
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
+}
+if (!process.env.ADMIN_JWT_SECRET) {
+  process.env.ADMIN_JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
 }
 if (!process.env.CLOUDINARY_CLOUD_NAME) {
   process.env.CLOUDINARY_CLOUD_NAME = "zwkad4sz";
@@ -225,6 +229,12 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success({ methods: PaymentService.availableMethods() });
     }
 
+    // 13. Admin Dashboard
+    if (path === "admin/dashboard") {
+      const metrics = await AdminService.getDashboardMetrics();
+      return success(metrics);
+    }
+
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route Error:", err);
@@ -246,7 +256,15 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success({ token: CustomerService.createToken("guest-" + Date.now(), "guest@muschio.client") });
     }
 
-    // 2. Auth: Login & Register
+    // 2. Auth: Customer & Admin Login
+    if (path === "admin/auth/login") {
+      const { email, password } = body || {};
+      if (!email || !password) {
+        return error("INVALID_INPUT", "Email and password are required", 400);
+      }
+      const result = await AdminService.login(email, password);
+      return success(result);
+    }
     if (path === "auth/login") {
       const result = await CustomerService.login(body);
       return success(result);
