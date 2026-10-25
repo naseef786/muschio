@@ -1,4 +1,5 @@
 import createNextIntlPlugin from "next-intl/plugin";
+import { PrismaPlugin } from "@prisma/nextjs-monorepo-workaround-plugin";
 
 const withNextIntl = createNextIntlPlugin("./src/i18n.ts");
 
@@ -13,6 +14,12 @@ const nextConfig = {
   transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api"],
   experimental: {
     serverComponentsExternalPackages: ["@prisma/client", "prisma"],
+  },
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      config.plugins = [...config.plugins, new PrismaPlugin()];
+    }
+    return config;
   },
 };
 
