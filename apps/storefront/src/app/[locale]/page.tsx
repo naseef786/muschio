@@ -109,7 +109,7 @@ export default async function HomePage({
   const rawNotes = (liveNotes || []).slice(0, 4).map((n: any) => ({
     nameEn: n.nameEn,
     nameAr: n.nameAr,
-    slug: n.slugEn,
+    slug: n.slugEn || n.slug,
     familyEn: n.categoryEn || "Natural Note",
     familyAr: n.categoryAr || "نوتة طبيعية",
   }));

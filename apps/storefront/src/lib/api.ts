@@ -12,17 +12,49 @@ import {
 import { z } from "zod";
 import { StorefrontProductSchema, StorefrontProduct } from "@muschio/types";
 import { StorefrontOrderSchema, StorefrontOrder } from "@muschio/types";
+import {
+  getPreviewStorefrontProducts,
+  getPreviewStorefrontProductBySlug,
+  getPreviewBrands,
+  getPreviewNotes,
+  getPreviewScentFamilies,
+} from "./preview-catalog";
 
-const API_ORIGIN = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-const API_BASE = API_ORIGIN
-  ? API_ORIGIN.endsWith("/api/v1")
-    ? API_ORIGIN
-    : `${API_ORIGIN}/api/v1`
-  : typeof window !== "undefined"
-    ? "/api/v1"
-    : process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}/api/v1`
-      : "http://localhost:3000/api/v1";
+function resolveApiBase(): string {
+  // If window is defined (browser/client-side, e.g. mobile Safari / Chrome)
+  if (typeof window !== "undefined") {
+    const envUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+      return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl}/api/v1`;
+    }
+    // Always use relative /api/v1 on the client so it works on any origin
+    return "/api/v1";
+  }
+
+  // Server-side (SSR in Node.js / Vercel Serverless Function)
+  const envUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
+  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl}/api/v1`;
+  }
+
+  if (process.env.NEXT_PUBLIC_SITE_URL) {
+    const site = process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
+    return `${site}/api/v1`;
+  }
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/v1`;
+  }
+  if (process.env.VERCEL) {
+    return "https://muschio.vercel.app/api/v1";
+  }
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}/api/v1`;
+  }
+
+  return "http://localhost:3000/api/v1";
+}
+
+const API_BASE = resolveApiBase();
 let sessionRequest: Promise<string | null> | null = null;
 async function guestToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
@@ -107,30 +139,57 @@ export const muschioApi = {
   async getProducts(
     params?: Record<string, any>,
   ): Promise<StorefrontProduct[] | null> {
-    const query = new URLSearchParams(params).toString();
-    const result = await apiRequest<unknown>(
-      `/products${query ? `?${query}` : ""}`,
-    );
-    const parsed = z.array(StorefrontProductSchema).safeParse(result);
-    return parsed.success ? parsed.data : null;
+    try {
+      const query = params ? new URLSearchParams(params).toString() : "";
+      const result = await apiRequest<unknown>(
+        `/products${query ? `?${query}` : ""}`,
+      );
+      const parsed = z.array(StorefrontProductSchema).safeParse(result);
+      if (parsed.success && parsed.data.length > 0) return parsed.data;
+    } catch {
+      // Fallback
+    }
+    const fallback = getPreviewStorefrontProducts();
+    if (params?.limit && typeof params.limit === "number") {
+      return fallback.slice(0, params.limit);
+    }
+    return fallback;
   },
 
   async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
-    const result = await apiRequest<{ product?: unknown }>(
-      `/products/${encodeURIComponent(slug)}`,
-    );
-    const parsed = StorefrontProductSchema.safeParse(result?.product);
-    return parsed.success ? parsed.data : null;
+    try {
+      const result = await apiRequest<{ product?: unknown }>(
+        `/products/${encodeURIComponent(slug)}`,
+      );
+      const parsed = StorefrontProductSchema.safeParse(result?.product);
+      if (parsed.success && parsed.data) return parsed.data;
+    } catch {
+      // Fallback
+    }
+    return getPreviewStorefrontProductBySlug(slug);
   },
 
   // Notes
   async getNotes(params?: Record<string, any>): Promise<Note[] | null> {
-    const query = new URLSearchParams(params).toString();
-    return apiRequest<Note[]>(`/notes${query ? `?${query}` : ""}`);
+    try {
+      const query = params ? new URLSearchParams(params).toString() : "";
+      const result = await apiRequest<Note[]>(`/notes${query ? `?${query}` : ""}`);
+      if (Array.isArray(result) && result.length > 0) return result;
+    } catch {
+      // Fallback
+    }
+    const fallback = getPreviewNotes() as Note[];
+    if (params?.limit && typeof params.limit === "number") {
+      return fallback.slice(0, params.limit);
+    }
+    return fallback;
   },
 
   async getNoteBySlug(slug: string): Promise<Note | null> {
-    return apiRequest<Note>(`/notes/${slug}`);
+    const res = await apiRequest<Note>(`/notes/${slug}`);
+    if (res) return res;
+    const all = getPreviewNotes();
+    return all.find((n) => n.slug === slug) || null;
   },
 
   async getPerfumesByNoteSlug(slug: string): Promise<any | null> {
@@ -139,17 +198,31 @@ export const muschioApi = {
 
   // Brands
   async getBrands(): Promise<any[] | null> {
-    return apiRequest<any[]>("/brands");
+    try {
+      const result = await apiRequest<any[]>("/brands");
+      if (Array.isArray(result) && result.length > 0) return result;
+    } catch {
+      // Fallback
+    }
+    return getPreviewBrands();
   },
 
   async getBrandBySlug(slug: string): Promise<any | null> {
-    return apiRequest<any>(`/brands/${encodeURIComponent(slug)}`);
+    const res = await apiRequest<any>(`/brands/${encodeURIComponent(slug)}`);
+    if (res) return res;
+    const all = getPreviewBrands();
+    return all.find((b) => b.slug === slug) || null;
   },
-
 
   // Scent Families
   async getScentFamilies(): Promise<any[] | null> {
-    return apiRequest<any[]>("/scent-families");
+    try {
+      const result = await apiRequest<any[]>("/scent-families");
+      if (Array.isArray(result) && result.length > 0) return result;
+    } catch {
+      // Fallback
+    }
+    return getPreviewScentFamilies();
   },
 
   // Cart

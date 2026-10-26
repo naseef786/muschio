@@ -1,3 +1,5 @@
+import type { StorefrontProduct } from "@muschio/types";
+
 export const PREVIEW_CATALOG: Record<string, any> = {
   "amouage-interlude-53-man": {
     slug: "amouage-interlude-53-man",
@@ -627,3 +629,118 @@ export const PREVIEW_CATALOG: Record<string, any> = {
     ],
   },
 };
+
+function toStorefrontProduct(item: any): StorefrontProduct {
+  const brandName = typeof item.brand === "string" ? item.brand : item.brand?.name || "Muschio Maison";
+  const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const brandType = brandName === "Tom Ford" ? "DESIGNER" : "NICHE";
+
+  const variants = (item.variants || []).map((v: any, idx: number) => ({
+    id: v.id || `var-${item.slug}-${idx}`,
+    sku: v.sku || `SKU-${item.slug}-${idx}`,
+    sizeLabelEn: v.labelEn || v.sizeLabelEn || `${v.volumeMl || 100}ml Flacon`,
+    sizeLabelAr: v.labelAr || v.sizeLabelAr || `${v.volumeMl || 100} مل`,
+    price: v.price || 0,
+    compareAtPrice: v.compareAt || v.compareAtPrice || null,
+    isSampleVial: v.isSampleVial || (v.volumeMl ? v.volumeMl <= 2 : false),
+    availableQuantity: v.stockCount || v.availableQuantity || 25,
+  }));
+
+  const notes = (item.notes || []).map((n: any) => ({
+    nameEn: n.name || n.nameEn || "Rare Essence",
+    nameAr: n.nameAr || n.name || "خلاصة نادرة",
+    position: (n.position || "HEART") as "TOP" | "HEART" | "BASE",
+    slug: n.slug || (n.name ? n.name.toLowerCase().replace(/[^a-z0-9]+/g, "-") : "note"),
+  }));
+
+  return {
+    id: item.id || `prod-${item.slug}`,
+    slug: item.slug,
+    nameEn: item.nameEn,
+    nameAr: item.nameAr,
+    descriptionEn: item.descriptionEn || "",
+    descriptionAr: item.descriptionAr || "",
+    concentration: (item.concentration || "EXTRAIT_DE_PARFUM").replaceAll(" ", "_").toUpperCase(),
+    brand: { name: brandName, slug: brandSlug, type: brandType },
+    scentFamily: item.scentFamily || {
+      slug: "woody-smoky",
+      nameEn: "Woody & Smoky",
+      nameAr: "خشبي ودخاني",
+    },
+    images: item.images && item.images.length > 0 ? item.images : ["/product-placeholder.svg"],
+    gender: item.gender || "UNISEX",
+    variants,
+    notes,
+  };
+}
+
+export function getPreviewStorefrontProducts(): StorefrontProduct[] {
+  return Object.values(PREVIEW_CATALOG).map(toStorefrontProduct);
+}
+
+export function getPreviewStorefrontProductBySlug(slug: string): StorefrontProduct | null {
+  const item = PREVIEW_CATALOG[slug];
+  if (!item) return null;
+  return toStorefrontProduct(item);
+}
+
+export function getPreviewBrands(): any[] {
+  const products = getPreviewStorefrontProducts();
+  const map = new Map<string, any>();
+  for (const p of products) {
+    if (!map.has(p.brand.slug)) {
+      map.set(p.brand.slug, {
+        id: `brand-${p.brand.slug}`,
+        name: p.brand.name,
+        slug: p.brand.slug,
+        type: p.brand.type,
+        countryOfOrigin:
+          p.brand.name === "Amouage"
+            ? "Sultanate of Oman"
+            : p.brand.name === "Roja Parfums"
+              ? "United Kingdom"
+              : p.brand.name === "MFK Paris" || p.brand.name === "Maison Francis Kurkdjian"
+                ? "France"
+                : p.brand.name === "Xerjoff"
+                  ? "Italy"
+                  : "International",
+        descriptionEn: `Official Atelier partner for ${p.brand.name}. 100% authentic sealed flacons.`,
+        descriptionAr: `شريك رسمي معتمد لدار ${p.brand.name}. عطور أصلية ومختومة ١٠٠٪.`,
+        _count: { products: 1 },
+      });
+    } else {
+      map.get(p.brand.slug)._count.products += 1;
+    }
+  }
+  return Array.from(map.values());
+}
+
+export function getPreviewNotes(): any[] {
+  const products = getPreviewStorefrontProducts();
+  const map = new Map<string, any>();
+  for (const p of products) {
+    for (const n of p.notes) {
+      if (!map.has(n.slug)) {
+        map.set(n.slug, {
+          nameEn: n.nameEn,
+          nameAr: n.nameAr,
+          slug: n.slug,
+          slugEn: n.slug,
+          categoryEn: n.position === "TOP" ? "Top Note" : n.position === "HEART" ? "Heart Note" : "Base Note",
+          categoryAr: n.position === "TOP" ? "افتتاحية" : n.position === "HEART" ? "قلب العطر" : "قاعدة العطر",
+        });
+      }
+    }
+  }
+  return Array.from(map.values());
+}
+
+export function getPreviewScentFamilies(): any[] {
+  return [
+    { slug: "woody-smoky", nameEn: "Woody & Smoky", nameAr: "خشبي ودخاني" },
+    { slug: "oriental-amber", nameEn: "Oriental & Amber", nameAr: "شرقي وعنبري" },
+    { slug: "fresh-citrus-aquatic", nameEn: "Fresh & Citrus", nameAr: "حمضي ومنعش" },
+    { slug: "rare-florals", nameEn: "Rare Florals", nameAr: "زهور نادرة" },
+    { slug: "gourmand-leather", nameEn: "Gourmand & Leather", nameAr: "غورماند وجلدي" },
+  ];
+}

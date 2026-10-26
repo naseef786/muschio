@@ -154,13 +154,21 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
           <div className="header-actions">
             <button
               className="mobile-trigger text-luxury-text hover:text-accent transition-colors"
-              onClick={() => setMenu(true)}
+              onClick={() => {
+                setSearch(false);
+                cart.setCartDrawerOpen(false);
+                setMenu(true);
+              }}
               aria-label={c("Open menu", "فتح القائمة")}
             >
               <Menu size={22} />
             </button>
             <button
-              onClick={() => setSearch(true)}
+              onClick={() => {
+                setMenu(false);
+                cart.setCartDrawerOpen(false);
+                setSearch(true);
+              }}
               aria-label={c("Search fragrances", "البحث في العطور")}
               className="text-luxury-text hover:text-accent transition-colors"
             >
@@ -242,7 +250,11 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
 
             {/* Cart Trigger */}
             <button
-              onClick={() => cart.setCartDrawerOpen(true)}
+              onClick={() => {
+                setMenu(false);
+                setSearch(false);
+                cart.setCartDrawerOpen(true);
+              }}
               aria-label={c(
                 `Shopping bag, ${cart.itemCount} items`,
                 `حقيبة التسوق، ${cart.itemCount} منتجات`,

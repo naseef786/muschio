@@ -1,6 +1,6 @@
 import { z } from "zod";
 export const StorefrontProductSchema = z.object({
-  id: z.string().uuid(),
+  id: z.string(),
   slug: z.string().min(1),
   nameEn: z.string(),
   nameAr: z.string(),
@@ -11,11 +11,11 @@ export const StorefrontProductSchema = z.object({
   scentFamily: z
     .object({ slug: z.string(), nameEn: z.string(), nameAr: z.string() })
     .nullable(),
-  images: z.array(z.string().url()),
+  images: z.array(z.string()),
   gender: z.string(),
   variants: z.array(
     z.object({
-      id: z.string().uuid(),
+      id: z.string(),
       sku: z.string(),
       sizeLabelEn: z.string(),
       sizeLabelAr: z.string(),
