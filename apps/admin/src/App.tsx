@@ -1564,10 +1564,15 @@ export function App() {
               </table>
             </div>
 
-            {/* Add Product Modal */}
             {showProductModal && (
-              <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                <div className="bg-[#111622] border border-slate-800 w-full max-w-xl p-6 space-y-4 rounded max-h-[90vh] overflow-y-auto">
+              <div
+                className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+                onClick={() => setShowProductModal(false)}
+              >
+                <div
+                  className="bg-[#111622] border border-slate-800 w-full max-w-xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto my-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                     <div>
                       <h3 className="font-serif text-lg text-white font-light">Add Product</h3>
@@ -2353,8 +2358,14 @@ export function App() {
 
             {/* Add Banner Modal */}
             {showBannerForm && (
-              <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
-                <div className="bg-[#111622] border border-slate-800 w-full max-w-lg p-6 space-y-4 rounded max-h-[90vh] overflow-y-auto">
+              <div
+                className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
+                onClick={resetBannerForm}
+              >
+                <div
+                  className="bg-[#111622] border border-slate-800 w-full max-w-lg p-6 space-y-4 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto my-auto"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                     <h3 className="font-serif text-lg text-white font-light">Create Campaign Banner</h3>
                     <button onClick={resetBannerForm} className="text-slate-400 hover:text-white">
