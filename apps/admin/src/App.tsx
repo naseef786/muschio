@@ -600,6 +600,88 @@ export function App() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<NoteItem | null>(null);
 
+  // Sync live products, brands, and notes from Neon PostgreSQL database
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      fetch("/api/v1/admin/products").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/v1/brands").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/v1/notes").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([prodRes, brandRes, noteRes]) => {
+      if (!active) return;
+      if (prodRes?.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
+        const dbProducts: ProductItem[] = prodRes.data.map((p: any) => ({
+          id: p.id,
+          sku: p.variants?.[0]?.sku || `SKU-${p.slug}`,
+          name: p.nameEn,
+          nameAr: p.nameAr,
+          slug: p.slug,
+          brand: p.brand?.name || "Haute Niche",
+          brandSlug: p.brand?.slug || "brand",
+          scentFamily: p.scentFamily?.nameEn || "Haute Parfumerie",
+          concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+          gender: p.gender || "UNISEX",
+          volumeMl: p.variants?.[0]?.volumeMl || 100,
+          price: `${p.variants?.[0]?.price || 0} AED`,
+          costPrice: "0 AED",
+          stock: p.variants?.[0]?.inventory?.sealedQuantity ?? 20,
+          testerStock: p.variants?.[0]?.inventory?.testerQuantity ?? 2,
+          reserved: 0,
+          warehouse: "DXB-MAIN",
+          topNotes: p.notes?.filter((n: any) => n.position === "TOP").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+          heartNotes: p.notes?.filter((n: any) => n.position === "HEART").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+          baseNotes: p.notes?.filter((n: any) => n.position === "BASE").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+          taglineEn: p.taglineEn || "",
+          taglineAr: p.taglineAr || "",
+          descriptionEn: p.descriptionEn || "",
+          descriptionAr: p.descriptionAr || "",
+          metaTitle: `${p.nameEn} | Muschio`,
+          metaDescription: p.descriptionEn || "",
+          imageUrl: p.images?.[0] || "/product-placeholder.svg",
+          imageAlt: p.nameEn,
+          status: p.isPublished ? "PUBLISHED" : "DRAFT",
+        }));
+        setProducts(dbProducts);
+      }
+      if (brandRes?.data && Array.isArray(brandRes.data) && brandRes.data.length > 0) {
+        setBrands(brandRes.data.map((b: any) => ({
+          id: b.id,
+          name: b.name,
+          slug: b.slug,
+          type: b.type,
+          countryEn: b.countryOfOrigin || "France",
+          countryAr: b.countryOfOrigin || "فرنسا",
+          year: 1983,
+          perfumer: "Master Perfumer",
+          storyEn: b.descriptionEn || "",
+          storyAr: b.descriptionAr || "",
+          metaTitle: `${b.name} | Muschio`,
+          metaDescription: b.descriptionEn || "",
+          perfumesCount: b._count?.products || 1,
+        })));
+      }
+      if (noteRes?.data && Array.isArray(noteRes.data) && noteRes.data.length > 0) {
+        setNotes(noteRes.data.map((n: any) => ({
+          id: n.id,
+          nameEn: n.nameEn,
+          nameAr: n.nameAr,
+          slug: n.slugEn || n.slug,
+          family: n.categoryEn || "General",
+          heroImageUrl: n.heroImageUrl || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+          status: "PUBLISHED" as const,
+          descriptionEn: n.descriptionEn || "",
+          descriptionAr: n.descriptionAr || "",
+          metaTitle: `${n.nameEn} Note | Muschio`,
+          metaDescription: n.descriptionEn || "",
+          perfumesCount: 2,
+        })));
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
+
   // 3. ORDERS
   const [orders, setOrders] = usePersistentState("orders", [
     {
@@ -894,7 +976,7 @@ export function App() {
   };
 
   // Product Actions
-  const handleSaveProduct = () => {
+  const handleSaveProduct = async () => {
     if (!productForm.name || !productForm.sku) return;
     const priceFormatted = productForm.price.includes("AED") ? productForm.price : `${productForm.price} AED`;
     const prodSlug = slugify(`${productForm.brand}-${productForm.name}`);
@@ -931,6 +1013,26 @@ export function App() {
       imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
     };
+    // Persist directly to Neon PostgreSQL database via API
+    try {
+      const token = authSession?.token;
+      await fetch("/api/v1/admin/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          ...productForm,
+          volumeMl: 100,
+          descriptionEn: productForm.name,
+          descriptionAr: productForm.nameAr || productForm.name,
+        }),
+      });
+    } catch (err) {
+      console.warn("DB product creation failed, saved to local state:", err);
+    }
+
     setProducts((prev) => [newP, ...prev]);
     addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name}) [SEO: /product/${newP.slug}]`);
     setShowProductModal(false);
@@ -953,13 +1055,37 @@ export function App() {
     });
   };
 
-  const handleDeleteProduct = (id: string, name: string) => {
+  const handleDeleteProduct = async (id: string, name: string) => {
+    try {
+      const token = authSession?.token;
+      await fetch(`/api/v1/admin/products/${encodeURIComponent(id)}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    } catch (err) {
+      console.warn("DB product deletion failed:", err);
+    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
   };
 
   // Brand Actions
-  const handleSaveBrand = (brand: BrandItem) => {
+  const handleSaveBrand = async (brand: BrandItem) => {
+    try {
+      const token = authSession?.token;
+      await fetch("/api/v1/admin/brands", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(brand),
+      });
+    } catch (err) {
+      console.warn("DB brand creation failed:", err);
+    }
     setBrands((prev) => {
       const idx = prev.findIndex((b) => b.id === brand.id);
       if (idx >= 0) {
@@ -978,7 +1104,28 @@ export function App() {
   };
 
   // Note Actions
-  const handleSaveNoteModal = (note: NoteItem) => {
+  const handleSaveNoteModal = async (note: NoteItem) => {
+    try {
+      const token = authSession?.token;
+      await fetch("/api/v1/admin/notes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          name: note.nameEn,
+          nameAr: note.nameAr,
+          categoryEn: note.family || "General",
+          categoryAr: "عام",
+          descriptionEn: note.descriptionEn,
+          descriptionAr: note.descriptionAr,
+          heroImageUrl: note.heroImageUrl,
+        }),
+      });
+    } catch (err) {
+      console.warn("DB note creation failed:", err);
+    }
     setNotes((prev) => {
       const idx = prev.findIndex((n) => n.id === note.id);
       if (idx >= 0) {

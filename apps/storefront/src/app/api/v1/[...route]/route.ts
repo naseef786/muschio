@@ -235,6 +235,20 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success(metrics);
     }
 
+    // 14. Admin Products List
+    if (path === "admin/products") {
+      const products = await prisma.product.findMany({
+        orderBy: { createdAt: "desc" },
+        include: {
+          brand: true,
+          scentFamily: true,
+          variants: { include: { inventory: true } },
+          notes: { include: { note: true } },
+        },
+      });
+      return success(products);
+    }
+
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route Error:", err);
@@ -362,6 +376,164 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(signature);
     }
 
+    // 12. Admin Create Product
+    if (path === "admin/products") {
+      const {
+        name,
+        nameAr,
+        sku,
+        price,
+        brand: brandName,
+        scentFamily: familyName,
+        concentration,
+        gender,
+        volumeMl,
+        imageUrl,
+        stock,
+        testerStock,
+        status,
+        descriptionEn,
+        descriptionAr,
+      } = body || {};
+
+      if (!name || !sku) {
+        return error("INVALID_INPUT", "Name and SKU are required", 400);
+      }
+
+      // 1. Resolve or create Brand
+      let brand = await prisma.brand.findFirst({
+        where: { name: { equals: String(brandName || "Haute Niche").trim(), mode: "insensitive" } },
+      });
+      if (!brand) {
+        const brandSlug = String(brandName || "haute-niche")
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "");
+        brand = await prisma.brand.create({
+          data: {
+            name: String(brandName || "Haute Niche").trim(),
+            slug: brandSlug || `brand-${Date.now()}`,
+            type: "NICHE",
+          },
+        });
+      }
+
+      // 2. Resolve ScentFamily if provided
+      let scentFamily = null;
+      if (familyName) {
+        scentFamily = await prisma.scentFamily.findFirst({
+          where: { nameEn: { equals: String(familyName).trim(), mode: "insensitive" } },
+        });
+      }
+
+      // 3. Generate product slug
+      const baseSlug = String(name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      let slug = baseSlug;
+      const existing = await prisma.product.findUnique({ where: { slug } });
+      if (existing) {
+        slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+      }
+
+      const numPrice = Number(String(price || 0).replace(/[^0-9.]/g, "")) || 0;
+      const numStock = Number(stock) || 10;
+      const numTesterStock = Number(testerStock) || 1;
+      const numVolume = Number(volumeMl) || 100;
+
+      // 4. Create Product with Variant and Inventory in Neon DB
+      const newProduct = await prisma.product.create({
+        data: {
+          slug,
+          nameEn: String(name).trim(),
+          nameAr: String(nameAr || name).trim(),
+          descriptionEn: String(descriptionEn || name).trim(),
+          descriptionAr: String(descriptionAr || nameAr || name).trim(),
+          brandId: brand.id,
+          scentFamilyId: scentFamily?.id,
+          concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
+          gender: (gender as any) || "UNISEX",
+          images: imageUrl ? [imageUrl] : ["/product-placeholder.svg"],
+          isPublished: status !== "DRAFT",
+          variants: {
+            create: {
+              sku: String(sku).trim(),
+              volumeMl: numVolume,
+              sizeLabelEn: `${numVolume}ml Extrait`,
+              sizeLabelAr: `${numVolume} مل إكستريت`,
+              price: numPrice,
+              inventory: {
+                create: {
+                  sealedQuantity: numStock,
+                  testerQuantity: numTesterStock,
+                },
+              },
+            },
+          },
+        },
+        include: {
+          brand: true,
+          scentFamily: true,
+          variants: { include: { inventory: true } },
+        },
+      });
+
+      return success(newProduct, 201);
+    }
+
+    // 13. Admin Create Brand
+    if (path === "admin/brands") {
+      const { name, storyEn, storyAr, countryEn, logoUrl, heroImageUrl, type } = body || {};
+      if (!name) return error("INVALID_INPUT", "Brand name is required", 400);
+
+      const baseSlug = String(name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      let slug = baseSlug;
+      const existing = await prisma.brand.findUnique({ where: { slug } });
+      if (existing) slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+
+      const brand = await prisma.brand.create({
+        data: {
+          name: String(name).trim(),
+          slug,
+          type: type === "DESIGNER" ? "DESIGNER" : "NICHE",
+          descriptionEn: storyEn || "",
+          descriptionAr: storyAr || "",
+          countryOfOrigin: countryEn || "France",
+          logoUrl,
+          heroImageUrl,
+        },
+      });
+      return success(brand, 201);
+    }
+
+    // 14. Admin Create Note
+    if (path === "admin/notes") {
+      const { name, nameAr, categoryEn, categoryAr, descriptionEn, descriptionAr, heroImageUrl } = body || {};
+      if (!name) return error("INVALID_INPUT", "Note name is required", 400);
+
+      const slugEn = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const slugAr = String(nameAr || name).toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").replace(/(^-|-$)/g, "");
+
+      const note = await prisma.note.create({
+        data: {
+          nameEn: String(name).trim(),
+          nameAr: String(nameAr || name).trim(),
+          slugEn: `${slugEn}-${Date.now().toString().slice(-4)}`,
+          slugAr: `${slugAr}-${Date.now().toString().slice(-4)}`,
+          categoryEn: categoryEn || "General",
+          categoryAr: categoryAr || "عام",
+          descriptionEn: descriptionEn || "",
+          descriptionAr: descriptionAr || "",
+          heroImageUrl,
+        },
+      });
+      return success(note, 201);
+    }
+
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route POST Error:", err);
@@ -444,6 +616,23 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
       if (!publicId) return error("INVALID_INPUT", "publicId is required", 400);
       const result = await CloudinaryService.deleteImage(publicId);
       return success(result);
+    }
+
+    // 4. Admin Delete Product
+    if (route[0] === "admin" && route[1] === "products" && route[2]) {
+      const productIdOrSlug = route[2];
+      try {
+        await prisma.product.delete({
+          where: { id: productIdOrSlug },
+        });
+      } catch {
+        // Fallback to slug or unpublish if referenced by foreign keys
+        await prisma.product.updateMany({
+          where: { OR: [{ id: productIdOrSlug }, { slug: productIdOrSlug }] },
+          data: { isPublished: false },
+        });
+      }
+      return success({ success: true, deleted: productIdOrSlug });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);
