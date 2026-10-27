@@ -11,6 +11,8 @@ export const StorefrontProductSchema = z.object({
   scentFamily: z
     .object({ slug: z.string(), nameEn: z.string(), nameAr: z.string() })
     .nullable(),
+  perfumer: z.string().nullable().optional(),
+  perfumerBio: z.string().nullable().optional(),
   images: z.array(z.string()),
   gender: z.string(),
   variants: z.array(

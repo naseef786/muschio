@@ -242,6 +242,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         include: {
           brand: true,
           scentFamily: true,
+          perfumers: { include: { perfumer: true } },
           variants: { include: { inventory: true } },
           notes: { include: { note: true } },
         },
@@ -385,6 +386,8 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         price,
         brand: brandName,
         scentFamily: familyName,
+        perfumer: perfumerName,
+        perfumerBio,
         concentration,
         gender,
         volumeMl,
@@ -418,12 +421,49 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         });
       }
 
-      // 2. Resolve ScentFamily if provided
+      // 2. Resolve or create ScentFamily if provided
       let scentFamily = null;
       if (familyName) {
         scentFamily = await prisma.scentFamily.findFirst({
           where: { nameEn: { equals: String(familyName).trim(), mode: "insensitive" } },
         });
+        if (!scentFamily) {
+          const familySlug = String(familyName)
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+          scentFamily = await prisma.scentFamily.create({
+            data: {
+              nameEn: String(familyName).trim(),
+              nameAr: String(familyName).trim(),
+              slug: familySlug || `family-${Date.now()}`,
+              descriptionEn: `${familyName} olfactory family`,
+              descriptionAr: `عائلة عطور ${familyName}`,
+            },
+          });
+        }
+      }
+
+      // 2.5 Resolve or create Perfumer if provided
+      let perfumerRecord = null;
+      if (perfumerName) {
+        const perfumerClean = String(perfumerName).trim();
+        perfumerRecord = await prisma.perfumer.findFirst({
+          where: { name: { equals: perfumerClean, mode: "insensitive" } },
+        });
+        if (!perfumerRecord) {
+          const perfumerSlug = perfumerClean
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+          perfumerRecord = await prisma.perfumer.create({
+            data: {
+              name: perfumerClean,
+              slug: perfumerSlug || `perfumer-${Date.now()}`,
+              bioEn: perfumerBio ? String(perfumerBio).trim() : null,
+            },
+          });
+        }
       }
 
       // 3. Generate product slug
@@ -442,7 +482,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       const numTesterStock = Number(testerStock) || 1;
       const numVolume = Number(volumeMl) || 100;
 
-      // 4. Create Product with Variant and Inventory in Neon DB
+      // 4. Create Product with Variant, Inventory, ScentFamily, and Perfumer in Neon DB
       const newProduct = await prisma.product.create({
         data: {
           slug,
@@ -456,6 +496,14 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           gender: (gender as any) || "UNISEX",
           images: imageUrl ? [imageUrl] : ["/product-placeholder.svg"],
           isPublished: status !== "DRAFT",
+          perfumers: perfumerRecord
+            ? {
+                create: {
+                  perfumerId: perfumerRecord.id,
+                  isLead: true,
+                },
+              }
+            : undefined,
           variants: {
             create: {
               sku: String(sku).trim(),
@@ -475,6 +523,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         include: {
           brand: true,
           scentFamily: true,
+          perfumers: { include: { perfumer: true } },
           variants: { include: { inventory: true } },
         },
       });

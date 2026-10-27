@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 500" width="400" height="500">
-  <rect width="400" height="500" fill="#F8F7F3"/>
+  <rect width="400" height="500" fill="#FFFFFF"/>
   <g transform="translate(200, 245)">
     <!-- Aura shadow -->
     <ellipse cx="0" cy="180" rx="95" ry="14" fill="#E6E4DE" opacity="0.6"/>

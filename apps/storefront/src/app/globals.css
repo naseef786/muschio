@@ -4,13 +4,13 @@
 
 @layer base {
   :root {
-    --bg-canvas: #F8F7F3;
+    --bg-canvas: #FFFFFF;
     --bg-surface: #FFFFFF;
-    --bg-surface-2: #F3F1EC;
+    --bg-surface-2: #F7F7F8;
     --text-primary: #171917;
-    --text-muted: #77776F;
-    --border-subtle: #E6E4DE;
-    --border-bold: #D4D1C8;
+    --text-muted: #737373;
+    --border-subtle: #E8E8E8;
+    --border-bold: #D4D4D4;
     --accent-olive: #46513B;
     --accent-olive-hover: #353E2D;
   }
@@ -19,7 +19,7 @@
     --bg-canvas: #121412;
     --bg-surface: #1A1D1A;
     --bg-surface-2: #222622;
-    --text-primary: #F8F7F3;
+    --text-primary: #FFFFFF;
     --text-muted: #9E9E96;
     --border-subtle: #2C312C;
     --border-bold: #3E453E;
@@ -706,7 +706,7 @@
 .site-footer {
   padding: 68px 32px 36px;
   background: #141714;
-  color: #F8F7F3;
+  color: #FFFFFF;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   transition: background-color 0.3s ease;
 }
@@ -737,7 +737,7 @@
   font-weight: 600;
   letter-spacing: 0.18em;
   text-transform: uppercase;
-  color: #F8F7F3;
+  color: #FFFFFF;
 }
 
 .footer-grid a:not(.masthead-logo):not(.social-card-link):not(.footer-contact-link) {

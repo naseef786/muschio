@@ -60,6 +60,8 @@ export function BulkCsvModal({ isOpen, onClose, existingBrands, existingNotes, o
             const brand = r["brand"] || "Independent Maison";
             const brandSlug = r["brandSlug"] || slugify(brand);
             const scentFamily = r["scentFamily"] || "Woody Amber";
+            const perfumer = r["perfumer"] || "";
+            const perfumerBio = r["perfumerBio"] || "";
             const concentration = r["concentration"] || "EXTRAIT_DE_PARFUM";
             const gender = r["gender"] || "UNISEX";
             const volumeMl = Number(r["volumeMl"]) || 100;
@@ -188,6 +190,8 @@ export function BulkCsvModal({ isOpen, onClose, existingBrands, existingNotes, o
                 brand,
                 brandSlug,
                 scentFamily,
+                perfumer: perfumer || undefined,
+                perfumerBio: perfumerBio || undefined,
                 concentration,
                 gender,
                 volumeMl,
@@ -243,6 +247,8 @@ export function BulkCsvModal({ isOpen, onClose, existingBrands, existingNotes, o
             brand: p.brand,
             brandSlug: p.brandSlug,
             scentFamily: p.scentFamily,
+            perfumer: p.perfumer || undefined,
+            perfumerBio: p.perfumerBio || undefined,
             concentration: p.concentration,
             gender: p.gender,
             volumeMl: p.volumeMl,

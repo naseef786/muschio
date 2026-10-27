@@ -109,7 +109,7 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
         {/* Col 2: The Collection */}
         <div className="flex flex-col justify-start">
           <div className="h-10 flex flex-col justify-end">
-            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-[#F8F7F3] m-0">
+            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-white m-0">
               {c("THE COLLECTION", "المجموعة")}
             </h4>
           </div>
@@ -150,7 +150,7 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
         {/* Col 3: The Houses */}
         <div className="flex flex-col justify-start">
           <div className="h-10 flex flex-col justify-end">
-            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-[#F8F7F3] m-0">
+            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-white m-0">
               {c("THE HOUSES", "دور العطور")}
             </h4>
           </div>
@@ -191,7 +191,7 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
         {/* Col 4: Client Care & Contact Channels */}
         <div className="flex flex-col justify-start">
           <div className="h-10 flex flex-col justify-end">
-            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-[#F8F7F3] m-0">
+            <h4 className="text-[11px] font-sans font-semibold uppercase tracking-[0.2em] text-white m-0">
               {c("CLIENT CARE & CONCIERGE", "خدمة العملاء والاتصال")}
             </h4>
           </div>

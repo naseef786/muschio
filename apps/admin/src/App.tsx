@@ -238,6 +238,8 @@ export function App() {
       brand: "Amouage",
       brandSlug: "amouage",
       scentFamily: "Woody Amber",
+      perfumer: "Pierre Negrin",
+      perfumerBio: "Master French perfumer renowned for sculpting deep, architectural incense and resinous extraits for royalty.",
       concentration: "EXTRAIT_DE_PARFUM",
       gender: "MEN",
       volumeMl: 100,
@@ -269,6 +271,8 @@ export function App() {
       brand: "Maison Francis Kurkdjian",
       brandSlug: "maison-francis-kurkdjian",
       scentFamily: "Amber Floral",
+      perfumer: "Francis Kurkdjian",
+      perfumerBio: "Legendary Master Perfumer and Dior Perfume Creation Director, famed for crystalline olfactory radiance.",
       concentration: "EXTRAIT_DE_PARFUM",
       gender: "UNISEX",
       volumeMl: 70,
@@ -300,6 +304,8 @@ export function App() {
       brand: "Roja Parfums",
       brandSlug: "roja-parfums",
       scentFamily: "Fresh Aromatic Citrus",
+      perfumer: "Roja Dove",
+      perfumerBio: "The premier British Master Perfumer and fragrance historian, famed for formulating without compromise on rare natural absolutes.",
       concentration: "PARFUM",
       gender: "MEN",
       volumeMl: 100,
@@ -331,6 +337,8 @@ export function App() {
       brand: "Xerjoff",
       brandSlug: "xerjoff",
       scentFamily: "Woody Amber Oud",
+      perfumer: "Chris Maurice",
+      perfumerBio: "Renowned Spanish nose celebrated for bridging classical Mediterranean perfumery with opulent Middle Eastern accords.",
       concentration: "EAU_DE_PARFUM",
       gender: "UNISEX",
       volumeMl: 100,
@@ -358,13 +366,17 @@ export function App() {
   const [productSearch, setProductSearch] = useState("");
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [productForm, setProductForm] = useState({
     sku: "",
     name: "",
     nameAr: "",
     brand: "Amouage",
     scentFamily: "Woody Amber",
+    perfumer: "",
+    perfumerBio: "",
     concentration: "EXTRAIT_DE_PARFUM",
+    volumeMl: 100,
     price: "",
     imageUrl: "",
     stock: 20,
@@ -373,6 +385,10 @@ export function App() {
     topNotes: "",
     heartNotes: "",
     baseNotes: "",
+    descriptionEn: "",
+    descriptionAr: "",
+    metaTitle: "",
+    metaDescription: "",
     status: "PUBLISHED" as const,
   });
 
@@ -618,7 +634,9 @@ export function App() {
           slug: p.slug,
           brand: p.brand?.name || "Haute Niche",
           brandSlug: p.brand?.slug || "brand",
-          scentFamily: p.scentFamily?.nameEn || "Haute Parfumerie",
+          scentFamily: p.scentFamily?.nameEn || "Woody Amber",
+          perfumer: p.perfumers?.[0]?.perfumer?.name || p.perfumer || "",
+          perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
           concentration: p.concentration || "EXTRAIT_DE_PARFUM",
           gender: p.gender || "UNISEX",
           volumeMl: p.variants?.[0]?.volumeMl || 100,
@@ -976,6 +994,67 @@ export function App() {
   };
 
   // Product Actions
+  const handleOpenAddProduct = () => {
+    setEditingProductId(null);
+    setProductForm({
+      sku: "",
+      name: "",
+      nameAr: "",
+      brand: brands[0]?.name || "Amouage",
+      scentFamily: "Woody Amber",
+      perfumer: "",
+      perfumerBio: "",
+      concentration: "EXTRAIT_DE_PARFUM",
+      volumeMl: 100,
+      price: "",
+      imageUrl: "",
+      stock: 20,
+      testerStock: 2,
+      warehouse: "DXB-MAIN",
+      topNotes: "",
+      heartNotes: "",
+      baseNotes: "",
+      descriptionEn: "",
+      descriptionAr: "",
+      metaTitle: "",
+      metaDescription: "",
+      status: "PUBLISHED",
+    });
+    setShowProductModal(true);
+  };
+
+  const handleOpenEditProduct = (p: ProductItem) => {
+    setEditingProductId(p.id);
+    const topNotesArr = p.topNotes || [];
+    setProductForm({
+      sku: p.sku || "",
+      name: p.name || "",
+      nameAr: p.nameAr || "",
+      brand: p.brand || "Amouage",
+      scentFamily: p.scentFamily || "Woody Amber",
+      perfumer: p.perfumer || "",
+      perfumerBio: p.perfumerBio || "",
+      concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+      volumeMl: p.volumeMl || 100,
+      price: p.price ? p.price.replace(" AED", "") : "",
+      imageUrl: p.imageUrl || "",
+      stock: p.stock || 0,
+      testerStock: p.testerStock || 0,
+      warehouse: p.warehouse || "DXB-MAIN",
+      topNotes: Array.isArray(p.topNotes) ? p.topNotes.join(", ") : "",
+      heartNotes: Array.isArray(p.heartNotes) ? p.heartNotes.join(", ") : "",
+      baseNotes: Array.isArray(p.baseNotes) ? p.baseNotes.join(", ") : "",
+      descriptionEn: p.descriptionEn || "",
+      descriptionAr: p.descriptionAr || "",
+      metaTitle: p.metaTitle || generateProductMetaTitle(p.name, p.brand),
+      metaDescription:
+        p.metaDescription ||
+        generateProductMetaDescription(p.name, p.brand, p.concentration, topNotesArr),
+      status: (p.status as any) || "PUBLISHED",
+    });
+    setShowProductModal(true);
+  };
+
   const handleSaveProduct = async () => {
     if (!productForm.name || !productForm.sku) return;
     const priceFormatted = productForm.price.includes("AED") ? productForm.price : `${productForm.price} AED`;
@@ -984,8 +1063,22 @@ export function App() {
     const heartNotesArr = productForm.heartNotes ? productForm.heartNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const baseNotesArr = productForm.baseNotes ? productForm.baseNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
 
+    const finalMetaTitle =
+      productForm.metaTitle.trim() ||
+      generateProductMetaTitle(productForm.name, productForm.brand);
+    const finalMetaDesc =
+      productForm.metaDescription.trim() ||
+      generateProductMetaDescription(
+        productForm.name,
+        productForm.brand,
+        productForm.concentration,
+        topNotesArr
+      );
+    const finalDescEn = productForm.descriptionEn.trim() || productForm.name;
+    const finalDescAr = productForm.descriptionAr.trim() || productForm.nameAr || productForm.name;
+
     const newP: ProductItem = {
-      id: `p-${Date.now()}`,
+      id: editingProductId || `p-${Date.now()}`,
       sku: productForm.sku,
       name: productForm.name,
       nameAr: productForm.nameAr || productForm.name,
@@ -993,9 +1086,11 @@ export function App() {
       brand: productForm.brand,
       brandSlug: slugify(productForm.brand),
       scentFamily: productForm.scentFamily || "Woody Amber",
+      perfumer: productForm.perfumer.trim() || undefined,
+      perfumerBio: productForm.perfumerBio.trim() || undefined,
       concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
       gender: "UNISEX",
-      volumeMl: 100,
+      volumeMl: Number(productForm.volumeMl) || 100,
       price: priceFormatted,
       costPrice: "0 AED",
       stock: Number(productForm.stock) || 0,
@@ -1005,8 +1100,10 @@ export function App() {
       topNotes: topNotesArr,
       heartNotes: heartNotesArr,
       baseNotes: baseNotesArr,
-      metaTitle: generateProductMetaTitle(productForm.name, productForm.brand),
-      metaDescription: generateProductMetaDescription(productForm.name, productForm.brand, productForm.concentration, topNotesArr),
+      descriptionEn: finalDescEn,
+      descriptionAr: finalDescAr,
+      metaTitle: finalMetaTitle,
+      metaDescription: finalMetaDesc,
       imageUrl:
         productForm.imageUrl ||
         "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
@@ -1024,25 +1121,43 @@ export function App() {
         },
         body: JSON.stringify({
           ...productForm,
-          volumeMl: 100,
-          descriptionEn: productForm.name,
-          descriptionAr: productForm.nameAr || productForm.name,
+          scentFamily: productForm.scentFamily || "Woody Amber",
+          perfumer: productForm.perfumer.trim() || undefined,
+          perfumerBio: productForm.perfumerBio.trim() || undefined,
+          volumeMl: Number(productForm.volumeMl) || 100,
+          descriptionEn: finalDescEn,
+          descriptionAr: finalDescAr,
+          metaTitle: finalMetaTitle,
+          metaDescription: finalMetaDesc,
         }),
       });
     } catch (err) {
       console.warn("DB product creation failed, saved to local state:", err);
     }
 
-    setProducts((prev) => [newP, ...prev]);
-    addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name}) [SEO: /product/${newP.slug}]`);
+    if (editingProductId) {
+      setProducts((prev) =>
+        prev.map((item) =>
+          item.id === editingProductId ? { ...item, ...newP, id: editingProductId } : item
+        )
+      );
+      addAuditLog("PRODUCT_UPDATED", `${newP.sku} (${newP.name})`);
+    } else {
+      setProducts((prev) => [newP, ...prev]);
+      addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name}) [SEO: /product/${newP.slug}]`);
+    }
     setShowProductModal(false);
+    setEditingProductId(null);
     setProductForm({
       sku: "",
       name: "",
       nameAr: "",
       brand: "Amouage",
       scentFamily: "Woody Amber",
+      perfumer: "",
+      perfumerBio: "",
       concentration: "EXTRAIT_DE_PARFUM",
+      volumeMl: 100,
       price: "",
       imageUrl: "",
       stock: 20,
@@ -1051,6 +1166,10 @@ export function App() {
       topNotes: "",
       heartNotes: "",
       baseNotes: "",
+      descriptionEn: "",
+      descriptionAr: "",
+      metaTitle: "",
+      metaDescription: "",
       status: "PUBLISHED",
     });
   };
@@ -1578,7 +1697,7 @@ export function App() {
                 </button>
 
                 <button
-                  onClick={() => setShowProductModal(true)}
+                  onClick={handleOpenAddProduct}
                   className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
                 >
                   <Plus size={14} />
@@ -1660,7 +1779,13 @@ export function App() {
                             <span>{p.brand}</span>
                             <Award size={11} className="text-amber-400" />
                           </button>
-                          <span className="text-[10px] text-slate-500 block">{p.scentFamily || "Woody"}</span>
+                          <span className="text-[10px] text-slate-400 block font-mono">{p.scentFamily || "Woody Amber"}</span>
+                          {p.perfumer && (
+                            <span className="text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
+                              <Sparkles size={10} className="text-amber-400 flex-shrink-0" />
+                              <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 text-[11px]">
                           <div className="space-y-0.5">
@@ -1687,6 +1812,13 @@ export function App() {
                         </td>
                         <td className="p-4 text-end">
                           <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              title="Edit Product"
+                            >
+                              <Edit3 size={14} />
+                            </button>
                             <a
                               href={`/en/product/${p.slug}`}
                               target="_blank"
@@ -1717,19 +1849,29 @@ export function App() {
                 onClick={() => setShowProductModal(false)}
               >
                 <div
-                  className="bg-[#111622] border border-slate-800 w-full max-w-xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto my-auto"
+                  className="bg-[#111622] border border-slate-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-slate-800">
                     <div>
-                      <h3 className="font-serif text-lg text-white font-light">Add Product</h3>
-                      <p className="text-[11px] text-slate-400">Product details, pricing, and scent notes</p>
+                      <h3 className="font-serif text-lg text-white font-light">
+                        {editingProductId ? "Edit Product" : "Add Product"}
+                      </h3>
+                      <p className="text-[11px] text-slate-400">
+                        {editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags"}
+                      </p>
                     </div>
-                    <button onClick={() => setShowProductModal(false)} className="text-slate-400 hover:text-white">
+                    <button
+                      onClick={() => {
+                        setShowProductModal(false);
+                        setEditingProductId(null);
+                      }}
+                      className="text-slate-400 hover:text-white"
+                    >
                       <X size={18} />
                     </button>
                   </div>
-                  <div className="space-y-3 text-xs">
+                  <div className="space-y-4 text-xs">
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-slate-400 mb-1">SKU Code *</label>
@@ -1782,19 +1924,117 @@ export function App() {
                       />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Olfactory Scent Family & Concentration */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-400 mb-1">Concentration</label>
+                        <label className="block text-slate-400 mb-1">Scent Family (Olfactory Classification) *</label>
+                        <select
+                          value={productForm.scentFamily}
+                          onChange={(e) => setProductForm({ ...productForm, scentFamily: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600"
+                        >
+                          <option value="Woody Amber">Woody Amber (خشب العنبر)</option>
+                          <option value="Amber Floral">Amber Floral (عنبر زهري)</option>
+                          <option value="Fresh Aromatic Citrus">Fresh Aromatic Citrus (حمضيات أروماتية)</option>
+                          <option value="Woody Amber Oud">Woody Amber Oud (عود خشب العنبر)</option>
+                          <option value="Leather & Smoke">Leather & Smoke (جلدي دخاني)</option>
+                          <option value="Oriental Spicy">Oriental Spicy (شرقي حار)</option>
+                          <option value="Gourmand & Vanilla">Gourmand & Vanilla (غورماند وفانيليا)</option>
+                          <option value="Chypre Floral">Chypre Floral (شبر زهري)</option>
+                          <option value="Aquatic & Fresh">Aquatic & Fresh (مائي منعش)</option>
+                          <option value="Floral">Floral (زهري)</option>
+                          <option value="Woody">Woody (خشبي)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Concentration *</label>
                         <select
                           value={productForm.concentration}
                           onChange={(e) => setProductForm({ ...productForm, concentration: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs"
                         >
                           <option value="EXTRAIT_DE_PARFUM">Extrait de Parfum (30-53%)</option>
                           <option value="PARFUM">Parfum Pure (20-30%)</option>
                           <option value="EAU_DE_PARFUM">Eau de Parfum (15-20%)</option>
                           <option value="PARFUM_OIL">Pure Attar / Perfume Oil</option>
                         </select>
+                      </div>
+                    </div>
+
+                    {/* Master Perfumer / Nose Details */}
+                    <div className="p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
+                          <Award size={13} />
+                          <span>Master Perfumer / Nose (الأنف العطري)</span>
+                        </span>
+                        <span className="text-[10px] text-slate-500 font-mono">Storefront: Maison & Perfumer Details</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-slate-400 text-[10px] mb-1">Perfumer Name (Nose)</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Pierre Negrin, Francis Kurkdjian, Roja Dove"
+                            value={productForm.perfumer}
+                            onChange={(e) => setProductForm({ ...productForm, perfumer: e.target.value })}
+                            className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-slate-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Master French perfumer famed for architectural incense"
+                            value={productForm.perfumerBio}
+                            onChange={(e) => setProductForm({ ...productForm, perfumerBio: e.target.value })}
+                            className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Editorial Product Descriptions */}
+                    <div className="space-y-3 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                          <FileText size={13} className="text-amber-400" />
+                          <span>Product Editorial Descriptions</span>
+                        </span>
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Product Description (English)</label>
+                        <textarea
+                          rows={3}
+                          placeholder="e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano..."
+                          value={productForm.descriptionEn}
+                          onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-slate-400 mb-1">Product Description (Arabic)</label>
+                        <textarea
+                          rows={3}
+                          dir="rtl"
+                          placeholder="e.g. بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان. يفتتح بنفحات الأوريغانو والفلفل الحار..."
+                          value={productForm.descriptionAr}
+                          onChange={(e) => setProductForm({ ...productForm, descriptionAr: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-slate-400 mb-1">Volume (ml)</label>
+                        <input
+                          type="number"
+                          placeholder="e.g. 100"
+                          value={productForm.volumeMl || 100}
+                          onChange={(e) => setProductForm({ ...productForm, volumeMl: Number(e.target.value) || 100 })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                        />
                       </div>
                       <div>
                         <label className="block text-slate-400 mb-1">Price (AED) *</label>
@@ -1855,6 +2095,111 @@ export function App() {
                       hint="Upload luxury bottle image on neutral or transparent background"
                     />
 
+                    {/* Google SERP SEO Meta Title & Meta Description */}
+                    <div className="space-y-3 pt-2 border-t border-slate-800">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                          <Globe size={13} className="text-emerald-400" />
+                          <span>Search Engine Optimization (SEO) & Google SERP</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const topNotesArr = productForm.topNotes
+                              ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean)
+                              : [];
+                            setProductForm({
+                              ...productForm,
+                              metaTitle: generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand"),
+                              metaDescription: generateProductMetaDescription(
+                                productForm.name || "Fragrance",
+                                productForm.brand || "Brand",
+                                productForm.concentration,
+                                topNotesArr
+                              ),
+                            });
+                          }}
+                          className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline underline-offset-2"
+                          title="Auto-generate SEO title and description based on current name, brand, concentration, and notes"
+                        >
+                          <Sparkles size={11} />
+                          <span>Auto-Generate SEO Tags</span>
+                        </button>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-400">Meta Title (Google)</label>
+                          <span
+                            className={`text-[10px] font-mono ${
+                              (productForm.metaTitle || "").length > 60 ? "text-amber-400 font-bold" : "text-slate-500"
+                            }`}
+                          >
+                            {(productForm.metaTitle || "").length}/60 chars
+                          </span>
+                        </div>
+                        <input
+                          type="text"
+                          placeholder={generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
+                          value={productForm.metaTitle}
+                          onChange={(e) => setProductForm({ ...productForm, metaTitle: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600"
+                        />
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-400">Meta Description (Google)</label>
+                          <span
+                            className={`text-[10px] font-mono ${
+                              (productForm.metaDescription || "").length > 160 ? "text-amber-400 font-bold" : "text-slate-500"
+                            }`}
+                          >
+                            {(productForm.metaDescription || "").length}/160 chars
+                          </span>
+                        </div>
+                        <textarea
+                          rows={2}
+                          placeholder={generateProductMetaDescription(
+                            productForm.name || "Fragrance",
+                            productForm.brand || "Brand",
+                            productForm.concentration
+                          )}
+                          value={productForm.metaDescription}
+                          onChange={(e) => setProductForm({ ...productForm, metaDescription: e.target.value })}
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600"
+                        />
+                      </div>
+
+                      {/* Live Google Search Preview Box */}
+                      <div className="p-3 bg-[#080B10] border border-slate-800 rounded space-y-1 font-sans">
+                        <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                          <Globe size={11} />
+                          <span>Google Search Preview</span>
+                        </span>
+                        <div className="text-xs text-slate-400 flex items-center gap-1 overflow-x-auto text-[11px]">
+                          <span>https://muschio.luxury</span>
+                          <span>›</span>
+                          <span>en</span>
+                          <span>›</span>
+                          <span className="font-mono text-slate-300 truncate">
+                            product › {slugify(`${productForm.brand || "brand"}-${productForm.name || "product"}`)}
+                          </span>
+                        </div>
+                        <div className="text-sm text-[#8AB4F8] hover:underline font-medium line-clamp-1">
+                          {productForm.metaTitle || generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                          {productForm.metaDescription ||
+                            generateProductMetaDescription(
+                              productForm.name || "Fragrance",
+                              productForm.brand || "Brand",
+                              productForm.concentration
+                            )}
+                        </p>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-3 gap-3">
                       <div>
                         <label className="block text-slate-400 mb-1">Sealed Stock</label>
@@ -1889,7 +2234,10 @@ export function App() {
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
                     <button
-                      onClick={() => setShowProductModal(false)}
+                      onClick={() => {
+                        setShowProductModal(false);
+                        setEditingProductId(null);
+                      }}
                       className="px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded"
                     >
                       Cancel
@@ -1899,7 +2247,7 @@ export function App() {
                       className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded flex items-center gap-1.5"
                     >
                       <CheckCircle2 size={14} />
-                      <span>Save Product</span>
+                      <span>{editingProductId ? "Update Product" : "Save Product"}</span>
                     </button>
                   </div>
                 </div>
