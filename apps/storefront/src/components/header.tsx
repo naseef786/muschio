@@ -18,9 +18,11 @@ import {
   Compass,
   BookOpen,
   User,
+  ArrowLeftRight,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
+import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
@@ -100,6 +102,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
   const [query, setQuery] = useState("");
   const cart = useCart();
   const wishlist = useWishlist();
+  const compare = useCompare();
   const { user, isLoggedIn } = useAuth();
 
   // Scroll lock when side drawer is open
@@ -223,6 +226,27 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
               {wishlist.itemCount > 0 && (
                 <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none">
                   {wishlist.itemCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Compare */}
+            <Link
+              className="desktop-utility relative flex items-center text-luxury-text hover:text-accent transition-colors"
+              href="/compare"
+              title={c("Compare Fragrances", "مقارنة العطور")}
+              aria-label={c(
+                `Compare fragrances, ${compare.itemCount} items`,
+                `مقارنة العطور، ${compare.itemCount} عناصر`,
+              )}
+            >
+              <ArrowLeftRight
+                size={19}
+                className={compare.itemCount > 0 ? "text-accent" : ""}
+              />
+              {compare.itemCount > 0 && (
+                <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none animate-pulse">
+                  {compare.itemCount}
                 </span>
               )}
             </Link>
@@ -593,6 +617,24 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                   <Heart
                     size={15}
                     className={wishlist.itemCount > 0 ? "fill-accent text-accent" : "opacity-60"}
+                  />
+                </Link>
+                <Link
+                  href="/compare"
+                  onClick={() => setMenu(false)}
+                  className="flex items-center justify-between p-2.5 text-xs text-luxury-text hover:text-accent font-medium transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <span>{c("Fragrance Comparison", "مقارنة العطور")}</span>
+                    {compare.itemCount > 0 && (
+                      <span className="text-[10px] px-1.5 py-0.2 bg-accent text-white font-semibold rounded-full animate-pulse">
+                        {compare.itemCount}
+                      </span>
+                    )}
+                  </span>
+                  <ArrowLeftRight
+                    size={15}
+                    className={compare.itemCount > 0 ? "text-accent" : "opacity-60"}
                   />
                 </Link>
               </div>

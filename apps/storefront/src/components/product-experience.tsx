@@ -3,11 +3,12 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package, ShoppingBag } from "lucide-react";
+import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { PriceDisplay } from "@muschio/ui";
 import { ProductCard } from "./product-card";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
+import { useCompare } from "../context/compare-context";
 
 export interface ProductDetailProps {
   product: {
@@ -114,6 +115,35 @@ export function ProductExperience({
   const heartNotes = product.notes?.filter((n) => n.position === "HEART") || [];
   const baseNotes = product.notes?.filter((n) => n.position === "BASE") || [];
 
+  const { isInCompare, toggleCompare } = useCompare();
+  const isCompared = isInCompare(product.slug);
+
+  const handleToggleCompare = () => {
+    toggleCompare({
+      slug: product.slug,
+      nameEn: product.nameEn,
+      nameAr: product.nameAr,
+      brand: product.brand.name,
+      brandType: product.brand.type as "NICHE" | "DESIGNER",
+      concentration: product.concentration.replaceAll("_", " "),
+      price: selectedVariant?.price || 0,
+      compareAtPrice: selectedVariant?.compareAtPrice,
+      image: currentImage,
+      topNotes: topNotes.map((n) => n.name),
+      heartNotes: heartNotes.map((n) => n.name),
+      baseNotes: baseNotes.map((n) => n.name),
+      perfumer: product.perfumer,
+      perfumerBio: product.perfumerBio,
+      origin: product.origin,
+      longevity: product.longevity,
+      sillage: product.sillage,
+      variantId: selectedVariant?.id,
+      volumeMl: selectedVariant?.sizeLabelEn?.match(/\d+/)?.[0]
+        ? parseInt(selectedVariant.sizeLabelEn.match(/\d+/)![0], 10)
+        : 100,
+    });
+  };
+
   const brandSlug = product.brand.slug || product.brand.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   const handleAddToCart = async () => {
@@ -187,7 +217,7 @@ export function ProductExperience({
                 className="object-contain p-6 sm:p-10 md:p-14"
               />
 
-              {/* Floating Luxury Action Dock (Wishlist & Share) */}
+              {/* Floating Luxury Action Dock (Wishlist, Compare & Share) */}
               <div className="absolute top-4 end-4 right-4 rtl:right-auto rtl:left-4 z-20 flex flex-col items-center gap-1 p-1.5 rounded-full bg-luxury-surface/85 backdrop-blur-md border border-luxury-border/70 shadow-sm transition-all duration-200 hover:shadow-md hover:bg-luxury-surface/95">
                 {/* Wishlist Action */}
                 <button
@@ -215,6 +245,39 @@ export function ProductExperience({
                       isWishlisted
                         ? "fill-accent text-accent scale-110 drop-shadow-[0_2px_4px_rgba(197,168,128,0.35)]"
                         : "group-hover/wishlist:scale-110 group-hover/wishlist:text-luxury-text"
+                    }`}
+                  />
+                </button>
+
+                {/* Micro Divider */}
+                <div className="w-4 h-[1px] bg-luxury-border/60 my-0.5" />
+
+                {/* Compare Action */}
+                <button
+                  type="button"
+                  onClick={handleToggleCompare}
+                  title={
+                    isCompared
+                      ? c("Remove from Comparison", "إزالة من المقارنة")
+                      : c("Compare Fragrance", "مقارنة هذا العطر")
+                  }
+                  aria-label={
+                    isCompared
+                      ? c("Remove from Comparison", "إزالة من المقارنة")
+                      : c("Compare Fragrance", "مقارنة هذا العطر")
+                  }
+                  className={`group/compare w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                    isCompared
+                      ? "text-accent bg-accent/15"
+                      : "text-luxury-muted hover:text-luxury-text hover:bg-luxury-surface2/80"
+                  }`}
+                >
+                  <ArrowLeftRight
+                    size={17}
+                    className={`transition-all duration-300 ${
+                      isCompared
+                        ? "text-accent scale-110 drop-shadow-[0_2px_4px_rgba(197,168,128,0.35)]"
+                        : "group-hover/compare:scale-110 group-hover/compare:text-luxury-text"
                     }`}
                   />
                 </button>
@@ -393,13 +456,38 @@ export function ProductExperience({
                   </span>
                 </button>
 
-                <Link
-                  href="/delivery"
-                  className="editorial-button-secondary w-full text-center justify-center"
+                {/* Compare Fragrance Button */}
+                <button
+                  type="button"
+                  onClick={handleToggleCompare}
+                  className={`py-3.5 px-4 flex items-center justify-center gap-2.5 text-xs font-sans uppercase tracking-[0.14em] font-medium border transition-all duration-200 group active:scale-[0.99] ${
+                    isCompared
+                      ? "bg-accent/15 border-accent text-accent shadow-sm"
+                      : "bg-luxury-surface/70 border-luxury-border hover:border-luxury-borderBold hover:bg-luxury-surface text-luxury-text"
+                  }`}
                 >
-                  {c("White-Glove Delivery", "التوصيل الفاخر")}
-                </Link>
+                  <ArrowLeftRight
+                    size={15}
+                    className={`transition-all duration-300 ${
+                      isCompared
+                        ? "text-accent scale-110"
+                        : "text-luxury-muted group-hover:text-luxury-text group-hover:scale-110"
+                    }`}
+                  />
+                  <span>
+                    {isCompared
+                      ? c("In Comparison", "في المقارنة")
+                      : c("Compare Fragrance", "مقارنة العطر")}
+                  </span>
+                </button>
               </div>
+
+              <Link
+                href="/delivery"
+                className="editorial-button-secondary w-full text-center justify-center"
+              >
+                {c("White-Glove Delivery Details", "تفاصيل التوصيل الفاخر")}
+              </Link>
             </div>
 
             {/* Service Badges (Authentic, GCC Delivery, Sealed Guarantee) */}
@@ -723,26 +811,51 @@ export function ProductExperience({
           </span>
         </div>
 
-        <button
-          type="button"
-          onClick={handleAddToCart}
-          disabled={isAdding}
-          className="py-3 px-5 bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 flex-shrink-0"
-        >
-          {isAdding ? (
-            <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-          ) : addedSuccess ? (
-            <>
-              <Check size={14} />
-              <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
-            </>
-          ) : (
-            <>
-              <ShoppingBag size={14} />
-              <span>{c("Add to Bag", "أضف للحقيبة")}</span>
-            </>
-          )}
-        </button>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Mobile Quick Compare Action */}
+          <button
+            type="button"
+            onClick={handleToggleCompare}
+            title={
+              isCompared
+                ? c("Remove from Comparison", "إزالة من المقارنة")
+                : c("Compare Fragrance", "مقارنة العطر")
+            }
+            aria-label={
+              isCompared
+                ? c("Remove from Comparison", "إزالة من المقارنة")
+                : c("Compare Fragrance", "مقارنة العطر")
+            }
+            className={`w-10 h-10 rounded-sm flex items-center justify-center border transition-all duration-200 active:scale-95 ${
+              isCompared
+                ? "bg-accent text-white border-accent shadow-sm"
+                : "border-luxury-border bg-luxury-surface text-luxury-muted hover:text-luxury-text"
+            }`}
+          >
+            <ArrowLeftRight size={15} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleAddToCart}
+            disabled={isAdding}
+            className="py-3 px-5 bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2"
+          >
+            {isAdding ? (
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+            ) : addedSuccess ? (
+              <>
+                <Check size={14} />
+                <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
+              </>
+            ) : (
+              <>
+                <ShoppingBag size={14} />
+                <span>{c("Add to Bag", "أضف للحقيبة")}</span>
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
