@@ -8,7 +8,7 @@ export interface BrandItem {
     year: number;
     storyEn: string;
     storyAr: string;
-    perfumer: string;
+    perfumer?: string;
     metaTitle: string;
     metaDescription: string;
     logoUrl?: string;
@@ -42,6 +42,7 @@ export interface ProductItem {
     brandSlug?: string;
     scentFamily?: string;
     perfumer?: string;
+    perfumers?: string[];
     perfumerBio?: string;
     concentration?: string;
     gender?: string;
@@ -62,6 +63,7 @@ export interface ProductItem {
     metaTitle?: string;
     metaDescription?: string;
     imageUrl?: string;
+    images?: string[];
     imageAlt?: string;
     status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
 }

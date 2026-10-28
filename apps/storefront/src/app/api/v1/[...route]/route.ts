@@ -377,9 +377,10 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(signature);
     }
 
-    // 12. Admin Create Product
+    // 12. Admin Create or Update Product
     if (path === "admin/products") {
       const {
+        id: existingId,
         name,
         nameAr,
         sku,
@@ -387,11 +388,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         brand: brandName,
         scentFamily: familyName,
         perfumer: perfumerName,
+        perfumers: perfumersList,
         perfumerBio,
         concentration,
         gender,
         volumeMl,
         imageUrl,
+        images: imagesList,
         stock,
         testerStock,
         status,
@@ -444,26 +447,49 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         }
       }
 
-      // 2.5 Resolve or create Perfumer if provided
-      let perfumerRecord = null;
-      if (perfumerName) {
-        const perfumerClean = String(perfumerName).trim();
-        perfumerRecord = await prisma.perfumer.findFirst({
-          where: { name: { equals: perfumerClean, mode: "insensitive" } },
+      // 2.5 Resolve or create multiple Perfumers
+      const perfumerNames: string[] = [];
+      if (Array.isArray(perfumersList) && perfumersList.length > 0) {
+        for (const p of perfumersList) {
+          if (typeof p === "string" && p.trim()) perfumerNames.push(p.trim());
+        }
+      } else if (perfumerName && typeof perfumerName === "string") {
+        const parts = perfumerName.split(",").map((p) => p.trim()).filter(Boolean);
+        perfumerNames.push(...parts);
+      }
+
+      const resolvedPerfumerIds: string[] = [];
+      for (const pName of perfumerNames) {
+        let perfumerRecord = await prisma.perfumer.findFirst({
+          where: { name: { equals: pName, mode: "insensitive" } },
         });
         if (!perfumerRecord) {
-          const perfumerSlug = perfumerClean
+          const perfumerSlug = pName
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, "-")
             .replace(/(^-|-$)/g, "");
           perfumerRecord = await prisma.perfumer.create({
             data: {
-              name: perfumerClean,
-              slug: perfumerSlug || `perfumer-${Date.now()}`,
+              name: pName,
+              slug: perfumerSlug || `perfumer-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
               bioEn: perfumerBio ? String(perfumerBio).trim() : null,
             },
           });
         }
+        if (perfumerRecord) {
+          resolvedPerfumerIds.push(perfumerRecord.id);
+        }
+      }
+
+      // 2.8 Resolve multiple images
+      let productImages: string[] = [];
+      if (Array.isArray(imagesList) && imagesList.length > 0) {
+        productImages = imagesList.map((img: any) => String(img).trim()).filter(Boolean);
+      } else if (imageUrl) {
+        productImages = [String(imageUrl).trim()];
+      }
+      if (productImages.length === 0) {
+        productImages = ["/product-placeholder.svg"];
       }
 
       // 3. Generate product slug
@@ -472,63 +498,114 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
       let slug = baseSlug;
-      const existing = await prisma.product.findUnique({ where: { slug } });
-      if (existing) {
-        slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
-      }
 
       const numPrice = Number(String(price || 0).replace(/[^0-9.]/g, "")) || 0;
       const numStock = Number(stock) || 10;
       const numTesterStock = Number(testerStock) || 1;
       const numVolume = Number(volumeMl) || 100;
 
-      // 4. Create Product with Variant, Inventory, ScentFamily, and Perfumer in Neon DB
-      const newProduct = await prisma.product.create({
-        data: {
-          slug,
-          nameEn: String(name).trim(),
-          nameAr: String(nameAr || name).trim(),
-          descriptionEn: String(descriptionEn || name).trim(),
-          descriptionAr: String(descriptionAr || nameAr || name).trim(),
-          brandId: brand.id,
-          scentFamilyId: scentFamily?.id,
-          concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
-          gender: (gender as any) || "UNISEX",
-          images: imageUrl ? [imageUrl] : ["/product-placeholder.svg"],
-          isPublished: status !== "DRAFT",
-          perfumers: perfumerRecord
-            ? {
-                create: {
-                  perfumerId: perfumerRecord.id,
-                  isLead: true,
-                },
-              }
-            : undefined,
-          variants: {
-            create: {
-              sku: String(sku).trim(),
-              volumeMl: numVolume,
-              sizeLabelEn: `${numVolume}ml Extrait`,
-              sizeLabelAr: `${numVolume} مل إكستريت`,
-              price: numPrice,
-              inventory: {
-                create: {
-                  sealedQuantity: numStock,
-                  testerQuantity: numTesterStock,
+      // Check if product already exists to update
+      let targetProduct = null;
+      if (existingId) {
+        targetProduct = await prisma.product.findUnique({ where: { id: existingId } });
+      }
+      if (!targetProduct) {
+        targetProduct = await prisma.product.findFirst({
+          where: { variants: { some: { sku: String(sku).trim() } } },
+        });
+      }
+
+      let savedProduct;
+
+      if (targetProduct) {
+        // Update existing product
+        await prisma.productPerfumer.deleteMany({
+          where: { productId: targetProduct.id },
+        });
+
+        savedProduct = await prisma.product.update({
+          where: { id: targetProduct.id },
+          data: {
+            nameEn: String(name).trim(),
+            nameAr: String(nameAr || name).trim(),
+            descriptionEn: String(descriptionEn || name).trim(),
+            descriptionAr: String(descriptionAr || nameAr || name).trim(),
+            brandId: brand.id,
+            scentFamilyId: scentFamily?.id,
+            concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
+            gender: (gender as any) || "UNISEX",
+            images: productImages,
+            isPublished: status !== "DRAFT",
+            perfumers: resolvedPerfumerIds.length > 0
+              ? {
+                  create: resolvedPerfumerIds.map((id, index) => ({
+                    perfumerId: id,
+                    isLead: index === 0,
+                  })),
+                }
+              : undefined,
+          },
+          include: {
+            brand: true,
+            scentFamily: true,
+            perfumers: { include: { perfumer: true } },
+            variants: { include: { inventory: true } },
+          },
+        });
+      } else {
+        // Create new product
+        const existing = await prisma.product.findUnique({ where: { slug } });
+        if (existing) {
+          slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+        }
+
+        savedProduct = await prisma.product.create({
+          data: {
+            slug,
+            nameEn: String(name).trim(),
+            nameAr: String(nameAr || name).trim(),
+            descriptionEn: String(descriptionEn || name).trim(),
+            descriptionAr: String(descriptionAr || nameAr || name).trim(),
+            brandId: brand.id,
+            scentFamilyId: scentFamily?.id,
+            concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
+            gender: (gender as any) || "UNISEX",
+            images: productImages,
+            isPublished: status !== "DRAFT",
+            perfumers: resolvedPerfumerIds.length > 0
+              ? {
+                  create: resolvedPerfumerIds.map((id, index) => ({
+                    perfumerId: id,
+                    isLead: index === 0,
+                  })),
+                }
+              : undefined,
+            variants: {
+              create: {
+                sku: String(sku).trim(),
+                volumeMl: numVolume,
+                sizeLabelEn: `${numVolume}ml Extrait`,
+                sizeLabelAr: `${numVolume} مل إكستريت`,
+                price: numPrice,
+                inventory: {
+                  create: {
+                    sealedQuantity: numStock,
+                    testerQuantity: numTesterStock,
+                  },
                 },
               },
             },
           },
-        },
-        include: {
-          brand: true,
-          scentFamily: true,
-          perfumers: { include: { perfumer: true } },
-          variants: { include: { inventory: true } },
-        },
-      });
+          include: {
+            brand: true,
+            scentFamily: true,
+            perfumers: { include: { perfumer: true } },
+            variants: { include: { inventory: true } },
+          },
+        });
+      }
 
-      return success(newProduct, 201);
+      return success(savedProduct, targetProduct ? 200 : 201);
     }
 
     // 13. Admin Create Brand

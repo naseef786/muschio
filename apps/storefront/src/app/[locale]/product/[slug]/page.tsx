@@ -33,8 +33,18 @@ export default async function ProductPage({
     concentration: live.concentration.replaceAll("_", " "),
     brand: { name: brandName, slug: brandSlug, type: live.brand.type },
     origin: (live.brand as any)?.countryOfOrigin || undefined,
-    perfumer: live.perfumer || (live as any).perfumers?.[0]?.perfumer?.name || (live.brand as any)?.perfumer || undefined,
-    perfumerBio: live.perfumerBio || (live as any).perfumers?.[0]?.perfumer?.bioEn || (live.brand as any)?.storyEn || undefined,
+    perfumer:
+      live.perfumer ||
+      ((live as any).perfumers && (live as any).perfumers.length > 0
+        ? (live as any).perfumers
+            .map((rel: any) => rel.perfumer?.name || rel.name)
+            .filter(Boolean)
+            .join(", ")
+        : undefined),
+    perfumerBio:
+      live.perfumerBio ||
+      (live as any).perfumers?.[0]?.perfumer?.bioEn ||
+      undefined,
     scentFamily: live.scentFamily?.nameEn || undefined,
     longevity: "20+ Hours",
     sillage: "Royal Projection",

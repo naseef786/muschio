@@ -18,7 +18,6 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
     countryEn: "France",
     countryAr: "فرنسا",
     year: 2020,
-    perfumer: "In-House Nose",
     storyEn: "",
     storyAr: "",
     metaTitle: "",
@@ -36,7 +35,6 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
         countryEn: brandToEdit.countryEn,
         countryAr: brandToEdit.countryAr,
         year: brandToEdit.year,
-        perfumer: brandToEdit.perfumer,
         storyEn: brandToEdit.storyEn,
         storyAr: brandToEdit.storyAr,
         metaTitle: brandToEdit.metaTitle,
@@ -52,7 +50,6 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
         countryEn: "Sultanate of Oman",
         countryAr: "سلطنة عُمان",
         year: 1983,
-        perfumer: "Master Perfumer",
         storyEn: "",
         storyAr: "",
         metaTitle: "",
@@ -90,7 +87,6 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
       countryEn: formData.countryEn.trim(),
       countryAr: formData.countryAr.trim(),
       year: Number(formData.year) || 2020,
-      perfumer: formData.perfumer.trim(),
       storyEn: formData.storyEn.trim(),
       storyAr: formData.storyAr.trim(),
       metaTitle: finalMetaTitle,
@@ -209,19 +205,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
             </div>
           </div>
 
-          {/* Row 4: Perfumers */}
-          <div>
-            <label className="block text-slate-400 mb-1">Perfumer(s)</label>
-            <input
-              type="text"
-              placeholder="e.g. Pierre Negrin, Karine Vinchon"
-              value={formData.perfumer}
-              onChange={(e) => setFormData({ ...formData, perfumer: e.target.value })}
-              className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-            />
-          </div>
-
-          {/* Row 4.5: Maison Visual Identity */}
+          {/* Row 4: Maison Visual Identity */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800">
             <MediaUploadField
               label="Brand Logo"

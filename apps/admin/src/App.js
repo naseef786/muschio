@@ -7,6 +7,7 @@ import { BrandModal } from "./components/BrandModal";
 import { NoteModal } from "./components/NoteModal";
 import { AdminLoginGate } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
+import { MultiImageUploadField } from "./components/MultiImageUploadField";
 const TAB_TITLES = {
     dashboard: "Dashboard",
     products: "Products",
@@ -138,6 +139,10 @@ export function App() {
             metaTitle: "Interlude 53 Man Extrait by Amouage | Authentic Luxury Fragrance UAE",
             metaDescription: "Shop authentic Interlude 53 Man Extrait by Amouage (53% Extrait) at Muschio. Opening with oregano and pimento.",
             imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+            images: [
+                "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+                "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+            ],
             imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
             status: "PUBLISHED",
         },
@@ -171,6 +176,9 @@ export function App() {
             metaTitle: "Baccarat Rouge 540 Extrait by MFK | Authentic UAE",
             metaDescription: "Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed.",
             imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+            images: [
+                "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+            ],
             imageAlt: "Baccarat Rouge 540 Extrait flacon",
             status: "PUBLISHED",
         },
@@ -204,6 +212,9 @@ export function App() {
             metaTitle: "Elysium Pour Homme Parfum by Roja Parfums | UAE GCC",
             metaDescription: "Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio with fast GCC delivery.",
             imageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
+            images: [
+                "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
+            ],
             imageAlt: "Roja Parfums Elysium luxury flacon",
             status: "PUBLISHED",
         },
@@ -237,6 +248,9 @@ export function App() {
             metaTitle: "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE",
             metaDescription: "Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose.",
             imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+            images: [
+                "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+            ],
             imageAlt: "Xerjoff Alexandria II luxury flacon",
             status: "PUBLISHED",
         },
@@ -257,6 +271,7 @@ export function App() {
         volumeMl: 100,
         price: "",
         imageUrl: "",
+        images: [],
         stock: 20,
         testerStock: 2,
         warehouse: "DXB-MAIN",
@@ -279,7 +294,6 @@ export function App() {
             countryEn: "Sultanate of Oman",
             countryAr: "سلطنة عُمان",
             year: 1983,
-            perfumer: "Pierre Negrin, Renaud Salmon, Karine Vinchon",
             storyEn: "Established in 1983 in the Sultanate of Oman at the request of the Royal Family, Amouage is revered as 'The Gift of Kings'. The house defines royal Arabian haute parfumerie by fusing precious Omani Silver Frankincense, wild rock rose, and aged Cambodian agarwood at monumental concentrations.",
             storyAr: "تأسست عام 1983 في سلطنة عُمان بطلب ملكي سامٍ، وتُعرف دار أمواج بلقب 'هدية الملوك'. تعيد الدار صياغة الفخامة العطرية الملكية بدمج اللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتراكيز أسطورية.",
             metaTitle: "Amouage Fragrances & Extraits | Authentic Royal Omani Perfumery",
@@ -294,7 +308,6 @@ export function App() {
             countryEn: "Paris, France",
             countryAr: "باريس، فرنسا",
             year: 2009,
-            perfumer: "Francis Kurkdjian",
             storyEn: "Co-founded in 2009 by master perfumer Francis Kurkdjian, the Maison envisions a contemporary luxury fragrance wardrobe celebrating French elegance, crystalline amber accords, and monumental sillage.",
             storyAr: "تأسست عام 2009 على يد العطار البارع فرانسيس كوركدجيان، وتجسد الدار مفهوم الخزانة العطرية الفرنسية المعاصرة الجامعة بين الأناقة والانتشار المهيب.",
             metaTitle: "Maison Francis Kurkdjian | Authentic French Haute Parfumerie UAE",
@@ -309,7 +322,6 @@ export function App() {
             countryEn: "United Kingdom",
             countryAr: "المملكة المتحدة",
             year: 2011,
-            perfumer: "Roja Dove",
             storyEn: "Crafted by the world's most respected perfumer, Roja Dove, Roja Parfums uses only the rarest raw materials on earth to sculpt fragrances of uncompromising opulence.",
             storyAr: "ابتكرها العطار العالمي روجا دوف باستخدام أندر المواد الأولية على وجه الأرض لصياغة عطور فائقة الفخامة.",
             metaTitle: "Roja Parfums | Haute Luxe & Elysium Extrait Parfums UAE",
@@ -324,7 +336,6 @@ export function App() {
             countryEn: "Turin, Italy",
             countryAr: "تورينو، إيطاليا",
             year: 2003,
-            perfumer: "Sergio Momo, Christian Carbonnel",
             storyEn: "Founded in Turin, Xerjoff merges ancient Italian artistry with the most decadent oriental essences, hand-carved quartz bottles, and certified meteorites.",
             storyAr: "تأسست في تورينو بإيطاليا، وتمزج زيرجوف بين الحرفية الإيطالية العريقة وأرقى الخلاصات الشرقية والعود الطبيعي النادر.",
             metaTitle: "Xerjoff Perfumes | Alexandria II & Shooting Stars UAE",
@@ -339,7 +350,6 @@ export function App() {
             countryEn: "USA",
             countryAr: "الولايات المتحدة",
             year: 2006,
-            perfumer: "Various Master Noses",
             storyEn: "Tom Ford Private Blend represents the artisan perfumer's private laboratory, crafting provocative and timeless scent architectures.",
             storyAr: "يمثل خط توم فورد برايفت بليند المختبر الإبداعي لصياغة أجرأ وأرقى العطور العالمية الأيقونية.",
             metaTitle: "Tom Ford Private Blend | Authentic Fragrances UAE",
@@ -354,7 +364,6 @@ export function App() {
             countryEn: "United Kingdom",
             countryAr: "المملكة المتحدة",
             year: 1872,
-            perfumer: "Crown Perfumery Artisans",
             storyEn: "The heir to the Crown Perfumery established in 1872, Clive Christian crafts the world's most concentrated royal perfumes with Queen Victoria's royal crown crest.",
             storyAr: "وريث دار كراون العريقة لعام 1872، تقدم كلايف كريستيان أرقى العطور بتراكيز فائقة وشعار التاج الملكي المعتمد من الملكة فيكتوريا.",
             metaTitle: "Clive Christian Perfumes | The World's Finest Perfumery UAE",
@@ -476,7 +485,10 @@ export function App() {
                     brand: p.brand?.name || "Haute Niche",
                     brandSlug: p.brand?.slug || "brand",
                     scentFamily: p.scentFamily?.nameEn || "Woody Amber",
-                    perfumer: p.perfumers?.[0]?.perfumer?.name || p.perfumer || "",
+                    perfumer: (p.perfumers && p.perfumers.length > 0)
+                        ? p.perfumers.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
+                        : p.perfumer || "",
+                    perfumers: p.perfumers?.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
                     perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
                     concentration: p.concentration || "EXTRAIT_DE_PARFUM",
                     gender: p.gender || "UNISEX",
@@ -496,7 +508,8 @@ export function App() {
                     descriptionAr: p.descriptionAr || "",
                     metaTitle: `${p.nameEn} | Muschio`,
                     metaDescription: p.descriptionEn || "",
-                    imageUrl: p.images?.[0] || "/product-placeholder.svg",
+                    imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
+                    images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
                     imageAlt: p.nameEn,
                     status: p.isPublished ? "PUBLISHED" : "DRAFT",
                 }));
@@ -828,6 +841,7 @@ export function App() {
             volumeMl: 100,
             price: "",
             imageUrl: "",
+            images: [],
             stock: 20,
             testerStock: 2,
             warehouse: "DXB-MAIN",
@@ -845,18 +859,21 @@ export function App() {
     const handleOpenEditProduct = (p) => {
         setEditingProductId(p.id);
         const topNotesArr = p.topNotes || [];
+        const prodImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []);
+        const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
         setProductForm({
             sku: p.sku || "",
             name: p.name || "",
             nameAr: p.nameAr || "",
             brand: p.brand || "Amouage",
             scentFamily: p.scentFamily || "Woody Amber",
-            perfumer: p.perfumer || "",
+            perfumer: perfumerStr,
             perfumerBio: p.perfumerBio || "",
             concentration: p.concentration || "EXTRAIT_DE_PARFUM",
             volumeMl: p.volumeMl || 100,
             price: p.price ? p.price.replace(" AED", "") : "",
-            imageUrl: p.imageUrl || "",
+            imageUrl: prodImages[0] || p.imageUrl || "",
+            images: prodImages,
             stock: p.stock || 0,
             testerStock: p.testerStock || 0,
             warehouse: p.warehouse || "DXB-MAIN",
@@ -886,6 +903,12 @@ export function App() {
             generateProductMetaDescription(productForm.name, productForm.brand, productForm.concentration, topNotesArr);
         const finalDescEn = productForm.descriptionEn.trim() || productForm.name;
         const finalDescAr = productForm.descriptionAr.trim() || productForm.nameAr || productForm.name;
+        const productImages = productForm.images && productForm.images.length > 0
+            ? productForm.images
+            : (productForm.imageUrl ? [productForm.imageUrl] : ["https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85"]);
+        const perfumerArray = productForm.perfumer
+            ? productForm.perfumer.split(",").map((s) => s.trim()).filter(Boolean)
+            : [];
         const newP = {
             id: editingProductId || `p-${Date.now()}`,
             sku: productForm.sku,
@@ -896,6 +919,7 @@ export function App() {
             brandSlug: slugify(productForm.brand),
             scentFamily: productForm.scentFamily || "Woody Amber",
             perfumer: productForm.perfumer.trim() || undefined,
+            perfumers: perfumerArray.length > 0 ? perfumerArray : undefined,
             perfumerBio: productForm.perfumerBio.trim() || undefined,
             concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
             gender: "UNISEX",
@@ -913,8 +937,8 @@ export function App() {
             descriptionAr: finalDescAr,
             metaTitle: finalMetaTitle,
             metaDescription: finalMetaDesc,
-            imageUrl: productForm.imageUrl ||
-                "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+            imageUrl: productImages[0] || productForm.imageUrl || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+            images: productImages,
             imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
             status: productForm.status,
         };
@@ -929,9 +953,13 @@ export function App() {
                 },
                 body: JSON.stringify({
                     ...productForm,
+                    id: editingProductId || undefined,
                     scentFamily: productForm.scentFamily || "Woody Amber",
                     perfumer: productForm.perfumer.trim() || undefined,
+                    perfumers: perfumerArray,
                     perfumerBio: productForm.perfumerBio.trim() || undefined,
+                    images: productImages,
+                    imageUrl: productImages[0] || productForm.imageUrl,
                     volumeMl: Number(productForm.volumeMl) || 100,
                     descriptionEn: finalDescEn,
                     descriptionAr: finalDescAr,
@@ -965,6 +993,7 @@ export function App() {
             volumeMl: 100,
             price: "",
             imageUrl: "",
+            images: [],
             stock: 20,
             testerStock: 2,
             warehouse: "DXB-MAIN",
@@ -1146,7 +1175,51 @@ export function App() {
                                                                 }, className: "text-slate-200 font-medium hover:text-accent hover:underline flex items-center gap-1", title: "View brand details", children: [_jsx("span", { children: p.brand }), _jsx(Award, { size: 11, className: "text-amber-400" })] }), _jsx("span", { className: "text-[10px] text-slate-400 block font-mono", children: p.scentFamily || "Woody Amber" }), p.perfumer && (_jsxs("span", { className: "text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5", title: `Master Perfumer: ${p.perfumer}`, children: [_jsx(Sparkles, { size: 10, className: "text-amber-400 flex-shrink-0" }), _jsxs("span", { className: "truncate max-w-[130px] font-sans", children: ["Nose: ", p.perfumer] })] }))] }), _jsx("td", { className: "p-4 text-[11px]", children: _jsxs("div", { className: "space-y-0.5", children: [_jsxs("span", { className: "text-slate-300 block", children: ["Top (", p.topNotes?.length || 0, ") \u2022 Heart (", p.heartNotes?.length || 0, ") \u2022 Base (", p.baseNotes?.length || 0, ")"] }), p.topNotes && p.topNotes.length > 0 && (_jsxs("span", { className: "text-slate-500 text-[10px] block truncate max-w-xs", children: ["Opening: ", p.topNotes.slice(0, 2).join(", ")] }))] }) }), _jsx("td", { className: "p-4 font-mono font-medium text-slate-100", children: p.price }), _jsxs("td", { className: "p-4 font-mono", children: [_jsxs("span", { className: "text-emerald-400 block", children: [p.stock, " sealed (", p.warehouse, ")"] }), _jsxs("span", { className: "text-purple-400 text-[11px]", children: ["+", p.testerStock, " testers"] })] }), _jsx("td", { className: "p-4", children: _jsxs("span", { className: "px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit", children: [_jsx(CheckCircle2, { size: 11 }), _jsx("span", { children: "SEO Ready" })] }) }), _jsx("td", { className: "p-4 text-end", children: _jsxs("div", { className: "flex items-center justify-end gap-2", children: [_jsx("button", { onClick: () => handleOpenEditProduct(p), className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "Edit Product", children: _jsx(Edit3, { size: 14 }) }), _jsx("a", { href: `/en/product/${p.slug}`, target: "_blank", rel: "noreferrer", className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "View Storefront Page", children: _jsx(ExternalLink, { size: 14 }) }), _jsx("button", { onClick: () => handleDeleteProduct(p.id, p.name), className: "p-1 text-slate-500 hover:text-rose-400 transition-colors", title: "Delete Product", children: _jsx(Trash2, { size: 14 }) })] }) })] }, p.id))) })] }) }), showProductModal && (_jsx("div", { className: "fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto", onClick: () => setShowProductModal(false), children: _jsxs("div", { className: "bg-[#111622] border border-slate-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto", onClick: (e) => e.stopPropagation(), children: [_jsxs("div", { className: "flex items-center justify-between pb-3 border-b border-slate-800", children: [_jsxs("div", { children: [_jsx("h3", { className: "font-serif text-lg text-white font-light", children: editingProductId ? "Edit Product" : "Add Product" }), _jsx("p", { className: "text-[11px] text-slate-400", children: editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags" })] }), _jsx("button", { onClick: () => {
                                                         setShowProductModal(false);
                                                         setEditingProductId(null);
-                                                    }, className: "text-slate-400 hover:text-white", children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "space-y-4 text-xs", children: [_jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "SKU Code *" }), _jsx("input", { type: "text", placeholder: "e.g. AMO-INT53-100", value: productForm.sku, onChange: (e) => setProductForm({ ...productForm, sku: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Brand *" }), _jsx("select", { value: productForm.brand, onChange: (e) => setProductForm({ ...productForm, brand: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", children: brands.map((b) => (_jsxs("option", { value: b.name, children: [b.name, " (", b.countryEn, ")"] }, b.id))) })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (English) *" }), _jsx("input", { type: "text", placeholder: "e.g. Royal Taif Extrait de Parfum", value: productForm.name, onChange: (e) => setProductForm({ ...productForm, name: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (Arabic)" }), _jsx("input", { type: "text", dir: "rtl", placeholder: "e.g. \u0648\u0631\u062F \u0627\u0644\u0637\u0627\u0626\u0641 \u0625\u0643\u0633\u062A\u0631\u064A\u062A \u062F\u064A \u0628\u0627\u0631\u0641\u0627\u0646", value: productForm.nameAr, onChange: (e) => setProductForm({ ...productForm, nameAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded" })] }), _jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Scent Family (Olfactory Classification) *" }), _jsxs("select", { value: productForm.scentFamily, onChange: (e) => setProductForm({ ...productForm, scentFamily: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600", children: [_jsx("option", { value: "Woody Amber", children: "Woody Amber (\u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Amber Floral", children: "Amber Floral (\u0639\u0646\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Fresh Aromatic Citrus", children: "Fresh Aromatic Citrus (\u062D\u0645\u0636\u064A\u0627\u062A \u0623\u0631\u0648\u0645\u0627\u062A\u064A\u0629)" }), _jsx("option", { value: "Woody Amber Oud", children: "Woody Amber Oud (\u0639\u0648\u062F \u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Leather & Smoke", children: "Leather & Smoke (\u062C\u0644\u062F\u064A \u062F\u062E\u0627\u0646\u064A)" }), _jsx("option", { value: "Oriental Spicy", children: "Oriental Spicy (\u0634\u0631\u0642\u064A \u062D\u0627\u0631)" }), _jsx("option", { value: "Gourmand & Vanilla", children: "Gourmand & Vanilla (\u063A\u0648\u0631\u0645\u0627\u0646\u062F \u0648\u0641\u0627\u0646\u064A\u0644\u064A\u0627)" }), _jsx("option", { value: "Chypre Floral", children: "Chypre Floral (\u0634\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Aquatic & Fresh", children: "Aquatic & Fresh (\u0645\u0627\u0626\u064A \u0645\u0646\u0639\u0634)" }), _jsx("option", { value: "Floral", children: "Floral (\u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Woody", children: "Woody (\u062E\u0634\u0628\u064A)" })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Concentration *" }), _jsxs("select", { value: productForm.concentration, onChange: (e) => setProductForm({ ...productForm, concentration: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs", children: [_jsx("option", { value: "EXTRAIT_DE_PARFUM", children: "Extrait de Parfum (30-53%)" }), _jsx("option", { value: "PARFUM", children: "Parfum Pure (20-30%)" }), _jsx("option", { value: "EAU_DE_PARFUM", children: "Eau de Parfum (15-20%)" }), _jsx("option", { value: "PARFUM_OIL", children: "Pure Attar / Perfume Oil" })] })] })] }), _jsxs("div", { className: "p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("span", { className: "text-[11px] font-medium text-amber-400 flex items-center gap-1.5", children: [_jsx(Award, { size: 13 }), _jsx("span", { children: "Master Perfumer / Nose (\u0627\u0644\u0623\u0646\u0641 \u0627\u0644\u0639\u0637\u0631\u064A)" })] }), _jsx("span", { className: "text-[10px] text-slate-500 font-mono", children: "Storefront: Maison & Perfumer Details" })] }), _jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 text-[10px] mb-1", children: "Perfumer Name (Nose)" }), _jsx("input", { type: "text", placeholder: "e.g. Pierre Negrin, Francis Kurkdjian, Roja Dove", value: productForm.perfumer, onChange: (e) => setProductForm({ ...productForm, perfumer: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 text-[10px] mb-1", children: "Perfumer Heritage / Bio Note" }), _jsx("input", { type: "text", placeholder: "e.g. Master French perfumer famed for architectural incense", value: productForm.perfumerBio, onChange: (e) => setProductForm({ ...productForm, perfumerBio: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] })] })] }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsx("div", { className: "flex items-center justify-between", children: _jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(FileText, { size: 13, className: "text-amber-400" }), _jsx("span", { children: "Product Editorial Descriptions" })] }) }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (English)" }), _jsx("textarea", { rows: 3, placeholder: "e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano...", value: productForm.descriptionEn, onChange: (e) => setProductForm({ ...productForm, descriptionEn: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (Arabic)" }), _jsx("textarea", { rows: 3, dir: "rtl", placeholder: "e.g. \u0628\u062A\u0631\u0643\u064A\u0632 \u0623\u0633\u0637\u0648\u0631\u064A \u064A\u0628\u0644\u063A 53% \u0648\u0645\u0639\u062A\u0642 \u0644\u0645\u062F\u0629 \u0633\u062A\u0629 \u0623\u0634\u0647\u0631 \u0641\u064A \u0639\u064F\u0645\u0627\u0646. \u064A\u0641\u062A\u062A\u062D \u0628\u0646\u0641\u062D\u0627\u062A \u0627\u0644\u0623\u0648\u0631\u064A\u063A\u0627\u0646\u0648 \u0648\u0627\u0644\u0641\u0644\u0641\u0644 \u0627\u0644\u062D\u0627\u0631...", value: productForm.descriptionAr, onChange: (e) => setProductForm({ ...productForm, descriptionAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans" })] })] }), _jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Volume (ml)" }), _jsx("input", { type: "number", placeholder: "e.g. 100", value: productForm.volumeMl || 100, onChange: (e) => setProductForm({ ...productForm, volumeMl: Number(e.target.value) || 100 }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Price (AED) *" }), _jsx("input", { type: "text", placeholder: "e.g. 1,850", value: productForm.price, onChange: (e) => setProductForm({ ...productForm, price: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] })] }), _jsxs("div", { className: "p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2", children: [_jsxs("span", { className: "text-[11px] font-medium text-purple-400 flex items-center gap-1", children: [_jsx(Layers, { size: 13 }), _jsx("span", { children: "Scent Notes (comma-separated, auto-linked to note pages)" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Top Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Bergamot, Pink Pepper, Taif Rose", value: productForm.topNotes, onChange: (e) => setProductForm({ ...productForm, topNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Heart Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Silver Frankincense, Jasmine, Cedarwood", value: productForm.heartNotes, onChange: (e) => setProductForm({ ...productForm, heartNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Base Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Cambodian Oud, Ambergris, Sandalwood", value: productForm.baseNotes, onChange: (e) => setProductForm({ ...productForm, baseNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] })] }), _jsx(MediaUploadField, { label: "Product Flacon Photography (Cloudinary)", value: productForm.imageUrl, onChange: (url) => setProductForm({ ...productForm, imageUrl: url }), folder: "muschio/products", hint: "Upload luxury bottle image on neutral or transparent background" }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(Globe, { size: 13, className: "text-emerald-400" }), _jsx("span", { children: "Search Engine Optimization (SEO) & Google SERP" })] }), _jsxs("button", { type: "button", onClick: () => {
+                                                    }, className: "text-slate-400 hover:text-white", children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "space-y-4 text-xs", children: [_jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "SKU Code *" }), _jsx("input", { type: "text", placeholder: "e.g. AMO-INT53-100", value: productForm.sku, onChange: (e) => setProductForm({ ...productForm, sku: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Brand *" }), _jsx("select", { value: productForm.brand, onChange: (e) => setProductForm({ ...productForm, brand: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", children: brands.map((b) => (_jsxs("option", { value: b.name, children: [b.name, " (", b.countryEn, ")"] }, b.id))) })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (English) *" }), _jsx("input", { type: "text", placeholder: "e.g. Royal Taif Extrait de Parfum", value: productForm.name, onChange: (e) => setProductForm({ ...productForm, name: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (Arabic)" }), _jsx("input", { type: "text", dir: "rtl", placeholder: "e.g. \u0648\u0631\u062F \u0627\u0644\u0637\u0627\u0626\u0641 \u0625\u0643\u0633\u062A\u0631\u064A\u062A \u062F\u064A \u0628\u0627\u0631\u0641\u0627\u0646", value: productForm.nameAr, onChange: (e) => setProductForm({ ...productForm, nameAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded" })] }), _jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Scent Family (Olfactory Classification) *" }), _jsxs("select", { value: productForm.scentFamily, onChange: (e) => setProductForm({ ...productForm, scentFamily: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600", children: [_jsx("option", { value: "Woody Amber", children: "Woody Amber (\u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Amber Floral", children: "Amber Floral (\u0639\u0646\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Fresh Aromatic Citrus", children: "Fresh Aromatic Citrus (\u062D\u0645\u0636\u064A\u0627\u062A \u0623\u0631\u0648\u0645\u0627\u062A\u064A\u0629)" }), _jsx("option", { value: "Woody Amber Oud", children: "Woody Amber Oud (\u0639\u0648\u062F \u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Leather & Smoke", children: "Leather & Smoke (\u062C\u0644\u062F\u064A \u062F\u062E\u0627\u0646\u064A)" }), _jsx("option", { value: "Oriental Spicy", children: "Oriental Spicy (\u0634\u0631\u0642\u064A \u062D\u0627\u0631)" }), _jsx("option", { value: "Gourmand & Vanilla", children: "Gourmand & Vanilla (\u063A\u0648\u0631\u0645\u0627\u0646\u062F \u0648\u0641\u0627\u0646\u064A\u0644\u064A\u0627)" }), _jsx("option", { value: "Chypre Floral", children: "Chypre Floral (\u0634\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Aquatic & Fresh", children: "Aquatic & Fresh (\u0645\u0627\u0626\u064A \u0645\u0646\u0639\u0634)" }), _jsx("option", { value: "Floral", children: "Floral (\u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Woody", children: "Woody (\u062E\u0634\u0628\u064A)" })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Concentration *" }), _jsxs("select", { value: productForm.concentration, onChange: (e) => setProductForm({ ...productForm, concentration: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs", children: [_jsx("option", { value: "EXTRAIT_DE_PARFUM", children: "Extrait de Parfum (30-53%)" }), _jsx("option", { value: "PARFUM", children: "Parfum Pure (20-30%)" }), _jsx("option", { value: "EAU_DE_PARFUM", children: "Eau de Parfum (15-20%)" }), _jsx("option", { value: "PARFUM_OIL", children: "Pure Attar / Perfume Oil" })] })] })] }), _jsxs("div", { className: "p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("span", { className: "text-[11px] font-medium text-amber-400 flex items-center gap-1.5", children: [_jsx(Award, { size: 13 }), _jsx("span", { children: "Master Perfumer(s) / Nose (\u0627\u0644\u0623\u0646\u0641 \u0627\u0644\u0639\u0637\u0631\u064A)" })] }), _jsx("span", { className: "text-[10px] text-slate-500 font-mono", children: "Storefront: Maison & Perfumer Details" })] }), _jsxs("div", { children: [_jsxs("div", { className: "flex items-center justify-between mb-1", children: [_jsx("label", { className: "text-slate-400 text-[10px]", children: "Perfumer Names (multiple names can be written separated by commas)" }), _jsx("span", { className: "text-[10px] text-amber-400/80 font-sans", children: "Multiple Noses Supported" })] }), _jsx("input", { type: "text", placeholder: "e.g. Pierre Negrin, Renaud Salmon, Karine Vinchon", value: productForm.perfumer, onChange: (e) => setProductForm({ ...productForm, perfumer: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] }), productForm.perfumer.trim() && (_jsxs("div", { className: "flex flex-wrap items-center gap-1.5 pt-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Tagged Perfumers:" }), productForm.perfumer
+                                                                    .split(",")
+                                                                    .map((s) => s.trim())
+                                                                    .filter(Boolean)
+                                                                    .map((name, i) => (_jsxs("span", { className: "inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-medium", children: [_jsx("span", { children: name }), _jsx("button", { type: "button", onClick: () => {
+                                                                                const filtered = productForm.perfumer
+                                                                                    .split(",")
+                                                                                    .map((s) => s.trim())
+                                                                                    .filter((s) => s && s.toLowerCase() !== name.toLowerCase());
+                                                                                setProductForm({ ...productForm, perfumer: filtered.join(", ") });
+                                                                            }, className: "text-amber-400/70 hover:text-amber-200 transition-colors ml-0.5", title: `Remove ${name}`, children: _jsx(X, { size: 11 }) })] }, i)))] })), _jsxs("div", { className: "pt-1 border-t border-slate-800/80", children: [_jsx("span", { className: "text-[10px] text-slate-400 block mb-1.5", children: "Quick-Add Master Perfumer:" }), _jsx("div", { className: "flex flex-wrap gap-1", children: [
+                                                                        "Pierre Negrin",
+                                                                        "Francis Kurkdjian",
+                                                                        "Quentin Bisch",
+                                                                        "Dominique Ropion",
+                                                                        "Roja Dove",
+                                                                        "Chris Maurice",
+                                                                        "Alberto Morillas",
+                                                                        "Renaud Salmon",
+                                                                        "Karine Vinchon",
+                                                                    ].map((perfumerSuggestion) => {
+                                                                        const currentPerfumers = productForm.perfumer
+                                                                            .split(",")
+                                                                            .map((s) => s.trim().toLowerCase())
+                                                                            .filter(Boolean);
+                                                                        const isAlreadyAdded = currentPerfumers.includes(perfumerSuggestion.toLowerCase());
+                                                                        return (_jsx("button", { type: "button", onClick: () => {
+                                                                                if (isAlreadyAdded)
+                                                                                    return;
+                                                                                const currentList = productForm.perfumer
+                                                                                    .split(",")
+                                                                                    .map((s) => s.trim())
+                                                                                    .filter(Boolean);
+                                                                                const updated = [...currentList, perfumerSuggestion].join(", ");
+                                                                                setProductForm({ ...productForm, perfumer: updated });
+                                                                            }, disabled: isAlreadyAdded, className: `px-2 py-0.5 text-[10px] rounded transition-colors ${isAlreadyAdded
+                                                                                ? "bg-slate-800/60 text-slate-500 border border-slate-800 cursor-default"
+                                                                                : "bg-[#141C2B] hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60"}`, children: isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}` }, perfumerSuggestion));
+                                                                    }) })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 text-[10px] mb-1", children: "Perfumer Heritage / Bio Note" }), _jsx("input", { type: "text", placeholder: "e.g. Master French perfumer famed for architectural incense and royal extraits", value: productForm.perfumerBio, onChange: (e) => setProductForm({ ...productForm, perfumerBio: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] })] }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsx("div", { className: "flex items-center justify-between", children: _jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(FileText, { size: 13, className: "text-amber-400" }), _jsx("span", { children: "Product Editorial Descriptions" })] }) }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (English)" }), _jsx("textarea", { rows: 3, placeholder: "e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano...", value: productForm.descriptionEn, onChange: (e) => setProductForm({ ...productForm, descriptionEn: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (Arabic)" }), _jsx("textarea", { rows: 3, dir: "rtl", placeholder: "e.g. \u0628\u062A\u0631\u0643\u064A\u0632 \u0623\u0633\u0637\u0648\u0631\u064A \u064A\u0628\u0644\u063A 53% \u0648\u0645\u0639\u062A\u0642 \u0644\u0645\u062F\u0629 \u0633\u062A\u0629 \u0623\u0634\u0647\u0631 \u0641\u064A \u0639\u064F\u0645\u0627\u0646. \u064A\u0641\u062A\u062A\u062D \u0628\u0646\u0641\u062D\u0627\u062A \u0627\u0644\u0623\u0648\u0631\u064A\u063A\u0627\u0646\u0648 \u0648\u0627\u0644\u0641\u0644\u0641\u0644 \u0627\u0644\u062D\u0627\u0631...", value: productForm.descriptionAr, onChange: (e) => setProductForm({ ...productForm, descriptionAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans" })] })] }), _jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Volume (ml)" }), _jsx("input", { type: "number", placeholder: "e.g. 100", value: productForm.volumeMl || 100, onChange: (e) => setProductForm({ ...productForm, volumeMl: Number(e.target.value) || 100 }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Price (AED) *" }), _jsx("input", { type: "text", placeholder: "e.g. 1,850", value: productForm.price, onChange: (e) => setProductForm({ ...productForm, price: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] })] }), _jsxs("div", { className: "p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2", children: [_jsxs("span", { className: "text-[11px] font-medium text-purple-400 flex items-center gap-1", children: [_jsx(Layers, { size: 13 }), _jsx("span", { children: "Scent Notes (comma-separated, auto-linked to note pages)" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Top Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Bergamot, Pink Pepper, Taif Rose", value: productForm.topNotes, onChange: (e) => setProductForm({ ...productForm, topNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Heart Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Silver Frankincense, Jasmine, Cedarwood", value: productForm.heartNotes, onChange: (e) => setProductForm({ ...productForm, heartNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Base Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Cambodian Oud, Ambergris, Sandalwood", value: productForm.baseNotes, onChange: (e) => setProductForm({ ...productForm, baseNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] })] }), _jsx(MultiImageUploadField, { label: "Product Flacon & Gallery Photography (Cloudinary)", images: productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : []), onChange: (urls) => {
+                                                        setProductForm({
+                                                            ...productForm,
+                                                            images: urls,
+                                                            imageUrl: urls[0] || "",
+                                                        });
+                                                    }, folder: "muschio/products", hint: "Upload multiple luxury photos (bottle flacon, packaging box, lifestyle presentation). The first photo with \u2605 is the primary storefront cover." }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(Globe, { size: 13, className: "text-emerald-400" }), _jsx("span", { children: "Search Engine Optimization (SEO) & Google SERP" })] }), _jsxs("button", { type: "button", onClick: () => {
                                                                         const topNotesArr = productForm.topNotes
                                                                             ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean)
                                                                             : [];
@@ -1159,7 +1232,7 @@ export function App() {
                                                                         generateProductMetaDescription(productForm.name || "Fragrance", productForm.brand || "Brand", productForm.concentration) })] })] }), _jsxs("div", { className: "grid grid-cols-3 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Sealed Stock" }), _jsx("input", { type: "number", value: productForm.stock, onChange: (e) => setProductForm({ ...productForm, stock: Number(e.target.value) }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Testers" }), _jsx("input", { type: "number", value: productForm.testerStock, onChange: (e) => setProductForm({ ...productForm, testerStock: Number(e.target.value) }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Warehouse" }), _jsxs("select", { value: productForm.warehouse, onChange: (e) => setProductForm({ ...productForm, warehouse: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", children: [_jsx("option", { value: "DXB-MAIN", children: "DXB-MAIN (Dubai)" }), _jsx("option", { value: "RUH-HUB", children: "RUH-HUB (Riyadh)" })] })] })] })] }), _jsxs("div", { className: "flex justify-end gap-2 pt-3 border-t border-slate-800", children: [_jsx("button", { onClick: () => {
                                                         setShowProductModal(false);
                                                         setEditingProductId(null);
-                                                    }, className: "px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded", children: "Cancel" }), _jsxs("button", { onClick: handleSaveProduct, className: "px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded flex items-center gap-1.5", children: [_jsx(CheckCircle2, { size: 14 }), _jsx("span", { children: editingProductId ? "Update Product" : "Save Product" })] })] })] }) }))] })), activeTab === "brands" && (_jsxs("div", { className: "space-y-6", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-4", children: [_jsxs("div", { className: "relative flex-1 max-w-sm", children: [_jsx(Search, { size: 14, className: "absolute inset-y-0 start-3 my-auto text-slate-500" }), _jsx("input", { type: "text", placeholder: "Search by brand name, country, or perfumer...", value: brandSearch, onChange: (e) => setBrandSearch(e.target.value), className: "w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600" })] }), _jsxs("button", { onClick: () => {
+                                                    }, className: "px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded", children: "Cancel" }), _jsxs("button", { onClick: handleSaveProduct, className: "px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded flex items-center gap-1.5", children: [_jsx(CheckCircle2, { size: 14 }), _jsx("span", { children: editingProductId ? "Update Product" : "Save Product" })] })] })] }) }))] })), activeTab === "brands" && (_jsxs("div", { className: "space-y-6", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-4", children: [_jsxs("div", { className: "relative flex-1 max-w-sm", children: [_jsx(Search, { size: 14, className: "absolute inset-y-0 start-3 my-auto text-slate-500" }), _jsx("input", { type: "text", placeholder: "Search by brand name or country...", value: brandSearch, onChange: (e) => setBrandSearch(e.target.value), className: "w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600" })] }), _jsxs("button", { onClick: () => {
                                             setBrandToEdit(null);
                                             setShowBrandModal(true);
                                         }, className: "px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-amber-950/40", children: [_jsx(Plus, { size: 14 }), _jsx("span", { children: "Add Brand" })] })] }), _jsx("div", { className: "border border-slate-800 bg-[#111622] overflow-x-auto rounded", children: _jsxs("table", { className: "w-full text-start text-xs font-sans", children: [_jsx("thead", { className: "bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800", children: _jsxs("tr", { children: [_jsx("th", { className: "p-4 text-start", children: "Brand Name" }), _jsx("th", { className: "p-4 text-start", children: "URL Slug" }), _jsx("th", { className: "p-4 text-start", children: "Category" }), _jsx("th", { className: "p-4 text-start", children: "Country & Year" }), _jsx("th", { className: "p-4 text-start", children: "Products" }), _jsx("th", { className: "p-4 text-start", children: "Description" }), _jsx("th", { className: "p-4 text-end", children: "Actions" })] }) }), _jsx("tbody", { className: "divide-y divide-slate-800", children: brands
@@ -1171,7 +1244,7 @@ export function App() {
                                                     b.countryEn.toLowerCase().includes(q) ||
                                                     b.slug.toLowerCase().includes(q));
                                             })
-                                                .map((b) => (_jsxs("tr", { className: "hover:bg-slate-800/30 transition-colors", children: [_jsx("td", { className: "p-4", children: _jsxs("div", { className: "flex items-center gap-3", children: [_jsx("div", { className: "w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center p-1", children: b.logoUrl || b.heroImageUrl ? (_jsx("img", { src: b.logoUrl || b.heroImageUrl, alt: b.name, className: "w-full h-full object-contain" })) : (_jsx("span", { className: "font-serif text-amber-300 font-bold text-sm", children: b.name.charAt(0) })) }), _jsxs("div", { children: [_jsx("span", { className: "font-semibold text-white block text-sm", children: b.name }), _jsx("span", { className: "text-slate-400 text-[11px] font-mono", children: b.perfumer })] })] }) }), _jsx("td", { className: "p-4 font-mono text-[11px]", children: _jsxs("div", { className: "flex items-center gap-1 text-slate-400", children: [_jsx("span", { className: "text-slate-500", children: "/brands/" }), _jsx("span", { className: "text-amber-400 font-medium", children: b.slug })] }) }), _jsx("td", { className: "p-4", children: _jsx("span", { className: `px-2 py-0.5 text-[10px] font-bold rounded ${b.type === "NICHE"
+                                                .map((b) => (_jsxs("tr", { className: "hover:bg-slate-800/30 transition-colors", children: [_jsx("td", { className: "p-4", children: _jsxs("div", { className: "flex items-center gap-3", children: [_jsx("div", { className: "w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center p-1", children: b.logoUrl || b.heroImageUrl ? (_jsx("img", { src: b.logoUrl || b.heroImageUrl, alt: b.name, className: "w-full h-full object-contain" })) : (_jsx("span", { className: "font-serif text-amber-300 font-bold text-sm", children: b.name.charAt(0) })) }), _jsxs("div", { children: [_jsx("span", { className: "font-semibold text-white block text-sm", children: b.name }), _jsx("span", { className: "text-slate-400 text-[11px]", children: b.countryEn || "Prestige House" })] })] }) }), _jsx("td", { className: "p-4 font-mono text-[11px]", children: _jsxs("div", { className: "flex items-center gap-1 text-slate-400", children: [_jsx("span", { className: "text-slate-500", children: "/brands/" }), _jsx("span", { className: "text-amber-400 font-medium", children: b.slug })] }) }), _jsx("td", { className: "p-4", children: _jsx("span", { className: `px-2 py-0.5 text-[10px] font-bold rounded ${b.type === "NICHE"
                                                                 ? "bg-amber-500/10 text-amber-300 border border-amber-500/30"
                                                                 : "bg-blue-500/10 text-blue-300 border border-blue-500/30"}`, children: b.type === "NICHE" ? "Niche Brand" : "Designer" }) }), _jsxs("td", { className: "p-4", children: [_jsx("span", { className: "text-slate-200 block", children: b.countryEn }), _jsxs("span", { className: "text-slate-500 text-[10px]", children: ["Est. ", b.year] })] }), _jsx("td", { className: "p-4 font-mono", children: _jsxs("span", { className: "text-emerald-400 font-medium", children: [products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length, " products"] }) }), _jsx("td", { className: "p-4 text-slate-400 max-w-sm truncate text-[11px]", children: b.storyEn || "Brand description available." }), _jsx("td", { className: "p-4 text-end", children: _jsxs("div", { className: "flex items-center justify-end gap-2", children: [_jsx("button", { onClick: () => {
                                                                         setBrandToEdit(b);

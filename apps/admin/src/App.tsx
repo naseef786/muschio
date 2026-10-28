@@ -45,6 +45,7 @@ import { BrandModal } from "./components/BrandModal";
 import { NoteModal } from "./components/NoteModal";
 import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
+import { MultiImageUploadField } from "./components/MultiImageUploadField";
 
 type AdminTab =
   | "dashboard"
@@ -259,6 +260,10 @@ export function App() {
       metaTitle: "Interlude 53 Man Extrait by Amouage | Authentic Luxury Fragrance UAE",
       metaDescription: "Shop authentic Interlude 53 Man Extrait by Amouage (53% Extrait) at Muschio. Opening with oregano and pimento.",
       imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      images: [
+        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      ],
       imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
       status: "PUBLISHED",
     },
@@ -292,6 +297,9 @@ export function App() {
       metaTitle: "Baccarat Rouge 540 Extrait by MFK | Authentic UAE",
       metaDescription: "Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed.",
       imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      images: [
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      ],
       imageAlt: "Baccarat Rouge 540 Extrait flacon",
       status: "PUBLISHED",
     },
@@ -325,6 +333,9 @@ export function App() {
       metaTitle: "Elysium Pour Homme Parfum by Roja Parfums | UAE GCC",
       metaDescription: "Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio with fast GCC delivery.",
       imageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
+      images: [
+        "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
+      ],
       imageAlt: "Roja Parfums Elysium luxury flacon",
       status: "PUBLISHED",
     },
@@ -358,6 +369,9 @@ export function App() {
       metaTitle: "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE",
       metaDescription: "Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose.",
       imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      images: [
+        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
+      ],
       imageAlt: "Xerjoff Alexandria II luxury flacon",
       status: "PUBLISHED",
     },
@@ -379,6 +393,7 @@ export function App() {
     volumeMl: 100,
     price: "",
     imageUrl: "",
+    images: [] as string[],
     stock: 20,
     testerStock: 2,
     warehouse: "DXB-MAIN",
@@ -402,7 +417,6 @@ export function App() {
       countryEn: "Sultanate of Oman",
       countryAr: "سلطنة عُمان",
       year: 1983,
-      perfumer: "Pierre Negrin, Renaud Salmon, Karine Vinchon",
       storyEn:
         "Established in 1983 in the Sultanate of Oman at the request of the Royal Family, Amouage is revered as 'The Gift of Kings'. The house defines royal Arabian haute parfumerie by fusing precious Omani Silver Frankincense, wild rock rose, and aged Cambodian agarwood at monumental concentrations.",
       storyAr:
@@ -420,7 +434,6 @@ export function App() {
       countryEn: "Paris, France",
       countryAr: "باريس، فرنسا",
       year: 2009,
-      perfumer: "Francis Kurkdjian",
       storyEn:
         "Co-founded in 2009 by master perfumer Francis Kurkdjian, the Maison envisions a contemporary luxury fragrance wardrobe celebrating French elegance, crystalline amber accords, and monumental sillage.",
       storyAr:
@@ -438,7 +451,6 @@ export function App() {
       countryEn: "United Kingdom",
       countryAr: "المملكة المتحدة",
       year: 2011,
-      perfumer: "Roja Dove",
       storyEn:
         "Crafted by the world's most respected perfumer, Roja Dove, Roja Parfums uses only the rarest raw materials on earth to sculpt fragrances of uncompromising opulence.",
       storyAr:
@@ -456,7 +468,6 @@ export function App() {
       countryEn: "Turin, Italy",
       countryAr: "تورينو، إيطاليا",
       year: 2003,
-      perfumer: "Sergio Momo, Christian Carbonnel",
       storyEn:
         "Founded in Turin, Xerjoff merges ancient Italian artistry with the most decadent oriental essences, hand-carved quartz bottles, and certified meteorites.",
       storyAr:
@@ -474,7 +485,6 @@ export function App() {
       countryEn: "USA",
       countryAr: "الولايات المتحدة",
       year: 2006,
-      perfumer: "Various Master Noses",
       storyEn:
         "Tom Ford Private Blend represents the artisan perfumer's private laboratory, crafting provocative and timeless scent architectures.",
       storyAr:
@@ -492,7 +502,6 @@ export function App() {
       countryEn: "United Kingdom",
       countryAr: "المملكة المتحدة",
       year: 1872,
-      perfumer: "Crown Perfumery Artisans",
       storyEn:
         "The heir to the Crown Perfumery established in 1872, Clive Christian crafts the world's most concentrated royal perfumes with Queen Victoria's royal crown crest.",
       storyAr:
@@ -635,7 +644,10 @@ export function App() {
           brand: p.brand?.name || "Haute Niche",
           brandSlug: p.brand?.slug || "brand",
           scentFamily: p.scentFamily?.nameEn || "Woody Amber",
-          perfumer: p.perfumers?.[0]?.perfumer?.name || p.perfumer || "",
+          perfumer: (p.perfumers && p.perfumers.length > 0)
+            ? p.perfumers.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
+            : p.perfumer || "",
+          perfumers: p.perfumers?.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
           perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
           concentration: p.concentration || "EXTRAIT_DE_PARFUM",
           gender: p.gender || "UNISEX",
@@ -655,7 +667,8 @@ export function App() {
           descriptionAr: p.descriptionAr || "",
           metaTitle: `${p.nameEn} | Muschio`,
           metaDescription: p.descriptionEn || "",
-          imageUrl: p.images?.[0] || "/product-placeholder.svg",
+          imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
+          images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
           imageAlt: p.nameEn,
           status: p.isPublished ? "PUBLISHED" : "DRAFT",
         }));
@@ -1008,6 +1021,7 @@ export function App() {
       volumeMl: 100,
       price: "",
       imageUrl: "",
+      images: [] as string[],
       stock: 20,
       testerStock: 2,
       warehouse: "DXB-MAIN",
@@ -1026,18 +1040,21 @@ export function App() {
   const handleOpenEditProduct = (p: ProductItem) => {
     setEditingProductId(p.id);
     const topNotesArr = p.topNotes || [];
+    const prodImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []);
+    const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
     setProductForm({
       sku: p.sku || "",
       name: p.name || "",
       nameAr: p.nameAr || "",
       brand: p.brand || "Amouage",
       scentFamily: p.scentFamily || "Woody Amber",
-      perfumer: p.perfumer || "",
+      perfumer: perfumerStr,
       perfumerBio: p.perfumerBio || "",
       concentration: p.concentration || "EXTRAIT_DE_PARFUM",
       volumeMl: p.volumeMl || 100,
       price: p.price ? p.price.replace(" AED", "") : "",
-      imageUrl: p.imageUrl || "",
+      imageUrl: prodImages[0] || p.imageUrl || "",
+      images: prodImages,
       stock: p.stock || 0,
       testerStock: p.testerStock || 0,
       warehouse: p.warehouse || "DXB-MAIN",
@@ -1077,6 +1094,14 @@ export function App() {
     const finalDescEn = productForm.descriptionEn.trim() || productForm.name;
     const finalDescAr = productForm.descriptionAr.trim() || productForm.nameAr || productForm.name;
 
+    const productImages = productForm.images && productForm.images.length > 0
+      ? productForm.images
+      : (productForm.imageUrl ? [productForm.imageUrl] : ["https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85"]);
+
+    const perfumerArray = productForm.perfumer
+      ? productForm.perfumer.split(",").map((s) => s.trim()).filter(Boolean)
+      : [];
+
     const newP: ProductItem = {
       id: editingProductId || `p-${Date.now()}`,
       sku: productForm.sku,
@@ -1087,6 +1112,7 @@ export function App() {
       brandSlug: slugify(productForm.brand),
       scentFamily: productForm.scentFamily || "Woody Amber",
       perfumer: productForm.perfumer.trim() || undefined,
+      perfumers: perfumerArray.length > 0 ? perfumerArray : undefined,
       perfumerBio: productForm.perfumerBio.trim() || undefined,
       concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
       gender: "UNISEX",
@@ -1104,9 +1130,8 @@ export function App() {
       descriptionAr: finalDescAr,
       metaTitle: finalMetaTitle,
       metaDescription: finalMetaDesc,
-      imageUrl:
-        productForm.imageUrl ||
-        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      imageUrl: productImages[0] || productForm.imageUrl || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
+      images: productImages,
       imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
     };
@@ -1121,9 +1146,13 @@ export function App() {
         },
         body: JSON.stringify({
           ...productForm,
+          id: editingProductId || undefined,
           scentFamily: productForm.scentFamily || "Woody Amber",
           perfumer: productForm.perfumer.trim() || undefined,
+          perfumers: perfumerArray,
           perfumerBio: productForm.perfumerBio.trim() || undefined,
+          images: productImages,
+          imageUrl: productImages[0] || productForm.imageUrl,
           volumeMl: Number(productForm.volumeMl) || 100,
           descriptionEn: finalDescEn,
           descriptionAr: finalDescAr,
@@ -1160,6 +1189,7 @@ export function App() {
       volumeMl: 100,
       price: "",
       imageUrl: "",
+      images: [] as string[],
       stock: 20,
       testerStock: 2,
       warehouse: "DXB-MAIN",
@@ -1961,36 +1991,121 @@ export function App() {
                       </div>
                     </div>
 
-                    {/* Master Perfumer / Nose Details */}
-                    <div className="p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                    {/* Master Perfumer(s) / Nose Details */}
+                    <div className="p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
                           <Award size={13} />
-                          <span>Master Perfumer / Nose (الأنف العطري)</span>
+                          <span>Master Perfumer(s) / Nose (الأنف العطري)</span>
                         </span>
                         <span className="text-[10px] text-slate-500 font-mono">Storefront: Maison & Perfumer Details</span>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                        <div>
-                          <label className="block text-slate-400 text-[10px] mb-1">Perfumer Name (Nose)</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Pierre Negrin, Francis Kurkdjian, Roja Dove"
-                            value={productForm.perfumer}
-                            onChange={(e) => setProductForm({ ...productForm, perfumer: e.target.value })}
-                            className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
-                          />
+                      
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <label className="text-slate-400 text-[10px]">
+                            Perfumer Names (multiple names can be written separated by commas)
+                          </label>
+                          <span className="text-[10px] text-amber-400/80 font-sans">Multiple Noses Supported</span>
                         </div>
-                        <div>
-                          <label className="block text-slate-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
-                          <input
-                            type="text"
-                            placeholder="e.g. Master French perfumer famed for architectural incense"
-                            value={productForm.perfumerBio}
-                            onChange={(e) => setProductForm({ ...productForm, perfumerBio: e.target.value })}
-                            className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
-                          />
+                        <input
+                          type="text"
+                          placeholder="e.g. Pierre Negrin, Renaud Salmon, Karine Vinchon"
+                          value={productForm.perfumer}
+                          onChange={(e) => setProductForm({ ...productForm, perfumer: e.target.value })}
+                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                        />
+                      </div>
+
+                      {/* Interactive Perfumer Badges */}
+                      {productForm.perfumer.trim() && (
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                          <span className="text-[10px] text-slate-400">Tagged Perfumers:</span>
+                          {productForm.perfumer
+                            .split(",")
+                            .map((s) => s.trim())
+                            .filter(Boolean)
+                            .map((name, i) => (
+                              <span
+                                key={i}
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-medium"
+                              >
+                                <span>{name}</span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const filtered = productForm.perfumer
+                                      .split(",")
+                                      .map((s) => s.trim())
+                                      .filter((s) => s && s.toLowerCase() !== name.toLowerCase());
+                                    setProductForm({ ...productForm, perfumer: filtered.join(", ") });
+                                  }}
+                                  className="text-amber-400/70 hover:text-amber-200 transition-colors ml-0.5"
+                                  title={`Remove ${name}`}
+                                >
+                                  <X size={11} />
+                                </button>
+                              </span>
+                            ))}
                         </div>
+                      )}
+
+                      {/* Quick-Add Renowned Noses */}
+                      <div className="pt-1 border-t border-slate-800/80">
+                        <span className="text-[10px] text-slate-400 block mb-1.5">Quick-Add Master Perfumer:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {[
+                            "Pierre Negrin",
+                            "Francis Kurkdjian",
+                            "Quentin Bisch",
+                            "Dominique Ropion",
+                            "Roja Dove",
+                            "Chris Maurice",
+                            "Alberto Morillas",
+                            "Renaud Salmon",
+                            "Karine Vinchon",
+                          ].map((perfumerSuggestion) => {
+                            const currentPerfumers = productForm.perfumer
+                              .split(",")
+                              .map((s) => s.trim().toLowerCase())
+                              .filter(Boolean);
+                            const isAlreadyAdded = currentPerfumers.includes(perfumerSuggestion.toLowerCase());
+                            return (
+                              <button
+                                key={perfumerSuggestion}
+                                type="button"
+                                onClick={() => {
+                                  if (isAlreadyAdded) return;
+                                  const currentList = productForm.perfumer
+                                    .split(",")
+                                    .map((s) => s.trim())
+                                    .filter(Boolean);
+                                  const updated = [...currentList, perfumerSuggestion].join(", ");
+                                  setProductForm({ ...productForm, perfumer: updated });
+                                }}
+                                disabled={isAlreadyAdded}
+                                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
+                                  isAlreadyAdded
+                                    ? "bg-slate-800/60 text-slate-500 border border-slate-800 cursor-default"
+                                    : "bg-[#141C2B] hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60"
+                                }`}
+                              >
+                                {isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}`}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Master French perfumer famed for architectural incense and royal extraits"
+                          value={productForm.perfumerBio}
+                          onChange={(e) => setProductForm({ ...productForm, perfumerBio: e.target.value })}
+                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                        />
                       </div>
                     </div>
 
@@ -2087,12 +2202,18 @@ export function App() {
                       </div>
                     </div>
 
-                    <MediaUploadField
-                      label="Product Flacon Photography (Cloudinary)"
-                      value={productForm.imageUrl}
-                      onChange={(url) => setProductForm({ ...productForm, imageUrl: url })}
+                    <MultiImageUploadField
+                      label="Product Flacon & Gallery Photography (Cloudinary)"
+                      images={productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : [])}
+                      onChange={(urls) => {
+                        setProductForm({
+                          ...productForm,
+                          images: urls,
+                          imageUrl: urls[0] || "",
+                        });
+                      }}
                       folder="muschio/products"
-                      hint="Upload luxury bottle image on neutral or transparent background"
+                      hint="Upload multiple luxury photos (bottle flacon, packaging box, lifestyle presentation). The first photo with ★ is the primary storefront cover."
                     />
 
                     {/* Google SERP SEO Meta Title & Meta Description */}
@@ -2264,7 +2385,7 @@ export function App() {
                 <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
                 <input
                   type="text"
-                  placeholder="Search by brand name, country, or perfumer..."
+                  placeholder="Search by brand name or country..."
                   value={brandSearch}
                   onChange={(e) => setBrandSearch(e.target.value)}
                   className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
@@ -2326,7 +2447,7 @@ export function App() {
                             </div>
                             <div>
                               <span className="font-semibold text-white block text-sm">{b.name}</span>
-                              <span className="text-slate-400 text-[11px] font-mono">{b.perfumer}</span>
+                              <span className="text-slate-400 text-[11px]">{b.countryEn || "Prestige House"}</span>
                             </div>
                           </div>
                         </td>
