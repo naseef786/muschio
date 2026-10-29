@@ -16,6 +16,8 @@ import {
   CloudinaryService,
   AdminService,
 } from "@muschio/api";
+import { EmailService } from "@/lib/email-service";
+
 
 if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL =
@@ -250,6 +252,86 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success(products);
     }
 
+    // 15. Admin Orders List
+    if (path === "admin/orders") {
+      const limit = Number(url.searchParams.get("limit") || "100");
+      const status = url.searchParams.get("status") || undefined;
+      const orders = await prisma.order.findMany({
+        where: status ? { status: status as any } : undefined,
+        include: {
+          items: true,
+          shippingAddress: true,
+          payments: { orderBy: { createdAt: "desc" } },
+          customer: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+      return success(orders);
+    }
+
+    // 16. Admin Real-Time Live Tracker (Events, Live Orders, Counters)
+    if (path === "admin/orders/live") {
+      const sinceParam = url.searchParams.get("since");
+      const sinceDate = sinceParam ? new Date(sinceParam) : new Date(Date.now() - 30 * 1000);
+
+      const [recentEvents, latestOrders, totalOrders, pendingOrders, cancelledOrders, totalEnquiries] = await Promise.all([
+        prisma.businessEvent.findMany({
+          where: { createdAt: { gt: sinceDate } },
+          orderBy: { createdAt: "asc" },
+          take: 50,
+        }),
+        prisma.order.findMany({
+          where: { createdAt: { gt: sinceDate } },
+          include: {
+            items: true,
+            shippingAddress: true,
+            payments: { orderBy: { createdAt: "desc" } },
+            customer: true,
+          },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        }),
+        prisma.order.count(),
+        prisma.order.count({ where: { status: "PENDING" } }),
+        prisma.order.count({ where: { status: "CANCELLED" } }),
+        prisma.businessEvent.count({ where: { eventName: "ENQUIRY_CREATED" } }),
+      ]);
+
+      return success({
+        events: recentEvents,
+        orders: latestOrders,
+        counters: {
+          totalOrders,
+          pendingOrders,
+          cancelledOrders,
+          totalEnquiries,
+        },
+        serverTime: new Date().toISOString(),
+      });
+    }
+
+    // 17. Admin Customer & VIP Concierge Enquiries List
+    if (path === "admin/enquiries") {
+      const enquiries = await prisma.businessEvent.findMany({
+        where: { eventName: "ENQUIRY_CREATED" },
+        orderBy: { createdAt: "desc" },
+        take: 100,
+      });
+      return success(
+        enquiries.map((e) => {
+          const payload = (e.payload as any) || {};
+          return {
+            id: e.id,
+            aggregateId: e.aggregateId,
+            createdAt: e.createdAt,
+            ...payload,
+          };
+        })
+      );
+    }
+
+
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route Error:", err);
@@ -335,6 +417,36 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       const session = body.guestSessionId || guestSessionId || "guest";
       const customer = body.customerId || customerId;
       const order = await CheckoutService.processCheckout(body, session, customer);
+
+      // Fetch full order to guarantee addresses and items for logging & emails
+      const fullOrder = await CheckoutService.getOrderById(order.id).catch(() => null);
+      const orderToLog = fullOrder || order;
+
+      await prisma.businessEvent.create({
+        data: {
+          eventName: "ORDER_CREATED",
+          aggregateType: "ORDER",
+          aggregateId: order.id,
+          payload: {
+            orderNumber: order.orderNumber,
+            customerName: (orderToLog as any).shippingAddress?.fullName || (orderToLog as any).customer?.name || "Client",
+            totalAmount: Number(order.totalAmount),
+            currency: order.currency || "AED",
+            status: order.status,
+            itemCount: (orderToLog as any).items?.length || 1,
+            createdAt: new Date().toISOString(),
+          },
+        },
+      }).catch((err) => console.error("Failed to log ORDER_CREATED event:", err));
+
+      // Trigger transactional emails asynchronously
+      EmailService.sendOrderConfirmation(orderToLog).catch((err) =>
+        console.error("Failed to send order confirmation email:", err)
+      );
+      EmailService.sendAdminOrderAlert(orderToLog).catch((err) =>
+        console.error("Failed to send admin order alert email:", err)
+      );
+
       return success(order, 201);
     }
 
@@ -794,6 +906,180 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       });
       return success(note, 201);
     }
+
+    // 15. Customer & Concierge Enquiries Submission
+    if (path === "enquiries") {
+      const { name, email, phone, subject, message, fragranceInterest } = body || {};
+      if (!name || !email || !message) {
+        return error("INVALID_INPUT", "Name, email, and message are required", 400);
+      }
+
+      const enquiryId = `ENQ-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
+      const enquiryPayload = {
+        enquiryId,
+        name: String(name).trim(),
+        email: String(email).trim(),
+        phone: phone ? String(phone).trim() : "",
+        subject: subject ? String(subject).trim() : "VIP Fragrance Concierge Enquiry",
+        message: String(message).trim(),
+        fragranceInterest: fragranceInterest ? String(fragranceInterest).trim() : "",
+        status: "NEW",
+        receivedAt: new Date().toISOString(),
+      };
+
+      const event = await prisma.businessEvent.create({
+        data: {
+          eventName: "ENQUIRY_CREATED",
+          aggregateType: "ENQUIRY",
+          aggregateId: enquiryId,
+          payload: enquiryPayload,
+        },
+      });
+
+      // Send transactional notification email to admin/concierge team
+      EmailService.sendEnquiryNotification(enquiryPayload).catch((err) =>
+        console.error("Failed to send enquiry notification email:", err)
+      );
+
+      return success({ success: true, enquiryId, eventId: event.id }, 201);
+    }
+
+    // 16. Admin Order Status Workflow & Cancellation
+    if (path === "admin/orders/status") {
+      const { orderId, orderNumber, status, reason } = body || {};
+      if (!status) return error("INVALID_INPUT", "Status is required", 400);
+
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [
+            ...(orderId ? [{ id: orderId }] : []),
+            ...(orderNumber ? [{ orderNumber }] : []),
+          ],
+        },
+        include: { items: true, shippingAddress: true, customer: true, payments: true },
+      });
+
+      if (!order) return error("NOT_FOUND", "Order not found", 404);
+
+      const previousStatus = order.status;
+      const updatedOrder = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: status as any },
+        include: { items: true, shippingAddress: true, customer: true, payments: true },
+      });
+
+      // Log business event for real-time tracking
+      const eventName = status === "CANCELLED" ? "ORDER_CANCELLED" : `ORDER_${status}`;
+      await prisma.businessEvent.create({
+        data: {
+          eventName,
+          aggregateType: "ORDER",
+          aggregateId: order.id,
+          payload: {
+            orderNumber: order.orderNumber,
+            previousStatus,
+            newStatus: status,
+            reason: reason || "Admin Status Update",
+            customerName: order.shippingAddress?.fullName || order.customer?.firstName || "Client",
+            totalAmount: Number(order.totalAmount),
+            currency: order.currency,
+            updatedAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      // Send transactional cancellation email if cancelled
+      if (status === "CANCELLED") {
+        EmailService.sendOrderCancellation(order, reason).catch((err) =>
+          console.error("Failed to send order cancellation email:", err)
+        );
+      }
+
+      return success({ success: true, order: updatedOrder });
+    }
+
+    // 17. Customer Order Cancellation
+    if (path === "orders/cancel") {
+      const { orderNumber, reason } = body || {};
+      if (!orderNumber) return error("INVALID_INPUT", "Order number is required", 400);
+
+      const order = await prisma.order.findUnique({
+        where: { orderNumber },
+        include: { items: true, shippingAddress: true, customer: true, payments: true },
+      });
+
+      if (!order) return error("NOT_FOUND", "Order not found", 404);
+
+      if (order.status !== "PENDING" && order.status !== "PAYMENT_PENDING") {
+        return error(
+          "INVALID_STATE",
+          `Order cannot be cancelled in status ${order.status}. Please contact our concierge.`,
+          400
+        );
+      }
+
+      const updated = await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "CANCELLED" },
+        include: { items: true, shippingAddress: true, customer: true },
+      });
+
+      await prisma.businessEvent.create({
+        data: {
+          eventName: "ORDER_CANCELLED",
+          aggregateType: "ORDER",
+          aggregateId: order.id,
+          payload: {
+            orderNumber: order.orderNumber,
+            reason: reason || "Client Cancellation Request",
+            customerName: order.shippingAddress?.fullName || order.customer?.firstName || "Client",
+            totalAmount: Number(order.totalAmount),
+            currency: order.currency,
+            cancelledAt: new Date().toISOString(),
+          },
+        },
+      });
+
+      EmailService.sendOrderCancellation(order, reason || "Client Cancellation Request").catch((err) =>
+        console.error("Failed to send order cancellation email:", err)
+      );
+
+      return success({ success: true, order: updated });
+    }
+
+    // 18. Admin Enquiry Status Update
+    if (path === "admin/enquiries/status") {
+      const { id, enquiryId, status, notes } = body || {};
+      if (!status) return error("INVALID_INPUT", "Status is required", 400);
+
+      const event = await prisma.businessEvent.findFirst({
+        where: {
+          OR: [
+            ...(id ? [{ id }] : []),
+            ...(enquiryId ? [{ aggregateId: enquiryId }] : []),
+          ],
+          eventName: "ENQUIRY_CREATED",
+        },
+      });
+
+      if (!event) return error("NOT_FOUND", "Enquiry not found", 404);
+
+      const existingPayload = (event.payload as any) || {};
+      const updatedPayload = {
+        ...existingPayload,
+        status,
+        lastAdminNote: notes || existingPayload.lastAdminNote,
+        updatedAt: new Date().toISOString(),
+      };
+
+      await prisma.businessEvent.update({
+        where: { id: event.id },
+        data: { payload: updatedPayload },
+      });
+
+      return success({ success: true, status, enquiryId: event.aggregateId });
+    }
+
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -31,6 +31,14 @@ import {
   Edit3,
   LogOut,
   Menu,
+  Bell,
+  BellRing,
+  Volume2,
+  VolumeX,
+  MessageSquare,
+  Send,
+  Clock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   BrandItem,
@@ -60,6 +68,7 @@ type AdminTab =
   | "reviews"
   | "markets"
   | "orders"
+  | "enquiries"
   | "banners"
   | "settings"
   | "audit";
@@ -72,7 +81,8 @@ const TAB_TITLES: Record<AdminTab, string> = {
   inventory: "Inventory",
   purchasing: "Purchasing",
   returns: "Returns",
-  orders: "Orders",
+  orders: "Orders & Real-Time Tracking",
+  enquiries: "VIP Enquiries & Concierge",
   reviews: "Reviews",
   markets: "Markets",
   banners: "Banners",
@@ -88,13 +98,48 @@ const TAB_SUBTITLES: Record<AdminTab, string> = {
   inventory: "Warehouse locations and stock allocation",
   purchasing: "Supplier purchase orders and incoming stock",
   returns: "Customer returns and product inspection",
-  orders: "Customer orders and fulfillment status",
+  orders: "Live customer orders, real-time cancellations, and dispatch workflow",
+  enquiries: "Live concierge consultations, bespoke inquiries, and VIP messages",
   reviews: "Moderate customer product ratings and reviews",
   markets: "GCC countries, currencies, and VAT rates",
   banners: "Homepage hero sliders, promos, and announcements",
   settings: "Social media links, contact info, and store settings",
   audit: "System security log and admin user activity",
 };
+
+interface LiveEventItem {
+  id: string;
+  eventName: string;
+  aggregateType: string;
+  aggregateId: string;
+  payload: any;
+  createdAt: string;
+  read?: boolean;
+}
+
+interface EnquiryItem {
+  id: string;
+  aggregateId?: string;
+  enquiryId?: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  fragranceInterest?: string;
+  status: "NEW" | "IN_PROGRESS" | "RESOLVED" | "ARCHIVED";
+  receivedAt?: string;
+  createdAt?: string;
+  lastAdminNote?: string;
+}
+
+interface LiveToast {
+  id: string;
+  type: "order" | "cancel" | "enquiry";
+  title: string;
+  message: string;
+  time: string;
+}
 
 type BannerSlot = "HERO_SLIDER" | "CAMPAIGN_MID" | "PROMO_STRIP" | "ANNOUNCEMENT_BAR";
 
@@ -824,6 +869,251 @@ export function App() {
 
   const [orderSearch, setOrderSearch] = useState("");
   const [orderMarketFilter, setOrderMarketFilter] = useState("ALL");
+  const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
+
+  // Real-Time Notification & Live Event State
+  const [liveEvents, setLiveEvents] = useState<LiveEventItem[]>([]);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isAudioEnabled, setIsAudioEnabled] = usePersistentState<boolean>("admin_audio_notifications", true);
+  const [toasts, setToasts] = useState<LiveToast[]>([]);
+  const [enquiries, setEnquiries] = useState<EnquiryItem[]>([
+    {
+      id: "enq-demo-1",
+      enquiryId: "ENQ-DEMO-01",
+      name: "Sheikha Maryam Al-Maktoum",
+      email: "maryam.m@dubai.priv",
+      phone: "+971501234567",
+      subject: "Private Sillage Consultation",
+      message: "Seeking a private VIP olfactory presentation of Amouage Guidance 46 and bespoke Attars for a royal wedding celebration.",
+      fragranceInterest: "Amouage Guidance 46 / Bespoke Attars",
+      status: "NEW",
+      createdAt: new Date(Date.now() - 3600000).toISOString(),
+    },
+    {
+      id: "enq-demo-2",
+      enquiryId: "ENQ-DEMO-02",
+      name: "Tariq Bin Laden",
+      email: "tariq.bl@holding.sa",
+      phone: "+966555123456",
+      subject: "Baccarat Rouge Extrait 500ml Flacon Availability",
+      message: "Do you offer private warehouse courier delivery to Riyadh Diplomatic Quarter for 2 flacons this week?",
+      fragranceInterest: "Maison Francis Kurkdjian Baccarat Rouge 540",
+      status: "IN_PROGRESS",
+      createdAt: new Date(Date.now() - 7200000).toISOString(),
+    },
+  ]);
+  const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<string>("ALL");
+  const [enquirySearch, setEnquirySearch] = useState<string>("");
+  const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
+  const lastPollTimeRef = useRef<string>(new Date(Date.now() - 60000).toISOString());
+
+  // Web Audio API Luxury Ambient Chime Synthesizer
+  const playLuxuryChime = (toneType: "order" | "cancel" | "enquiry" = "order") => {
+    if (!isAudioEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioCtx) return;
+      const ctx = new AudioCtx();
+      if (ctx.state === "suspended") {
+        ctx.resume();
+      }
+      const now = ctx.currentTime;
+      if (toneType === "order") {
+        // Dual Bell Sine: E5 (659.25Hz) -> A5 (880Hz)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = "sine";
+        osc1.frequency.setValueAtTime(659.25, now);
+        gain1.gain.setValueAtTime(0.08, now);
+        gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(now);
+        osc1.stop(now + 0.5);
+
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = "sine";
+        osc2.frequency.setValueAtTime(880, now + 0.12);
+        gain2.gain.setValueAtTime(0.1, now + 0.12);
+        gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.8);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(now + 0.12);
+        osc2.stop(now + 0.8);
+      } else if (toneType === "cancel") {
+        // Descending Tone: F5 (698.46Hz) down to D5 (587.33Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "triangle";
+        osc.frequency.setValueAtTime(698.46, now);
+        osc.frequency.exponentialRampToValueAtTime(523.25, now + 0.45);
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.5);
+      } else {
+        // Soft Single Sine: C5 (523.25Hz)
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(587.33, now);
+        gain.gain.setValueAtTime(0.08, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+    } catch {
+      // Audio autoplay policy
+    }
+  };
+
+  // Toast notification dispatcher
+  const addToast = (type: "order" | "cancel" | "enquiry", title: string, message: string) => {
+    const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
+    setToasts((prev) => [{ id, type, title, message, time: "Just now" }, ...prev.slice(0, 3)]);
+    setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 6000);
+  };
+
+  // Load initial orders and enquiries from live database
+  useEffect(() => {
+    let active = true;
+    const fetchLiveDbData = async () => {
+      try {
+        const [ordersRes, enquiriesRes] = await Promise.all([
+          fetch("/api/v1/admin/orders").catch(() => null),
+          fetch("/api/v1/admin/enquiries").catch(() => null),
+        ]);
+
+        if (ordersRes && ordersRes.ok) {
+          const json = await ordersRes.json();
+          if (json.success && Array.isArray(json.data) && json.data.length > 0 && active) {
+            setOrders(
+              json.data.map((o: any) => ({
+                id: o.id,
+                number: o.orderNumber,
+                customer: o.shippingAddress?.fullName || o.customer?.firstName || o.guestEmail || "Client",
+                amount: `${Number(o.totalAmount).toLocaleString()} ${o.currency || "AED"}`,
+                method: o.payments?.[0]?.provider || "CARD",
+                status: o.status,
+                market: o.marketId || o.shippingAddress?.countryCode || "AE",
+                date: new Date(o.createdAt).toLocaleDateString("en-GB", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              }))
+            );
+          }
+        }
+
+        if (enquiriesRes && enquiriesRes.ok) {
+          const json = await enquiriesRes.json();
+          if (json.success && Array.isArray(json.data) && active) {
+            setEnquiries(json.data);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not load initial live admin data:", err);
+      }
+    };
+
+    fetchLiveDbData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Real-time live poller (polls every 4.5 seconds)
+  useEffect(() => {
+    if (!isLiveActive) return;
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/v1/admin/orders/live?since=${encodeURIComponent(lastPollTimeRef.current)}`);
+        if (!res.ok) return;
+        const json = await res.json();
+        if (!json.success || !json.data) return;
+
+        const { events, orders: newOrders, serverTime } = json.data;
+        if (serverTime) {
+          lastPollTimeRef.current = serverTime;
+        }
+
+        if (Array.isArray(events) && events.length > 0) {
+          setLiveEvents((prev) => [...events.map((e: any) => ({ ...e, read: false })), ...prev].slice(0, 50));
+
+          events.forEach((evt: any) => {
+            const p = evt.payload || {};
+            if (evt.eventName === "ORDER_CREATED") {
+              playLuxuryChime("order");
+              addToast(
+                "order",
+                "New Order Received",
+                `${p.orderNumber || "Order"} • ${p.totalAmount ? Number(p.totalAmount).toLocaleString() : ""} ${p.currency || "AED"} (${p.customerName || "Client"})`
+              );
+            } else if (evt.eventName === "ORDER_CANCELLED") {
+              playLuxuryChime("cancel");
+              addToast(
+                "cancel",
+                "Order Cancelled",
+                `${p.orderNumber || "Order"} cancelled: ${p.reason || "Client/Admin update"}`
+              );
+            } else if (evt.eventName === "ENQUIRY_CREATED") {
+              playLuxuryChime("enquiry");
+              addToast(
+                "enquiry",
+                "New VIP Concierge Enquiry",
+                `${p.name || "Client"}: ${p.subject || "Fragrance Consultation"}`
+              );
+              setEnquiries((prev) => [
+                {
+                  id: evt.id,
+                  aggregateId: evt.aggregateId,
+                  ...p,
+                },
+                ...prev,
+              ]);
+            }
+          });
+        }
+
+        if (Array.isArray(newOrders) && newOrders.length > 0) {
+          setOrders((prev) => {
+            const map = new Map(prev.map((o) => [o.id, o]));
+            newOrders.forEach((o: any) => {
+              map.set(o.id, {
+                id: o.id,
+                number: o.orderNumber,
+                customer: o.shippingAddress?.fullName || o.customer?.firstName || o.guestEmail || "Client",
+                amount: `${Number(o.totalAmount).toLocaleString()} ${o.currency || "AED"}`,
+                method: o.payments?.[0]?.provider || "CARD",
+                status: o.status,
+                market: o.marketId || o.shippingAddress?.countryCode || "AE",
+                date: new Date(o.createdAt).toLocaleDateString("en-GB", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                }),
+              });
+            });
+            return Array.from(map.values());
+          });
+        }
+      } catch {
+        // Silently continue
+      }
+    }, 4500);
+
+    return () => clearInterval(timer);
+  }, [isLiveActive, isAudioEnabled]);
 
   // 4. RETURNS
   const [returns, setReturns] = usePersistentState("returns", [
@@ -1568,12 +1858,57 @@ export function App() {
     URL.revokeObjectURL(url);
   };
 
-  // Order Actions
-  const updateOrderStatus = (orderId: string, nextStatus: string) => {
+  // Order Actions with Backend Synchronization & Email Trigger
+  const updateOrderStatus = async (orderId: string, nextStatus: string, reason?: string) => {
     setOrders((prev) =>
       prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
     );
     addAuditLog("ORDER_STATUS_UPDATE", `${orderId} -> ${nextStatus}`);
+
+    try {
+      const res = await fetch("/api/v1/admin/orders/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId,
+          status: nextStatus,
+          reason: reason || (nextStatus === "CANCELLED" ? "Admin cancelled via control panel" : undefined),
+        }),
+      });
+      if (res.ok) {
+        if (nextStatus === "CANCELLED") {
+          playLuxuryChime("cancel");
+          addToast("cancel", "Order Cancelled", `Order ${orderId} status set to CANCELLED. Notification email sent.`);
+        } else {
+          addToast("order", "Status Updated", `Order ${orderId} set to ${nextStatus}`);
+        }
+      }
+    } catch (err) {
+      console.warn("Could not sync order status to server:", err);
+    }
+  };
+
+  // Enquiry Workflow Actions
+  const updateEnquiryStatus = async (enquiryId: string, nextStatus: "NEW" | "IN_PROGRESS" | "RESOLVED" | "ARCHIVED") => {
+    setEnquiries((prev) =>
+      prev.map((e) =>
+        (e.enquiryId === enquiryId || e.id === enquiryId || e.aggregateId === enquiryId)
+          ? { ...e, status: nextStatus }
+          : e
+      )
+    );
+    addAuditLog("ENQUIRY_STATUS_UPDATE", `${enquiryId} -> ${nextStatus}`);
+
+    try {
+      await fetch("/api/v1/admin/enquiries/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enquiryId, status: nextStatus }),
+      });
+      addToast("enquiry", "Enquiry Updated", `Status marked as ${nextStatus}`);
+    } catch (err) {
+      console.warn("Could not update enquiry status on server:", err);
+    }
   };
 
   // Return Actions
@@ -1705,6 +2040,7 @@ export function App() {
               { id: "purchasing", label: "Purchasing", icon: FileText },
               { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
               { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
+              { id: "enquiries", label: "VIP Enquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
               { id: "reviews", label: "Reviews", icon: Star, count: pendingReviewsCount > 0 ? pendingReviewsCount : undefined },
               { id: "markets", label: "Markets", icon: Globe },
               { id: "banners", label: "Banners", icon: ImageIcon, count: banners.length },
@@ -1797,6 +2133,140 @@ export function App() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            {/* Live Sync Status Toggle */}
+            <button
+              onClick={() => setIsLiveActive(!isLiveActive)}
+              title={isLiveActive ? "Live sync active (Click to pause)" : "Live sync paused (Click to resume)"}
+              className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-[11px] font-mono transition-colors ${
+                isLiveActive
+                  ? "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
+                  : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500"
+              }`}
+            >
+              <span className="relative flex h-2 w-2">
+                {isLiveActive && (
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveActive ? "bg-emerald-500" : "bg-neutral-400"}`}></span>
+              </span>
+              <span className="hidden md:inline">{isLiveActive ? "Real-Time Sync" : "Sync Paused"}</span>
+            </button>
+
+            {/* Audio Ambient Alert Toggle */}
+            <button
+              onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+              title={isAudioEnabled ? "Audio chimes active (Click to mute)" : "Audio muted (Click to enable luxury chime)"}
+              className={`p-2 border rounded-md transition-colors ${
+                isAudioEnabled
+                  ? "bg-white dark:bg-black border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white"
+                  : "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-400"
+              }`}
+            >
+              {isAudioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+            </button>
+
+            {/* Notification Bell with Live Dropdown */}
+            <div className="relative">
+              <button
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                title="Real-Time Orders & Concierge Notifications"
+                className="relative p-2 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shadow-sm"
+              >
+                {liveEvents.filter((e) => !e.read).length > 0 ? (
+                  <BellRing size={15} className="text-amber-500 animate-pulse" />
+                ) : (
+                  <Bell size={15} />
+                )}
+                {liveEvents.filter((e) => !e.read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black font-bold text-[9px] px-1.5 py-0.2 rounded-full border border-neutral-400">
+                    {liveEvents.filter((e) => !e.read).length}
+                  </span>
+                )}
+              </button>
+
+              {/* Notification Popover */}
+              {isNotificationOpen && (
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-lg shadow-2xl z-50 overflow-hidden font-sans">
+                  <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-900">
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-xs text-neutral-900 dark:text-white">Live Activity Stream</span>
+                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                        {liveEvents.length} events
+                      </span>
+                    </div>
+                    {liveEvents.length > 0 && (
+                      <button
+                        onClick={() => {
+                          setLiveEvents((prev) => prev.map((e) => ({ ...e, read: true })));
+                        }}
+                        className="text-[10px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
+                      >
+                        Mark all read
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="max-h-80 overflow-y-auto divide-y divide-neutral-200 dark:divide-neutral-800 text-xs">
+                    {liveEvents.length === 0 ? (
+                      <div className="p-6 text-center text-neutral-400 text-xs space-y-1">
+                        <Clock size={20} className="mx-auto mb-1 opacity-50" />
+                        <div>No new events received yet.</div>
+                        <div className="text-[10px] text-neutral-500">Live tracker is listening for orders, cancellations, and enquiries.</div>
+                      </div>
+                    ) : (
+                      liveEvents.map((evt) => {
+                        const p = evt.payload || {};
+                        const isOrder = evt.eventName.startsWith("ORDER_");
+                        const isCancel = evt.eventName === "ORDER_CANCELLED";
+                        return (
+                          <div
+                            key={evt.id}
+                            className={`p-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900 ${
+                              !evt.read ? "bg-neutral-50/50 dark:bg-neutral-900/50" : ""
+                            }`}
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <span
+                                className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded font-mono ${
+                                  isCancel
+                                    ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                    : isOrder
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                }`}
+                              >
+                                {evt.eventName.replace("_", " ")}
+                              </span>
+                              <span className="text-[10px] text-neutral-400 font-mono">
+                                {new Date(evt.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                              </span>
+                            </div>
+                            <div className="font-medium text-neutral-900 dark:text-white mt-1">
+                              {p.orderNumber || p.name || "Event Alert"}
+                            </div>
+                            <div className="text-[11px] text-neutral-600 dark:text-neutral-400 line-clamp-2 mt-0.5">
+                              {p.reason || p.message || `Total: ${p.totalAmount || 0} ${p.currency || "AED"} • ${p.customerName || ""}`}
+                            </div>
+                            <div className="mt-2 flex items-center justify-between">
+                              <button
+                                onClick={() => {
+                                  setActiveTab(isOrder ? "orders" : "enquiries");
+                                  setIsNotificationOpen(false);
+                                }}
+                                className="text-[10px] underline text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                              >
+                                View in {isOrder ? "Orders" : "Enquiries"} →
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
               className="px-3 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md flex items-center gap-2 transition-colors shadow-sm"
@@ -3031,6 +3501,188 @@ export function App() {
           </div>
         )}
 
+        {/* 7.5 VIP CONCIERGE & CLIENT ENQUIRIES */}
+        {activeTab === "enquiries" && (
+          <div className="space-y-6">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Requests</span>
+                <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
+                  {enquiries.length}
+                </div>
+              </div>
+              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">New Pending</span>
+                <div className="font-serif text-2xl font-light text-amber-500 mt-1">
+                  {enquiries.filter((e) => e.status === "NEW").length}
+                </div>
+              </div>
+              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">In Progress</span>
+                <div className="font-serif text-2xl font-light text-blue-500 mt-1">
+                  {enquiries.filter((e) => e.status === "IN_PROGRESS").length}
+                </div>
+              </div>
+              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Resolved</span>
+                <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
+                  {enquiries.filter((e) => e.status === "RESOLVED").length}
+                </div>
+              </div>
+            </div>
+
+            {/* Filter and Search Bar */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "ARCHIVED"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setEnquiryStatusFilter(st)}
+                    className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
+                      enquiryStatusFilter === st
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
+                        : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                    }`}
+                  >
+                    {st === "ALL" ? "All Requests" : st}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                placeholder="Search by client, scent, email..."
+                value={enquirySearch}
+                onChange={(e) => setEnquirySearch(e.target.value)}
+                className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
+              />
+            </div>
+
+            {/* Enquiries List */}
+            <div className="space-y-3">
+              {enquiries
+                .filter((e) => {
+                  if (enquiryStatusFilter !== "ALL" && e.status !== enquiryStatusFilter) return false;
+                  if (enquirySearch.trim()) {
+                    const q = enquirySearch.toLowerCase();
+                    return (
+                      e.name.toLowerCase().includes(q) ||
+                      e.email.toLowerCase().includes(q) ||
+                      (e.subject && e.subject.toLowerCase().includes(q)) ||
+                      (e.fragranceInterest && e.fragranceInterest.toLowerCase().includes(q))
+                    );
+                  }
+                  return true;
+                })
+                .map((enq) => {
+                  const id = enq.enquiryId || enq.aggregateId || enq.id;
+                  const cleanPhone = enq.phone ? enq.phone.replace(/[^0-9]/g, "") : "";
+                  return (
+                    <div
+                      key={id}
+                      className="p-5 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-4"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-neutral-100 dark:border-neutral-900">
+                        <div className="space-y-0.5">
+                          <div className="flex items-center gap-2">
+                            <span className="font-medium text-sm text-neutral-900 dark:text-white">{enq.name}</span>
+                            <span
+                              className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold ${
+                                enq.status === "NEW"
+                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                  : enq.status === "IN_PROGRESS"
+                                  ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                                  : enq.status === "RESOLVED"
+                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                  : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"
+                              }`}
+                            >
+                              {enq.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-neutral-500 font-mono">
+                            {enq.email} {enq.phone && `• ${enq.phone}`}
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <select
+                            value={enq.status}
+                            onChange={(e) => updateEnquiryStatus(id, e.target.value as any)}
+                            className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1.5 rounded focus:outline-none"
+                          >
+                            <option value="NEW">NEW</option>
+                            <option value="IN_PROGRESS">IN_PROGRESS</option>
+                            <option value="RESOLVED">RESOLVED</option>
+                            <option value="ARCHIVED">ARCHIVED</option>
+                          </select>
+
+                          {cleanPhone && (
+                            <a
+                              href={`https://wa.me/${cleanPhone}?text=${encodeURIComponent(`Hello ${enq.name}, thank you for contacting Muschio Haute Parfumerie Concierge.`)}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="px-3 py-1.5 bg-neutral-900 hover:bg-neutral-800 text-white dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-xs rounded flex items-center gap-1.5 transition-colors"
+                            >
+                              <MessageSquare size={13} />
+                              <span>WhatsApp</span>
+                            </a>
+                          )}
+
+                          <a
+                            href={`mailto:${enq.email}?subject=${encodeURIComponent(`Muschio Concierge: ${enq.subject || "VIP Fragrance Consultation"}`)}`}
+                            className="px-3 py-1.5 border border-neutral-300 dark:border-neutral-700 hover:bg-neutral-100 dark:hover:bg-neutral-900 text-neutral-700 dark:text-neutral-300 text-xs rounded flex items-center gap-1.5 transition-colors"
+                          >
+                            <Send size={13} />
+                            <span>Email</span>
+                          </a>
+                        </div>
+                      </div>
+
+                      {enq.fragranceInterest && (
+                        <div className="text-xs">
+                          <span className="text-neutral-500 font-mono text-[11px] uppercase tracking-wider block">
+                            Fragrance / Maison of Interest:
+                          </span>
+                          <span className="font-serif text-sm text-neutral-900 dark:text-white mt-0.5 block">
+                            {enq.fragranceInterest}
+                          </span>
+                        </div>
+                      )}
+
+                      <div className="bg-neutral-50 dark:bg-neutral-900 p-3.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed">
+                        <strong className="block text-neutral-900 dark:text-white mb-1 font-sans">{enq.subject || "Message"}:</strong>
+                        {enq.message}
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono pt-1">
+                        <span>ID: {id}</span>
+                        <span>
+                          {enq.createdAt
+                            ? new Date(enq.createdAt).toLocaleString([], {
+                                dateStyle: "medium",
+                                timeStyle: "short",
+                              })
+                            : "Recent"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+
+              {enquiries.length === 0 && (
+                <div className="p-12 text-center text-neutral-500 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <MessageSquare size={32} className="mx-auto mb-2 opacity-40" />
+                  <div className="font-serif text-lg text-neutral-800 dark:text-neutral-200">No VIP Enquiries Yet</div>
+                  <div className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
+                    When customers submit bespoke fragrance consultations on the storefront, they appear here live with instant alerts.
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* 3. NOTES */}
         {activeTab === "notes" && (
           <div className="space-y-6">
@@ -3266,16 +3918,42 @@ export function App() {
         {/* 7. ORDERS */}
         {activeTab === "orders" && (
           <div className="space-y-6">
-            <div className="flex items-center justify-between gap-4">
+            {/* Status & Market Filters + Real-Time Live Status */}
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
+              <div className="flex flex-wrap items-center gap-2">
+                {["ALL", "PAID", "FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED"].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setOrderStatusFilter(st)}
+                    className={`px-3 py-1 text-xs rounded-md border transition-colors font-mono ${
+                      orderStatusFilter === st
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold"
+                        : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                    }`}
+                  >
+                    {st === "ALL" ? "All Statuses" : st}
+                  </button>
+                ))}
+              </div>
+
               <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                  <span>Database Orders: {orders.length}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
                 {["ALL", "AE", "SA", "KW", "QA"].map((mkt) => (
                   <button
                     key={mkt}
                     onClick={() => setOrderMarketFilter(mkt)}
                     className={`px-3 py-1.5 text-xs rounded border transition-colors ${
                       orderMarketFilter === mkt
-                        ? "bg-accent border-accent text-white"
-                        : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-white"
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
+                        : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
                     }`}
                   >
                     {mkt === "ALL" ? "All Markets" : `Market: ${mkt}`}
@@ -3287,7 +3965,7 @@ export function App() {
                 placeholder="Search by order # or customer..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
-                className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white px-3 py-1.5 rounded focus:outline-none"
+                className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
               />
             </div>
 
@@ -3307,6 +3985,7 @@ export function App() {
                   {orders
                     .filter((o) => {
                       if (orderMarketFilter !== "ALL" && o.market !== orderMarketFilter) return false;
+                      if (orderStatusFilter !== "ALL" && o.status !== orderStatusFilter) return false;
                       if (orderSearch.trim()) {
                         const q = orderSearch.toLowerCase();
                         return o.number.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q);
@@ -3908,6 +4587,39 @@ export function App() {
           </div>
         )}
       </main>
+
+      {/* LIVE TOAST NOTIFICATIONS */}
+      <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+        {toasts.map((t) => (
+          <div
+            key={t.id}
+            className="pointer-events-auto p-4 bg-white dark:bg-black text-neutral-900 dark:text-white border border-neutral-300 dark:border-neutral-700 rounded-lg shadow-2xl flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-200"
+          >
+            <div className="p-1.5 rounded-full bg-neutral-100 dark:bg-neutral-900 shrink-0 mt-0.5">
+              {t.type === "cancel" ? (
+                <AlertTriangle size={15} className="text-rose-500" />
+              ) : t.type === "enquiry" ? (
+                <MessageSquare size={15} className="text-blue-500" />
+              ) : (
+                <ShoppingBag size={15} className="text-emerald-500" />
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center justify-between gap-2">
+                <span className="font-semibold text-xs">{t.title}</span>
+                <span className="text-[10px] text-neutral-400 font-mono">{t.time}</span>
+              </div>
+              <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-2">{t.message}</p>
+            </div>
+            <button
+              onClick={() => setToasts((prev) => prev.filter((item) => item.id !== t.id))}
+              className="text-neutral-400 hover:text-black dark:hover:text-white p-1"
+            >
+              <X size={12} />
+            </button>
+          </div>
+        ))}
+      </div>
 
       {/* PRO SEO MODALS */}
       <BulkCsvModal
