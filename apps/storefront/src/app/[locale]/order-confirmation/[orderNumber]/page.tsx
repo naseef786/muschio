@@ -18,6 +18,8 @@ import {
   Sparkles,
   Copy,
   Check,
+  Mail,
+  MessageSquare,
 } from "lucide-react";
 
 export default function OrderStatusPage({
@@ -254,6 +256,48 @@ export default function OrderStatusPage({
                   )}
             </p>
           </div>
+        </div>
+      </div>
+
+      {/* Real-Time Dispatch Notice (Email & WhatsApp Active) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="p-4 bg-luxury-surface border border-luxury-border flex items-center gap-3 rounded-sm">
+          <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-luxury-text shrink-0">
+            <Mail size={16} />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xs font-semibold text-luxury-text">
+              {c("Email Confirmation Dispatched", "تم إرسال إشعار التأكيد عبر البريد")}
+            </div>
+            <div className="text-[11px] text-luxury-muted truncate">
+              {c("Receipt and flacon breakdown sent to your inbox", "تم إرسال الفاتورة وتفاصيل العطور إلى بريدك")}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 bg-luxury-surface border border-luxury-border flex items-center justify-between gap-3 rounded-sm">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-8 h-8 rounded-full bg-[#128C7E]/10 border border-[#128C7E]/30 flex items-center justify-center text-[#128C7E] shrink-0">
+              <MessageSquare size={16} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-semibold text-luxury-text">
+                {c("WhatsApp Tracking Updates", "تحديثات الشحن عبر واتساب")}
+              </div>
+              <div className="text-[11px] text-luxury-muted truncate">
+                {c("Direct alerts sent to registered mobile", "تحديثات المسار تصل إلى رقم هاتفك")}
+              </div>
+            </div>
+          </div>
+          <a
+            href={whatsappInquiryUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-2.5 py-1 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-[11px] font-medium rounded-sm flex items-center gap-1 shrink-0 transition-colors"
+          >
+            <span>{c("Open Chat", "محادثة")}</span>
+            <ArrowRight size={11} className="rtl:rotate-180" />
+          </a>
         </div>
       </div>
 

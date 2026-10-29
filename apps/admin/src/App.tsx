@@ -36,6 +36,7 @@ import {
   Volume2,
   VolumeX,
   MessageSquare,
+  Mail,
   Send,
   Clock,
   AlertTriangle,
@@ -1885,6 +1886,26 @@ export function App() {
       }
     } catch (err) {
       console.warn("Could not sync order status to server:", err);
+    }
+  };
+
+  // Dispatch / Resend Order Notifications (WhatsApp & Email)
+  const handleResendNotification = async (orderId: string, channel: "whatsapp" | "email") => {
+    try {
+      const res = await fetch("/api/v1/admin/orders/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, channels: [channel] }),
+      });
+      if (res.ok) {
+        addToast(
+          "order",
+          `${channel === "whatsapp" ? "WhatsApp" : "Email"} Sent`,
+          `Order confirmation re-dispatched to client via ${channel.toUpperCase()}`
+        );
+      }
+    } catch {
+      addToast("cancel", "Dispatch Error", "Failed to contact dispatch server");
     }
   };
 
@@ -3979,6 +4000,7 @@ export function App() {
                     <th className="p-4 text-start">Market</th>
                     <th className="p-4 text-start">Date / Timeline</th>
                     <th className="p-4 text-start">Status Workflow</th>
+                    <th className="p-4 text-end">Dispatch Alerts</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800">
@@ -4018,6 +4040,28 @@ export function App() {
                             <option value="DELIVERED">DELIVERED</option>
                             <option value="CANCELLED">CANCELLED</option>
                           </select>
+                        </td>
+                        <td className="p-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => handleResendNotification(o.id, "whatsapp")}
+                              title="Send / Resend WhatsApp Notification to Client"
+                              className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                            >
+                              <MessageSquare size={12} />
+                              <span className="hidden sm:inline">WhatsApp</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResendNotification(o.id, "email")}
+                              title="Send / Resend Email Notification to Client"
+                              className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                            >
+                              <Mail size={12} />
+                              <span className="hidden sm:inline">Email</span>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}

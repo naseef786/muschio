@@ -17,6 +17,7 @@ import {
   AdminService,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
+import { WhatsAppService } from "@/lib/whatsapp-service";
 
 
 if (!process.env.DATABASE_URL) {
@@ -445,6 +446,14 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       );
       EmailService.sendAdminOrderAlert(orderToLog).catch((err) =>
         console.error("Failed to send admin order alert email:", err)
+      );
+
+      // Trigger transactional WhatsApp messages asynchronously
+      WhatsAppService.sendOrderConfirmation(orderToLog).catch((err) =>
+        console.error("Failed to send WhatsApp order confirmation:", err)
+      );
+      WhatsAppService.sendAdminOrderAlert(orderToLog).catch((err) =>
+        console.error("Failed to send WhatsApp admin alert:", err)
       );
 
       return success(order, 201);
@@ -988,10 +997,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         },
       });
 
-      // Send transactional cancellation email if cancelled
+      // Send transactional cancellation email and WhatsApp if cancelled
       if (status === "CANCELLED") {
         EmailService.sendOrderCancellation(order, reason).catch((err) =>
           console.error("Failed to send order cancellation email:", err)
+        );
+        WhatsAppService.sendOrderCancellation(order, reason).catch((err) =>
+          console.error("Failed to send WhatsApp order cancellation:", err)
         );
       }
 
@@ -1043,6 +1055,9 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       EmailService.sendOrderCancellation(order, reason || "Client Cancellation Request").catch((err) =>
         console.error("Failed to send order cancellation email:", err)
       );
+      WhatsAppService.sendOrderCancellation(order, reason || "Client Cancellation Request").catch((err) =>
+        console.error("Failed to send WhatsApp order cancellation:", err)
+      );
 
       return success({ success: true, order: updated });
     }
@@ -1078,6 +1093,42 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       });
 
       return success({ success: true, status, enquiryId: event.aggregateId });
+    }
+
+    // 19. Admin Resend Order Notifications (Email & WhatsApp)
+    if (path === "admin/orders/notify") {
+      const { orderId, orderNumber, channels = ["email", "whatsapp"], messageType = "confirmation" } = body || {};
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [
+            ...(orderId ? [{ id: orderId }] : []),
+            ...(orderNumber ? [{ orderNumber }] : []),
+          ],
+        },
+        include: { items: true, shippingAddress: true, customer: true, payments: true },
+      });
+
+      if (!order) return error("NOT_FOUND", "Order not found", 404);
+
+      const results: Record<string, any> = {};
+
+      if (channels.includes("email")) {
+        if (messageType === "cancellation") {
+          results.email = await EmailService.sendOrderCancellation(order, body?.reason);
+        } else {
+          results.email = await EmailService.sendOrderConfirmation(order);
+        }
+      }
+
+      if (channels.includes("whatsapp")) {
+        if (messageType === "cancellation") {
+          results.whatsapp = await WhatsAppService.sendOrderCancellation(order, body?.reason);
+        } else {
+          results.whatsapp = await WhatsAppService.sendOrderConfirmation(order);
+        }
+      }
+
+      return success({ success: true, results });
     }
 
 
