@@ -35,6 +35,7 @@ import {
   BrandItem,
   NoteItem,
   ProductItem,
+  ProductVariantItem,
   slugify,
   generateProductMetaTitle,
   generateProductMetaDescription,
@@ -266,6 +267,11 @@ export function App() {
       ],
       imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
       status: "PUBLISHED",
+      variants: [
+        { id: "p1-v100", sku: "AMO-INT53-100", volume: "100ml", volumeMl: 100, regularPrice: 1850, price: 1850, discountPrice: null, salePrice: null, stockQuantity: 28, isDefault: true },
+        { id: "p1-v50", sku: "AMO-INT53-50", volume: "50ml", volumeMl: 50, regularPrice: 1290, price: 1190, discountPrice: 1190, salePrice: 1190, stockQuantity: 15, isDefault: false },
+        { id: "p1-v30", sku: "AMO-INT53-30", volume: "30ml", volumeMl: 30, regularPrice: 790, price: 790, discountPrice: null, salePrice: null, stockQuantity: 10, isDefault: false },
+      ],
     },
     {
       id: "p2",
@@ -302,6 +308,11 @@ export function App() {
       ],
       imageAlt: "Baccarat Rouge 540 Extrait flacon",
       status: "PUBLISHED",
+      variants: [
+        { id: "p2-v70", sku: "MFK-BR540E-70", volume: "70ml", volumeMl: 70, regularPrice: 1850, price: 1650, discountPrice: 1650, salePrice: 1650, stockQuantity: 34, isDefault: true },
+        { id: "p2-v200", sku: "MFK-BR540E-200", volume: "200ml", volumeMl: 200, regularPrice: 3500, price: 3200, discountPrice: 3200, salePrice: 3200, stockQuantity: 12, isDefault: false },
+        { id: "p2-v35", sku: "MFK-BR540E-35", volume: "35ml", volumeMl: 35, regularPrice: 990, price: 990, discountPrice: null, salePrice: null, stockQuantity: 20, isDefault: false },
+      ],
     },
     {
       id: "p3",
@@ -338,6 +349,10 @@ export function App() {
       ],
       imageAlt: "Roja Parfums Elysium luxury flacon",
       status: "PUBLISHED",
+      variants: [
+        { id: "p3-v100", sku: "ROJA-ELY-100", volume: "100ml", volumeMl: 100, regularPrice: 2200, price: 1950, discountPrice: 1950, salePrice: 1950, stockQuantity: 25, isDefault: true },
+        { id: "p3-v50", sku: "ROJA-ELY-50", volume: "50ml", volumeMl: 50, regularPrice: 1250, price: 1250, discountPrice: null, salePrice: null, stockQuantity: 14, isDefault: false },
+      ],
     },
     {
       id: "p4",
@@ -374,6 +389,10 @@ export function App() {
       ],
       imageAlt: "Xerjoff Alexandria II luxury flacon",
       status: "PUBLISHED",
+      variants: [
+        { id: "p4-v100", sku: "XER-ALEX2-100", volume: "100ml", volumeMl: 100, price: 2200, discountPrice: null, stockQuantity: 19, isDefault: true },
+        { id: "p4-v50", sku: "XER-ALEX2-50", volume: "50ml", volumeMl: 50, price: 1420, discountPrice: null, stockQuantity: 11, isDefault: false },
+      ],
     },
   ]);
 
@@ -405,6 +424,18 @@ export function App() {
     metaTitle: "",
     metaDescription: "",
     status: "PUBLISHED" as const,
+    variants: [
+      {
+        id: "var-init-1",
+        sku: "AMO-INT53-100",
+        volume: "100ml",
+        volumeMl: 100,
+        price: 1850,
+        discountPrice: null as number | null,
+        stockQuantity: 20,
+        isDefault: true,
+      },
+    ] as ProductVariantItem[],
   });
 
   // 2. BRANDS & PRESTIGE MAISONS (PRO SEO)
@@ -635,43 +666,85 @@ export function App() {
     ]).then(([prodRes, brandRes, noteRes]) => {
       if (!active) return;
       if (prodRes?.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
-        const dbProducts: ProductItem[] = prodRes.data.map((p: any) => ({
-          id: p.id,
-          sku: p.variants?.[0]?.sku || `SKU-${p.slug}`,
-          name: p.nameEn,
-          nameAr: p.nameAr,
-          slug: p.slug,
-          brand: p.brand?.name || "Haute Niche",
-          brandSlug: p.brand?.slug || "brand",
-          scentFamily: p.scentFamily?.nameEn || "Woody Amber",
-          perfumer: (p.perfumers && p.perfumers.length > 0)
-            ? p.perfumers.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
-            : p.perfumer || "",
-          perfumers: p.perfumers?.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
-          perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
-          concentration: p.concentration || "EXTRAIT_DE_PARFUM",
-          gender: p.gender || "UNISEX",
-          volumeMl: p.variants?.[0]?.volumeMl || 100,
-          price: `${p.variants?.[0]?.price || 0} AED`,
-          costPrice: "0 AED",
-          stock: p.variants?.[0]?.inventory?.sealedQuantity ?? 20,
-          testerStock: p.variants?.[0]?.inventory?.testerQuantity ?? 2,
-          reserved: 0,
-          warehouse: "DXB-MAIN",
-          topNotes: p.notes?.filter((n: any) => n.position === "TOP").map((n: any) => n.note?.nameEn || n.nameEn) || [],
-          heartNotes: p.notes?.filter((n: any) => n.position === "HEART").map((n: any) => n.note?.nameEn || n.nameEn) || [],
-          baseNotes: p.notes?.filter((n: any) => n.position === "BASE").map((n: any) => n.note?.nameEn || n.nameEn) || [],
-          taglineEn: p.taglineEn || "",
-          taglineAr: p.taglineAr || "",
-          descriptionEn: p.descriptionEn || "",
-          descriptionAr: p.descriptionAr || "",
-          metaTitle: `${p.nameEn} | Muschio`,
-          metaDescription: p.descriptionEn || "",
-          imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
-          images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
-          imageAlt: p.nameEn,
-          status: p.isPublished ? "PUBLISHED" : "DRAFT",
-        }));
+        const dbProducts: ProductItem[] = prodRes.data.map((p: any) => {
+          const variantsList: ProductVariantItem[] = Array.isArray(p.variants) && p.variants.length > 0
+            ? p.variants.map((v: any, idx: number) => {
+                const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
+                const discPrice = v.discountPrice ? Number(v.discountPrice) : (v.compareAtPrice ? Number(v.price) : null);
+                return {
+                  id: v.id,
+                  sku: v.sku,
+                  volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
+                  volumeMl: v.volumeMl || 100,
+                  regularPrice: regPrice,
+                  originalPrice: regPrice,
+                  price: regPrice,
+                  discountPrice: discPrice,
+                  salePrice: discPrice,
+                  stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
+                  isDefault: v.isDefault ?? idx === 0,
+                };
+              })
+            : [
+                {
+                  id: `var-${p.id}`,
+                  sku: `SKU-${p.slug}`,
+                  volume: "100ml",
+                  volumeMl: 100,
+                  regularPrice: 1000,
+                  originalPrice: 1000,
+                  price: 1000,
+                  discountPrice: null,
+                  salePrice: null,
+                  stockQuantity: 20,
+                  isDefault: true,
+                },
+              ];
+          const defaultV = variantsList.find((v) => v.isDefault) || variantsList[0] || {
+            sku: p.slug || "SKU-DEF",
+            volumeMl: 100,
+            price: 1000,
+            stockQuantity: 20,
+          };
+          return {
+            id: p.id,
+            sku: defaultV.sku,
+            name: p.nameEn,
+            nameAr: p.nameAr,
+            slug: p.slug,
+            brand: p.brand?.name || "Haute Niche",
+            brandSlug: p.brand?.slug || "brand",
+            scentFamily: p.scentFamily?.nameEn || "Woody Amber",
+            perfumer: (p.perfumers && p.perfumers.length > 0)
+              ? p.perfumers.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
+              : p.perfumer || "",
+            perfumers: p.perfumers?.map((rel: any) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
+            perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
+            concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+            gender: p.gender || "UNISEX",
+            volumeMl: defaultV.volumeMl || 100,
+            price: `${defaultV.price} AED`,
+            costPrice: "0 AED",
+            stock: defaultV.stockQuantity,
+            testerStock: p.variants?.[0]?.inventory?.testerQuantity ?? 2,
+            reserved: 0,
+            warehouse: "DXB-MAIN",
+            topNotes: p.notes?.filter((n: any) => n.position === "TOP").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+            heartNotes: p.notes?.filter((n: any) => n.position === "HEART").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+            baseNotes: p.notes?.filter((n: any) => n.position === "BASE").map((n: any) => n.note?.nameEn || n.nameEn) || [],
+            taglineEn: p.taglineEn || "",
+            taglineAr: p.taglineAr || "",
+            descriptionEn: p.descriptionEn || "",
+            descriptionAr: p.descriptionAr || "",
+            metaTitle: `${p.nameEn} | Muschio`,
+            metaDescription: p.descriptionEn || "",
+            imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
+            images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
+            imageAlt: p.nameEn,
+            status: p.isPublished ? "PUBLISHED" : "DRAFT",
+            variants: variantsList,
+          };
+        });
         setProducts(dbProducts);
       }
       if (brandRes?.data && Array.isArray(brandRes.data) && brandRes.data.length > 0) {
@@ -1033,6 +1106,21 @@ export function App() {
       metaTitle: "",
       metaDescription: "",
       status: "PUBLISHED",
+      variants: [
+        {
+          id: `var-${Date.now()}-1`,
+          sku: "",
+          volume: "100ml",
+          volumeMl: 100,
+          regularPrice: 1850,
+          originalPrice: 1850,
+          price: 1850,
+          discountPrice: null,
+          salePrice: null,
+          stockQuantity: 20,
+          isDefault: true,
+        },
+      ],
     });
     setShowProductModal(true);
   };
@@ -1042,6 +1130,41 @@ export function App() {
     const topNotesArr = p.topNotes || [];
     const prodImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []);
     const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
+    const initialVariants: ProductVariantItem[] = (p.variants && p.variants.length > 0)
+      ? p.variants.map((v, i) => {
+          const rawPrice = typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) || 0 : v.price;
+          const rawRegular = v.regularPrice ? (typeof v.regularPrice === "string" ? Number(v.regularPrice.replace(/[^0-9.]/g, "")) : v.regularPrice) : (v.originalPrice ? Number(v.originalPrice) : rawPrice);
+          const rawDiscount = v.discountPrice !== null && v.discountPrice !== undefined ? (typeof v.discountPrice === "string" ? Number(v.discountPrice.replace(/[^0-9.]/g, "")) : v.discountPrice) : (v.salePrice ? Number(v.salePrice) : null);
+
+          return {
+            id: v.id || `var-${p.id}-${i}`,
+            sku: v.sku || (i === 0 ? p.sku : `${p.sku}-${v.volumeMl || 100}`),
+            volume: v.volume || `${v.volumeMl || 100}ml`,
+            volumeMl: v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10),
+            regularPrice: rawRegular,
+            originalPrice: rawRegular,
+            price: rawRegular,
+            discountPrice: rawDiscount,
+            salePrice: rawDiscount,
+            stockQuantity: v.stockQuantity ?? p.stock ?? 20,
+            isDefault: v.isDefault ?? i === 0,
+          };
+        })
+      : [
+          {
+            id: `var-${p.id}-1`,
+            sku: p.sku || "AMO-INT53-100",
+            volume: `${p.volumeMl || 100}ml`,
+            volumeMl: p.volumeMl || 100,
+            regularPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+            originalPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+            price: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+            discountPrice: null,
+            salePrice: null,
+            stockQuantity: p.stock || 20,
+            isDefault: true,
+          },
+        ];
     setProductForm({
       sku: p.sku || "",
       name: p.name || "",
@@ -1068,13 +1191,88 @@ export function App() {
         p.metaDescription ||
         generateProductMetaDescription(p.name, p.brand, p.concentration, topNotesArr),
       status: (p.status as any) || "PUBLISHED",
+      variants: initialVariants,
     });
     setShowProductModal(true);
   };
 
   const handleSaveProduct = async () => {
-    if (!productForm.name || !productForm.sku) return;
-    const priceFormatted = productForm.price.includes("AED") ? productForm.price : `${productForm.price} AED`;
+    if (!productForm.name) {
+      alert("Product name is required.");
+      return;
+    }
+    if (!productForm.variants || productForm.variants.length === 0) {
+      alert("Every fragrance product must have at least one valid bottle volume variant.");
+      return;
+    }
+    for (let i = 0; i < productForm.variants.length; i++) {
+      const v = productForm.variants[i];
+      if (!v) continue;
+      if (!v.volume?.trim()) {
+        alert(`Variant #${i + 1} is missing a bottle volume (e.g. 50ml, 100ml).`);
+        return;
+      }
+      if (!v.sku?.trim()) {
+        alert(`Variant #${i + 1} (${v.volume}) is missing a unique SKU code.`);
+        return;
+      }
+      const regPrice = Number(v.regularPrice ?? v.price);
+      if (isNaN(regPrice) || regPrice <= 0) {
+        alert(`Variant #${i + 1} (${v.volume}): Original Price (MRP) must be a valid positive number greater than 0 AED.`);
+        return;
+      }
+      if (v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "") {
+        const discPrice = Number(v.discountPrice);
+        if (isNaN(discPrice) || discPrice <= 0) {
+          alert(`Variant #${i + 1} (${v.volume}): Discounted Price must be a valid positive number greater than 0 AED.`);
+          return;
+        }
+        if (discPrice > regPrice) {
+          alert(`Variant #${i + 1} (${v.volume}): Discounted Price (${discPrice} AED) cannot exceed Original Price (${regPrice} AED).`);
+          return;
+        }
+      }
+      const stock = Number(v.stockQuantity);
+      if (isNaN(stock) || stock < 0) {
+        alert(`Variant #${i + 1} (${v.volume}): Stock quantity must be 0 or greater.`);
+        return;
+      }
+    }
+
+    let activeVariants = productForm.variants.map((v) => {
+      const regPrice = Number(v.regularPrice ?? v.price);
+      const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
+      const discPrice = hasDiscount ? Number(v.discountPrice) : null;
+      const validDiscount = discPrice !== null && discPrice > 0 && discPrice < regPrice ? discPrice : null;
+      const sellingPrice = validDiscount ?? regPrice;
+      const comparePrice = validDiscount ? regPrice : null;
+
+      return {
+        ...v,
+        regularPrice: regPrice,
+        originalPrice: regPrice,
+        price: sellingPrice,
+        compareAtPrice: comparePrice,
+        discountPrice: validDiscount,
+        salePrice: validDiscount,
+        stockQuantity: Number(v.stockQuantity) || 0,
+      };
+    });
+
+    if (activeVariants.length > 0 && !activeVariants.some((v) => v.isDefault)) {
+      const first = activeVariants[0];
+      if (first) first.isDefault = true;
+    }
+    const defaultVariant = activeVariants.find((v) => v.isDefault) || activeVariants[0];
+    if (!defaultVariant) {
+      alert("Invalid variant configuration.");
+      return;
+    }
+    const primarySku = defaultVariant.sku || productForm.sku || `SKU-${slugify(productForm.name)}`;
+    const primaryPrice = `${defaultVariant.price} AED`;
+    const primaryVolumeMl = defaultVariant.volumeMl || parseInt(defaultVariant.volume.replace(/[^0-9]/g, "") || "100", 10);
+    const primaryStock = defaultVariant.stockQuantity;
+
     const prodSlug = slugify(`${productForm.brand}-${productForm.name}`);
     const topNotesArr = productForm.topNotes ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
     const heartNotesArr = productForm.heartNotes ? productForm.heartNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -1104,7 +1302,7 @@ export function App() {
 
     const newP: ProductItem = {
       id: editingProductId || `p-${Date.now()}`,
-      sku: productForm.sku,
+      sku: primarySku,
       name: productForm.name,
       nameAr: productForm.nameAr || productForm.name,
       slug: prodSlug,
@@ -1116,10 +1314,10 @@ export function App() {
       perfumerBio: productForm.perfumerBio.trim() || undefined,
       concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
       gender: "UNISEX",
-      volumeMl: Number(productForm.volumeMl) || 100,
-      price: priceFormatted,
+      volumeMl: primaryVolumeMl,
+      price: primaryPrice,
       costPrice: "0 AED",
-      stock: Number(productForm.stock) || 0,
+      stock: Number(primaryStock) || 0,
       testerStock: Number(productForm.testerStock) || 0,
       reserved: 0,
       warehouse: productForm.warehouse,
@@ -1134,6 +1332,7 @@ export function App() {
       images: productImages,
       imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
+      variants: activeVariants,
     };
     // Persist directly to Neon PostgreSQL database via API
     try {
@@ -1146,6 +1345,11 @@ export function App() {
         },
         body: JSON.stringify({
           ...productForm,
+          sku: primarySku,
+          price: defaultVariant.price,
+          volumeMl: primaryVolumeMl,
+          stock: primaryStock,
+          variants: activeVariants,
           id: editingProductId || undefined,
           scentFamily: productForm.scentFamily || "Woody Amber",
           perfumer: productForm.perfumer.trim() || undefined,
@@ -1153,7 +1357,6 @@ export function App() {
           perfumerBio: productForm.perfumerBio.trim() || undefined,
           images: productImages,
           imageUrl: productImages[0] || productForm.imageUrl,
-          volumeMl: Number(productForm.volumeMl) || 100,
           descriptionEn: finalDescEn,
           descriptionAr: finalDescAr,
           metaTitle: finalMetaTitle,
@@ -1201,6 +1404,18 @@ export function App() {
       metaTitle: "",
       metaDescription: "",
       status: "PUBLISHED",
+      variants: [
+        {
+          id: `var-${Date.now()}-1`,
+          sku: "",
+          volume: "100ml",
+          volumeMl: 100,
+          price: 1850,
+          discountPrice: null,
+          stockQuantity: 20,
+          isDefault: true,
+        },
+      ],
     });
   };
 
@@ -1829,9 +2044,40 @@ export function App() {
                             )}
                           </div>
                         </td>
-                        <td className="p-4 font-mono font-medium text-slate-100">{p.price}</td>
+                        <td className="p-4 font-mono">
+                          <div className="font-medium text-slate-100">{p.price}</div>
+                          {p.variants && p.variants.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {p.variants.map((v, i) => {
+                                const orig = Number(v.regularPrice ?? v.price);
+                                const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
+                                return (
+                                  <span
+                                    key={v.id || i}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${
+                                      v.isDefault
+                                        ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                                        : "bg-slate-800 text-slate-400 border-slate-700"
+                                    }`}
+                                    title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
+                                  >
+                                    {v.volume}
+                                    {hasDisc && <span className="ms-0.5 text-emerald-400 font-bold">%</span>}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-slate-500 block">{p.volumeMl || 100}ml</span>
+                          )}
+                        </td>
                         <td className="p-4 font-mono">
                           <span className="text-emerald-400 block">{p.stock} sealed ({p.warehouse})</span>
+                          {p.variants && p.variants.length > 1 && (
+                            <span className="text-slate-400 text-[10px] block">
+                              Total across {p.variants.length} sizes: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)}
+                            </span>
+                          )}
                           <span className="text-purple-400 text-[11px]">+{p.testerStock} testers</span>
                         </td>
                         <td className="p-4">
@@ -2140,27 +2386,286 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="block text-slate-400 mb-1">Volume (ml)</label>
-                        <input
-                          type="number"
-                          placeholder="e.g. 100"
-                          value={productForm.volumeMl || 100}
-                          onChange={(e) => setProductForm({ ...productForm, volumeMl: Number(e.target.value) || 100 })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                        />
+                    {/* Bottle Volume Variants & Pricing Manager */}
+                    <div className="p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                          <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
+                            <Layers size={13} />
+                            <span>Bottle Volume Variants & Pricing (أحجام العطور والتسعير) *</span>
+                          </span>
+                          <p className="text-[10px] text-slate-400 mt-0.5">
+                            Configure multiple bottle sizes with independent pricing, stock, and SKU tracking. At least one variant is required.
+                          </p>
+                        </div>
+                        {/* Quick-add buttons */}
+                        <div className="flex items-center gap-1">
+                          <span className="text-[10px] text-slate-500 mr-1">Quick Add:</span>
+                          {["30ml", "50ml", "100ml", "200ml"].map((vol) => (
+                            <button
+                              key={vol}
+                              type="button"
+                              onClick={() => {
+                                const exists = productForm.variants.some((v) => v.volume.toLowerCase() === vol.toLowerCase());
+                                if (exists) return;
+                                const volNum = parseInt(vol.replace(/[^0-9]/g, "") || "100", 10);
+                                const baseSku = productForm.sku || "FRAG";
+                                const suggestedSku = `${baseSku}-${volNum}`;
+                                const refPrice = Number(String(productForm.price || "").replace(/[^0-9.]/g, "")) || 1000;
+                                const ratio = volNum / 100;
+                                const approxPrice = Math.round((refPrice * (ratio < 1 ? ratio * 1.15 : ratio * 0.9)) / 10) * 10;
+                                const newVariant: ProductVariantItem = {
+                                  id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                                  sku: suggestedSku,
+                                  volume: vol,
+                                  volumeMl: volNum,
+                                  regularPrice: approxPrice || 800,
+                                  originalPrice: approxPrice || 800,
+                                  price: approxPrice || 800,
+                                  discountPrice: null,
+                                  salePrice: null,
+                                  stockQuantity: 15,
+                                  isDefault: false,
+                                };
+                                setProductForm({
+                                  ...productForm,
+                                  variants: [...productForm.variants, newVariant],
+                                });
+                              }}
+                              className="px-2 py-0.5 text-[10px] bg-slate-800/80 hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60 rounded transition-colors"
+                            >
+                              + {vol}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <div>
-                        <label className="block text-slate-400 mb-1">Price (AED) *</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. 1,850"
-                          value={productForm.price}
-                          onChange={(e) => setProductForm({ ...productForm, price: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                          required
-                        />
+
+                      {/* Variants dynamic list */}
+                      <div className="space-y-2.5 pt-1">
+                        {productForm.variants.map((v, index) => {
+                          const origPrice = Number(v.regularPrice ?? v.price ?? 0);
+                          const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
+                          const discPrice = hasDiscount ? Number(v.discountPrice) : null;
+                          const isExceeding = discPrice !== null && discPrice > origPrice;
+                          const isValidDiscount = discPrice !== null && discPrice < origPrice && origPrice > 0;
+                          const savingsPct = isValidDiscount ? Math.round(((origPrice - discPrice!) / origPrice) * 100) : 0;
+                          const savingsDiff = isValidDiscount ? origPrice - discPrice! : 0;
+
+                          return (
+                            <div
+                              key={v.id || index}
+                              className={`p-2.5 rounded border transition-colors ${
+                                v.isDefault
+                                  ? "bg-[#111827] border-amber-500/40 ring-1 ring-amber-500/20"
+                                  : "bg-[#111622] border-slate-800 hover:border-slate-700"
+                              }`}
+                            >
+                              <div className="grid grid-cols-12 gap-2 items-center">
+                                {/* Volume Column */}
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
+                                    Volume *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. 100ml"
+                                    value={v.volume}
+                                    onChange={(e) => {
+                                      const val = e.target.value;
+                                      const updated = [...productForm.variants];
+                                      updated[index] = {
+                                        ...v,
+                                        volume: val,
+                                        volumeMl: parseInt(val.replace(/[^0-9]/g, "") || "100", 10),
+                                      };
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-medium"
+                                    required
+                                  />
+                                </div>
+
+                                {/* SKU Column */}
+                                <div className="col-span-3">
+                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
+                                    Variant SKU *
+                                  </label>
+                                  <input
+                                    type="text"
+                                    placeholder="e.g. AMO-INT53-100"
+                                    value={v.sku}
+                                    onChange={(e) => {
+                                      const updated = [...productForm.variants];
+                                      updated[index] = { ...v, sku: e.target.value };
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
+                                    required
+                                  />
+                                </div>
+
+                                {/* Original Price / MRP (strike-through price) */}
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
+                                    Original Price *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="1850"
+                                    value={v.price}
+                                    onChange={(e) => {
+                                      const val = Number(e.target.value) || 0;
+                                      const updated = [...productForm.variants];
+                                      updated[index] = { ...v, price: val, regularPrice: val, originalPrice: val };
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
+                                    required
+                                  />
+                                </div>
+
+                                {/* Discounted Price / Selling Price */}
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
+                                    Discounted Price
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="1590 (Opt)"
+                                    value={v.discountPrice ?? ""}
+                                    onChange={(e) => {
+                                      const disc = e.target.value ? Number(e.target.value) : null;
+                                      const updated = [...productForm.variants];
+                                      updated[index] = {
+                                        ...v,
+                                        discountPrice: disc,
+                                        salePrice: disc,
+                                      };
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    className={`w-full bg-[#0A0D14] border px-2 py-1.5 rounded text-xs font-mono transition-colors ${
+                                      isExceeding
+                                        ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
+                                        : isValidDiscount
+                                        ? "border-emerald-500/50 text-emerald-300"
+                                        : "border-slate-800 text-white"
+                                    }`}
+                                  />
+                                </div>
+
+                                {/* Stock Quantity */}
+                                <div className="col-span-2">
+                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
+                                    Stock Qty *
+                                  </label>
+                                  <input
+                                    type="number"
+                                    placeholder="20"
+                                    value={v.stockQuantity}
+                                    onChange={(e) => {
+                                      const updated = [...productForm.variants];
+                                      updated[index] = { ...v, stockQuantity: Number(e.target.value) || 0 };
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
+                                  />
+                                </div>
+
+                                {/* Controls: Default & Delete */}
+                                <div className="col-span-1 flex items-center justify-end gap-1.5 pt-3">
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const updated = productForm.variants.map((item, i) => ({
+                                        ...item,
+                                        isDefault: i === index,
+                                      }));
+                                      setProductForm({ ...productForm, variants: updated });
+                                    }}
+                                    title={v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant"}
+                                    className={`p-1 rounded text-[11px] transition-colors ${
+                                      v.isDefault
+                                        ? "text-amber-400 bg-amber-500/15"
+                                        : "text-slate-500 hover:text-amber-300"
+                                    }`}
+                                  >
+                                    ★
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={productForm.variants.length <= 1}
+                                    onClick={() => {
+                                      if (productForm.variants.length <= 1) return;
+                                      const filtered = productForm.variants.filter((_, i) => i !== index);
+                                      if (v.isDefault && filtered.length > 0 && filtered[0]) {
+                                        filtered[0].isDefault = true;
+                                      }
+                                      setProductForm({ ...productForm, variants: filtered });
+                                    }}
+                                    title={productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant"}
+                                    className={`p-1 rounded transition-colors ${
+                                      productForm.variants.length <= 1
+                                        ? "text-slate-700 cursor-not-allowed"
+                                        : "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
+                                    }`}
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </div>
+
+                              {/* Live Dual Pricing Calculation & Validation Feedback */}
+                              {isExceeding && (
+                                <div className="mt-1.5 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/25 px-2 py-0.5 rounded flex items-center gap-1 font-mono">
+                                  <span>⚠ Discounted price ({discPrice} AED) cannot exceed Original Price ({origPrice} AED)</span>
+                                </div>
+                              )}
+                              {isValidDiscount && (
+                                <div className="mt-1.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center justify-between font-mono">
+                                  <span>✓ Save {savingsPct}% ({savingsDiff} AED off)</span>
+                                  <span className="text-slate-400">
+                                    Selling Price: <strong className="text-emerald-300">{discPrice} AED</strong> | Original: <s className="text-slate-500">{origPrice} AED</s>
+                                  </span>
+                                </div>
+                              )}
+                              {v.isDefault && (
+                                <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-400 font-sans">
+                                  <span>★ Primary storefront display variant (Default size on PDP)</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="pt-2 flex items-center justify-between">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const count = productForm.variants.length + 1;
+                            const newVariant: ProductVariantItem = {
+                              id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                              sku: productForm.sku ? `${productForm.sku}-v${count}` : `SKU-V${count}`,
+                              volume: "50ml",
+                              volumeMl: 50,
+                              price: 1000,
+                              discountPrice: null,
+                              stockQuantity: 10,
+                              isDefault: false,
+                            };
+                            setProductForm({
+                              ...productForm,
+                              variants: [...productForm.variants, newVariant],
+                            });
+                          }}
+                          className="px-3 py-1.5 bg-[#141C2B] hover:bg-slate-800 text-amber-400 hover:text-amber-300 text-xs font-medium rounded border border-amber-500/30 flex items-center gap-1.5 transition-colors"
+                        >
+                          <Plus size={12} />
+                          <span>Add Another Volume Variant</span>
+                        </button>
+                        <span className="text-[10px] text-slate-500">
+                          {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured
+                        </span>
                       </div>
                     </div>
 

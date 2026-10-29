@@ -18,10 +18,7 @@ export default async function ProductPage({
 
   const brandName = live.brand.name;
   const brandSlug = live.brand.slug || brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-  const isAmouage = live.slug === "amouage-interlude-53-man";
-  const images = isAmouage
-    ? ["/amouage-placeholder.svg", ...(live.images.slice(1))]
-    : (live.images.length > 0 ? live.images : ["/product-placeholder.svg"]);
+  const images = live.images.length > 0 ? live.images : ["/product-placeholder.svg"];
 
   const product = {
     id: live.id,
@@ -49,16 +46,34 @@ export default async function ProductPage({
     longevity: "20+ Hours",
     sillage: "Royal Projection",
     images,
-    variants: live.variants.map((v) => ({
-      id: v.id,
-      sku: v.sku,
-      sizeLabelEn: v.sizeLabelEn,
-      sizeLabelAr: v.sizeLabelAr,
-      price: v.price,
-      compareAtPrice: v.compareAtPrice,
-      isSampleVial: v.isSampleVial,
-      availableQuantity: v.availableQuantity,
-    })),
+    variants: live.variants.map((v) => {
+      const regPrice = Number(v.regularPrice ?? v.originalPrice ?? (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price));
+      const rawDisc = v.discountPrice !== null && v.discountPrice !== undefined
+        ? Number(v.discountPrice)
+        : (v.salePrice ? Number(v.salePrice) : (v.compareAtPrice && v.compareAtPrice > v.price ? v.price : null));
+      const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regPrice;
+      const sellingPrice = hasDisc ? rawDisc! : regPrice;
+      const compareAt = hasDisc ? regPrice : null;
+
+      return {
+        id: v.id,
+        sku: v.sku,
+        volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
+        volumeMl: v.volumeMl,
+        sizeLabelEn: v.sizeLabelEn || (v.volume ? `${v.volume} Flacon` : "100ml Flacon"),
+        sizeLabelAr: v.sizeLabelAr || (v.volume ? `${v.volume} مل` : "100 مل"),
+        regularPrice: regPrice,
+        originalPrice: regPrice,
+        price: sellingPrice,
+        compareAtPrice: compareAt,
+        discountPrice: hasDisc ? rawDisc : null,
+        salePrice: hasDisc ? rawDisc : null,
+        isSampleVial: v.isSampleVial,
+        stockQuantity: v.stockQuantity ?? v.availableQuantity ?? 25,
+        availableQuantity: v.availableQuantity ?? v.stockQuantity ?? 25,
+        isDefault: Boolean(v.isDefault),
+      };
+    }),
     notes: live.notes.map((n) => ({
       id: n.slug,
       name: locale === "ar" ? n.nameAr : n.nameEn,
@@ -73,7 +88,6 @@ export default async function ProductPage({
     .filter((p) => p.slug !== slug && p.brand.name === brandName)
     .map((p) => {
       const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
-      const isAmo = p.slug === "amouage-interlude-53-man";
       return {
         slug: p.slug,
         nameEn: p.nameEn,
@@ -82,7 +96,8 @@ export default async function ProductPage({
         concentration: p.concentration.replaceAll("_", " "),
         price: v?.price || 0,
         compareAtPrice: v?.compareAtPrice,
-        images: isAmo ? ["/amouage-placeholder.svg", ...p.images] : p.images,
+        variants: p.variants,
+        images: p.images.length > 0 ? p.images : ["/product-placeholder.svg"],
       };
     });
 
@@ -91,7 +106,6 @@ export default async function ProductPage({
     .slice(0, 4)
     .map((p) => {
       const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
-      const isAmo = p.slug === "amouage-interlude-53-man";
       return {
         slug: p.slug,
         nameEn: p.nameEn,
@@ -100,7 +114,8 @@ export default async function ProductPage({
         concentration: p.concentration.replaceAll("_", " "),
         price: v?.price || 0,
         compareAtPrice: v?.compareAtPrice,
-        images: isAmo ? ["/amouage-placeholder.svg", ...p.images] : p.images,
+        variants: p.variants,
+        images: p.images.length > 0 ? p.images : ["/product-placeholder.svg"],
       };
     });
 

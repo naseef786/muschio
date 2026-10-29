@@ -336,6 +336,16 @@ export function BulkCsvModal({
       imageUrl: p.imageUrl,
       imageAlt: p.imageAlt,
       status: p.status,
+      variants: [
+        {
+          sku: p.sku,
+          volume: `${p.volumeMl || 100}ml`,
+          volumeMl: p.volumeMl || 100,
+          price: p.price,
+          stockQuantity: p.stock || 0,
+          isDefault: true,
+        },
+      ],
     }));
 
     onImportSuccess(convertedProducts, parsedResult.newBrandsToCreate, parsedResult.newNotesToCreate);

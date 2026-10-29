@@ -30,7 +30,7 @@
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
-    font-family: var(--font-sans), 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family: var(--font-figtree), var(--font-sans), 'Figtree', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     overflow-x: hidden;
@@ -528,12 +528,12 @@
 .product-card-image-wrap img {
   object-fit: contain;
   transition: transform 0.4s ease, opacity 0.3s ease;
-  padding: 12px;
+  padding: 0;
 }
 
 @media (min-width: 768px) {
   .product-card-image-wrap img {
-    padding: 18px;
+    padding: 0;
   }
 }
 
@@ -700,6 +700,13 @@
   border-color: var(--text-primary);
   background: var(--text-primary);
   color: var(--bg-canvas);
+}
+
+.volume-pill.out-of-stock {
+  opacity: 0.45;
+  background: var(--bg-surface2);
+  border-style: dashed;
+  cursor: not-allowed;
 }
 
 /* Footer */

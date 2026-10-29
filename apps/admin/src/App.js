@@ -145,6 +145,11 @@ export function App() {
             ],
             imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
             status: "PUBLISHED",
+            variants: [
+                { id: "p1-v100", sku: "AMO-INT53-100", volume: "100ml", volumeMl: 100, regularPrice: 1850, price: 1850, discountPrice: null, salePrice: null, stockQuantity: 28, isDefault: true },
+                { id: "p1-v50", sku: "AMO-INT53-50", volume: "50ml", volumeMl: 50, regularPrice: 1290, price: 1190, discountPrice: 1190, salePrice: 1190, stockQuantity: 15, isDefault: false },
+                { id: "p1-v30", sku: "AMO-INT53-30", volume: "30ml", volumeMl: 30, regularPrice: 790, price: 790, discountPrice: null, salePrice: null, stockQuantity: 10, isDefault: false },
+            ],
         },
         {
             id: "p2",
@@ -181,6 +186,11 @@ export function App() {
             ],
             imageAlt: "Baccarat Rouge 540 Extrait flacon",
             status: "PUBLISHED",
+            variants: [
+                { id: "p2-v70", sku: "MFK-BR540E-70", volume: "70ml", volumeMl: 70, regularPrice: 1850, price: 1650, discountPrice: 1650, salePrice: 1650, stockQuantity: 34, isDefault: true },
+                { id: "p2-v200", sku: "MFK-BR540E-200", volume: "200ml", volumeMl: 200, regularPrice: 3500, price: 3200, discountPrice: 3200, salePrice: 3200, stockQuantity: 12, isDefault: false },
+                { id: "p2-v35", sku: "MFK-BR540E-35", volume: "35ml", volumeMl: 35, regularPrice: 990, price: 990, discountPrice: null, salePrice: null, stockQuantity: 20, isDefault: false },
+            ],
         },
         {
             id: "p3",
@@ -217,6 +227,10 @@ export function App() {
             ],
             imageAlt: "Roja Parfums Elysium luxury flacon",
             status: "PUBLISHED",
+            variants: [
+                { id: "p3-v100", sku: "ROJA-ELY-100", volume: "100ml", volumeMl: 100, regularPrice: 2200, price: 1950, discountPrice: 1950, salePrice: 1950, stockQuantity: 25, isDefault: true },
+                { id: "p3-v50", sku: "ROJA-ELY-50", volume: "50ml", volumeMl: 50, regularPrice: 1250, price: 1250, discountPrice: null, salePrice: null, stockQuantity: 14, isDefault: false },
+            ],
         },
         {
             id: "p4",
@@ -253,6 +267,10 @@ export function App() {
             ],
             imageAlt: "Xerjoff Alexandria II luxury flacon",
             status: "PUBLISHED",
+            variants: [
+                { id: "p4-v100", sku: "XER-ALEX2-100", volume: "100ml", volumeMl: 100, price: 2200, discountPrice: null, stockQuantity: 19, isDefault: true },
+                { id: "p4-v50", sku: "XER-ALEX2-50", volume: "50ml", volumeMl: 50, price: 1420, discountPrice: null, stockQuantity: 11, isDefault: false },
+            ],
         },
     ]);
     const [productSearch, setProductSearch] = useState("");
@@ -283,6 +301,18 @@ export function App() {
         metaTitle: "",
         metaDescription: "",
         status: "PUBLISHED",
+        variants: [
+            {
+                id: "var-init-1",
+                sku: "AMO-INT53-100",
+                volume: "100ml",
+                volumeMl: 100,
+                price: 1850,
+                discountPrice: null,
+                stockQuantity: 20,
+                isDefault: true,
+            },
+        ],
     });
     // 2. BRANDS & PRESTIGE MAISONS (PRO SEO)
     const [brands, setBrands] = usePersistentState("brands", [
@@ -476,43 +506,85 @@ export function App() {
             if (!active)
                 return;
             if (prodRes?.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
-                const dbProducts = prodRes.data.map((p) => ({
-                    id: p.id,
-                    sku: p.variants?.[0]?.sku || `SKU-${p.slug}`,
-                    name: p.nameEn,
-                    nameAr: p.nameAr,
-                    slug: p.slug,
-                    brand: p.brand?.name || "Haute Niche",
-                    brandSlug: p.brand?.slug || "brand",
-                    scentFamily: p.scentFamily?.nameEn || "Woody Amber",
-                    perfumer: (p.perfumers && p.perfumers.length > 0)
-                        ? p.perfumers.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
-                        : p.perfumer || "",
-                    perfumers: p.perfumers?.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
-                    perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
-                    concentration: p.concentration || "EXTRAIT_DE_PARFUM",
-                    gender: p.gender || "UNISEX",
-                    volumeMl: p.variants?.[0]?.volumeMl || 100,
-                    price: `${p.variants?.[0]?.price || 0} AED`,
-                    costPrice: "0 AED",
-                    stock: p.variants?.[0]?.inventory?.sealedQuantity ?? 20,
-                    testerStock: p.variants?.[0]?.inventory?.testerQuantity ?? 2,
-                    reserved: 0,
-                    warehouse: "DXB-MAIN",
-                    topNotes: p.notes?.filter((n) => n.position === "TOP").map((n) => n.note?.nameEn || n.nameEn) || [],
-                    heartNotes: p.notes?.filter((n) => n.position === "HEART").map((n) => n.note?.nameEn || n.nameEn) || [],
-                    baseNotes: p.notes?.filter((n) => n.position === "BASE").map((n) => n.note?.nameEn || n.nameEn) || [],
-                    taglineEn: p.taglineEn || "",
-                    taglineAr: p.taglineAr || "",
-                    descriptionEn: p.descriptionEn || "",
-                    descriptionAr: p.descriptionAr || "",
-                    metaTitle: `${p.nameEn} | Muschio`,
-                    metaDescription: p.descriptionEn || "",
-                    imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
-                    images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
-                    imageAlt: p.nameEn,
-                    status: p.isPublished ? "PUBLISHED" : "DRAFT",
-                }));
+                const dbProducts = prodRes.data.map((p) => {
+                    const variantsList = Array.isArray(p.variants) && p.variants.length > 0
+                        ? p.variants.map((v, idx) => {
+                            const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
+                            const discPrice = v.discountPrice ? Number(v.discountPrice) : (v.compareAtPrice ? Number(v.price) : null);
+                            return {
+                                id: v.id,
+                                sku: v.sku,
+                                volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
+                                volumeMl: v.volumeMl || 100,
+                                regularPrice: regPrice,
+                                originalPrice: regPrice,
+                                price: regPrice,
+                                discountPrice: discPrice,
+                                salePrice: discPrice,
+                                stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
+                                isDefault: v.isDefault ?? idx === 0,
+                            };
+                        })
+                        : [
+                            {
+                                id: `var-${p.id}`,
+                                sku: `SKU-${p.slug}`,
+                                volume: "100ml",
+                                volumeMl: 100,
+                                regularPrice: 1000,
+                                originalPrice: 1000,
+                                price: 1000,
+                                discountPrice: null,
+                                salePrice: null,
+                                stockQuantity: 20,
+                                isDefault: true,
+                            },
+                        ];
+                    const defaultV = variantsList.find((v) => v.isDefault) || variantsList[0] || {
+                        sku: p.slug || "SKU-DEF",
+                        volumeMl: 100,
+                        price: 1000,
+                        stockQuantity: 20,
+                    };
+                    return {
+                        id: p.id,
+                        sku: defaultV.sku,
+                        name: p.nameEn,
+                        nameAr: p.nameAr,
+                        slug: p.slug,
+                        brand: p.brand?.name || "Haute Niche",
+                        brandSlug: p.brand?.slug || "brand",
+                        scentFamily: p.scentFamily?.nameEn || "Woody Amber",
+                        perfumer: (p.perfumers && p.perfumers.length > 0)
+                            ? p.perfumers.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean).join(", ")
+                            : p.perfumer || "",
+                        perfumers: p.perfumers?.map((rel) => rel.perfumer?.name || rel.name).filter(Boolean) || [],
+                        perfumerBio: p.perfumers?.[0]?.perfumer?.bioEn || p.perfumerBio || "",
+                        concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+                        gender: p.gender || "UNISEX",
+                        volumeMl: defaultV.volumeMl || 100,
+                        price: `${defaultV.price} AED`,
+                        costPrice: "0 AED",
+                        stock: defaultV.stockQuantity,
+                        testerStock: p.variants?.[0]?.inventory?.testerQuantity ?? 2,
+                        reserved: 0,
+                        warehouse: "DXB-MAIN",
+                        topNotes: p.notes?.filter((n) => n.position === "TOP").map((n) => n.note?.nameEn || n.nameEn) || [],
+                        heartNotes: p.notes?.filter((n) => n.position === "HEART").map((n) => n.note?.nameEn || n.nameEn) || [],
+                        baseNotes: p.notes?.filter((n) => n.position === "BASE").map((n) => n.note?.nameEn || n.nameEn) || [],
+                        taglineEn: p.taglineEn || "",
+                        taglineAr: p.taglineAr || "",
+                        descriptionEn: p.descriptionEn || "",
+                        descriptionAr: p.descriptionAr || "",
+                        metaTitle: `${p.nameEn} | Muschio`,
+                        metaDescription: p.descriptionEn || "",
+                        imageUrl: p.images?.[0] || p.imageUrl || "/product-placeholder.svg",
+                        images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
+                        imageAlt: p.nameEn,
+                        status: p.isPublished ? "PUBLISHED" : "DRAFT",
+                        variants: variantsList,
+                    };
+                });
                 setProducts(dbProducts);
             }
             if (brandRes?.data && Array.isArray(brandRes.data) && brandRes.data.length > 0) {
@@ -853,6 +925,21 @@ export function App() {
             metaTitle: "",
             metaDescription: "",
             status: "PUBLISHED",
+            variants: [
+                {
+                    id: `var-${Date.now()}-1`,
+                    sku: "",
+                    volume: "100ml",
+                    volumeMl: 100,
+                    regularPrice: 1850,
+                    originalPrice: 1850,
+                    price: 1850,
+                    discountPrice: null,
+                    salePrice: null,
+                    stockQuantity: 20,
+                    isDefault: true,
+                },
+            ],
         });
         setShowProductModal(true);
     };
@@ -861,6 +948,40 @@ export function App() {
         const topNotesArr = p.topNotes || [];
         const prodImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []);
         const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
+        const initialVariants = (p.variants && p.variants.length > 0)
+            ? p.variants.map((v, i) => {
+                const rawPrice = typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) || 0 : v.price;
+                const rawRegular = v.regularPrice ? (typeof v.regularPrice === "string" ? Number(v.regularPrice.replace(/[^0-9.]/g, "")) : v.regularPrice) : (v.originalPrice ? Number(v.originalPrice) : rawPrice);
+                const rawDiscount = v.discountPrice !== null && v.discountPrice !== undefined ? (typeof v.discountPrice === "string" ? Number(v.discountPrice.replace(/[^0-9.]/g, "")) : v.discountPrice) : (v.salePrice ? Number(v.salePrice) : null);
+                return {
+                    id: v.id || `var-${p.id}-${i}`,
+                    sku: v.sku || (i === 0 ? p.sku : `${p.sku}-${v.volumeMl || 100}`),
+                    volume: v.volume || `${v.volumeMl || 100}ml`,
+                    volumeMl: v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10),
+                    regularPrice: rawRegular,
+                    originalPrice: rawRegular,
+                    price: rawRegular,
+                    discountPrice: rawDiscount,
+                    salePrice: rawDiscount,
+                    stockQuantity: v.stockQuantity ?? p.stock ?? 20,
+                    isDefault: v.isDefault ?? i === 0,
+                };
+            })
+            : [
+                {
+                    id: `var-${p.id}-1`,
+                    sku: p.sku || "AMO-INT53-100",
+                    volume: `${p.volumeMl || 100}ml`,
+                    volumeMl: p.volumeMl || 100,
+                    regularPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+                    originalPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+                    price: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+                    discountPrice: null,
+                    salePrice: null,
+                    stockQuantity: p.stock || 20,
+                    isDefault: true,
+                },
+            ];
         setProductForm({
             sku: p.sku || "",
             name: p.name || "",
@@ -886,13 +1007,85 @@ export function App() {
             metaDescription: p.metaDescription ||
                 generateProductMetaDescription(p.name, p.brand, p.concentration, topNotesArr),
             status: p.status || "PUBLISHED",
+            variants: initialVariants,
         });
         setShowProductModal(true);
     };
     const handleSaveProduct = async () => {
-        if (!productForm.name || !productForm.sku)
+        if (!productForm.name) {
+            alert("Product name is required.");
             return;
-        const priceFormatted = productForm.price.includes("AED") ? productForm.price : `${productForm.price} AED`;
+        }
+        if (!productForm.variants || productForm.variants.length === 0) {
+            alert("Every fragrance product must have at least one valid bottle volume variant.");
+            return;
+        }
+        for (let i = 0; i < productForm.variants.length; i++) {
+            const v = productForm.variants[i];
+            if (!v)
+                continue;
+            if (!v.volume?.trim()) {
+                alert(`Variant #${i + 1} is missing a bottle volume (e.g. 50ml, 100ml).`);
+                return;
+            }
+            if (!v.sku?.trim()) {
+                alert(`Variant #${i + 1} (${v.volume}) is missing a unique SKU code.`);
+                return;
+            }
+            const regPrice = Number(v.regularPrice ?? v.price);
+            if (isNaN(regPrice) || regPrice <= 0) {
+                alert(`Variant #${i + 1} (${v.volume}): Original Price (MRP) must be a valid positive number greater than 0 AED.`);
+                return;
+            }
+            if (v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "") {
+                const discPrice = Number(v.discountPrice);
+                if (isNaN(discPrice) || discPrice <= 0) {
+                    alert(`Variant #${i + 1} (${v.volume}): Discounted Price must be a valid positive number greater than 0 AED.`);
+                    return;
+                }
+                if (discPrice > regPrice) {
+                    alert(`Variant #${i + 1} (${v.volume}): Discounted Price (${discPrice} AED) cannot exceed Original Price (${regPrice} AED).`);
+                    return;
+                }
+            }
+            const stock = Number(v.stockQuantity);
+            if (isNaN(stock) || stock < 0) {
+                alert(`Variant #${i + 1} (${v.volume}): Stock quantity must be 0 or greater.`);
+                return;
+            }
+        }
+        let activeVariants = productForm.variants.map((v) => {
+            const regPrice = Number(v.regularPrice ?? v.price);
+            const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
+            const discPrice = hasDiscount ? Number(v.discountPrice) : null;
+            const validDiscount = discPrice !== null && discPrice > 0 && discPrice < regPrice ? discPrice : null;
+            const sellingPrice = validDiscount ?? regPrice;
+            const comparePrice = validDiscount ? regPrice : null;
+            return {
+                ...v,
+                regularPrice: regPrice,
+                originalPrice: regPrice,
+                price: sellingPrice,
+                compareAtPrice: comparePrice,
+                discountPrice: validDiscount,
+                salePrice: validDiscount,
+                stockQuantity: Number(v.stockQuantity) || 0,
+            };
+        });
+        if (activeVariants.length > 0 && !activeVariants.some((v) => v.isDefault)) {
+            const first = activeVariants[0];
+            if (first)
+                first.isDefault = true;
+        }
+        const defaultVariant = activeVariants.find((v) => v.isDefault) || activeVariants[0];
+        if (!defaultVariant) {
+            alert("Invalid variant configuration.");
+            return;
+        }
+        const primarySku = defaultVariant.sku || productForm.sku || `SKU-${slugify(productForm.name)}`;
+        const primaryPrice = `${defaultVariant.price} AED`;
+        const primaryVolumeMl = defaultVariant.volumeMl || parseInt(defaultVariant.volume.replace(/[^0-9]/g, "") || "100", 10);
+        const primaryStock = defaultVariant.stockQuantity;
         const prodSlug = slugify(`${productForm.brand}-${productForm.name}`);
         const topNotesArr = productForm.topNotes ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
         const heartNotesArr = productForm.heartNotes ? productForm.heartNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -911,7 +1104,7 @@ export function App() {
             : [];
         const newP = {
             id: editingProductId || `p-${Date.now()}`,
-            sku: productForm.sku,
+            sku: primarySku,
             name: productForm.name,
             nameAr: productForm.nameAr || productForm.name,
             slug: prodSlug,
@@ -923,10 +1116,10 @@ export function App() {
             perfumerBio: productForm.perfumerBio.trim() || undefined,
             concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
             gender: "UNISEX",
-            volumeMl: Number(productForm.volumeMl) || 100,
-            price: priceFormatted,
+            volumeMl: primaryVolumeMl,
+            price: primaryPrice,
             costPrice: "0 AED",
-            stock: Number(productForm.stock) || 0,
+            stock: Number(primaryStock) || 0,
             testerStock: Number(productForm.testerStock) || 0,
             reserved: 0,
             warehouse: productForm.warehouse,
@@ -941,6 +1134,7 @@ export function App() {
             images: productImages,
             imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
             status: productForm.status,
+            variants: activeVariants,
         };
         // Persist directly to Neon PostgreSQL database via API
         try {
@@ -953,6 +1147,11 @@ export function App() {
                 },
                 body: JSON.stringify({
                     ...productForm,
+                    sku: primarySku,
+                    price: defaultVariant.price,
+                    volumeMl: primaryVolumeMl,
+                    stock: primaryStock,
+                    variants: activeVariants,
                     id: editingProductId || undefined,
                     scentFamily: productForm.scentFamily || "Woody Amber",
                     perfumer: productForm.perfumer.trim() || undefined,
@@ -960,7 +1159,6 @@ export function App() {
                     perfumerBio: productForm.perfumerBio.trim() || undefined,
                     images: productImages,
                     imageUrl: productImages[0] || productForm.imageUrl,
-                    volumeMl: Number(productForm.volumeMl) || 100,
                     descriptionEn: finalDescEn,
                     descriptionAr: finalDescAr,
                     metaTitle: finalMetaTitle,
@@ -1005,6 +1203,18 @@ export function App() {
             metaTitle: "",
             metaDescription: "",
             status: "PUBLISHED",
+            variants: [
+                {
+                    id: `var-${Date.now()}-1`,
+                    sku: "",
+                    volume: "100ml",
+                    volumeMl: 100,
+                    price: 1850,
+                    discountPrice: null,
+                    stockQuantity: 20,
+                    isDefault: true,
+                },
+            ],
         });
     };
     const handleDeleteProduct = async (id, name) => {
@@ -1172,7 +1382,13 @@ export function App() {
                                                 .map((p) => (_jsxs("tr", { className: "hover:bg-slate-800/30 transition-colors", children: [_jsx("td", { className: "p-4", children: _jsxs("div", { className: "flex items-center gap-3", children: [_jsx("div", { className: "w-10 h-10 rounded border border-slate-700 bg-slate-900/80 overflow-hidden flex-shrink-0 flex items-center justify-center", children: p.imageUrl ? (_jsx("img", { src: p.imageUrl, alt: p.name, className: "w-full h-full object-cover" })) : (_jsx(Package, { size: 16, className: "text-slate-600" })) }), _jsxs("div", { children: [_jsx("span", { className: "font-semibold text-white block", children: p.name }), p.nameAr && (_jsx("span", { className: "text-slate-400 text-xs", dir: "rtl", children: p.nameAr })), _jsx("span", { className: "text-slate-500 font-mono text-[11px] block mt-0.5", children: p.sku })] })] }) }), _jsxs("td", { className: "p-4 font-mono text-[11px]", children: [_jsxs("div", { className: "flex items-center gap-1 text-slate-400", children: [_jsx("span", { className: "text-slate-500", children: "/product/" }), _jsx("span", { className: "text-emerald-400 font-medium", children: p.slug })] }), _jsx("span", { className: "text-[10px] text-slate-500 font-sans block mt-0.5", children: p.concentration || "Extrait de Parfum" })] }), _jsxs("td", { className: "p-4", children: [_jsxs("button", { onClick: () => {
                                                                     setActiveTab("brands");
                                                                     setBrandSearch(p.brand);
-                                                                }, className: "text-slate-200 font-medium hover:text-accent hover:underline flex items-center gap-1", title: "View brand details", children: [_jsx("span", { children: p.brand }), _jsx(Award, { size: 11, className: "text-amber-400" })] }), _jsx("span", { className: "text-[10px] text-slate-400 block font-mono", children: p.scentFamily || "Woody Amber" }), p.perfumer && (_jsxs("span", { className: "text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5", title: `Master Perfumer: ${p.perfumer}`, children: [_jsx(Sparkles, { size: 10, className: "text-amber-400 flex-shrink-0" }), _jsxs("span", { className: "truncate max-w-[130px] font-sans", children: ["Nose: ", p.perfumer] })] }))] }), _jsx("td", { className: "p-4 text-[11px]", children: _jsxs("div", { className: "space-y-0.5", children: [_jsxs("span", { className: "text-slate-300 block", children: ["Top (", p.topNotes?.length || 0, ") \u2022 Heart (", p.heartNotes?.length || 0, ") \u2022 Base (", p.baseNotes?.length || 0, ")"] }), p.topNotes && p.topNotes.length > 0 && (_jsxs("span", { className: "text-slate-500 text-[10px] block truncate max-w-xs", children: ["Opening: ", p.topNotes.slice(0, 2).join(", ")] }))] }) }), _jsx("td", { className: "p-4 font-mono font-medium text-slate-100", children: p.price }), _jsxs("td", { className: "p-4 font-mono", children: [_jsxs("span", { className: "text-emerald-400 block", children: [p.stock, " sealed (", p.warehouse, ")"] }), _jsxs("span", { className: "text-purple-400 text-[11px]", children: ["+", p.testerStock, " testers"] })] }), _jsx("td", { className: "p-4", children: _jsxs("span", { className: "px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit", children: [_jsx(CheckCircle2, { size: 11 }), _jsx("span", { children: "SEO Ready" })] }) }), _jsx("td", { className: "p-4 text-end", children: _jsxs("div", { className: "flex items-center justify-end gap-2", children: [_jsx("button", { onClick: () => handleOpenEditProduct(p), className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "Edit Product", children: _jsx(Edit3, { size: 14 }) }), _jsx("a", { href: `/en/product/${p.slug}`, target: "_blank", rel: "noreferrer", className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "View Storefront Page", children: _jsx(ExternalLink, { size: 14 }) }), _jsx("button", { onClick: () => handleDeleteProduct(p.id, p.name), className: "p-1 text-slate-500 hover:text-rose-400 transition-colors", title: "Delete Product", children: _jsx(Trash2, { size: 14 }) })] }) })] }, p.id))) })] }) }), showProductModal && (_jsx("div", { className: "fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto", onClick: () => setShowProductModal(false), children: _jsxs("div", { className: "bg-[#111622] border border-slate-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto", onClick: (e) => e.stopPropagation(), children: [_jsxs("div", { className: "flex items-center justify-between pb-3 border-b border-slate-800", children: [_jsxs("div", { children: [_jsx("h3", { className: "font-serif text-lg text-white font-light", children: editingProductId ? "Edit Product" : "Add Product" }), _jsx("p", { className: "text-[11px] text-slate-400", children: editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags" })] }), _jsx("button", { onClick: () => {
+                                                                }, className: "text-slate-200 font-medium hover:text-accent hover:underline flex items-center gap-1", title: "View brand details", children: [_jsx("span", { children: p.brand }), _jsx(Award, { size: 11, className: "text-amber-400" })] }), _jsx("span", { className: "text-[10px] text-slate-400 block font-mono", children: p.scentFamily || "Woody Amber" }), p.perfumer && (_jsxs("span", { className: "text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5", title: `Master Perfumer: ${p.perfumer}`, children: [_jsx(Sparkles, { size: 10, className: "text-amber-400 flex-shrink-0" }), _jsxs("span", { className: "truncate max-w-[130px] font-sans", children: ["Nose: ", p.perfumer] })] }))] }), _jsx("td", { className: "p-4 text-[11px]", children: _jsxs("div", { className: "space-y-0.5", children: [_jsxs("span", { className: "text-slate-300 block", children: ["Top (", p.topNotes?.length || 0, ") \u2022 Heart (", p.heartNotes?.length || 0, ") \u2022 Base (", p.baseNotes?.length || 0, ")"] }), p.topNotes && p.topNotes.length > 0 && (_jsxs("span", { className: "text-slate-500 text-[10px] block truncate max-w-xs", children: ["Opening: ", p.topNotes.slice(0, 2).join(", ")] }))] }) }), _jsxs("td", { className: "p-4 font-mono", children: [_jsx("div", { className: "font-medium text-slate-100", children: p.price }), p.variants && p.variants.length > 0 ? (_jsx("div", { className: "flex flex-wrap gap-1 mt-1", children: p.variants.map((v, i) => {
+                                                                    const orig = Number(v.regularPrice ?? v.price);
+                                                                    const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
+                                                                    return (_jsxs("span", { className: `text-[9px] px-1.5 py-0.5 rounded border font-mono ${v.isDefault
+                                                                            ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
+                                                                            : "bg-slate-800 text-slate-400 border-slate-700"}`, title: `${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`, children: [v.volume, hasDisc && _jsx("span", { className: "ms-0.5 text-emerald-400 font-bold", children: "%" })] }, v.id || i));
+                                                                }) })) : (_jsxs("span", { className: "text-[10px] text-slate-500 block", children: [p.volumeMl || 100, "ml"] }))] }), _jsxs("td", { className: "p-4 font-mono", children: [_jsxs("span", { className: "text-emerald-400 block", children: [p.stock, " sealed (", p.warehouse, ")"] }), p.variants && p.variants.length > 1 && (_jsxs("span", { className: "text-slate-400 text-[10px] block", children: ["Total across ", p.variants.length, " sizes: ", p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)] })), _jsxs("span", { className: "text-purple-400 text-[11px]", children: ["+", p.testerStock, " testers"] })] }), _jsx("td", { className: "p-4", children: _jsxs("span", { className: "px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit", children: [_jsx(CheckCircle2, { size: 11 }), _jsx("span", { children: "SEO Ready" })] }) }), _jsx("td", { className: "p-4 text-end", children: _jsxs("div", { className: "flex items-center justify-end gap-2", children: [_jsx("button", { onClick: () => handleOpenEditProduct(p), className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "Edit Product", children: _jsx(Edit3, { size: 14 }) }), _jsx("a", { href: `/en/product/${p.slug}`, target: "_blank", rel: "noreferrer", className: "p-1 text-slate-400 hover:text-emerald-400 transition-colors", title: "View Storefront Page", children: _jsx(ExternalLink, { size: 14 }) }), _jsx("button", { onClick: () => handleDeleteProduct(p.id, p.name), className: "p-1 text-slate-500 hover:text-rose-400 transition-colors", title: "Delete Product", children: _jsx(Trash2, { size: 14 }) })] }) })] }, p.id))) })] }) }), showProductModal && (_jsx("div", { className: "fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto", onClick: () => setShowProductModal(false), children: _jsxs("div", { className: "bg-[#111622] border border-slate-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto", onClick: (e) => e.stopPropagation(), children: [_jsxs("div", { className: "flex items-center justify-between pb-3 border-b border-slate-800", children: [_jsxs("div", { children: [_jsx("h3", { className: "font-serif text-lg text-white font-light", children: editingProductId ? "Edit Product" : "Add Product" }), _jsx("p", { className: "text-[11px] text-slate-400", children: editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags" })] }), _jsx("button", { onClick: () => {
                                                         setShowProductModal(false);
                                                         setEditingProductId(null);
                                                     }, className: "text-slate-400 hover:text-white", children: _jsx(X, { size: 18 }) })] }), _jsxs("div", { className: "space-y-4 text-xs", children: [_jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "SKU Code *" }), _jsx("input", { type: "text", placeholder: "e.g. AMO-INT53-100", value: productForm.sku, onChange: (e) => setProductForm({ ...productForm, sku: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Brand *" }), _jsx("select", { value: productForm.brand, onChange: (e) => setProductForm({ ...productForm, brand: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", children: brands.map((b) => (_jsxs("option", { value: b.name, children: [b.name, " (", b.countryEn, ")"] }, b.id))) })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (English) *" }), _jsx("input", { type: "text", placeholder: "e.g. Royal Taif Extrait de Parfum", value: productForm.name, onChange: (e) => setProductForm({ ...productForm, name: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded", required: true })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Name (Arabic)" }), _jsx("input", { type: "text", dir: "rtl", placeholder: "e.g. \u0648\u0631\u062F \u0627\u0644\u0637\u0627\u0626\u0641 \u0625\u0643\u0633\u062A\u0631\u064A\u062A \u062F\u064A \u0628\u0627\u0631\u0641\u0627\u0646", value: productForm.nameAr, onChange: (e) => setProductForm({ ...productForm, nameAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded" })] }), _jsxs("div", { className: "grid grid-cols-1 sm:grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Scent Family (Olfactory Classification) *" }), _jsxs("select", { value: productForm.scentFamily, onChange: (e) => setProductForm({ ...productForm, scentFamily: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600", children: [_jsx("option", { value: "Woody Amber", children: "Woody Amber (\u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Amber Floral", children: "Amber Floral (\u0639\u0646\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Fresh Aromatic Citrus", children: "Fresh Aromatic Citrus (\u062D\u0645\u0636\u064A\u0627\u062A \u0623\u0631\u0648\u0645\u0627\u062A\u064A\u0629)" }), _jsx("option", { value: "Woody Amber Oud", children: "Woody Amber Oud (\u0639\u0648\u062F \u062E\u0634\u0628 \u0627\u0644\u0639\u0646\u0628\u0631)" }), _jsx("option", { value: "Leather & Smoke", children: "Leather & Smoke (\u062C\u0644\u062F\u064A \u062F\u062E\u0627\u0646\u064A)" }), _jsx("option", { value: "Oriental Spicy", children: "Oriental Spicy (\u0634\u0631\u0642\u064A \u062D\u0627\u0631)" }), _jsx("option", { value: "Gourmand & Vanilla", children: "Gourmand & Vanilla (\u063A\u0648\u0631\u0645\u0627\u0646\u062F \u0648\u0641\u0627\u0646\u064A\u0644\u064A\u0627)" }), _jsx("option", { value: "Chypre Floral", children: "Chypre Floral (\u0634\u0628\u0631 \u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Aquatic & Fresh", children: "Aquatic & Fresh (\u0645\u0627\u0626\u064A \u0645\u0646\u0639\u0634)" }), _jsx("option", { value: "Floral", children: "Floral (\u0632\u0647\u0631\u064A)" }), _jsx("option", { value: "Woody", children: "Woody (\u062E\u0634\u0628\u064A)" })] })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Concentration *" }), _jsxs("select", { value: productForm.concentration, onChange: (e) => setProductForm({ ...productForm, concentration: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs", children: [_jsx("option", { value: "EXTRAIT_DE_PARFUM", children: "Extrait de Parfum (30-53%)" }), _jsx("option", { value: "PARFUM", children: "Parfum Pure (20-30%)" }), _jsx("option", { value: "EAU_DE_PARFUM", children: "Eau de Parfum (15-20%)" }), _jsx("option", { value: "PARFUM_OIL", children: "Pure Attar / Perfume Oil" })] })] })] }), _jsxs("div", { className: "p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3", children: [_jsxs("div", { className: "flex items-center justify-between", children: [_jsxs("span", { className: "text-[11px] font-medium text-amber-400 flex items-center gap-1.5", children: [_jsx(Award, { size: 13 }), _jsx("span", { children: "Master Perfumer(s) / Nose (\u0627\u0644\u0623\u0646\u0641 \u0627\u0644\u0639\u0637\u0631\u064A)" })] }), _jsx("span", { className: "text-[10px] text-slate-500 font-mono", children: "Storefront: Maison & Perfumer Details" })] }), _jsxs("div", { children: [_jsxs("div", { className: "flex items-center justify-between mb-1", children: [_jsx("label", { className: "text-slate-400 text-[10px]", children: "Perfumer Names (multiple names can be written separated by commas)" }), _jsx("span", { className: "text-[10px] text-amber-400/80 font-sans", children: "Multiple Noses Supported" })] }), _jsx("input", { type: "text", placeholder: "e.g. Pierre Negrin, Renaud Salmon, Karine Vinchon", value: productForm.perfumer, onChange: (e) => setProductForm({ ...productForm, perfumer: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] }), productForm.perfumer.trim() && (_jsxs("div", { className: "flex flex-wrap items-center gap-1.5 pt-1", children: [_jsx("span", { className: "text-[10px] text-slate-400", children: "Tagged Perfumers:" }), productForm.perfumer
@@ -1213,7 +1429,114 @@ export function App() {
                                                                             }, disabled: isAlreadyAdded, className: `px-2 py-0.5 text-[10px] rounded transition-colors ${isAlreadyAdded
                                                                                 ? "bg-slate-800/60 text-slate-500 border border-slate-800 cursor-default"
                                                                                 : "bg-[#141C2B] hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60"}`, children: isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}` }, perfumerSuggestion));
-                                                                    }) })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 text-[10px] mb-1", children: "Perfumer Heritage / Bio Note" }), _jsx("input", { type: "text", placeholder: "e.g. Master French perfumer famed for architectural incense and royal extraits", value: productForm.perfumerBio, onChange: (e) => setProductForm({ ...productForm, perfumerBio: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] })] }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsx("div", { className: "flex items-center justify-between", children: _jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(FileText, { size: 13, className: "text-amber-400" }), _jsx("span", { children: "Product Editorial Descriptions" })] }) }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (English)" }), _jsx("textarea", { rows: 3, placeholder: "e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano...", value: productForm.descriptionEn, onChange: (e) => setProductForm({ ...productForm, descriptionEn: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (Arabic)" }), _jsx("textarea", { rows: 3, dir: "rtl", placeholder: "e.g. \u0628\u062A\u0631\u0643\u064A\u0632 \u0623\u0633\u0637\u0648\u0631\u064A \u064A\u0628\u0644\u063A 53% \u0648\u0645\u0639\u062A\u0642 \u0644\u0645\u062F\u0629 \u0633\u062A\u0629 \u0623\u0634\u0647\u0631 \u0641\u064A \u0639\u064F\u0645\u0627\u0646. \u064A\u0641\u062A\u062A\u062D \u0628\u0646\u0641\u062D\u0627\u062A \u0627\u0644\u0623\u0648\u0631\u064A\u063A\u0627\u0646\u0648 \u0648\u0627\u0644\u0641\u0644\u0641\u0644 \u0627\u0644\u062D\u0627\u0631...", value: productForm.descriptionAr, onChange: (e) => setProductForm({ ...productForm, descriptionAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans" })] })] }), _jsxs("div", { className: "grid grid-cols-2 gap-3", children: [_jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Volume (ml)" }), _jsx("input", { type: "number", placeholder: "e.g. 100", value: productForm.volumeMl || 100, onChange: (e) => setProductForm({ ...productForm, volumeMl: Number(e.target.value) || 100 }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Price (AED) *" }), _jsx("input", { type: "text", placeholder: "e.g. 1,850", value: productForm.price, onChange: (e) => setProductForm({ ...productForm, price: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono", required: true })] })] }), _jsxs("div", { className: "p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2", children: [_jsxs("span", { className: "text-[11px] font-medium text-purple-400 flex items-center gap-1", children: [_jsx(Layers, { size: 13 }), _jsx("span", { children: "Scent Notes (comma-separated, auto-linked to note pages)" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Top Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Bergamot, Pink Pepper, Taif Rose", value: productForm.topNotes, onChange: (e) => setProductForm({ ...productForm, topNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Heart Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Silver Frankincense, Jasmine, Cedarwood", value: productForm.heartNotes, onChange: (e) => setProductForm({ ...productForm, heartNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Base Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Cambodian Oud, Ambergris, Sandalwood", value: productForm.baseNotes, onChange: (e) => setProductForm({ ...productForm, baseNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] })] }), _jsx(MultiImageUploadField, { label: "Product Flacon & Gallery Photography (Cloudinary)", images: productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : []), onChange: (urls) => {
+                                                                    }) })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 text-[10px] mb-1", children: "Perfumer Heritage / Bio Note" }), _jsx("input", { type: "text", placeholder: "e.g. Master French perfumer famed for architectural incense and royal extraits", value: productForm.perfumerBio, onChange: (e) => setProductForm({ ...productForm, perfumerBio: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600" })] })] }), _jsxs("div", { className: "space-y-3 pt-2 border-t border-slate-800", children: [_jsx("div", { className: "flex items-center justify-between", children: _jsxs("span", { className: "text-[11px] font-medium text-slate-300 flex items-center gap-1.5", children: [_jsx(FileText, { size: 13, className: "text-amber-400" }), _jsx("span", { children: "Product Editorial Descriptions" })] }) }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (English)" }), _jsx("textarea", { rows: 3, placeholder: "e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano...", value: productForm.descriptionEn, onChange: (e) => setProductForm({ ...productForm, descriptionEn: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-400 mb-1", children: "Product Description (Arabic)" }), _jsx("textarea", { rows: 3, dir: "rtl", placeholder: "e.g. \u0628\u062A\u0631\u0643\u064A\u0632 \u0623\u0633\u0637\u0648\u0631\u064A \u064A\u0628\u0644\u063A 53% \u0648\u0645\u0639\u062A\u0642 \u0644\u0645\u062F\u0629 \u0633\u062A\u0629 \u0623\u0634\u0647\u0631 \u0641\u064A \u0639\u064F\u0645\u0627\u0646. \u064A\u0641\u062A\u062A\u062D \u0628\u0646\u0641\u062D\u0627\u062A \u0627\u0644\u0623\u0648\u0631\u064A\u063A\u0627\u0646\u0648 \u0648\u0627\u0644\u0641\u0644\u0641\u0644 \u0627\u0644\u062D\u0627\u0631...", value: productForm.descriptionAr, onChange: (e) => setProductForm({ ...productForm, descriptionAr: e.target.value }), className: "w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans" })] })] }), _jsxs("div", { className: "p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3", children: [_jsxs("div", { className: "flex flex-wrap items-center justify-between gap-2", children: [_jsxs("div", { children: [_jsxs("span", { className: "text-[11px] font-medium text-amber-400 flex items-center gap-1.5", children: [_jsx(Layers, { size: 13 }), _jsx("span", { children: "Bottle Volume Variants & Pricing (\u0623\u062D\u062C\u0627\u0645 \u0627\u0644\u0639\u0637\u0648\u0631 \u0648\u0627\u0644\u062A\u0633\u0639\u064A\u0631) *" })] }), _jsx("p", { className: "text-[10px] text-slate-400 mt-0.5", children: "Configure multiple bottle sizes with independent pricing, stock, and SKU tracking. At least one variant is required." })] }), _jsxs("div", { className: "flex items-center gap-1", children: [_jsx("span", { className: "text-[10px] text-slate-500 mr-1", children: "Quick Add:" }), ["30ml", "50ml", "100ml", "200ml"].map((vol) => (_jsxs("button", { type: "button", onClick: () => {
+                                                                                const exists = productForm.variants.some((v) => v.volume.toLowerCase() === vol.toLowerCase());
+                                                                                if (exists)
+                                                                                    return;
+                                                                                const volNum = parseInt(vol.replace(/[^0-9]/g, "") || "100", 10);
+                                                                                const baseSku = productForm.sku || "FRAG";
+                                                                                const suggestedSku = `${baseSku}-${volNum}`;
+                                                                                const refPrice = Number(String(productForm.price || "").replace(/[^0-9.]/g, "")) || 1000;
+                                                                                const ratio = volNum / 100;
+                                                                                const approxPrice = Math.round((refPrice * (ratio < 1 ? ratio * 1.15 : ratio * 0.9)) / 10) * 10;
+                                                                                const newVariant = {
+                                                                                    id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                                                                                    sku: suggestedSku,
+                                                                                    volume: vol,
+                                                                                    volumeMl: volNum,
+                                                                                    regularPrice: approxPrice || 800,
+                                                                                    originalPrice: approxPrice || 800,
+                                                                                    price: approxPrice || 800,
+                                                                                    discountPrice: null,
+                                                                                    salePrice: null,
+                                                                                    stockQuantity: 15,
+                                                                                    isDefault: false,
+                                                                                };
+                                                                                setProductForm({
+                                                                                    ...productForm,
+                                                                                    variants: [...productForm.variants, newVariant],
+                                                                                });
+                                                                            }, className: "px-2 py-0.5 text-[10px] bg-slate-800/80 hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60 rounded transition-colors", children: ["+ ", vol] }, vol)))] })] }), _jsx("div", { className: "space-y-2.5 pt-1", children: productForm.variants.map((v, index) => {
+                                                                const origPrice = Number(v.regularPrice ?? v.price ?? 0);
+                                                                const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
+                                                                const discPrice = hasDiscount ? Number(v.discountPrice) : null;
+                                                                const isExceeding = discPrice !== null && discPrice > origPrice;
+                                                                const isValidDiscount = discPrice !== null && discPrice < origPrice && origPrice > 0;
+                                                                const savingsPct = isValidDiscount ? Math.round(((origPrice - discPrice) / origPrice) * 100) : 0;
+                                                                const savingsDiff = isValidDiscount ? origPrice - discPrice : 0;
+                                                                return (_jsxs("div", { className: `p-2.5 rounded border transition-colors ${v.isDefault
+                                                                        ? "bg-[#111827] border-amber-500/40 ring-1 ring-amber-500/20"
+                                                                        : "bg-[#111622] border-slate-800 hover:border-slate-700"}`, children: [_jsxs("div", { className: "grid grid-cols-12 gap-2 items-center", children: [_jsxs("div", { className: "col-span-2", children: [_jsx("label", { className: "text-[10px] text-slate-400 block mb-0.5 font-medium", children: "Volume *" }), _jsx("input", { type: "text", placeholder: "e.g. 100ml", value: v.volume, onChange: (e) => {
+                                                                                                const val = e.target.value;
+                                                                                                const updated = [...productForm.variants];
+                                                                                                updated[index] = {
+                                                                                                    ...v,
+                                                                                                    volume: val,
+                                                                                                    volumeMl: parseInt(val.replace(/[^0-9]/g, "") || "100", 10),
+                                                                                                };
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, className: "w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-medium", required: true })] }), _jsxs("div", { className: "col-span-3", children: [_jsx("label", { className: "text-[10px] text-slate-400 block mb-0.5 font-medium", children: "Variant SKU *" }), _jsx("input", { type: "text", placeholder: "e.g. AMO-INT53-100", value: v.sku, onChange: (e) => {
+                                                                                                const updated = [...productForm.variants];
+                                                                                                updated[index] = { ...v, sku: e.target.value };
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, className: "w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono", required: true })] }), _jsxs("div", { className: "col-span-2", children: [_jsx("label", { className: "text-[10px] text-slate-400 block mb-0.5 font-medium", children: "Original Price *" }), _jsx("input", { type: "number", placeholder: "1850", value: v.price, onChange: (e) => {
+                                                                                                const val = Number(e.target.value) || 0;
+                                                                                                const updated = [...productForm.variants];
+                                                                                                updated[index] = { ...v, price: val, regularPrice: val, originalPrice: val };
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, className: "w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono", required: true })] }), _jsxs("div", { className: "col-span-2", children: [_jsx("label", { className: "text-[10px] text-slate-400 block mb-0.5 font-medium", children: "Discounted Price" }), _jsx("input", { type: "number", placeholder: "1590 (Opt)", value: v.discountPrice ?? "", onChange: (e) => {
+                                                                                                const disc = e.target.value ? Number(e.target.value) : null;
+                                                                                                const updated = [...productForm.variants];
+                                                                                                updated[index] = {
+                                                                                                    ...v,
+                                                                                                    discountPrice: disc,
+                                                                                                    salePrice: disc,
+                                                                                                };
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, className: `w-full bg-[#0A0D14] border px-2 py-1.5 rounded text-xs font-mono transition-colors ${isExceeding
+                                                                                                ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
+                                                                                                : isValidDiscount
+                                                                                                    ? "border-emerald-500/50 text-emerald-300"
+                                                                                                    : "border-slate-800 text-white"}` })] }), _jsxs("div", { className: "col-span-2", children: [_jsx("label", { className: "text-[10px] text-slate-400 block mb-0.5 font-medium", children: "Stock Qty *" }), _jsx("input", { type: "number", placeholder: "20", value: v.stockQuantity, onChange: (e) => {
+                                                                                                const updated = [...productForm.variants];
+                                                                                                updated[index] = { ...v, stockQuantity: Number(e.target.value) || 0 };
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, className: "w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono" })] }), _jsxs("div", { className: "col-span-1 flex items-center justify-end gap-1.5 pt-3", children: [_jsx("button", { type: "button", onClick: () => {
+                                                                                                const updated = productForm.variants.map((item, i) => ({
+                                                                                                    ...item,
+                                                                                                    isDefault: i === index,
+                                                                                                }));
+                                                                                                setProductForm({ ...productForm, variants: updated });
+                                                                                            }, title: v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant", className: `p-1 rounded text-[11px] transition-colors ${v.isDefault
+                                                                                                ? "text-amber-400 bg-amber-500/15"
+                                                                                                : "text-slate-500 hover:text-amber-300"}`, children: "\u2605" }), _jsx("button", { type: "button", disabled: productForm.variants.length <= 1, onClick: () => {
+                                                                                                if (productForm.variants.length <= 1)
+                                                                                                    return;
+                                                                                                const filtered = productForm.variants.filter((_, i) => i !== index);
+                                                                                                if (v.isDefault && filtered.length > 0 && filtered[0]) {
+                                                                                                    filtered[0].isDefault = true;
+                                                                                                }
+                                                                                                setProductForm({ ...productForm, variants: filtered });
+                                                                                            }, title: productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant", className: `p-1 rounded transition-colors ${productForm.variants.length <= 1
+                                                                                                ? "text-slate-700 cursor-not-allowed"
+                                                                                                : "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"}`, children: _jsx(Trash2, { size: 13 }) })] })] }), isExceeding && (_jsx("div", { className: "mt-1.5 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/25 px-2 py-0.5 rounded flex items-center gap-1 font-mono", children: _jsxs("span", { children: ["\u26A0 Discounted price (", discPrice, " AED) cannot exceed Original Price (", origPrice, " AED)"] }) })), isValidDiscount && (_jsxs("div", { className: "mt-1.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center justify-between font-mono", children: [_jsxs("span", { children: ["\u2713 Save ", savingsPct, "% (", savingsDiff, " AED off)"] }), _jsxs("span", { className: "text-slate-400", children: ["Selling Price: ", _jsxs("strong", { className: "text-emerald-300", children: [discPrice, " AED"] }), " | Original: ", _jsxs("s", { className: "text-slate-500", children: [origPrice, " AED"] })] })] })), v.isDefault && (_jsx("div", { className: "mt-1 flex items-center gap-1 text-[10px] text-amber-400 font-sans", children: _jsx("span", { children: "\u2605 Primary storefront display variant (Default size on PDP)" }) }))] }, v.id || index));
+                                                            }) }), _jsxs("div", { className: "pt-2 flex items-center justify-between", children: [_jsxs("button", { type: "button", onClick: () => {
+                                                                        const count = productForm.variants.length + 1;
+                                                                        const newVariant = {
+                                                                            id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+                                                                            sku: productForm.sku ? `${productForm.sku}-v${count}` : `SKU-V${count}`,
+                                                                            volume: "50ml",
+                                                                            volumeMl: 50,
+                                                                            price: 1000,
+                                                                            discountPrice: null,
+                                                                            stockQuantity: 10,
+                                                                            isDefault: false,
+                                                                        };
+                                                                        setProductForm({
+                                                                            ...productForm,
+                                                                            variants: [...productForm.variants, newVariant],
+                                                                        });
+                                                                    }, className: "px-3 py-1.5 bg-[#141C2B] hover:bg-slate-800 text-amber-400 hover:text-amber-300 text-xs font-medium rounded border border-amber-500/30 flex items-center gap-1.5 transition-colors", children: [_jsx(Plus, { size: 12 }), _jsx("span", { children: "Add Another Volume Variant" })] }), _jsxs("span", { className: "text-[10px] text-slate-500", children: [productForm.variants.length, " variant", productForm.variants.length === 1 ? "" : "s", " configured"] })] })] }), _jsxs("div", { className: "p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2", children: [_jsxs("span", { className: "text-[11px] font-medium text-purple-400 flex items-center gap-1", children: [_jsx(Layers, { size: 13 }), _jsx("span", { children: "Scent Notes (comma-separated, auto-linked to note pages)" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Top Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Bergamot, Pink Pepper, Taif Rose", value: productForm.topNotes, onChange: (e) => setProductForm({ ...productForm, topNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Heart Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Silver Frankincense, Jasmine, Cedarwood", value: productForm.heartNotes, onChange: (e) => setProductForm({ ...productForm, heartNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] }), _jsxs("div", { children: [_jsx("label", { className: "block text-slate-500 text-[10px]", children: "Base Notes" }), _jsx("input", { type: "text", placeholder: "e.g. Cambodian Oud, Ambergris, Sandalwood", value: productForm.baseNotes, onChange: (e) => setProductForm({ ...productForm, baseNotes: e.target.value }), className: "w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs" })] })] }), _jsx(MultiImageUploadField, { label: "Product Flacon & Gallery Photography (Cloudinary)", images: productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : []), onChange: (urls) => {
                                                         setProductForm({
                                                             ...productForm,
                                                             images: urls,

@@ -2,9 +2,10 @@ import { z } from "zod";
 import { CurrencySchema, ProductVariantSchema, ProductSchema } from "./catalog";
 
 export const CartItemSchema = z.object({
-  id: z.string().uuid(),
-  cartId: z.string().uuid(),
-  variantId: z.string().uuid(),
+  id: z.string(),
+  cartId: z.string().optional(),
+  variantId: z.string(),
+  volume: z.string().optional(),
   quantity: z.number().int().positive(),
   variant: ProductVariantSchema.optional(),
   product: ProductSchema.optional(),

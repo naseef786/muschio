@@ -36,6 +36,20 @@ export interface NoteItem {
   perfumesCount: number;
 }
 
+export interface ProductVariantItem {
+  id?: string;
+  sku: string;
+  volume: string; // e.g. "30ml", "50ml", "100ml"
+  volumeMl?: number;
+  regularPrice?: number | string; // Original Price / MRP
+  originalPrice?: number | string; // alias
+  price: number | string; // effective price
+  discountPrice?: number | string | null; // Discounted Price / Selling Price
+  salePrice?: number | string | null; // alias
+  stockQuantity: number;
+  isDefault: boolean;
+}
+
 export interface ProductItem {
   id: string;
   sku: string;
@@ -70,6 +84,7 @@ export interface ProductItem {
   images?: string[];
   imageAlt?: string;
   status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
+  variants?: ProductVariantItem[];
 }
 
 export interface ParsedCsvProduct {

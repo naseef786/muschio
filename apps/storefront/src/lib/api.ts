@@ -20,11 +20,11 @@ import {
   getPreviewScentFamilies,
 } from "./preview-catalog";
 
-function resolveApiBase(): string {
+export function resolveApiBase(): string {
   // If window is defined (browser/client-side, e.g. mobile Safari / Chrome)
   if (typeof window !== "undefined") {
     const envUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-    if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+    if (envUrl && envUrl.startsWith("http")) {
       return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl}/api/v1`;
     }
     // Always use relative /api/v1 on the client so it works on any origin
@@ -32,8 +32,8 @@ function resolveApiBase(): string {
   }
 
   // Server-side (SSR in Node.js / Vercel Serverless Function)
-  const envUrl = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "");
-  if (envUrl && !envUrl.includes("localhost") && !envUrl.includes("127.0.0.1")) {
+  const envUrl = (process.env.API_URL || process.env.NEXT_PUBLIC_API_URL)?.replace(/\/$/, "");
+  if (envUrl && envUrl.startsWith("http")) {
     return envUrl.endsWith("/api/v1") ? envUrl : `${envUrl}/api/v1`;
   }
 
@@ -51,10 +51,10 @@ function resolveApiBase(): string {
     return `https://${process.env.VERCEL_URL}/api/v1`;
   }
 
-  return "http://localhost:3000/api/v1";
+  const port = process.env.PORT || 3000;
+  return `http://127.0.0.1:${port}/api/v1`;
 }
 
-const API_BASE = resolveApiBase();
 let sessionRequest: Promise<string | null> | null = null;
 async function guestToken(): Promise<string | null> {
   if (typeof window === "undefined") return null;
@@ -63,7 +63,8 @@ async function guestToken(): Promise<string | null> {
   if (!sessionRequest) {
     sessionRequest = (async () => {
       try {
-        const response = await fetch(`${API_BASE}/sessions/guest`, {
+        const apiBase = resolveApiBase();
+        const response = await fetch(`${apiBase}/sessions/guest`, {
           method: "POST",
           cache: "no-store",
           signal: AbortSignal.timeout(8000),
@@ -87,13 +88,14 @@ async function apiRequest<T>(
   endpoint: string,
   options?: RequestInit,
 ): Promise<T | null> {
+  const apiBase = resolveApiBase();
   try {
     const secured = /^\/(cart|checkout|orders|payments\/session|auth\/(me|profile)|customers\/addresses)(\/|\?|$)/.test(
       endpoint,
     );
     const token = secured ? await guestToken() : null;
     if (secured && !token) return null;
-    const res = await fetch(`${API_BASE}${endpoint}`, {
+    const res = await fetch(`${apiBase}${endpoint}`, {
       ...options,
       headers: {
         "Content-Type": "application/json",
@@ -118,7 +120,9 @@ async function apiRequest<T>(
     const data = await res.json();
     return data.data as T;
   } catch (err) {
-    // Graceful fallback for offline local dev or SSR without live API
+    if (process.env.NODE_ENV !== "production") {
+      console.warn(`API request to ${apiBase}${endpoint} failed:`, err);
+    }
     return null;
   }
 }
@@ -144,10 +148,25 @@ export const muschioApi = {
       const result = await apiRequest<unknown>(
         `/products${query ? `?${query}` : ""}`,
       );
-      const parsed = z.array(StorefrontProductSchema).safeParse(result);
-      if (parsed.success && parsed.data.length > 0) return parsed.data;
-    } catch {
-      // Fallback
+      if (Array.isArray(result) && result.length > 0) {
+        const validated: StorefrontProduct[] = [];
+        for (const item of result) {
+          const parsed = StorefrontProductSchema.safeParse(item);
+          if (parsed.success) {
+            validated.push(parsed.data);
+          } else {
+            console.warn(`Product ${item?.slug} failed schema validation:`, parsed.error.issues);
+          }
+        }
+        if (validated.length > 0) {
+          if (params?.limit && typeof params.limit === "number") {
+            return validated.slice(0, params.limit);
+          }
+          return validated;
+        }
+      }
+    } catch (e) {
+      console.error("Error in getProducts:", e);
     }
     const fallback = getPreviewStorefrontProducts();
     if (params?.limit && typeof params.limit === "number") {
@@ -158,13 +177,17 @@ export const muschioApi = {
 
   async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
     try {
-      const result = await apiRequest<{ product?: unknown }>(
+      const result = await apiRequest<{ product?: unknown } | unknown>(
         `/products/${encodeURIComponent(slug)}`,
       );
-      const parsed = StorefrontProductSchema.safeParse(result?.product);
+      const rawProduct = (result as any)?.product ?? result;
+      const parsed = StorefrontProductSchema.safeParse(rawProduct);
       if (parsed.success && parsed.data) return parsed.data;
-    } catch {
-      // Fallback
+      if (!parsed.success && rawProduct) {
+        console.warn(`Product ${slug} failed schema validation:`, parsed.error.issues);
+      }
+    } catch (e) {
+      console.error(`Error in getProductBySlug(${slug}):`, e);
     }
     return getPreviewStorefrontProductBySlug(slug);
   },

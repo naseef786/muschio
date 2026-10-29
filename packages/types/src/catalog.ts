@@ -110,18 +110,24 @@ export const SeasonSchema = z.object({
 export type Season = z.infer<typeof SeasonSchema>;
 
 export const ProductVariantSchema = z.object({
-  id: z.string().uuid(),
-  productId: z.string().uuid(),
+  id: z.string(),
+  productId: z.string().optional(),
   sku: z.string().min(1),
-  volumeMl: z.number().positive(),
-  sizeLabelEn: z.string(),
-  sizeLabelAr: z.string(),
-  costPrice: z.number().nonnegative().default(0),
+  volume: z.string().or(z.number()).default("100ml"),
+  volumeMl: z.number().positive().optional(),
+  sizeLabelEn: z.string().optional(),
+  sizeLabelAr: z.string().optional(),
+  costPrice: z.number().nonnegative().default(0).optional(),
+  regularPrice: z.number().positive().optional(),
+  originalPrice: z.number().positive().optional(),
   price: z.number().positive(),
+  discountPrice: z.number().positive().optional().nullable(),
+  salePrice: z.number().positive().optional().nullable(),
   compareAtPrice: z.number().positive().optional().nullable(),
   isSampleVial: z.boolean().default(false),
   stockQuantity: z.number().int().nonnegative().default(0),
-  reservedQuantity: z.number().int().nonnegative().default(0),
+  isDefault: z.boolean().default(false),
+  reservedQuantity: z.number().int().nonnegative().default(0).optional(),
   barcode: z.string().optional().nullable(),
 });
 export type ProductVariant = z.infer<typeof ProductVariantSchema>;

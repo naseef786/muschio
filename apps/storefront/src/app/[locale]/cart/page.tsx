@@ -50,7 +50,7 @@ export default function CartPage({
                       {isAr ? item.titleAr : item.title}
                     </h3>
                     <div className="text-xs text-luxury-muted font-sans truncate">{item.sizeLabel || "Full Bottle"}</div>
-                    <PriceDisplay price={item.price} locale={locale} size="sm" />
+                    <PriceDisplay price={item.price} compareAtPrice={item.compareAtPrice} locale={locale} size="sm" />
                   </div>
                 </div>
 

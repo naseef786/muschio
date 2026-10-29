@@ -23,8 +23,8 @@ export const PREVIEW_CATALOG: Record<string, any> = {
     ratingAverage: 4.95,
     ratingCount: 142,
     images: [
-      "/amouage-placeholder.svg",
-      "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
+      "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203985/muschio/products/amouage-interlude-53-man-primary.jpg",
+      "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203986/muschio/products/amouage-interlude-53-man-lifestyle.jpg",
     ],
     variants: [
       {
@@ -635,16 +635,38 @@ function toStorefrontProduct(item: any): StorefrontProduct {
   const brandSlug = brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
   const brandType = brandName === "Tom Ford" ? "DESIGNER" : "NICHE";
 
-  const variants = (item.variants || []).map((v: any, idx: number) => ({
-    id: v.id || `var-${item.slug}-${idx}`,
-    sku: v.sku || `SKU-${item.slug}-${idx}`,
-    sizeLabelEn: v.labelEn || v.sizeLabelEn || `${v.volumeMl || 100}ml Flacon`,
-    sizeLabelAr: v.labelAr || v.sizeLabelAr || `${v.volumeMl || 100} مل`,
-    price: v.price || 0,
-    compareAtPrice: v.compareAt || v.compareAtPrice || null,
-    isSampleVial: v.isSampleVial || (v.volumeMl ? v.volumeMl <= 2 : false),
-    availableQuantity: v.stockCount || v.availableQuantity || 25,
-  }));
+  const variants = (item.variants || []).map((v: any, idx: number) => {
+    const vol = v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.labelEn ? v.labelEn.split(" ")[0] : "100ml");
+    const stock = v.stockCount ?? v.stockQuantity ?? v.availableQuantity ?? 25;
+    const baseCompare = v.compareAt || v.compareAtPrice || null;
+    const basePrice = v.price || 0;
+    const regPrice = Number(v.regularPrice ?? v.originalPrice ?? (baseCompare && baseCompare > basePrice ? baseCompare : basePrice));
+    const rawDisc = v.discountPrice !== null && v.discountPrice !== undefined
+      ? Number(v.discountPrice)
+      : (v.salePrice ? Number(v.salePrice) : (baseCompare && baseCompare > basePrice ? basePrice : null));
+    const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regPrice;
+    const sellingPrice = hasDisc ? rawDisc! : regPrice;
+    const compareAt = hasDisc ? regPrice : null;
+
+    return {
+      id: v.id || `var-${item.slug}-${idx}`,
+      sku: v.sku || `SKU-${item.slug}-${idx}`,
+      volume: vol,
+      volumeMl: v.volumeMl || parseInt(vol.replace(/[^0-9]/g, "") || "100", 10),
+      sizeLabelEn: v.labelEn || v.sizeLabelEn || `${vol} Flacon`,
+      sizeLabelAr: v.labelAr || v.sizeLabelAr || `${vol} مل`,
+      regularPrice: regPrice,
+      originalPrice: regPrice,
+      price: sellingPrice,
+      compareAtPrice: compareAt,
+      discountPrice: hasDisc ? rawDisc : null,
+      salePrice: hasDisc ? rawDisc : null,
+      isSampleVial: v.isSampleVial || (v.volumeMl ? v.volumeMl <= 2 : false),
+      stockQuantity: stock,
+      availableQuantity: stock,
+      isDefault: Boolean(v.isDefault ?? idx === 0),
+    };
+  });
 
   const notes = (item.notes || []).map((n: any) => ({
     nameEn: n.name || n.nameEn || "Rare Essence",

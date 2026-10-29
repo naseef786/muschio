@@ -174,9 +174,7 @@ export default function AIScentDiscoveryPage({
             matchPercentage: rec.matchPercentage,
             image:
               rec.image ||
-              (rec.slug === "amouage-interlude-53-man"
-                ? "/amouage-placeholder.svg"
-                : "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=800&q=85"),
+              "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203985/muschio/products/amouage-interlude-53-man-primary.jpg",
             reason: isAr ? rec.matchReasonAr : rec.matchReasonEn,
             accords: rec.accordOverlap,
           })),
@@ -205,7 +203,7 @@ export default function AIScentDiscoveryPage({
             concentration: "Extrait de Parfum (53%)",
             price: 1850,
             matchPercentage: 99,
-            image: "/amouage-placeholder.svg",
+            image: "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203985/muschio/products/amouage-interlude-53-man-primary.jpg",
             reason: isAr
               ? "توافق تام بنسبة ٩٩٪ بفضل تركيز الزيت ٥٣٪ المعتق لستة أشهر مع لبان حوجري فضي وعود كمبودي."
               : "Direct 99% match via 53% perfume oil maceration, Silver Frankincense, and aged Cambodian Oud.",

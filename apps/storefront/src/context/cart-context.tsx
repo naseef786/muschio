@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { z } from "zod";
 const SavedItemSchema = z.object({
   id: z.string().min(1).max(100),
-  variantId: z.string().uuid(),
+  variantId: z.string().min(1).max(100),
   slug: z.string().min(1),
   title: z.string(),
   titleAr: z.string(),
@@ -16,6 +16,8 @@ const SavedItemSchema = z.object({
     .string()
     .refine((value) => value.startsWith("/") || /^https:\/\//.test(value)),
   sizeLabel: z.string().optional(),
+  volume: z.string().optional(),
+  stockQuantity: z.number().int().nonnegative().optional(),
 });
 
 export interface CartItemModel {
@@ -30,6 +32,8 @@ export interface CartItemModel {
   quantity: number;
   image: string;
   sizeLabel?: string;
+  volume?: string;
+  stockQuantity?: number;
 }
 
 interface CartContextType {
@@ -89,31 +93,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   const addItem = async (
     newItem: Omit<CartItemModel, "id"> & { id?: string },
   ) => {
-    if (!z.string().uuid().safeParse(newItem.variantId).success)
-      throw new Error("Only live catalog variants can be added");
     setItems((items) => {
+      // Grouping: strictly by variantId or slug + volume/sizeLabel
+      // Different bottle sizes of the same perfume are treated as distinct cart items!
       const existingIndex = items.findIndex(
         (item) =>
           item.variantId === newItem.variantId ||
-          (item.slug === newItem.slug && item.sizeLabel === newItem.sizeLabel),
+          (item.slug === newItem.slug && (item.volume || item.sizeLabel) === (newItem.volume || newItem.sizeLabel)),
       );
 
+      const maxStock = newItem.stockQuantity ?? 99;
+
       if (existingIndex > -1) {
-        return items.map((item, idx) =>
-          idx === existingIndex
-            ? {
-                ...item,
-                quantity: Math.min(99, item.quantity + (newItem.quantity || 1)),
-              }
-            : item,
-        );
+        return items.map((item, idx) => {
+          if (idx !== existingIndex) return item;
+          const currentLimit = item.stockQuantity ?? maxStock;
+          const requestedTotal = item.quantity + (newItem.quantity || 1);
+          const finalQ = Math.min(Math.min(99, currentLimit), requestedTotal);
+          return {
+            ...item,
+            quantity: finalQ,
+            volume: newItem.volume || item.volume,
+            stockQuantity: item.stockQuantity ?? newItem.stockQuantity,
+          };
+        });
       } else {
         const generatedId =
           newItem.id ||
           `cart-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const initialQ = Math.min(Math.min(99, maxStock), newItem.quantity || 1);
         return [
           ...items,
-          { ...newItem, id: generatedId, quantity: newItem.quantity || 1 },
+          { ...newItem, id: generatedId, quantity: initialQ },
         ];
       }
     });
@@ -130,7 +141,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       prev
         .map((item) => {
           if (item.id === id) {
-            const newQ = Math.min(99, item.quantity + delta);
+            const maxAllowed = Math.min(99, item.stockQuantity ?? 99);
+            const newQ = Math.min(maxAllowed, item.quantity + delta);
             return newQ > 0 ? { ...item, quantity: newQ } : null;
           }
           return item;

@@ -29,12 +29,20 @@ export interface ProductDetailProps {
     variants: Array<{
       id: string;
       sku: string;
+      volume?: string;
+      volumeMl?: number | null;
       sizeLabelEn: string;
       sizeLabelAr: string;
+      regularPrice?: number;
+      originalPrice?: number;
       price: number;
+      discountPrice?: number | null;
+      salePrice?: number | null;
       compareAtPrice?: number | null;
       isSampleVial?: boolean;
+      stockQuantity?: number;
       availableQuantity?: number;
+      isDefault?: boolean;
     }>;
     notes?: Array<{
       id: string;
@@ -49,6 +57,67 @@ export interface ProductDetailProps {
   preview: boolean;
 }
 
+export function getVariantPricing(v?: ProductDetailProps["product"]["variants"][0]) {
+  if (!v) {
+    return {
+      regularPrice: 0,
+      sellingPrice: 0,
+      compareAtPrice: null as number | null,
+      hasDiscount: false,
+      discountPercent: 0,
+      savingsAmount: 0,
+    };
+  }
+
+  // 1. Regular Price / Original Price (MRP)
+  const regularPrice = Number(
+    v.regularPrice ??
+    v.originalPrice ??
+    (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price)
+  );
+
+  // 2. Discounted / Sale Price
+  const rawDiscount =
+    v.salePrice !== null && v.salePrice !== undefined
+      ? Number(v.salePrice)
+      : v.discountPrice !== null && v.discountPrice !== undefined
+      ? Number(v.discountPrice)
+      : v.compareAtPrice && v.compareAtPrice > v.price
+      ? Number(v.price)
+      : null;
+
+  const hasDiscount = rawDiscount !== null && rawDiscount > 0 && rawDiscount < regularPrice;
+  const sellingPrice = hasDiscount ? rawDiscount! : (v.price || regularPrice);
+  const compareAtPrice = hasDiscount ? regularPrice : null;
+  const savingsAmount = hasDiscount ? Math.max(0, regularPrice - sellingPrice) : 0;
+  const discountPercent = hasDiscount && regularPrice > 0 ? Math.round((savingsAmount / regularPrice) * 100) : 0;
+
+  return {
+    regularPrice,
+    sellingPrice,
+    compareAtPrice,
+    hasDiscount,
+    discountPercent,
+    savingsAmount,
+  };
+}
+
+export function getProductCardPricing(p: any) {
+  if (p.price) {
+    return {
+      price: p.price,
+      compareAtPrice: p.compareAtPrice || null,
+    };
+  }
+  const v0 = p.variants?.[0];
+  if (!v0) return { price: 0, compareAtPrice: null };
+  const pricing = getVariantPricing(v0);
+  return {
+    price: pricing.sellingPrice,
+    compareAtPrice: pricing.compareAtPrice,
+  };
+}
+
 export function ProductExperience({
   product,
   relatedProducts = [],
@@ -60,7 +129,11 @@ export function ProductExperience({
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
   const [selectedVariantId, setSelectedVariantId] = useState(
-    product.variants.find((v) => !v.isSampleVial)?.id || product.variants[0]?.id,
+    product.variants.find((v) => v.isDefault && (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
+    product.variants.find((v) => v.isDefault)?.id ||
+    product.variants.find((v) => !v.isSampleVial && (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
+    product.variants.find((v) => (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
+    product.variants[0]?.id,
   );
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { isInWishlist, toggleWishlist } = useWishlist();
@@ -79,6 +152,7 @@ export function ProductExperience({
 
   const selectedVariant =
     product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
+  const selectedPricing = getVariantPricing(selectedVariant);
 
   const images = product.images.length > 0 ? product.images : ["/product-placeholder.svg"];
   const currentImage: string = images[selectedImageIndex] || images[0] || "/product-placeholder.svg";
@@ -91,8 +165,8 @@ export function ProductExperience({
       brand: product.brand.name,
       brandType: product.brand.type as "NICHE" | "DESIGNER",
       concentration: product.concentration.replaceAll("_", " "),
-      price: selectedVariant?.price || 0,
-      compareAtPrice: selectedVariant?.compareAtPrice,
+      price: selectedPricing.sellingPrice,
+      compareAtPrice: selectedPricing.compareAtPrice,
       image: currentImage,
       variantId: selectedVariant?.id || "",
     });
@@ -126,8 +200,8 @@ export function ProductExperience({
       brand: product.brand.name,
       brandType: product.brand.type as "NICHE" | "DESIGNER",
       concentration: product.concentration.replaceAll("_", " "),
-      price: selectedVariant?.price || 0,
-      compareAtPrice: selectedVariant?.compareAtPrice,
+      price: selectedPricing.sellingPrice,
+      compareAtPrice: selectedPricing.compareAtPrice,
       image: currentImage,
       topNotes: topNotes.map((n) => n.name),
       heartNotes: heartNotes.map((n) => n.name),
@@ -148,19 +222,26 @@ export function ProductExperience({
 
   const handleAddToCart = async () => {
     if (!selectedVariant || isAdding) return;
+    const currentStock = selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+    if (currentStock <= 0) return;
+
     setIsAdding(true);
     try {
+      const selectedVol = selectedVariant.volume || selectedVariant.sizeLabelEn?.match(/\d+ml/i)?.[0] || `${selectedVariant.volumeMl || 100}ml`;
+
       await addItem({
         variantId: selectedVariant.id,
         slug: product.slug,
         title: product.nameEn,
         titleAr: product.nameAr,
         brand: product.brand.name,
-        price: selectedVariant.price,
-        compareAtPrice: selectedVariant.compareAtPrice,
+        price: selectedPricing.sellingPrice,
+        compareAtPrice: selectedPricing.compareAtPrice,
         quantity: 1,
         image: currentImage,
         sizeLabel: c(selectedVariant.sizeLabelEn, selectedVariant.sizeLabelAr),
+        volume: selectedVol,
+        stockQuantity: currentStock,
       });
       setAddedSuccess(true);
       setCartDrawerOpen(true);
@@ -350,15 +431,57 @@ export function ProductExperience({
               </p>
             </div>
 
-            {/* Price Display */}
+            {/* Price Display & Dynamic Stock Badge */}
             {selectedVariant && (
-              <div className="pt-2 border-t border-luxury-border">
-                <PriceDisplay
-                  price={selectedVariant.price}
-                  compareAtPrice={selectedVariant.compareAtPrice}
-                  locale={locale}
-                  size="xl"
-                />
+              <div className="pt-2 border-t border-luxury-border space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <PriceDisplay
+                    price={selectedPricing.sellingPrice}
+                    compareAtPrice={selectedPricing.compareAtPrice}
+                    locale={locale}
+                    size="xl"
+                  />
+                  {selectedPricing.hasDiscount && (
+                    <span className="px-2.5 py-1 text-[11px] font-sans font-semibold tracking-wider uppercase bg-accent/15 text-accent border border-accent/30 rounded-sm">
+                      {selectedPricing.discountPercent}% {c("OFF", "خصم")}
+                      <span className="ms-1.5 opacity-80 font-normal">
+                        ({c(`Save AED ${selectedPricing.savingsAmount}`, `وفر ${selectedPricing.savingsAmount} د.إ`)})
+                      </span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Live Real-time Vault Stock Status */}
+                {(() => {
+                  const stock = selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+                  if (stock <= 0) {
+                    return (
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 rounded-sm text-xs text-rose-600 dark:text-rose-400 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-rose-500" />
+                        <span>{c("Currently Sold Out — Flacon Awaiting Batch Restock", "الكمية نفدت حالياً — بانتظار دفعة جديدة")}</span>
+                      </div>
+                    );
+                  }
+                  if (stock <= 5) {
+                    return (
+                      <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-amber-500/10 border border-amber-500/25 rounded-sm text-xs text-amber-600 dark:text-amber-400 font-medium">
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                        <span>
+                          {c(
+                            `Rare Stock — Only ${stock} flacon${stock === 1 ? "" : "s"} remaining in Dubai vault`,
+                            `كمية نادرة ومحدودة — متبقي ${stock} فقط في خزينة دبي`
+                          )}
+                        </span>
+                      </div>
+                    );
+                  }
+                  return (
+                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-sm text-xs text-emerald-700 dark:text-emerald-400 font-medium">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                      <span>{c("In Stock — Ready for White-Glove GCC Delivery", "متوفر بالخزينة — جاهز للتوصيل الفاخر المبرد")}</span>
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
@@ -367,23 +490,50 @@ export function ProductExperience({
               <div className="space-y-3 pt-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium uppercase tracking-wider text-luxury-text">
-                    {c("Select Volume", "اختر الحجم")}
+                    {c("Select Bottle Volume", "اختر حجم الزجاجة")}
                   </span>
-                  <span className="text-luxury-muted">
-                    {c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
+                  <span className="text-luxury-muted font-mono">
+                    {selectedVariant?.volume || c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {product.variants.map((v) => {
                     const isSelected = v.id === selectedVariantId;
+                    const stock = v.availableQuantity ?? v.stockQuantity ?? 25;
+                    const isOutOfStock = stock <= 0;
+                    const volLabel = v.volume || c(v.sizeLabelEn, v.sizeLabelAr);
+                    const vPricing = getVariantPricing(v);
+
                     return (
                       <button
                         key={v.id}
                         type="button"
                         onClick={() => setSelectedVariantId(v.id)}
-                        className={`volume-pill ${isSelected ? "selected" : ""}`}
+                        className={`volume-pill relative ${isSelected ? "selected" : ""} ${
+                          isOutOfStock ? "out-of-stock" : ""
+                        }`}
+                        title={
+                          isOutOfStock
+                            ? c("Out of stock", "غير متوفر")
+                            : vPricing.hasDiscount
+                            ? `${volLabel} - ${vPricing.sellingPrice} AED (MRP: ${vPricing.regularPrice} AED | Save ${vPricing.discountPercent}%)`
+                            : `${volLabel} - ${vPricing.sellingPrice} AED`
+                        }
                       >
-                        {c(v.sizeLabelEn, v.sizeLabelAr)}
+                        <span>{volLabel}</span>
+                        {vPricing.hasDiscount && !isOutOfStock && (
+                          <span className="ms-1.5 px-1 py-0.5 text-[9px] font-sans font-semibold text-accent bg-accent/15 rounded">
+                            -{vPricing.discountPercent}%
+                          </span>
+                        )}
+                        {isOutOfStock && (
+                          <span className="ms-1.5 text-[9px] uppercase tracking-wider opacity-80 font-sans font-semibold text-rose-500">
+                            {c("(Sold Out)", "(نفد)")}
+                          </span>
+                        )}
+                        {v.isDefault && !isOutOfStock && !isSelected && !vPricing.hasDiscount && (
+                          <span className="ms-1 text-accent text-[10px]" title={c("Default Size", "الحجم الافتراضي")}>★</span>
+                        )}
                       </button>
                     );
                   })}
@@ -409,26 +559,38 @@ export function ProductExperience({
 
             {/* Primary Action Buttons (Level Shoes Add to Bag Standard) */}
             <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={handleAddToCart}
-                disabled={isAdding}
-                className="w-full py-4 px-6 bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 font-sans text-xs uppercase tracking-[0.16em] font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-[0.99]"
-              >
-                {isAdding ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : addedSuccess ? (
-                  <>
-                    <Check size={16} />
-                    <span>{c("Added to Bag ✓", "تمت الإضافة بنجاح ✓")}</span>
-                  </>
-                ) : (
-                  <>
-                    <ShoppingBag size={16} />
-                    <span>{c("Add to Bag", "أضف إلى حقيبة التسوق")}</span>
-                  </>
-                )}
-              </button>
+              {(() => {
+                const currentStock = selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 25;
+                const isOutOfStock = currentStock <= 0;
+                return (
+                  <button
+                    type="button"
+                    onClick={handleAddToCart}
+                    disabled={isAdding || isOutOfStock}
+                    className={`w-full py-4 px-6 font-sans text-xs uppercase tracking-[0.16em] font-medium transition-all duration-200 flex items-center justify-center gap-2 shadow-sm ${
+                      isOutOfStock
+                        ? "bg-luxury-surface2 text-luxury-muted border border-luxury-border cursor-not-allowed opacity-60"
+                        : "bg-luxury-text text-luxury-canvas hover:bg-luxury-text/90 active:scale-[0.99]"
+                    }`}
+                  >
+                    {isAdding ? (
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    ) : addedSuccess ? (
+                      <>
+                        <Check size={16} />
+                        <span>{c("Added to Bag ✓", "تمت الإضافة بنجاح ✓")}</span>
+                      </>
+                    ) : isOutOfStock ? (
+                      <span>{c("Out of Stock", "الكمية نفدت")}</span>
+                    ) : (
+                      <>
+                        <ShoppingBag size={16} />
+                        <span>{c("Add to Bag", "أضف إلى حقيبة التسوق")}</span>
+                      </>
+                    )}
+                  </button>
+                );
+              })()}
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {/* Pro Luxury Wishlist Button */}
@@ -749,20 +911,24 @@ export function ProductExperience({
             </Link>
           </div>
           <div className="product-grid">
-            {houseProducts.slice(0, 4).map((p) => (
-              <ProductCard
-                key={p.slug}
-                slug={p.slug}
-                nameEn={p.nameEn}
-                nameAr={p.nameAr}
-                brand={p.brand?.name || p.brand || product.brand.name}
-                concentration={p.concentration}
-                price={p.price || p.variants?.[0]?.price || 0}
-                compareAtPrice={p.compareAtPrice || p.variants?.[0]?.compareAtPrice}
-                image={p.images?.[0] || p.image || "/product-placeholder.svg"}
-                locale={locale}
-              />
-            ))}
+            {houseProducts.slice(0, 4).map((p) => {
+              const cardPricing = getProductCardPricing(p);
+              return (
+                <ProductCard
+                  key={p.slug}
+                  slug={p.slug}
+                  nameEn={p.nameEn}
+                  nameAr={p.nameAr}
+                  brand={p.brand?.name || p.brand || product.brand.name}
+                  concentration={p.concentration}
+                  price={cardPricing.price}
+                  compareAtPrice={cardPricing.compareAtPrice}
+                  variants={p.variants}
+                  image={p.images?.[0] || p.image || "/product-placeholder.svg"}
+                  locale={locale}
+                />
+              );
+            })}
           </div>
         </section>
       )}
@@ -782,20 +948,24 @@ export function ProductExperience({
             </Link>
           </div>
           <div className="product-grid">
-            {relatedProducts.slice(0, 4).map((p) => (
-              <ProductCard
-                key={p.slug}
-                slug={p.slug}
-                nameEn={p.nameEn}
-                nameAr={p.nameAr}
-                brand={p.brand?.name || p.brand}
-                concentration={p.concentration}
-                price={p.price || p.variants?.[0]?.price || 0}
-                compareAtPrice={p.compareAtPrice || p.variants?.[0]?.compareAtPrice}
-                image={p.images?.[0] || p.image || "/product-placeholder.svg"}
-                locale={locale}
-              />
-            ))}
+            {relatedProducts.slice(0, 4).map((p) => {
+              const cardPricing = getProductCardPricing(p);
+              return (
+                <ProductCard
+                  key={p.slug}
+                  slug={p.slug}
+                  nameEn={p.nameEn}
+                  nameAr={p.nameAr}
+                  brand={p.brand?.name || p.brand}
+                  concentration={p.concentration}
+                  price={cardPricing.price}
+                  compareAtPrice={cardPricing.compareAtPrice}
+                  variants={p.variants}
+                  image={p.images?.[0] || p.image || "/product-placeholder.svg"}
+                  locale={locale}
+                />
+              );
+            })}
           </div>
         </section>
       )}
@@ -804,7 +974,12 @@ export function ProductExperience({
       <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-luxury-surface/95 backdrop-blur-md border-t border-luxury-border p-3 shadow-2xl flex items-center justify-between gap-3">
         <div className="min-w-0">
           <div className="font-serif text-base font-medium text-luxury-text truncate">
-            <PriceDisplay price={selectedVariant?.price || 0} locale={locale} size="sm" />
+            <PriceDisplay
+              price={selectedPricing.sellingPrice}
+              compareAtPrice={selectedPricing.compareAtPrice}
+              locale={locale}
+              size="sm"
+            />
           </div>
           <span className="text-[10px] text-luxury-muted block truncate">
             {c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}

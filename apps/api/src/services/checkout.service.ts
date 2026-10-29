@@ -84,7 +84,10 @@ export class CheckoutService {
             "An item in your bag is unavailable",
           );
         }
-        subtotal = subtotal.plus(item.variant.price.times(item.quantity));
+        const effectivePrice = item.variant.discountPrice && new Prisma.Decimal(item.variant.discountPrice).greaterThan(0) && new Prisma.Decimal(item.variant.discountPrice).lessThan(item.variant.price)
+          ? item.variant.discountPrice
+          : item.variant.price;
+        subtotal = subtotal.plus(effectivePrice.times(item.quantity));
         itemsToReserve.push({
           variantId: item.variantId,
           quantity: item.quantity,

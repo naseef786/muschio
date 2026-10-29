@@ -540,8 +540,8 @@ async function main() {
       longevity: "24+ Hours",
       styleCharacter: "Imperial & Dominant",
       images: [
-        "/amouage-placeholder.svg",
-        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203985/muschio/products/amouage-interlude-53-man-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203986/muschio/products/amouage-interlude-53-man-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -570,8 +570,8 @@ async function main() {
       longevity: "18-24 Hours",
       styleCharacter: "Opulent & Magnetic",
       images: [
-        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203992/muschio/products/mfk-baccarat-rouge-540-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203993/muschio/products/mfk-baccarat-rouge-540-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -600,8 +600,8 @@ async function main() {
       longevity: "16-20 Hours",
       styleCharacter: "Noble & Invigorating",
       images: [
-        "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203996/muschio/products/roja-elysium-pour-homme-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203997/muschio/products/roja-elysium-pour-homme-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -630,8 +630,8 @@ async function main() {
       longevity: "20+ Hours",
       styleCharacter: "Aristocratic & Timeless",
       images: [
-        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204000/muschio/products/xerjoff-alexandria-ii-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204001/muschio/products/xerjoff-alexandria-ii-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -660,8 +660,8 @@ async function main() {
       longevity: "18+ Hours",
       styleCharacter: "Decadent & Warm",
       images: [
-        "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204003/muschio/products/tom-ford-tobacco-vanille-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204004/muschio/products/tom-ford-tobacco-vanille-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -690,8 +690,8 @@ async function main() {
       longevity: "20+ Hours",
       styleCharacter: "Sovereign & Rare",
       images: [
-        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1508746829417-e6f548d8d6ed?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204007/muschio/products/clive-christian-no1-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204008/muschio/products/clive-christian-no1-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -720,8 +720,8 @@ async function main() {
       longevity: "14-18 Hours",
       styleCharacter: "Triumphant & Iconic",
       images: [
-        "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85",
-        "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1200&q=85",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204011/muschio/products/creed-aventus-primary.jpg",
+        "https://res.cloudinary.com/zwkad4sz/image/upload/v1793204011/muschio/products/creed-aventus-lifestyle.jpg",
       ],
       isPublished: true,
       isFeatured: true,
@@ -853,6 +853,7 @@ async function main() {
       data: {
         productId: def.product.id,
         sku: `${def.skuBase}-${def.flaconVolume}ML`,
+        volume: `${def.flaconVolume}ml`,
         volumeMl: def.flaconVolume,
         sizeLabelEn: def.flaconLabelEn,
         sizeLabelAr: def.flaconLabelAr,
@@ -878,6 +879,7 @@ async function main() {
       data: {
         productId: def.product.id,
         sku: `${def.skuBase}-02ML`,
+        volume: "2ml",
         volumeMl: 2,
         sizeLabelEn: "2ml Official Sample Vial",
         sizeLabelAr: "عينة رسمية 2 مل",

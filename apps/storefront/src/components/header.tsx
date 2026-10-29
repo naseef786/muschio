@@ -916,7 +916,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                         >
                           {ar ? item.titleAr : item.title}
                         </Link>
-                        <p className="text-xs text-luxury-muted">{item.sizeLabel}</p>
+                        <p className="text-xs text-luxury-muted">{item.volume || item.sizeLabel}</p>
                         <div className="flex items-center gap-2.5 mt-2.5">
                           <button
                             type="button"
@@ -946,6 +946,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                       <div className="text-end flex-shrink-0">
                         <PriceDisplay
                           price={item.price * item.quantity}
+                          compareAtPrice={item.compareAtPrice ? item.compareAtPrice * item.quantity : null}
                           locale={locale}
                           size="sm"
                         />

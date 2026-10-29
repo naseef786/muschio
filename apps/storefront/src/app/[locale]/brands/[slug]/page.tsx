@@ -111,6 +111,7 @@ export default async function BrandDetailPage({
                 concentration={perfume.concentration}
                 price={perfume.price}
                 compareAtPrice={perfume.compareAtPrice}
+                variants={perfume.variants}
                 image={perfume.images?.[0] || "/placeholder-flacon.png"}
                 badge={brand.type === "NICHE" ? "Haute Niche" : undefined}
                 locale={locale}

@@ -252,8 +252,13 @@ export class CatalogService {
         gender: p.gender,
         images: p.images,
         brand: brand.name,
-        price: Number(p.variants[0]?.price || 0),
-        compareAtPrice: p.variants[0]?.compareAtPrice ? Number(p.variants[0].compareAtPrice) : null,
+        ...(() => {
+          const defaultVar = p.variants.find((v: any) => v.isDefault) || p.variants[0];
+          return {
+            price: Number(defaultVar?.price || 0),
+            compareAtPrice: defaultVar?.compareAtPrice ? Number(defaultVar.compareAtPrice) : null,
+          };
+        })(),
       })),
     };
   }

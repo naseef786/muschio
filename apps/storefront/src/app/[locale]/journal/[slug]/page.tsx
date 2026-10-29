@@ -97,7 +97,8 @@ export default async function JournalDetailPage({
               concentration={featuredProduct.concentration?.replaceAll("_", " ") || "Extrait de Parfum"}
               price={featuredProduct.variants?.[0]?.price || 0}
               compareAtPrice={featuredProduct.variants?.[0]?.compareAtPrice}
-              image={featuredProduct.slug === "amouage-interlude-53-man" ? "/amouage-placeholder.svg" : (featuredProduct.images?.[0] || "/product-placeholder.svg")}
+              variants={featuredProduct.variants}
+              image={featuredProduct.images?.[0] || "/product-placeholder.svg"}
               locale={locale}
             />
           </div>

@@ -22,24 +22,38 @@ export function storefrontProduct(product: any) {
           nameAr: product.scentFamily.nameAr,
         }
       : null,
-    variants: product.variants.map((variant: any) => ({
-      id: variant.id,
-      sku: variant.sku,
-      sizeLabelEn: variant.sizeLabelEn,
-      sizeLabelAr: variant.sizeLabelAr,
-      price: Number(variant.price),
-      compareAtPrice: variant.compareAtPrice
-        ? Number(variant.compareAtPrice)
-        : null,
-      isSampleVial: variant.isSampleVial,
-      availableQuantity: variant.isSampleVial
-        ? 0
-        : Math.max(
-            0,
-            (variant.inventory?.sealedQuantity || 0) -
-              (variant.inventory?.reservedQuantity || 0),
-          ),
-    })),
+    variants: product.variants.map((variant: any) => {
+      const stock = Math.max(
+        0,
+        (variant.inventory?.sealedQuantity || 0) -
+          (variant.inventory?.reservedQuantity || 0),
+      );
+      const regPrice = variant.compareAtPrice ? Number(variant.compareAtPrice) : Number(variant.price);
+      const discPrice = variant.discountPrice
+        ? Number(variant.discountPrice)
+        : (variant.compareAtPrice ? Number(variant.price) : null);
+      const effectiveSellingPrice = (discPrice && discPrice < regPrice) ? discPrice : Number(variant.price);
+      const effectiveCompareAt = (discPrice && discPrice < regPrice) ? regPrice : (variant.compareAtPrice ? Number(variant.compareAtPrice) : null);
+
+      return {
+        id: variant.id,
+        sku: variant.sku,
+        volume: variant.volume || (variant.volumeMl ? `${variant.volumeMl}ml` : variant.sizeLabelEn),
+        volumeMl: variant.volumeMl || null,
+        sizeLabelEn: variant.sizeLabelEn,
+        sizeLabelAr: variant.sizeLabelAr,
+        regularPrice: regPrice,
+        originalPrice: regPrice,
+        price: effectiveSellingPrice,
+        compareAtPrice: effectiveCompareAt,
+        discountPrice: discPrice,
+        salePrice: discPrice,
+        isDefault: Boolean(variant.isDefault),
+        stockQuantity: stock,
+        isSampleVial: variant.isSampleVial,
+        availableQuantity: variant.isSampleVial ? 0 : stock,
+      };
+    }),
     notes: (product.notes || []).map((relation: any) => ({
       nameEn: relation.note.nameEn,
       nameAr: relation.note.nameAr,

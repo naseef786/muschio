@@ -83,7 +83,6 @@ export default async function HomePage({
 
   const featuredProducts = (liveProducts || []).map((p) => {
     const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
-    const isAmouage = p.slug === "amouage-interlude-53-man";
     return {
       slug: p.slug,
       nameEn: p.nameEn,
@@ -92,9 +91,10 @@ export default async function HomePage({
       concentration: p.concentration.replaceAll("_", " "),
       price: v?.price || 0,
       compareAtPrice: v?.compareAtPrice,
-      image: isAmouage ? "/amouage-placeholder.svg" : (p.images[0] || "/product-placeholder.svg"),
+      image: p.images[0] || "/product-placeholder.svg",
       secondaryImage: p.images[1],
       badge: p.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
+      variants: p.variants,
     };
   });
 
@@ -222,6 +222,7 @@ export default async function HomePage({
               concentration={product.concentration}
               price={product.price}
               compareAtPrice={product.compareAtPrice}
+              variants={product.variants}
               image={product.image}
               secondaryImage={product.secondaryImage}
               badge={product.badge}

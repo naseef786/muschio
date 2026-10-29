@@ -504,6 +504,71 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       const numTesterStock = Number(testerStock) || 1;
       const numVolume = Number(volumeMl) || 100;
 
+      // Parse incoming multi-volume variants or fallback to single variant
+      const incomingVariants: Array<{
+        volume: string;
+        volumeMl: number;
+        sizeLabelEn: string;
+        sizeLabelAr: string;
+        regularPrice: number;
+        originalPrice: number;
+        price: number;
+        compareAtPrice: number | null;
+        discountPrice: number | null;
+        salePrice: number | null;
+        sku: string;
+        stockQuantity: number;
+        isDefault: boolean;
+      }> = (Array.isArray(body?.variants) && body.variants.length > 0)
+        ? body.variants.map((v: any, index: number) => {
+            const vVol = String(v.volume || `${v.volumeMl || 100}ml`).trim();
+            const vVolNum = Number(v.volumeMl) || parseInt(vVol.replace(/[^0-9]/g, "") || "100", 10) || 100;
+            const vRegPrice = Number(String((v.regularPrice ?? v.price) || 0).replace(/[^0-9.]/g, "")) || 0;
+            const rawDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== ""
+              ? Number(String(v.discountPrice).replace(/[^0-9.]/g, ""))
+              : (v.salePrice !== null && v.salePrice !== undefined && String(v.salePrice).trim() !== ""
+                  ? Number(String(v.salePrice).replace(/[^0-9.]/g, ""))
+                  : null);
+            const vDiscPrice = (rawDiscount !== null && rawDiscount > 0 && rawDiscount <= vRegPrice) ? rawDiscount : null;
+            const vSellingPrice = (vDiscPrice !== null && vDiscPrice < vRegPrice) ? vDiscPrice : vRegPrice;
+            const vCompareAt = (vDiscPrice !== null && vDiscPrice < vRegPrice) ? vRegPrice : null;
+            const vStock = Number(v.stockQuantity ?? v.stock) || 10;
+            const vSku = String(v.sku || `${sku}-${vVolNum}`).trim();
+            const vIsDefault = Boolean(v.isDefault ?? index === 0);
+            return {
+              volume: vVol,
+              volumeMl: vVolNum,
+              sizeLabelEn: `${vVol} Flacon`,
+              sizeLabelAr: `${vVolNum} مل إكستريت`,
+              regularPrice: vRegPrice,
+              originalPrice: vRegPrice,
+              price: vSellingPrice,
+              compareAtPrice: vCompareAt,
+              discountPrice: vDiscPrice,
+              salePrice: vDiscPrice,
+              sku: vSku,
+              stockQuantity: vStock,
+              isDefault: vIsDefault,
+            };
+          })
+        : [
+            {
+              volume: `${numVolume}ml`,
+              volumeMl: numVolume,
+              sizeLabelEn: `${numVolume}ml Extrait`,
+              sizeLabelAr: `${numVolume} مل إكستريت`,
+              regularPrice: numPrice,
+              originalPrice: numPrice,
+              price: numPrice,
+              compareAtPrice: null,
+              discountPrice: null,
+              salePrice: null,
+              sku: String(sku).trim(),
+              stockQuantity: numStock,
+              isDefault: true,
+            },
+          ];
+
       // Check if product already exists to update
       let targetProduct = null;
       if (existingId) {
@@ -522,6 +587,66 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         await prisma.productPerfumer.deleteMany({
           where: { productId: targetProduct.id },
         });
+
+        // Upsert / sync variants
+        for (const iv of incomingVariants) {
+          const existingVariant = await prisma.productVariant.findFirst({
+            where: {
+              OR: [
+                { sku: iv.sku },
+                { productId: targetProduct.id, volumeMl: iv.volumeMl },
+              ],
+            },
+          });
+          if (existingVariant) {
+            await prisma.productVariant.update({
+              where: { id: existingVariant.id },
+              data: {
+                sku: iv.sku,
+                volume: iv.volume,
+                volumeMl: iv.volumeMl,
+                sizeLabelEn: iv.sizeLabelEn,
+                sizeLabelAr: iv.sizeLabelAr,
+                price: iv.price,
+                compareAtPrice: iv.compareAtPrice,
+                discountPrice: iv.discountPrice,
+                isDefault: iv.isDefault,
+              },
+            });
+            await prisma.inventory.upsert({
+              where: { variantId: existingVariant.id },
+              create: {
+                variantId: existingVariant.id,
+                sealedQuantity: iv.stockQuantity,
+                testerQuantity: numTesterStock,
+              },
+              update: {
+                sealedQuantity: iv.stockQuantity,
+              },
+            });
+          } else {
+            await prisma.productVariant.create({
+              data: {
+                productId: targetProduct.id,
+                sku: iv.sku,
+                volume: iv.volume,
+                volumeMl: iv.volumeMl,
+                sizeLabelEn: iv.sizeLabelEn,
+                sizeLabelAr: iv.sizeLabelAr,
+                price: iv.price,
+                compareAtPrice: iv.compareAtPrice,
+                discountPrice: iv.discountPrice,
+                isDefault: iv.isDefault,
+                inventory: {
+                  create: {
+                    sealedQuantity: iv.stockQuantity,
+                    testerQuantity: numTesterStock,
+                  },
+                },
+              },
+            });
+          }
+        }
 
         savedProduct = await prisma.product.update({
           where: { id: targetProduct.id },
@@ -581,19 +706,23 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
                 }
               : undefined,
             variants: {
-              create: {
-                sku: String(sku).trim(),
-                volumeMl: numVolume,
-                sizeLabelEn: `${numVolume}ml Extrait`,
-                sizeLabelAr: `${numVolume} مل إكستريت`,
-                price: numPrice,
+              create: incomingVariants.map((iv) => ({
+                sku: iv.sku,
+                volume: iv.volume,
+                volumeMl: iv.volumeMl,
+                sizeLabelEn: iv.sizeLabelEn,
+                sizeLabelAr: iv.sizeLabelAr,
+                price: iv.price,
+                compareAtPrice: iv.compareAtPrice,
+                discountPrice: iv.discountPrice,
+                isDefault: iv.isDefault,
                 inventory: {
                   create: {
-                    sealedQuantity: numStock,
+                    sealedQuantity: iv.stockQuantity,
                     testerQuantity: numTesterStock,
                   },
                 },
-              },
+              })),
             },
           },
           include: {

@@ -32,6 +32,19 @@ export interface NoteItem {
     status: "PUBLISHED" | "DRAFT";
     perfumesCount: number;
 }
+export interface ProductVariantItem {
+    id?: string;
+    sku: string;
+    volume: string;
+    volumeMl?: number;
+    regularPrice?: number | string;
+    originalPrice?: number | string;
+    price: number | string;
+    discountPrice?: number | string | null;
+    salePrice?: number | string | null;
+    stockQuantity: number;
+    isDefault: boolean;
+}
 export interface ProductItem {
     id: string;
     sku: string;
@@ -66,6 +79,7 @@ export interface ProductItem {
     images?: string[];
     imageAlt?: string;
     status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
+    variants?: ProductVariantItem[];
 }
 export interface ParsedCsvProduct {
     sku: string;

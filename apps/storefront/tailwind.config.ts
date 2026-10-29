@@ -9,7 +9,11 @@ const config: Config = {
     "../../packages/ui/src/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ["var(--font-figtree)", "var(--font-sans)", "Figtree", "Inter", "sans-serif"],
+      },
+    },
   },
   plugins: [],
 };

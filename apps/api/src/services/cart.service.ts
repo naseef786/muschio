@@ -197,8 +197,12 @@ export class CartService {
 
   static calculateCartTotals(cart: any) {
     const amount = cart.items.reduce(
-      (sum: Prisma.Decimal, item: any) =>
-        sum.plus(new Prisma.Decimal(item.variant.price).times(item.quantity)),
+      (sum: Prisma.Decimal, item: any) => {
+        const itemPrice = item.variant.discountPrice && new Prisma.Decimal(item.variant.discountPrice).greaterThan(0) && new Prisma.Decimal(item.variant.discountPrice).lessThan(item.variant.price)
+          ? item.variant.discountPrice
+          : item.variant.price;
+        return sum.plus(new Prisma.Decimal(itemPrice).times(item.quantity));
+      },
       new Prisma.Decimal(0),
     ) as Prisma.Decimal;
     const shipping =

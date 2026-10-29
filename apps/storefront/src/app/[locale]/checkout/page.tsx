@@ -790,11 +790,12 @@ export default function CheckoutPage({
                     {ar ? item.titleAr : item.title}
                   </p>
                   <p className="text-[11px] text-luxury-muted">
-                    {item.sizeLabel} × {item.quantity}
+                    {item.volume || item.sizeLabel} × {item.quantity}
                   </p>
                 </div>
                 <PriceDisplay
                   price={item.price * item.quantity}
+                  compareAtPrice={item.compareAtPrice ? item.compareAtPrice * item.quantity : null}
                   locale={locale}
                   size="sm"
                 />

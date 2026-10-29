@@ -465,12 +465,15 @@ model ProductVariant {
   id              String                 @id @default(uuid())
   productId       String
   sku             String                 @unique
+  volume          String?                // e.g. "30ml", "50ml", "100ml"
   volumeMl        Int
   sizeLabelEn     String
   sizeLabelAr     String
   costPrice       Decimal                @default(0) @db.Decimal(10, 2)
   price           Decimal                @db.Decimal(10, 2) // Base AED Price
   compareAtPrice  Decimal?               @db.Decimal(10, 2)
+  discountPrice   Decimal?               @db.Decimal(10, 2)
+  isDefault       Boolean                @default(false)
   isSampleVial    Boolean                @default(false)
   barcode         String?
   product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)

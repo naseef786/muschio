@@ -35,7 +35,7 @@ module.exports = {
       },
       fontFamily: {
         serif: ["var(--font-serif)", "Cormorant Garamond", "Playfair Display", "serif"],
-        sans: ["var(--font-sans)", "Inter", "Plus Jakarta Sans", "sans-serif"],
+        sans: ["var(--font-figtree)", "var(--font-sans)", "Figtree", "Inter", "Plus Jakarta Sans", "sans-serif"],
         arabic: ["var(--font-arabic)", "Cairo", "Tajawal", "sans-serif"],
       },
       letterSpacing: {

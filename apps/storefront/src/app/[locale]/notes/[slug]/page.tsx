@@ -135,6 +135,7 @@ export default async function NoteDetailPage({
                       ? Number(perfume.variants[0].compareAtPrice)
                       : null
                   }
+                  variants={perfume.variants}
                   image={perfume.images?.[0] || "/placeholder-flacon.png"}
                   badge={item.position ? `${item.position} Note` : undefined}
                   locale={locale}

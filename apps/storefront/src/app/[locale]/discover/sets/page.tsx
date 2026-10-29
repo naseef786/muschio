@@ -51,10 +51,7 @@ export default function DiscoverySetsPage({
       if (Array.isArray(data) && data.length > 0) {
         const mapped: SampleItem[] = data.map((v: any) => {
           const prod = v.product;
-          const isAmouage = prod.slug === "amouage-interlude-53-man";
-          const img = isAmouage
-            ? "/amouage-placeholder.svg"
-            : (prod.images?.[0] || "/product-placeholder.svg");
+          const img = prod.images?.[0] || "/product-placeholder.svg";
 
           const noteNames: string[] = prod.notes
             ? prod.notes.map((pn: any) => (isAr ? pn.note.nameAr : pn.note.nameEn))
