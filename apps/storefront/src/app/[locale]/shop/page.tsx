@@ -125,42 +125,42 @@ export default function ShopCatalogPage({
   ].reduce((a, b) => a + b, 0);
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 bg-white dark:bg-neutral-950 font-sans">
       {/* 1. Level Shoes Compact Header & Product Count */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-luxury-border">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-neutral-100 dark:border-neutral-800">
         <div>
           <span className="eyebrow mb-1">
             {c("HAUTE PARFUMERIE COLLECTION", "مجموعة العطور الفاخرة")}
           </span>
-          <h1 className="font-serif text-3xl sm:text-4xl text-luxury-text font-normal">
+          <h1 className="font-serif text-3xl sm:text-4xl text-neutral-900 dark:text-neutral-50 font-normal">
             {c("All Fragrances", "جميع العطور")}
           </h1>
-          <p className="text-xs sm:text-sm text-luxury-muted mt-1 max-w-xl">
+          <p className="text-xs sm:text-sm text-neutral-500 mt-1 max-w-xl">
             {c(
               "Curated artisanal extraits and pure parfums from the world's most prestigious perfume houses.",
               "مجموعة مختارة من خلاصات العطور النقية من أرقى دور العطور العالمية المعتمدة.",
             )}
           </p>
         </div>
-        <div className="text-xs text-luxury-muted font-sans">
-          <span className="font-medium text-luxury-text">{filtered.length}</span>{" "}
+        <div className="text-xs text-neutral-400 font-sans">
+          <span className="font-medium text-neutral-900 dark:text-neutral-100">{filtered.length}</span>{" "}
           {c(filtered.length === 1 ? "Product" : "Products", "منتج")}
         </div>
       </div>
 
       {/* 2. Desktop Filter & Sort Toolbar */}
-      <div className="hidden md:flex items-center justify-between py-4 border-b border-luxury-border text-xs">
+      <div className="hidden md:flex items-center justify-between py-4 border-b border-neutral-100 dark:border-neutral-800 text-xs">
         {/* Left: Filter Selectors */}
         <div className="flex items-center gap-3">
           {/* Maison Category Tabs */}
-          <div className="flex border border-luxury-border rounded-sm overflow-hidden bg-luxury-surface">
+          <div className="flex border border-neutral-200 dark:border-neutral-800 rounded-sm overflow-hidden bg-white dark:bg-neutral-900">
             <button
               type="button"
               onClick={() => setSelectedBrandType(null)}
               className={`px-3 py-1.5 transition-colors ${
                 selectedBrandType === null
-                  ? "bg-luxury-text text-luxury-canvas font-medium"
-                  : "text-luxury-muted hover:text-luxury-text"
+                  ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
               }`}
             >
               {c("All Maisons", "كل الدور")}
@@ -168,10 +168,10 @@ export default function ShopCatalogPage({
             <button
               type="button"
               onClick={() => setSelectedBrandType("NICHE")}
-              className={`px-3 py-1.5 border-s border-luxury-border transition-colors ${
+              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${
                 selectedBrandType === "NICHE"
-                  ? "bg-luxury-text text-luxury-canvas font-medium"
-                  : "text-luxury-muted hover:text-luxury-text"
+                  ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
               }`}
             >
               {c("Haute Niche", "نيش")}
@@ -179,10 +179,10 @@ export default function ShopCatalogPage({
             <button
               type="button"
               onClick={() => setSelectedBrandType("DESIGNER")}
-              className={`px-3 py-1.5 border-s border-luxury-border transition-colors ${
+              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${
                 selectedBrandType === "DESIGNER"
-                  ? "bg-luxury-text text-luxury-canvas font-medium"
-                  : "text-luxury-muted hover:text-luxury-text"
+                  ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
+                  : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
               }`}
             >
               {c("Designer Privé", "ديزاينر")}
@@ -193,7 +193,7 @@ export default function ShopCatalogPage({
           <select
             value={selectedFamily}
             onChange={(e) => setSelectedFamily(e.target.value)}
-            className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-luxury-text text-xs focus:outline-none focus:border-luxury-borderBold"
+            className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 text-xs rounded-sm focus:outline-none focus:border-neutral-900 dark:focus:border-white"
           >
             <option value="">{c("All Scent Families", "جميع العائلات العطرية")}</option>
             {families.map((fam) => (
@@ -206,11 +206,11 @@ export default function ShopCatalogPage({
 
         {/* Right: Sort By */}
         <div className="flex items-center gap-2">
-          <span className="text-luxury-muted">{c("Sort by:", "ترتيب حسب:")}</span>
+          <span className="text-neutral-400">{c("Sort by:", "ترتيب حسب:")}</span>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value)}
-            className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-luxury-text text-xs focus:outline-none focus:border-luxury-borderBold"
+            className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 text-xs rounded-sm focus:outline-none focus:border-neutral-900 dark:focus:border-white"
           >
             <option value="curated">{c("Muschio Curated", "ترشيحات موسكيو")}</option>
             <option value="price-asc">{c("Price: Low to High", "السعر: الأقل أولاً")}</option>
@@ -221,16 +221,16 @@ export default function ShopCatalogPage({
       </div>
 
       {/* 3. Mobile Filter and Sort Toolbar (Level Shoes Fixed Strip Pattern) */}
-      <div className="flex md:hidden items-center justify-between gap-2 py-3 border-b border-luxury-border">
+      <div className="flex md:hidden items-center justify-between gap-2 py-3 border-b border-neutral-100 dark:border-neutral-800">
         <button
           type="button"
           onClick={() => setMobileFilterOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border border-luxury-border bg-luxury-surface text-xs font-medium text-luxury-text"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-medium text-neutral-900 dark:text-neutral-100 rounded-sm"
         >
           <SlidersHorizontal size={14} />
           <span>{c("Filter", "تصفية")}</span>
           {activeFilterCount > 0 && (
-            <span className="w-4 h-4 rounded-full bg-luxury-text text-luxury-canvas text-[10px] flex items-center justify-center">
+            <span className="w-4 h-4 rounded-full bg-neutral-900 text-white text-[10px] flex items-center justify-center">
               {activeFilterCount}
             </span>
           )}
@@ -239,7 +239,7 @@ export default function ShopCatalogPage({
         <button
           type="button"
           onClick={() => setMobileSortOpen(true)}
-          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border border-luxury-border bg-luxury-surface text-xs font-medium text-luxury-text"
+          className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-xs font-medium text-neutral-900 dark:text-neutral-100 rounded-sm"
         >
           <ArrowUpDown size={14} />
           <span>{c("Sort", "ترتيب")}</span>
@@ -248,7 +248,7 @@ export default function ShopCatalogPage({
 
       {/* 4. Active Filter Chips & Clear All */}
       {hasActiveFilters && (
-        <div className="flex items-center gap-2 flex-wrap py-3 border-b border-luxury-border text-xs">
+        <div className="flex items-center gap-2 flex-wrap py-3 border-b border-neutral-100 dark:border-neutral-800 text-xs">
           <span className="text-luxury-muted me-1">{c("Active Filters:", "الفلاتر النشطة:")}</span>
           {selectedBrandType && (
             <span className="filter-chip">

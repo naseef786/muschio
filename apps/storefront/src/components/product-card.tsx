@@ -249,27 +249,33 @@ export function ProductCard({
       ? "aspect-[4/5]"
       : "aspect-[3/4]";
 
+  const brandConcentrationLine = useMemo(() => {
+    if (!concentration) return brand;
+    const cleanConc = concentration.replaceAll("_", " ");
+    return `${brand} • ${cleanConc}`;
+  }, [brand, concentration]);
+
   return (
     <Link
       href={`/product/${slug}`}
-      className="group relative flex flex-col h-full select-none cursor-pointer transition-transform duration-300 hover:-translate-y-1 block"
+      className="group relative flex flex-col h-full select-none cursor-pointer block"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       {/* 1. Image Container (Soft Off-White Minimal Canvas) */}
       <div
-        className={`relative ${aspectClass} w-full bg-[#F7F7F7] dark:bg-neutral-900/60 overflow-hidden flex items-center justify-center rounded-sm transition-colors duration-300`}
+        className={`relative ${aspectClass} w-full bg-[#F8F8F8] dark:bg-neutral-900/60 overflow-hidden flex items-center justify-center rounded-sm`}
       >
         {/* Subtle Luxury Badge (top-start) */}
         {badge && (
-          <span className="absolute top-3 start-3 z-10 text-[10px] font-sans font-medium uppercase tracking-[0.14em] px-2.5 py-1 bg-white/90 dark:bg-neutral-800/90 backdrop-blur-sm border border-neutral-200/50 dark:border-neutral-700/50 text-neutral-800 dark:text-neutral-200 pointer-events-none select-none rounded-sm">
+          <span className="absolute top-3 start-3 z-10 text-[10px] font-sans font-medium uppercase tracking-wider px-2 py-0.5 bg-white/95 dark:bg-neutral-800/90 text-neutral-700 dark:text-neutral-300 pointer-events-none select-none rounded-none border border-neutral-100 dark:border-neutral-700/50">
             {badge}
           </span>
         )}
 
-        {/* Floating Action Icons (top-end stacked vertically) */}
-        <div className="absolute top-3 end-3 z-20 flex flex-col gap-2">
-          {/* Wishlist Button */}
+        {/* Floating Action Controls (Top Right: Circular Wishlist + Quick-Add) */}
+        <div className="absolute top-3 end-3 z-20 flex flex-col gap-1.5">
+          {/* Circular Wishlist Button */}
           <button
             type="button"
             onClick={handleToggleWishlist}
@@ -285,7 +291,7 @@ export function ProductCard({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm border ${
               isWishlisted
                 ? "bg-white text-accent border-accent/40 shadow-md scale-105"
-                : "bg-white/95 hover:bg-white text-neutral-600 hover:text-neutral-900 border-neutral-200/60 dark:bg-neutral-800/95 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:hover:text-white dark:border-neutral-700/60 hover:scale-105"
+                : "bg-white/95 hover:bg-white text-neutral-600 hover:text-neutral-950 border-neutral-100 dark:bg-neutral-800/95 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:hover:text-white dark:border-neutral-700/60 hover:scale-105"
             } active:scale-95`}
           >
             <Heart
@@ -296,7 +302,7 @@ export function ProductCard({
             />
           </button>
 
-          {/* Quick Add Button */}
+          {/* Circular Quick Add Button */}
           <button
             type="button"
             onClick={handleQuickAdd}
@@ -305,7 +311,7 @@ export function ProductCard({
             className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm border ${
               justAdded
                 ? "bg-accent text-white border-accent shadow-md scale-105"
-                : "bg-white/95 hover:bg-white text-neutral-600 hover:text-neutral-900 border-neutral-200/60 dark:bg-neutral-800/95 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:hover:text-white dark:border-neutral-700/60 hover:scale-105"
+                : "bg-white/95 hover:bg-white text-neutral-600 hover:text-neutral-950 border-neutral-100 dark:bg-neutral-800/95 dark:hover:bg-neutral-800 dark:text-neutral-300 dark:hover:text-white dark:border-neutral-700/60 hover:scale-105"
             } active:scale-95`}
           >
             {justAdded ? (
@@ -316,52 +322,41 @@ export function ProductCard({
           </button>
         </div>
 
-        {/* Product Bottle Image */}
-        <div className="relative w-full h-full flex items-center justify-center">
+        {/* Product Bottle Image (Centered with subtle zoom on hover) */}
+        <div className="relative w-full h-full flex items-center justify-center p-4">
           <Image
             src={displayImage || "/product-placeholder.svg"}
             alt={title}
             fill
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-contain transition-transform duration-700 ease-[cubic-bezier(0.25,1,0.5,1)] group-hover:scale-[1.06]"
+            className="object-contain transition-transform duration-500 ease-out group-hover:scale-105"
           />
         </div>
       </div>
 
-      {/* 2. Typography & Content Layout (Minimal Luxury Alignment) */}
-      <div className="pt-3 pb-1 flex flex-col flex-1 justify-between text-start rtl:text-right">
+      {/* 2. Level Shoes 3-Line Bottom Content Layout */}
+      <div className="pt-3 pb-1 flex flex-col flex-1 justify-between text-start rtl:text-right font-sans">
         <div className="space-y-1">
-          {/* Brand Name / Collection */}
-          <p className="text-xs sm:text-[13px] font-sans text-neutral-500 dark:text-neutral-400 font-normal tracking-wide uppercase truncate">
-            {brand}
+          {/* Line 1: Brand name / Concentration */}
+          <p className="text-xs tracking-wider uppercase text-neutral-500 line-clamp-1">
+            {brandConcentrationLine}
           </p>
 
-          {/* Product Title */}
-          <h3 className="text-sm sm:text-base font-medium text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-1 group-hover:text-accent transition-colors">
+          {/* Line 2: Product Name */}
+          <h3 className="text-sm md:text-base font-normal text-neutral-900 dark:text-neutral-100 leading-snug line-clamp-1 group-hover:text-neutral-600 dark:group-hover:text-neutral-300 transition-colors">
             {title}
           </h3>
-
-          {/* Subtitle / Concentration */}
-          {concentration && (
-            <p className="text-[11px] sm:text-xs text-neutral-400 dark:text-neutral-500 line-clamp-1 font-sans font-light tracking-wide">
-              {concentration}
-            </p>
-          )}
         </div>
 
-        {/* 3. Price Display */}
-        <div className="mt-2.5 flex items-baseline gap-2 flex-wrap font-sans">
-          <span className="text-sm sm:text-[15px] font-semibold text-neutral-900 dark:text-neutral-100 tracking-tight">
-            {isFromPrice && (
-              <span className="font-normal text-xs text-neutral-500 dark:text-neutral-400 me-1">
-                {isAr ? "من " : "From "}
-              </span>
-            )}
+        {/* Line 3: Pricing string */}
+        <div className="mt-1.5 flex items-baseline gap-2 font-sans">
+          <span className="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+            {isFromPrice && (isAr ? "من " : "From ")}
             {formatCurrency(displayPrice, "AED", locale)}
           </span>
 
           {isDiscounted && displayCompareAtPrice && (
-            <span className="text-xs text-neutral-400 dark:text-neutral-500 line-through">
+            <span className="text-xs text-neutral-400 dark:text-neutral-500 line-through font-normal">
               {formatCurrency(displayCompareAtPrice, "AED", locale)}
             </span>
           )}
