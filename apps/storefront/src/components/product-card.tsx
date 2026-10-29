@@ -12,18 +12,21 @@ import { PREVIEW_CATALOG } from "../lib/preview-catalog";
 export interface ProductCardVariant {
   id?: string;
   sku?: string;
-  volume?: string;
+  volume?: string | number;
   volumeMl?: number | null;
   sizeLabelEn?: string;
   sizeLabelAr?: string;
-  price: number;
-  compareAtPrice?: number | null;
+  basePrice?: number | null;
   regularPrice?: number;
   originalPrice?: number;
+  price: number;
+  compareAtPrice?: number | null;
   salePrice?: number | null;
   discountPrice?: number | null;
+  stock?: number;
   stockQuantity?: number;
   availableQuantity?: number;
+  warehouse?: string;
   isDefault?: boolean;
   isSampleVial?: boolean;
 }
@@ -96,6 +99,7 @@ export function ProductCard({
       // Calculate normalized pricing for each variant
       const parsed = activeVariants.map((v) => {
         const regular = Number(
+          v.basePrice ??
           v.regularPrice ??
           v.originalPrice ??
           (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price),
@@ -205,9 +209,11 @@ export function ProductCard({
         ) ||
         activeVariants[0];
 
-      const variantVol = targetVariant?.volume || targetVariant?.sizeLabelEn || "100ml";
+      const variantVol: string = typeof targetVariant?.volume === "number"
+        ? `${targetVariant.volume}ml`
+        : String(targetVariant?.volume || targetVariant?.sizeLabelEn || "100ml");
       const variantId = targetVariant?.id || `var-${slug}-quick`;
-      const currentStock = targetVariant?.availableQuantity ?? targetVariant?.stockQuantity ?? 25;
+      const currentStock = targetVariant?.stock ?? targetVariant?.availableQuantity ?? targetVariant?.stockQuantity ?? 25;
 
       await addItem({
         variantId,

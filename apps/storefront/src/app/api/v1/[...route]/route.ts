@@ -510,6 +510,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         volumeMl: number;
         sizeLabelEn: string;
         sizeLabelAr: string;
+        basePrice: number;
         regularPrice: number;
         originalPrice: number;
         price: number;
@@ -518,21 +519,19 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         salePrice: number | null;
         sku: string;
         stockQuantity: number;
+        warehouse: string;
         isDefault: boolean;
       }> = (Array.isArray(body?.variants) && body.variants.length > 0)
         ? body.variants.map((v: any, index: number) => {
-            const vVol = String(v.volume || `${v.volumeMl || 100}ml`).trim();
-            const vVolNum = Number(v.volumeMl) || parseInt(vVol.replace(/[^0-9]/g, "") || "100", 10) || 100;
-            const vRegPrice = Number(String((v.regularPrice ?? v.price) || 0).replace(/[^0-9.]/g, "")) || 0;
-            const rawDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== ""
-              ? Number(String(v.discountPrice).replace(/[^0-9.]/g, ""))
-              : (v.salePrice !== null && v.salePrice !== undefined && String(v.salePrice).trim() !== ""
-                  ? Number(String(v.salePrice).replace(/[^0-9.]/g, ""))
-                  : null);
-            const vDiscPrice = (rawDiscount !== null && rawDiscount > 0 && rawDiscount <= vRegPrice) ? rawDiscount : null;
-            const vSellingPrice = (vDiscPrice !== null && vDiscPrice < vRegPrice) ? vDiscPrice : vRegPrice;
-            const vCompareAt = (vDiscPrice !== null && vDiscPrice < vRegPrice) ? vRegPrice : null;
-            const vStock = Number(v.stockQuantity ?? v.stock) || 10;
+            const vVolNum = Number(v.volumeMl) || (typeof v.volume === "number" ? v.volume : parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10)) || 100;
+            const vVol = String(v.volume || `${vVolNum}ml`).trim().endsWith("ml") ? String(v.volume || `${vVolNum}ml`).trim() : `${vVolNum}ml`;
+            const vBasePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? v.price ?? 0).replace(/[^0-9.]/g, "")) || 0;
+            const rawSellingPrice = Number(String((v.price !== undefined && v.price !== null ? v.price : (v.discountPrice ?? vBasePrice))).replace(/[^0-9.]/g, "")) || vBasePrice;
+            const vSellingPrice = (rawSellingPrice > 0 && rawSellingPrice <= vBasePrice) ? rawSellingPrice : (vBasePrice || rawSellingPrice);
+            const vCompareAt = (vBasePrice > vSellingPrice) ? vBasePrice : null;
+            const vDiscPrice = (vSellingPrice < vBasePrice) ? vSellingPrice : null;
+            const vStock = Number(v.stockQuantity ?? v.stock) >= 0 ? Number(v.stockQuantity ?? v.stock) : 10;
+            const vWarehouse = String(v.warehouse || body.warehouse || "DXB-MAIN").trim();
             const vSku = String(v.sku || `${sku}-${vVolNum}`).trim();
             const vIsDefault = Boolean(v.isDefault ?? index === 0);
             return {
@@ -540,14 +539,16 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
               volumeMl: vVolNum,
               sizeLabelEn: `${vVol} Flacon`,
               sizeLabelAr: `${vVolNum} مل إكستريت`,
-              regularPrice: vRegPrice,
-              originalPrice: vRegPrice,
+              basePrice: vBasePrice,
+              regularPrice: vBasePrice,
+              originalPrice: vBasePrice,
               price: vSellingPrice,
               compareAtPrice: vCompareAt,
               discountPrice: vDiscPrice,
               salePrice: vDiscPrice,
               sku: vSku,
               stockQuantity: vStock,
+              warehouse: vWarehouse,
               isDefault: vIsDefault,
             };
           })
@@ -557,6 +558,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
               volumeMl: numVolume,
               sizeLabelEn: `${numVolume}ml Extrait`,
               sizeLabelAr: `${numVolume} مل إكستريت`,
+              basePrice: numPrice,
               regularPrice: numPrice,
               originalPrice: numPrice,
               price: numPrice,
@@ -565,6 +567,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
               salePrice: null,
               sku: String(sku).trim(),
               stockQuantity: numStock,
+              warehouse: String(body?.warehouse || "DXB-MAIN").trim(),
               isDefault: true,
             },
           ];
@@ -610,6 +613,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
                 price: iv.price,
                 compareAtPrice: iv.compareAtPrice,
                 discountPrice: iv.discountPrice,
+                warehouse: iv.warehouse,
                 isDefault: iv.isDefault,
               },
             });
@@ -636,6 +640,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
                 price: iv.price,
                 compareAtPrice: iv.compareAtPrice,
                 discountPrice: iv.discountPrice,
+                warehouse: iv.warehouse,
                 isDefault: iv.isDefault,
                 inventory: {
                   create: {
@@ -715,6 +720,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
                 price: iv.price,
                 compareAtPrice: iv.compareAtPrice,
                 discountPrice: iv.discountPrice,
+                warehouse: iv.warehouse,
                 isDefault: iv.isDefault,
                 inventory: {
                   create: {

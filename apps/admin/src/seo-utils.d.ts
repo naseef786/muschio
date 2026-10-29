@@ -34,16 +34,20 @@ export interface NoteItem {
 }
 export interface ProductVariantItem {
     id?: string;
-    sku: string;
-    volume: string;
+    sku?: string;
+    volume: string | number;
     volumeMl?: number;
+    basePrice?: number | string;
     regularPrice?: number | string;
     originalPrice?: number | string;
     price: number | string;
     discountPrice?: number | string | null;
     salePrice?: number | string | null;
+    compareAtPrice?: number | string | null;
+    stock?: number;
     stockQuantity: number;
-    isDefault: boolean;
+    warehouse?: string;
+    isDefault?: boolean;
 }
 export interface ProductItem {
     id: string;

@@ -655,6 +655,7 @@ function toStorefrontProduct(item: any): StorefrontProduct {
       volumeMl: v.volumeMl || parseInt(vol.replace(/[^0-9]/g, "") || "100", 10),
       sizeLabelEn: v.labelEn || v.sizeLabelEn || `${vol} Flacon`,
       sizeLabelAr: v.labelAr || v.sizeLabelAr || `${vol} مل`,
+      basePrice: regPrice,
       regularPrice: regPrice,
       originalPrice: regPrice,
       price: sellingPrice,
@@ -662,7 +663,9 @@ function toStorefrontProduct(item: any): StorefrontProduct {
       discountPrice: hasDisc ? rawDisc : null,
       salePrice: hasDisc ? rawDisc : null,
       isSampleVial: v.isSampleVial || (v.volumeMl ? v.volumeMl <= 2 : false),
+      stock: stock,
       stockQuantity: stock,
+      warehouse: v.warehouse || "DXB-MAIN",
       availableQuantity: stock,
       isDefault: Boolean(v.isDefault ?? idx === 0),
     };

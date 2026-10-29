@@ -29,10 +29,11 @@ export interface ProductDetailProps {
     variants: Array<{
       id: string;
       sku: string;
-      volume?: string;
+      volume?: string | number;
       volumeMl?: number | null;
       sizeLabelEn: string;
       sizeLabelAr: string;
+      basePrice?: number | null;
       regularPrice?: number;
       originalPrice?: number;
       price: number;
@@ -40,8 +41,10 @@ export interface ProductDetailProps {
       salePrice?: number | null;
       compareAtPrice?: number | null;
       isSampleVial?: boolean;
+      stock?: number;
       stockQuantity?: number;
       availableQuantity?: number;
+      warehouse?: string;
       isDefault?: boolean;
     }>;
     notes?: Array<{
@@ -69,8 +72,9 @@ export function getVariantPricing(v?: ProductDetailProps["product"]["variants"][
     };
   }
 
-  // 1. Regular Price / Original Price (MRP)
+  // 1. Regular Price / Base MRP
   const regularPrice = Number(
+    v.basePrice ??
     v.regularPrice ??
     v.originalPrice ??
     (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price)
@@ -222,12 +226,14 @@ export function ProductExperience({
 
   const handleAddToCart = async () => {
     if (!selectedVariant || isAdding) return;
-    const currentStock = selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+    const currentStock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
     if (currentStock <= 0) return;
 
     setIsAdding(true);
     try {
-      const selectedVol = selectedVariant.volume || selectedVariant.sizeLabelEn?.match(/\d+ml/i)?.[0] || `${selectedVariant.volumeMl || 100}ml`;
+      const selectedVol = typeof selectedVariant.volume === "number"
+        ? `${selectedVariant.volume}ml`
+        : (selectedVariant.volume || selectedVariant.sizeLabelEn?.match(/\d+ml/i)?.[0] || `${selectedVariant.volumeMl || 100}ml`);
 
       await addItem({
         variantId: selectedVariant.id,
@@ -453,12 +459,13 @@ export function ProductExperience({
 
                 {/* Live Real-time Vault Stock Status */}
                 {(() => {
-                  const stock = selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+                  const stock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+                  const wh = selectedVariant.warehouse || "DXB-MAIN";
                   if (stock <= 0) {
                     return (
                       <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 rounded-sm text-xs text-rose-600 dark:text-rose-400 font-medium">
                         <span className="w-2 h-2 rounded-full bg-rose-500" />
-                        <span>{c("Currently Sold Out — Flacon Awaiting Batch Restock", "الكمية نفدت حالياً — بانتظار دفعة جديدة")}</span>
+                        <span>{c(`Currently Sold Out (${wh}) — Flacon Awaiting Restock`, `الكمية نفدت حالياً (${wh}) — بانتظار دفعة جديدة`)}</span>
                       </div>
                     );
                   }
@@ -468,8 +475,8 @@ export function ProductExperience({
                         <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
                         <span>
                           {c(
-                            `Rare Stock — Only ${stock} flacon${stock === 1 ? "" : "s"} remaining in Dubai vault`,
-                            `كمية نادرة ومحدودة — متبقي ${stock} فقط في خزينة دبي`
+                            `Rare Stock — Only ${stock} flacon${stock === 1 ? "" : "s"} remaining in ${wh}`,
+                            `كمية نادرة ومحدودة — متبقي ${stock} فقط في مستودع ${wh}`
                           )}
                         </span>
                       </div>
@@ -478,7 +485,7 @@ export function ProductExperience({
                   return (
                     <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-sm text-xs text-emerald-700 dark:text-emerald-400 font-medium">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>{c("In Stock — Ready for White-Glove GCC Delivery", "متوفر بالخزينة — جاهز للتوصيل الفاخر المبرد")}</span>
+                      <span>{c(`In Stock (${wh}) — Ready for White-Glove GCC Delivery`, `متوفر بالخزينة (${wh}) — جاهز للتوصيل الفاخر المبرد`)}</span>
                     </div>
                   );
                 })()}
@@ -493,15 +500,15 @@ export function ProductExperience({
                     {c("Select Bottle Volume", "اختر حجم الزجاجة")}
                   </span>
                   <span className="text-luxury-muted font-mono">
-                    {selectedVariant?.volume || c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || "")}
+                    {typeof selectedVariant?.volume === "number" ? `${selectedVariant.volume}ml` : (selectedVariant?.volume || c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || ""))}
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {product.variants.map((v) => {
                     const isSelected = v.id === selectedVariantId;
-                    const stock = v.availableQuantity ?? v.stockQuantity ?? 25;
+                    const stock = v.stock ?? v.availableQuantity ?? v.stockQuantity ?? 25;
                     const isOutOfStock = stock <= 0;
-                    const volLabel = v.volume || c(v.sizeLabelEn, v.sizeLabelAr);
+                    const volLabel = typeof v.volume === "number" ? `${v.volume}ml` : (v.volume || c(v.sizeLabelEn, v.sizeLabelAr));
                     const vPricing = getVariantPricing(v);
 
                     return (

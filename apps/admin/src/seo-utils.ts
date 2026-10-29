@@ -38,16 +38,20 @@ export interface NoteItem {
 
 export interface ProductVariantItem {
   id?: string;
-  sku: string;
-  volume: string; // e.g. "30ml", "50ml", "100ml"
+  sku?: string;
+  volume: string | number; // e.g. 30, 50, 100 or "30ml", "50ml", "100ml"
   volumeMl?: number;
-  regularPrice?: number | string; // Original Price / MRP
+  basePrice?: number | string; // Base Price / Original MRP in AED
+  regularPrice?: number | string; // Original Price / MRP alias
   originalPrice?: number | string; // alias
-  price: number | string; // effective price
-  discountPrice?: number | string | null; // Discounted Price / Selling Price
-  salePrice?: number | string | null; // alias
+  price: number | string; // Selling / Discounted Price in AED
+  discountPrice?: number | string | null;
+  salePrice?: number | string | null;
+  compareAtPrice?: number | string | null;
+  stock?: number; // Stock Quantity alias
   stockQuantity: number;
-  isDefault: boolean;
+  warehouse?: string; // Warehouse location/identifier, e.g. "DXB-MAIN", "RUH-HUB"
+  isDefault?: boolean;
 }
 
 export interface ProductItem {

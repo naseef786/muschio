@@ -1110,14 +1110,17 @@ export function App() {
         {
           id: `var-${Date.now()}-1`,
           sku: "",
-          volume: "100ml",
+          volume: 100,
           volumeMl: 100,
+          basePrice: 1850,
           regularPrice: 1850,
           originalPrice: 1850,
-          price: 1850,
-          discountPrice: null,
-          salePrice: null,
+          price: 1590,
+          discountPrice: 1590,
+          salePrice: 1590,
+          stock: 20,
           stockQuantity: 20,
+          warehouse: "DXB-MAIN",
           isDefault: true,
         },
       ],
@@ -1132,21 +1135,26 @@ export function App() {
     const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
     const initialVariants: ProductVariantItem[] = (p.variants && p.variants.length > 0)
       ? p.variants.map((v, i) => {
-          const rawPrice = typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) || 0 : v.price;
-          const rawRegular = v.regularPrice ? (typeof v.regularPrice === "string" ? Number(v.regularPrice.replace(/[^0-9.]/g, "")) : v.regularPrice) : (v.originalPrice ? Number(v.originalPrice) : rawPrice);
-          const rawDiscount = v.discountPrice !== null && v.discountPrice !== undefined ? (typeof v.discountPrice === "string" ? Number(v.discountPrice.replace(/[^0-9.]/g, "")) : v.discountPrice) : (v.salePrice ? Number(v.salePrice) : null);
+          const rawBase = Number(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)) || 1000;
+          const rawSelling = Number(v.price !== undefined ? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price) : (v.discountPrice ?? rawBase)) || rawBase;
+          const volNum = typeof v.volume === "number" ? v.volume : (v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
+          const stock = v.stock !== undefined ? Number(v.stock) : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : (p.stock || 20));
+          const wh = v.warehouse || p.warehouse || "DXB-MAIN";
 
           return {
             id: v.id || `var-${p.id}-${i}`,
-            sku: v.sku || (i === 0 ? p.sku : `${p.sku}-${v.volumeMl || 100}`),
-            volume: v.volume || `${v.volumeMl || 100}ml`,
-            volumeMl: v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10),
-            regularPrice: rawRegular,
-            originalPrice: rawRegular,
-            price: rawRegular,
-            discountPrice: rawDiscount,
-            salePrice: rawDiscount,
-            stockQuantity: v.stockQuantity ?? p.stock ?? 20,
+            sku: v.sku || (i === 0 ? p.sku : `${p.sku}-${volNum}`),
+            volume: volNum,
+            volumeMl: volNum,
+            basePrice: rawBase,
+            regularPrice: rawBase,
+            originalPrice: rawBase,
+            price: rawSelling,
+            discountPrice: rawSelling < rawBase ? rawSelling : null,
+            salePrice: rawSelling < rawBase ? rawSelling : null,
+            stock: stock,
+            stockQuantity: stock,
+            warehouse: wh,
             isDefault: v.isDefault ?? i === 0,
           };
         })
@@ -1154,14 +1162,17 @@ export function App() {
           {
             id: `var-${p.id}-1`,
             sku: p.sku || "AMO-INT53-100",
-            volume: `${p.volumeMl || 100}ml`,
+            volume: p.volumeMl || 100,
             volumeMl: p.volumeMl || 100,
-            regularPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
-            originalPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
-            price: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price,
+            basePrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
+            regularPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
+            originalPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
+            price: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
             discountPrice: null,
             salePrice: null,
+            stock: p.stock || 20,
             stockQuantity: p.stock || 20,
+            warehouse: p.warehouse || "DXB-MAIN",
             isDefault: true,
           },
         ];
@@ -1202,60 +1213,62 @@ export function App() {
       return;
     }
     if (!productForm.variants || productForm.variants.length === 0) {
-      alert("Every fragrance product must have at least one valid bottle volume variant.");
+      alert("At least one volume variant row must be added before saving.");
       return;
     }
     for (let i = 0; i < productForm.variants.length; i++) {
       const v = productForm.variants[i];
       if (!v) continue;
-      if (!v.volume?.trim()) {
-        alert(`Variant #${i + 1} is missing a bottle volume (e.g. 50ml, 100ml).`);
+      const vol = typeof v.volume === "number" ? v.volume : Number(String(v.volume).replace(/[^0-9.]/g, ""));
+      if (isNaN(vol) || vol <= 0) {
+        alert(`Variant #${i + 1}: Volume (ml) must be a positive number greater than 0.`);
         return;
       }
-      if (!v.sku?.trim()) {
-        alert(`Variant #${i + 1} (${v.volume}) is missing a unique SKU code.`);
+      const basePrice = Number(v.basePrice ?? v.regularPrice);
+      if (isNaN(basePrice) || basePrice <= 0) {
+        alert(`Variant #${i + 1} (${vol}ml): Base Price / Regular Price must be a positive number greater than 0 AED.`);
         return;
       }
-      const regPrice = Number(v.regularPrice ?? v.price);
-      if (isNaN(regPrice) || regPrice <= 0) {
-        alert(`Variant #${i + 1} (${v.volume}): Original Price (MRP) must be a valid positive number greater than 0 AED.`);
+      const sellingPrice = Number(v.price);
+      if (isNaN(sellingPrice) || sellingPrice <= 0) {
+        alert(`Variant #${i + 1} (${vol}ml): Selling Price must be a positive number greater than 0 AED.`);
         return;
       }
-      if (v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "") {
-        const discPrice = Number(v.discountPrice);
-        if (isNaN(discPrice) || discPrice <= 0) {
-          alert(`Variant #${i + 1} (${v.volume}): Discounted Price must be a valid positive number greater than 0 AED.`);
-          return;
-        }
-        if (discPrice > regPrice) {
-          alert(`Variant #${i + 1} (${v.volume}): Discounted Price (${discPrice} AED) cannot exceed Original Price (${regPrice} AED).`);
-          return;
-        }
+      if (sellingPrice > basePrice) {
+        alert(`Variant #${i + 1} (${vol}ml): Selling Price (${sellingPrice} AED) cannot exceed Base Price (${basePrice} AED).`);
+        return;
       }
-      const stock = Number(v.stockQuantity);
+      const stock = Number(v.stock ?? v.stockQuantity);
       if (isNaN(stock) || stock < 0) {
-        alert(`Variant #${i + 1} (${v.volume}): Stock quantity must be 0 or greater.`);
+        alert(`Variant #${i + 1} (${vol}ml): Stock quantity must be 0 or greater.`);
         return;
       }
     }
 
-    let activeVariants = productForm.variants.map((v) => {
-      const regPrice = Number(v.regularPrice ?? v.price);
-      const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
-      const discPrice = hasDiscount ? Number(v.discountPrice) : null;
-      const validDiscount = discPrice !== null && discPrice > 0 && discPrice < regPrice ? discPrice : null;
-      const sellingPrice = validDiscount ?? regPrice;
-      const comparePrice = validDiscount ? regPrice : null;
+    let activeVariants = productForm.variants.map((v, i) => {
+      const volNum = typeof v.volume === "number" ? v.volume : (Number(String(v.volume).replace(/[^0-9.]/g, "")) || 100);
+      const basePrice = Number(v.basePrice ?? v.regularPrice ?? v.price);
+      const sellingPrice = Number(v.price ?? basePrice);
+      const stock = Number(v.stock ?? v.stockQuantity) >= 0 ? Number(v.stock ?? v.stockQuantity) : 0;
+      const warehouse = v.warehouse || productForm.warehouse || "DXB-MAIN";
+      const sku = v.sku?.trim() || `${productForm.sku || "SKU"}-${volNum}`;
 
       return {
         ...v,
-        regularPrice: regPrice,
-        originalPrice: regPrice,
+        id: v.id || `var-${Date.now()}-${i}`,
+        sku,
+        volume: volNum,
+        volumeMl: volNum,
+        basePrice,
+        regularPrice: basePrice,
+        originalPrice: basePrice,
         price: sellingPrice,
-        compareAtPrice: comparePrice,
-        discountPrice: validDiscount,
-        salePrice: validDiscount,
-        stockQuantity: Number(v.stockQuantity) || 0,
+        compareAtPrice: basePrice > sellingPrice ? basePrice : null,
+        discountPrice: sellingPrice < basePrice ? sellingPrice : null,
+        salePrice: sellingPrice < basePrice ? sellingPrice : null,
+        stock,
+        stockQuantity: stock,
+        warehouse,
       };
     });
 
@@ -1270,8 +1283,8 @@ export function App() {
     }
     const primarySku = defaultVariant.sku || productForm.sku || `SKU-${slugify(productForm.name)}`;
     const primaryPrice = `${defaultVariant.price} AED`;
-    const primaryVolumeMl = defaultVariant.volumeMl || parseInt(defaultVariant.volume.replace(/[^0-9]/g, "") || "100", 10);
-    const primaryStock = defaultVariant.stockQuantity;
+    const primaryVolumeMl = defaultVariant.volumeMl || 100;
+    const primaryStock = defaultVariant.stock;
 
     const prodSlug = slugify(`${productForm.brand}-${productForm.name}`);
     const topNotesArr = productForm.topNotes ? productForm.topNotes.split(",").map((s) => s.trim()).filter(Boolean) : [];
@@ -2386,45 +2399,50 @@ export function App() {
                       </div>
                     </div>
 
-                    {/* Bottle Volume Variants & Pricing Manager */}
-                    <div className="p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3">
+                    {/* Dynamic Bottle Volume Variants & Warehouse Inventory Table */}
+                    <div className="p-4 bg-[#0B0F17] border border-slate-800 rounded-lg space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
-                          <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
-                            <Layers size={13} />
-                            <span>Bottle Volume Variants & Pricing (أحجام العطور والتسعير) *</span>
-                          </span>
-                          <p className="text-[10px] text-slate-400 mt-0.5">
-                            Configure multiple bottle sizes with independent pricing, stock, and SKU tracking. At least one variant is required.
+                          <div className="flex items-center gap-2">
+                            <Layers size={14} className="text-amber-400" />
+                            <span className="text-xs font-semibold text-white tracking-wide">
+                              Multi-Volume Variants & Warehouse Inventory (أحجام العطور والمستودعات) *
+                            </span>
+                            <span className="text-[10px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
+                              Dynamic Builder
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-400 mt-1">
+                            Configure multiple volume options per product (e.g. 30ml, 50ml, 100ml) with dual pricing (Selling Price vs. Base MRP) and warehouse inventory.
                           </p>
                         </div>
                         {/* Quick-add buttons */}
-                        <div className="flex items-center gap-1">
-                          <span className="text-[10px] text-slate-500 mr-1">Quick Add:</span>
-                          {["30ml", "50ml", "100ml", "200ml"].map((vol) => (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-[10px] text-slate-500">Quick Add:</span>
+                          {[30, 50, 100, 200].map((volNum) => (
                             <button
-                              key={vol}
+                              key={volNum}
                               type="button"
                               onClick={() => {
-                                const exists = productForm.variants.some((v) => v.volume.toLowerCase() === vol.toLowerCase());
+                                const exists = productForm.variants.some((v) => Number(v.volume) === volNum || Number(v.volumeMl) === volNum);
                                 if (exists) return;
-                                const volNum = parseInt(vol.replace(/[^0-9]/g, "") || "100", 10);
                                 const baseSku = productForm.sku || "FRAG";
                                 const suggestedSku = `${baseSku}-${volNum}`;
-                                const refPrice = Number(String(productForm.price || "").replace(/[^0-9.]/g, "")) || 1000;
+                                const refBase = Number(productForm.variants[0]?.basePrice || productForm.variants[0]?.price) || 1500;
                                 const ratio = volNum / 100;
-                                const approxPrice = Math.round((refPrice * (ratio < 1 ? ratio * 1.15 : ratio * 0.9)) / 10) * 10;
+                                const approxBase = Math.round((refBase * (ratio < 1 ? ratio * 1.15 : ratio * 0.95)) / 10) * 10;
+                                const approxSelling = Math.round((approxBase * 0.88) / 10) * 10;
                                 const newVariant: ProductVariantItem = {
                                   id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
                                   sku: suggestedSku,
-                                  volume: vol,
+                                  volume: volNum,
                                   volumeMl: volNum,
-                                  regularPrice: approxPrice || 800,
-                                  originalPrice: approxPrice || 800,
-                                  price: approxPrice || 800,
-                                  discountPrice: null,
-                                  salePrice: null,
+                                  basePrice: approxBase,
+                                  regularPrice: approxBase,
+                                  price: approxSelling,
+                                  stock: 15,
                                   stockQuantity: 15,
+                                  warehouse: "DXB-MAIN",
                                   isDefault: false,
                                 };
                                 setProductForm({
@@ -2432,225 +2450,266 @@ export function App() {
                                   variants: [...productForm.variants, newVariant],
                                 });
                               }}
-                              className="px-2 py-0.5 text-[10px] bg-slate-800/80 hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60 rounded transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-mono bg-slate-800/80 hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60 rounded transition-colors"
                             >
-                              + {vol}
+                              + {volNum}ml
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* Variants dynamic list */}
-                      <div className="space-y-2.5 pt-1">
-                        {productForm.variants.map((v, index) => {
-                          const origPrice = Number(v.regularPrice ?? v.price ?? 0);
-                          const hasDiscount = v.discountPrice !== null && v.discountPrice !== undefined && String(v.discountPrice).trim() !== "";
-                          const discPrice = hasDiscount ? Number(v.discountPrice) : null;
-                          const isExceeding = discPrice !== null && discPrice > origPrice;
-                          const isValidDiscount = discPrice !== null && discPrice < origPrice && origPrice > 0;
-                          const savingsPct = isValidDiscount ? Math.round(((origPrice - discPrice!) / origPrice) * 100) : 0;
-                          const savingsDiff = isValidDiscount ? origPrice - discPrice! : 0;
+                      {/* Variant Table */}
+                      <div className="overflow-x-auto border border-slate-800 rounded-md bg-[#0E1420]">
+                        <table className="w-full text-start text-xs font-sans">
+                          <thead className="bg-[#121826] text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+                            <tr>
+                              <th className="p-2.5 text-start font-medium">Volume (ml) *</th>
+                              <th className="p-2.5 text-start font-medium">Selling Price (AED) *</th>
+                              <th className="p-2.5 text-start font-medium">Base Price / Regular (AED) *</th>
+                              <th className="p-2.5 text-start font-medium">Stock Quantity *</th>
+                              <th className="p-2.5 text-start font-medium">Warehouse Location *</th>
+                              <th className="p-2.5 text-center font-medium w-16">Default</th>
+                              <th className="p-2.5 text-end font-medium w-12">Action</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/80">
+                            {productForm.variants.map((v, index) => {
+                              const selling = Number(v.price) || 0;
+                              const base = Number(v.basePrice ?? v.regularPrice) || 0;
+                              const isOverpriced = selling > base && base > 0;
+                              const isDiscounted = selling < base && base > 0 && selling > 0;
+                              const savingsPct = isDiscounted ? Math.round(((base - selling) / base) * 100) : 0;
 
-                          return (
-                            <div
-                              key={v.id || index}
-                              className={`p-2.5 rounded border transition-colors ${
-                                v.isDefault
-                                  ? "bg-[#111827] border-amber-500/40 ring-1 ring-amber-500/20"
-                                  : "bg-[#111622] border-slate-800 hover:border-slate-700"
-                              }`}
-                            >
-                              <div className="grid grid-cols-12 gap-2 items-center">
-                                {/* Volume Column */}
-                                <div className="col-span-2">
-                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
-                                    Volume *
-                                  </label>
-                                  <input
-                                    type="text"
-                                    placeholder="e.g. 100ml"
-                                    value={v.volume}
-                                    onChange={(e) => {
-                                      const val = e.target.value;
-                                      const updated = [...productForm.variants];
-                                      updated[index] = {
-                                        ...v,
-                                        volume: val,
-                                        volumeMl: parseInt(val.replace(/[^0-9]/g, "") || "100", 10),
-                                      };
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-medium"
-                                    required
-                                  />
-                                </div>
+                              return (
+                                <tr
+                                  key={v.id || index}
+                                  className={`transition-colors ${
+                                    v.isDefault ? "bg-amber-500/5 hover:bg-amber-500/10" : "hover:bg-slate-800/40"
+                                  }`}
+                                >
+                                  {/* Volume (ml) */}
+                                  <td className="p-2.5">
+                                    <div className="space-y-1">
+                                      <div className="relative">
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          step="1"
+                                          placeholder="100"
+                                          value={v.volume}
+                                          onChange={(e) => {
+                                            const val = Number(e.target.value) || 0;
+                                            const updated = [...productForm.variants];
+                                            updated[index] = {
+                                              ...v,
+                                              volume: val,
+                                              volumeMl: val,
+                                            };
+                                            setProductForm({ ...productForm, variants: updated });
+                                          }}
+                                          className="w-24 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                          required
+                                        />
+                                        <span className="absolute end-2 top-2 text-[10px] text-slate-500 pointer-events-none">ml</span>
+                                      </div>
+                                      <input
+                                        type="text"
+                                        placeholder={v.sku || `${productForm.sku || "SKU"}-${v.volume || 100}`}
+                                        value={v.sku || ""}
+                                        onChange={(e) => {
+                                          const updated = [...productForm.variants];
+                                          updated[index] = { ...v, sku: e.target.value };
+                                          setProductForm({ ...productForm, variants: updated });
+                                        }}
+                                        className="w-24 bg-[#080B10] border border-slate-800/80 text-slate-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-white"
+                                        title="Variant SKU (optional / auto-generated)"
+                                      />
+                                    </div>
+                                  </td>
 
-                                {/* SKU Column */}
-                                <div className="col-span-3">
-                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
-                                    Variant SKU *
-                                  </label>
-                                  <input
-                                    type="text"
-                                    placeholder="e.g. AMO-INT53-100"
-                                    value={v.sku}
-                                    onChange={(e) => {
-                                      const updated = [...productForm.variants];
-                                      updated[index] = { ...v, sku: e.target.value };
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
-                                    required
-                                  />
-                                </div>
+                                  {/* Selling Price (AED) */}
+                                  <td className="p-2.5">
+                                    <div className="space-y-1">
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        step="1"
+                                        placeholder="1590"
+                                        value={v.price}
+                                        onChange={(e) => {
+                                          const val = Number(e.target.value) || 0;
+                                          const updated = [...productForm.variants];
+                                          updated[index] = {
+                                            ...v,
+                                            price: val,
+                                            discountPrice: val,
+                                            salePrice: val,
+                                          };
+                                          setProductForm({ ...productForm, variants: updated });
+                                        }}
+                                        className={`w-32 bg-[#0A0D14] border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
+                                          isOverpriced
+                                            ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
+                                            : isDiscounted
+                                            ? "border-emerald-500/60 text-emerald-300"
+                                            : "border-slate-800 text-white focus:border-amber-500/50"
+                                        }`}
+                                        required
+                                      />
+                                      {isOverpriced && (
+                                        <div className="text-[9px] text-rose-400 font-mono">
+                                          ⚠ Exceeds Base ({base} AED)
+                                        </div>
+                                      )}
+                                      {isDiscounted && (
+                                        <div className="text-[9px] text-emerald-400 font-mono">
+                                          Save {savingsPct}% ({base - selling} AED off)
+                                        </div>
+                                      )}
+                                    </div>
+                                  </td>
 
-                                {/* Original Price / MRP (strike-through price) */}
-                                <div className="col-span-2">
-                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
-                                    Original Price *
-                                  </label>
-                                  <input
-                                    type="number"
-                                    placeholder="1850"
-                                    value={v.price}
-                                    onChange={(e) => {
-                                      const val = Number(e.target.value) || 0;
-                                      const updated = [...productForm.variants];
-                                      updated[index] = { ...v, price: val, regularPrice: val, originalPrice: val };
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
-                                    required
-                                  />
-                                </div>
+                                  {/* Base Price / Regular Price (AED) */}
+                                  <td className="p-2.5">
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      step="1"
+                                      placeholder="1850"
+                                      value={v.basePrice ?? v.regularPrice ?? ""}
+                                      onChange={(e) => {
+                                        const val = Number(e.target.value) || 0;
+                                        const updated = [...productForm.variants];
+                                        updated[index] = {
+                                          ...v,
+                                          basePrice: val,
+                                          regularPrice: val,
+                                          originalPrice: val,
+                                        };
+                                        setProductForm({ ...productForm, variants: updated });
+                                      }}
+                                      className="w-32 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      required
+                                    />
+                                  </td>
 
-                                {/* Discounted Price / Selling Price */}
-                                <div className="col-span-2">
-                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
-                                    Discounted Price
-                                  </label>
-                                  <input
-                                    type="number"
-                                    placeholder="1590 (Opt)"
-                                    value={v.discountPrice ?? ""}
-                                    onChange={(e) => {
-                                      const disc = e.target.value ? Number(e.target.value) : null;
-                                      const updated = [...productForm.variants];
-                                      updated[index] = {
-                                        ...v,
-                                        discountPrice: disc,
-                                        salePrice: disc,
-                                      };
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    className={`w-full bg-[#0A0D14] border px-2 py-1.5 rounded text-xs font-mono transition-colors ${
-                                      isExceeding
-                                        ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
-                                        : isValidDiscount
-                                        ? "border-emerald-500/50 text-emerald-300"
-                                        : "border-slate-800 text-white"
-                                    }`}
-                                  />
-                                </div>
+                                  {/* Stock Quantity */}
+                                  <td className="p-2.5">
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="1"
+                                      placeholder="20"
+                                      value={v.stock ?? v.stockQuantity ?? 0}
+                                      onChange={(e) => {
+                                        const val = Math.max(0, Number(e.target.value) || 0);
+                                        const updated = [...productForm.variants];
+                                        updated[index] = {
+                                          ...v,
+                                          stock: val,
+                                          stockQuantity: val,
+                                        };
+                                        setProductForm({ ...productForm, variants: updated });
+                                      }}
+                                      className="w-24 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      required
+                                    />
+                                  </td>
 
-                                {/* Stock Quantity */}
-                                <div className="col-span-2">
-                                  <label className="text-[10px] text-slate-400 block mb-0.5 font-medium">
-                                    Stock Qty *
-                                  </label>
-                                  <input
-                                    type="number"
-                                    placeholder="20"
-                                    value={v.stockQuantity}
-                                    onChange={(e) => {
-                                      const updated = [...productForm.variants];
-                                      updated[index] = { ...v, stockQuantity: Number(e.target.value) || 0 };
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    className="w-full bg-[#0A0D14] border border-slate-800 text-white px-2 py-1.5 rounded text-xs font-mono"
-                                  />
-                                </div>
+                                  {/* Warehouse Location */}
+                                  <td className="p-2.5">
+                                    <select
+                                      value={v.warehouse || "DXB-MAIN"}
+                                      onChange={(e) => {
+                                        const updated = [...productForm.variants];
+                                        updated[index] = {
+                                          ...v,
+                                          warehouse: e.target.value,
+                                        };
+                                        setProductForm({ ...productForm, variants: updated });
+                                      }}
+                                      className="w-36 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs focus:border-amber-500/50 focus:outline-none"
+                                    >
+                                      <option value="DXB-MAIN">DXB-MAIN (Dubai)</option>
+                                      <option value="RUH-HUB">RUH-HUB (Riyadh)</option>
+                                      <option value="AUH-VAULT">AUH-VAULT (Abu Dhabi)</option>
+                                      <option value="JED-STORE">JED-STORE (Jeddah)</option>
+                                    </select>
+                                  </td>
 
-                                {/* Controls: Default & Delete */}
-                                <div className="col-span-1 flex items-center justify-end gap-1.5 pt-3">
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      const updated = productForm.variants.map((item, i) => ({
-                                        ...item,
-                                        isDefault: i === index,
-                                      }));
-                                      setProductForm({ ...productForm, variants: updated });
-                                    }}
-                                    title={v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant"}
-                                    className={`p-1 rounded text-[11px] transition-colors ${
-                                      v.isDefault
-                                        ? "text-amber-400 bg-amber-500/15"
-                                        : "text-slate-500 hover:text-amber-300"
-                                    }`}
-                                  >
-                                    ★
-                                  </button>
-                                  <button
-                                    type="button"
-                                    disabled={productForm.variants.length <= 1}
-                                    onClick={() => {
-                                      if (productForm.variants.length <= 1) return;
-                                      const filtered = productForm.variants.filter((_, i) => i !== index);
-                                      if (v.isDefault && filtered.length > 0 && filtered[0]) {
-                                        filtered[0].isDefault = true;
-                                      }
-                                      setProductForm({ ...productForm, variants: filtered });
-                                    }}
-                                    title={productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant"}
-                                    className={`p-1 rounded transition-colors ${
-                                      productForm.variants.length <= 1
-                                        ? "text-slate-700 cursor-not-allowed"
-                                        : "text-slate-500 hover:text-rose-400 hover:bg-rose-500/10"
-                                    }`}
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              </div>
+                                  {/* Default Variant Indicator */}
+                                  <td className="p-2.5 text-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const updated = productForm.variants.map((item, i) => ({
+                                          ...item,
+                                          isDefault: i === index,
+                                        }));
+                                        setProductForm({ ...productForm, variants: updated });
+                                      }}
+                                      title={v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant"}
+                                      className={`px-2 py-1 rounded text-xs transition-colors ${
+                                        v.isDefault
+                                          ? "text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
+                                          : "text-slate-500 hover:text-amber-300 border border-transparent"
+                                      }`}
+                                    >
+                                      {v.isDefault ? "★ Primary" : "Set"}
+                                    </button>
+                                  </td>
 
-                              {/* Live Dual Pricing Calculation & Validation Feedback */}
-                              {isExceeding && (
-                                <div className="mt-1.5 text-[10px] text-rose-400 bg-rose-500/10 border border-rose-500/25 px-2 py-0.5 rounded flex items-center gap-1 font-mono">
-                                  <span>⚠ Discounted price ({discPrice} AED) cannot exceed Original Price ({origPrice} AED)</span>
-                                </div>
-                              )}
-                              {isValidDiscount && (
-                                <div className="mt-1.5 text-[10px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded flex items-center justify-between font-mono">
-                                  <span>✓ Save {savingsPct}% ({savingsDiff} AED off)</span>
-                                  <span className="text-slate-400">
-                                    Selling Price: <strong className="text-emerald-300">{discPrice} AED</strong> | Original: <s className="text-slate-500">{origPrice} AED</s>
-                                  </span>
-                                </div>
-                              )}
-                              {v.isDefault && (
-                                <div className="mt-1 flex items-center gap-1 text-[10px] text-amber-400 font-sans">
-                                  <span>★ Primary storefront display variant (Default size on PDP)</span>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
+                                  {/* Remove Action */}
+                                  <td className="p-2.5 text-end">
+                                    <button
+                                      type="button"
+                                      disabled={productForm.variants.length <= 1}
+                                      onClick={() => {
+                                        if (productForm.variants.length <= 1) return;
+                                        const filtered = productForm.variants.filter((_, i) => i !== index);
+                                        if (v.isDefault && filtered.length > 0 && filtered[0]) {
+                                          filtered[0].isDefault = true;
+                                        }
+                                        setProductForm({ ...productForm, variants: filtered });
+                                      }}
+                                      title={productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant"}
+                                      className={`p-1.5 rounded transition-colors ${
+                                        productForm.variants.length <= 1
+                                          ? "text-slate-700 cursor-not-allowed"
+                                          : "text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+                                      }`}
+                                    >
+                                      <Trash2 size={14} />
+                                    </button>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between">
+                      {/* Add Button & Footer info */}
+                      <div className="pt-1 flex flex-wrap items-center justify-between gap-3">
                         <button
                           type="button"
                           onClick={() => {
                             const count = productForm.variants.length + 1;
+                            const defaultVol = count === 2 ? 50 : count === 3 ? 30 : 200;
+                            const baseRef = Number(productForm.variants[0]?.basePrice || 1500);
+                            const approxBase = Math.round((baseRef * (defaultVol / 100)) / 10) * 10 || 800;
+                            const approxSelling = Math.round((approxBase * 0.9) / 10) * 10 || 720;
                             const newVariant: ProductVariantItem = {
                               id: `var-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-                              sku: productForm.sku ? `${productForm.sku}-v${count}` : `SKU-V${count}`,
-                              volume: "50ml",
-                              volumeMl: 50,
-                              price: 1000,
-                              discountPrice: null,
+                              sku: productForm.sku ? `${productForm.sku}-${defaultVol}` : `SKU-${defaultVol}`,
+                              volume: defaultVol,
+                              volumeMl: defaultVol,
+                              basePrice: approxBase,
+                              regularPrice: approxBase,
+                              price: approxSelling,
+                              stock: 10,
                               stockQuantity: 10,
+                              warehouse: productForm.warehouse || "DXB-MAIN",
                               isDefault: false,
                             };
                             setProductForm({
@@ -2658,13 +2717,16 @@ export function App() {
                               variants: [...productForm.variants, newVariant],
                             });
                           }}
-                          className="px-3 py-1.5 bg-[#141C2B] hover:bg-slate-800 text-amber-400 hover:text-amber-300 text-xs font-medium rounded border border-amber-500/30 flex items-center gap-1.5 transition-colors"
+                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs rounded shadow-md shadow-amber-500/10 flex items-center gap-1.5 transition-all"
                         >
-                          <Plus size={12} />
-                          <span>Add Another Volume Variant</span>
+                          <Plus size={13} className="text-slate-950" />
+                          <span>+ Add Volume Variant</span>
                         </button>
-                        <span className="text-[10px] text-slate-500">
-                          {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured
+                        <span className="text-[11px] text-slate-400 font-mono">
+                          {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured · Total Stock:{" "}
+                          <strong className="text-emerald-400">
+                            {productForm.variants.reduce((sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0), 0)} units
+                          </strong>
                         </span>
                       </div>
                     </div>
@@ -2826,35 +2888,23 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
                       <div>
-                        <label className="block text-slate-400 mb-1">Sealed Stock</label>
+                        <label className="block text-slate-400 mb-1">Showroom & Boutique Testers (Units)</label>
                         <input
                           type="number"
-                          value={productForm.stock}
-                          onChange={(e) => setProductForm({ ...productForm, stock: Number(e.target.value) })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-slate-400 mb-1">Testers</label>
-                        <input
-                          type="number"
+                          min="0"
                           value={productForm.testerStock}
                           onChange={(e) => setProductForm({ ...productForm, testerStock: Number(e.target.value) })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono text-xs"
+                          placeholder="2"
                         />
                       </div>
-                      <div>
-                        <label className="block text-slate-400 mb-1">Warehouse</label>
-                        <select
-                          value={productForm.warehouse}
-                          onChange={(e) => setProductForm({ ...productForm, warehouse: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
-                        >
-                          <option value="DXB-MAIN">DXB-MAIN (Dubai)</option>
-                          <option value="RUH-HUB">RUH-HUB (Riyadh)</option>
-                        </select>
+                      <div className="p-3 bg-[#0A0D14] border border-slate-800 rounded flex flex-col justify-center text-xs">
+                        <span className="text-slate-400 text-[11px]">Primary Warehouse Fulfillment:</span>
+                        <span className="text-amber-400 font-medium">
+                          {productForm.variants[0]?.warehouse || "DXB-MAIN (Dubai Hub)"}
+                        </span>
                       </div>
                     </div>
                   </div>

@@ -47,13 +47,14 @@ export default async function ProductPage({
     sillage: "Royal Projection",
     images,
     variants: live.variants.map((v) => {
-      const regPrice = Number(v.regularPrice ?? v.originalPrice ?? (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price));
+      const regPrice = Number(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price));
       const rawDisc = v.discountPrice !== null && v.discountPrice !== undefined
         ? Number(v.discountPrice)
         : (v.salePrice ? Number(v.salePrice) : (v.compareAtPrice && v.compareAtPrice > v.price ? v.price : null));
       const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regPrice;
       const sellingPrice = hasDisc ? rawDisc! : regPrice;
       const compareAt = hasDisc ? regPrice : null;
+      const stock = v.stock ?? v.stockQuantity ?? v.availableQuantity ?? 25;
 
       return {
         id: v.id,
@@ -62,6 +63,7 @@ export default async function ProductPage({
         volumeMl: v.volumeMl,
         sizeLabelEn: v.sizeLabelEn || (v.volume ? `${v.volume} Flacon` : "100ml Flacon"),
         sizeLabelAr: v.sizeLabelAr || (v.volume ? `${v.volume} مل` : "100 مل"),
+        basePrice: regPrice,
         regularPrice: regPrice,
         originalPrice: regPrice,
         price: sellingPrice,
@@ -69,8 +71,10 @@ export default async function ProductPage({
         discountPrice: hasDisc ? rawDisc : null,
         salePrice: hasDisc ? rawDisc : null,
         isSampleVial: v.isSampleVial,
-        stockQuantity: v.stockQuantity ?? v.availableQuantity ?? 25,
-        availableQuantity: v.availableQuantity ?? v.stockQuantity ?? 25,
+        stock: stock,
+        stockQuantity: stock,
+        availableQuantity: stock,
+        warehouse: v.warehouse || "DXB-MAIN",
         isDefault: Boolean(v.isDefault),
       };
     }),

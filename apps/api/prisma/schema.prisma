@@ -476,6 +476,7 @@ model ProductVariant {
   isDefault       Boolean                @default(false)
   isSampleVial    Boolean                @default(false)
   barcode         String?
+  warehouse       String?                @default("DXB-MAIN")
   product         Product                @relation(fields: [productId], references: [id], onDelete: Cascade)
   marketPrices    MarketPrice[]
   inventoryLots   InventoryLot[]
