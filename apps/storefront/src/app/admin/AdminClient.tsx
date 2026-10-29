@@ -8,13 +8,13 @@ const AdminDashboard = dynamic(
   {
     ssr: false,
     loading: () => (
-      <div className="min-h-screen bg-[#090D14] flex flex-col items-center justify-center text-slate-300">
-        <div className="w-10 h-10 border-2 border-amber-500/60 border-t-transparent rounded-full animate-spin mb-4" />
+      <div className="min-h-screen bg-white dark:bg-black flex flex-col items-center justify-center text-neutral-900 dark:text-neutral-100">
+        <div className="w-10 h-10 border-2 border-black dark:border-white border-t-transparent rounded-full animate-spin mb-4" />
         <div className="text-center space-y-1">
-          <p className="text-xs uppercase tracking-[0.25em] text-amber-400/90 font-medium">
+          <p className="text-xs uppercase tracking-[0.25em] text-neutral-900 dark:text-white font-medium">
             Muschio Haute Parfumerie
           </p>
-          <p className="text-xs text-slate-500 font-sans">
+          <p className="text-xs text-neutral-500 font-sans">
             Initializing Administrative Suite & Secure Storage...
           </p>
         </div>

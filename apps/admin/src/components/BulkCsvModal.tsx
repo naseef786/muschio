@@ -356,11 +356,11 @@ export function BulkCsvModal({
 
   return (
     <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-[#111622] border border-slate-800 w-full max-w-5xl rounded-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-5xl rounded-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
         {/* MODAL HEADER */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#0E1420]">
+        <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-black">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-accent/20 border border-accent/30 text-accent">
+            <div className="p-2 rounded bg-black text-white dark:bg-white dark:text-black">
               <FileSpreadsheet size={20} />
             </div>
             <div>
@@ -370,14 +370,14 @@ export function BulkCsvModal({
                   SEO FRIENDLY
                 </span>
               </div>
-              <p className="text-xs text-slate-400 font-sans mt-0.5">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-sans mt-0.5">
                 Upload products in bulk with automated SEO slugs and note links
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
+            className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
           >
             <X size={20} />
           </button>
@@ -386,13 +386,13 @@ export function BulkCsvModal({
         {/* CONTROLS & SUBHEADER */}
         <div className="p-6 space-y-5 overflow-y-auto flex-1">
           {/* Action Row */}
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-[#0A0D14] p-4 border border-slate-800 rounded">
+          <div className="flex flex-wrap items-center justify-between gap-4 bg-neutral-50 dark:bg-neutral-900 p-4 border border-neutral-200 dark:border-neutral-800 rounded">
             {/* Input Mode Selector */}
-            <div className="flex items-center gap-2 bg-[#111622] p-1 border border-slate-800 rounded text-xs">
+            <div className="flex items-center gap-2 bg-white dark:bg-neutral-950 p-1 border border-neutral-200 dark:border-neutral-800 rounded text-xs">
               <button
                 onClick={() => setMode("paste")}
                 className={`px-3 py-1.5 rounded transition-colors ${
-                  mode === "paste" ? "bg-accent text-white font-medium shadow" : "text-slate-400 hover:text-white"
+                  mode === "paste" ? "bg-black text-white dark:bg-white dark:text-black font-medium shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 Paste CSV
@@ -400,7 +400,7 @@ export function BulkCsvModal({
               <button
                 onClick={() => setMode("upload")}
                 className={`px-3 py-1.5 rounded transition-colors flex items-center gap-1.5 ${
-                  mode === "upload" ? "bg-accent text-white font-medium shadow" : "text-slate-400 hover:text-white"
+                  mode === "upload" ? "bg-black text-white dark:bg-white dark:text-black font-medium shadow-sm" : "text-neutral-500 dark:text-neutral-400 hover:text-white"
                 }`}
               >
                 <Upload size={13} />
@@ -410,12 +410,12 @@ export function BulkCsvModal({
 
             {/* Template Download & Options */}
             <div className="flex items-center gap-3">
-              <label className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer select-none">
+              <label className="flex items-center gap-2 text-xs text-neutral-700 dark:text-neutral-300 cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={autoGenerateSeo}
                   onChange={(e) => setAutoGenerateSeo(e.target.checked)}
-                  className="rounded border-slate-700 bg-slate-900 text-accent focus:ring-accent"
+                  className="rounded border-neutral-300 dark:border-neutral-700 bg-slate-900 text-accent focus:ring-accent"
                 />
                 <span className="flex items-center gap-1">
                   <Sparkles size={13} className="text-amber-400" />
@@ -425,7 +425,7 @@ export function BulkCsvModal({
 
               <button
                 onClick={handleDownloadTemplate}
-                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded flex items-center gap-1.5 border border-slate-700 transition-colors"
+                className="px-3.5 py-1.5 bg-slate-800 hover:bg-slate-700 text-neutral-900 dark:text-neutral-100 text-xs font-medium rounded flex items-center gap-1.5 border border-neutral-300 dark:border-neutral-700 transition-colors"
                 title="Download CSV template file"
               >
                 <Download size={13} />
@@ -452,11 +452,11 @@ export function BulkCsvModal({
               className={`border-2 border-dashed rounded-lg p-8 text-center transition-all ${
                 isDragging
                   ? "border-accent bg-accent/10"
-                  : "border-slate-700 bg-[#0A0D14]/50 hover:border-slate-600"
+                  : "border-neutral-300 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900/50 hover:border-neutral-400 dark:border-neutral-600"
               }`}
             >
-              <Upload size={32} className="mx-auto text-slate-500 mb-3" />
-              <p className="text-sm text-slate-200 font-medium">
+              <Upload size={32} className="mx-auto text-neutral-500 mb-3" />
+              <p className="text-sm text-neutral-900 dark:text-neutral-100 font-medium">
                 Drop your CSV file here, or{" "}
                 <label className="text-accent underline cursor-pointer hover:text-accent-hover">
                   browse from device
@@ -472,11 +472,11 @@ export function BulkCsvModal({
                   />
                 </label>
               </p>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-neutral-500 mt-1">
                 Accepted: UTF-8 formatted .CSV files
               </p>
               {fileName && (
-                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-slate-800 border border-slate-700 text-emerald-400 text-xs rounded font-mono">
+                <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-slate-800 border border-neutral-300 dark:border-neutral-700 text-emerald-400 text-xs rounded font-mono">
                   <CheckCircle2 size={13} />
                   <span>{fileName} ({parsedResult.products.length} products parsed)</span>
                 </div>
@@ -484,7 +484,7 @@ export function BulkCsvModal({
             </div>
           ) : (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400">
                 <span>Paste CSV data (headers included):</span>
                 <button
                   onClick={() => setCsvContent(PRO_SEO_CSV_TEMPLATE)}
@@ -498,20 +498,20 @@ export function BulkCsvModal({
                 onChange={(e) => setCsvContent(e.target.value)}
                 rows={6}
                 placeholder="sku,nameEn,nameAr,slug,brand,scentFamily,concentration,gender,volumeMl,priceAed,sealedStock,topNotes,heartNotes,baseNotes..."
-                className="w-full bg-[#0A0D14] border border-slate-800 text-white font-mono text-[11px] p-3 rounded focus:outline-none focus:border-slate-600 leading-relaxed"
+                className="w-full bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white font-mono text-[11px] p-3 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 leading-relaxed"
               />
             </div>
           )}
 
           {/* SEO VERIFICATION STATS */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="p-3 bg-[#0A0D14] border border-slate-800 rounded">
-              <span className="text-[10px] uppercase tracking-wider text-slate-400 block">Total Products</span>
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded">
+              <span className="text-[10px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400 block">Total Products</span>
               <div className="text-xl font-serif text-white mt-1">{parsedResult.products.length}</div>
-              <span className="text-[10px] text-slate-500">In CSV batch</span>
+              <span className="text-[10px] text-neutral-500">In CSV batch</span>
             </div>
 
-            <div className="p-3 bg-[#0A0D14] border border-emerald-500/30 rounded">
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-emerald-500/30 rounded">
               <span className="text-[10px] uppercase tracking-wider text-emerald-400 block flex items-center gap-1">
                 <CheckCircle2 size={12} />
                 <span>Ready to Import</span>
@@ -519,10 +519,10 @@ export function BulkCsvModal({
               <div className="text-xl font-serif text-emerald-400 mt-1">
                 {parsedResult.validCount + parsedResult.warningCount}
               </div>
-              <span className="text-[10px] text-slate-500">Valid products</span>
+              <span className="text-[10px] text-neutral-500">Valid products</span>
             </div>
 
-            <div className="p-3 bg-[#0A0D14] border border-amber-500/30 rounded">
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-amber-500/30 rounded">
               <span className="text-[10px] uppercase tracking-wider text-amber-400 block flex items-center gap-1">
                 <Award size={12} />
                 <span>New Brands</span>
@@ -530,10 +530,10 @@ export function BulkCsvModal({
               <div className="text-xl font-serif text-amber-400 mt-1">
                 +{parsedResult.newBrandsToCreate.length}
               </div>
-              <span className="text-[10px] text-slate-500">Will create brand pages</span>
+              <span className="text-[10px] text-neutral-500">Will create brand pages</span>
             </div>
 
-            <div className="p-3 bg-[#0A0D14] border border-purple-500/30 rounded">
+            <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-purple-500/30 rounded">
               <span className="text-[10px] uppercase tracking-wider text-purple-400 block flex items-center gap-1">
                 <Layers size={12} />
                 <span>New Notes</span>
@@ -541,7 +541,7 @@ export function BulkCsvModal({
               <div className="text-xl font-serif text-purple-400 mt-1">
                 +{parsedResult.newNotesToCreate.length}
               </div>
-              <span className="text-[10px] text-slate-500">Will create note pages</span>
+              <span className="text-[10px] text-neutral-500">Will create note pages</span>
             </div>
           </div>
 
@@ -550,18 +550,18 @@ export function BulkCsvModal({
             <div className="flex items-center justify-between">
               <h3 className="font-serif text-sm font-light text-white flex items-center gap-2">
                 <span>Import Preview</span>
-                <span className="text-[10px] text-slate-400 font-sans">
+                <span className="text-[10px] text-neutral-500 dark:text-neutral-400 font-sans">
                   ({parsedResult.products.length} products found)
                 </span>
               </h3>
-              <span className="text-xs text-slate-400 font-mono">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                 Storefront domain: <span className="text-emerald-400">https://muschio.luxury</span>
               </span>
             </div>
 
-            <div className="border border-slate-800 bg-[#0A0D14] overflow-x-auto rounded max-h-72">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900 overflow-x-auto rounded max-h-72">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800 sticky top-0 z-10">
+                <thead className="bg-neutral-50 dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800 sticky top-0 z-10">
                   <tr>
                     <th className="p-3 text-start">Product</th>
                     <th className="p-3 text-start">SEO URL</th>
@@ -575,7 +575,7 @@ export function BulkCsvModal({
                 <tbody className="divide-y divide-slate-800/60 font-sans">
                   {parsedResult.products.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="p-6 text-center text-slate-500 text-xs">
+                      <td colSpan={7} className="p-6 text-center text-neutral-500 text-xs">
                         No product rows detected. Upload a .csv file or paste CSV content above.
                       </td>
                     </tr>
@@ -585,15 +585,15 @@ export function BulkCsvModal({
                         <tr className="hover:bg-slate-900/60 transition-colors">
                           <td className="p-3">
                             <span className="font-medium text-white block">{p.nameEn}</span>
-                            <span className="text-slate-400 text-[11px]" dir="rtl">{p.nameAr}</span>
-                            <span className="text-slate-500 font-mono text-[10px] block mt-0.5">{p.sku}</span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-[11px]" dir="rtl">{p.nameAr}</span>
+                            <span className="text-neutral-500 font-mono text-[10px] block mt-0.5">{p.sku}</span>
                           </td>
                           <td className="p-3 font-mono text-[11px]">
-                            <span className="text-slate-500">/en/product/</span>
+                            <span className="text-neutral-500">/en/product/</span>
                             <span className="text-emerald-400 font-medium">{p.slug || "auto-generated"}</span>
                           </td>
                           <td className="p-3">
-                            <span className="text-slate-200 block font-medium">{p.brand}</span>
+                            <span className="text-neutral-900 dark:text-neutral-100 block font-medium">{p.brand}</span>
                             {p.isNewBrand ? (
                               <span className="text-[9px] px-1.5 py-0.2 bg-purple-500/20 text-purple-300 rounded border border-purple-500/30">
                                 +Auto-create brand
@@ -604,7 +604,7 @@ export function BulkCsvModal({
                           </td>
                           <td className="p-3 text-[11px]">
                             <div className="space-y-0.5">
-                              <span className="text-slate-300 block">
+                              <span className="text-neutral-700 dark:text-neutral-300 block">
                                 Top: {p.topNotes.length} • Heart: {p.heartNotes.length} • Base: {p.baseNotes.length}
                               </span>
                               {p.newNotesCount > 0 && (
@@ -616,7 +616,7 @@ export function BulkCsvModal({
                           </td>
                           <td className="p-3 font-mono text-xs">
                             <span className="text-white block">{p.price}</span>
-                            <span className="text-slate-400 text-[10px]">{p.stock} sealed ({p.warehouse})</span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-[10px]">{p.stock} sealed ({p.warehouse})</span>
                           </td>
                           <td className="p-3">
                             {p.validationStatus === "VALID" ? (
@@ -636,7 +636,7 @@ export function BulkCsvModal({
                               </span>
                             )}
                             {p.validationMessages.length > 0 && (
-                              <div className="text-[10px] text-slate-400 mt-1 space-y-0.5 max-w-xs">
+                              <div className="text-[10px] text-neutral-500 dark:text-neutral-400 mt-1 space-y-0.5 max-w-xs">
                                 {p.validationMessages.map((m, i) => (
                                   <div key={i}>• {m}</div>
                                 ))}
@@ -646,7 +646,7 @@ export function BulkCsvModal({
                           <td className="p-3 text-end">
                             <button
                               onClick={() => setPreviewSerpSku(previewSerpSku === p.sku ? null : p.sku)}
-                              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] rounded border border-slate-700 flex items-center gap-1 ml-auto transition-colors"
+                              className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-neutral-700 dark:text-neutral-300 text-[10px] rounded border border-neutral-300 dark:border-neutral-700 flex items-center gap-1 ml-auto transition-colors"
                             >
                               <Search size={11} />
                               <span>{previewSerpSku === p.sku ? "Hide SERP" : "View SERP"}</span>
@@ -656,10 +656,10 @@ export function BulkCsvModal({
 
                         {/* GOOGLE SERP RICH SNIPPET PREVIEW ACCORDION */}
                         {previewSerpSku === p.sku && (
-                          <tr className="bg-[#080B10] border-t border-b border-emerald-500/30">
+                          <tr className="bg-neutral-50 dark:bg-neutral-900 border-t border-b border-emerald-500/30">
                             <td colSpan={7} className="p-4">
                               <div className="space-y-2">
-                                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                                <div className="flex items-center justify-between text-[11px] text-neutral-500 dark:text-neutral-400">
                                   <span className="font-semibold text-emerald-400 flex items-center gap-1">
                                     <Globe size={13} />
                                     <span>Google Search Engine Result Snippet (Desktop & Mobile SERP)</span>
@@ -667,14 +667,14 @@ export function BulkCsvModal({
                                   <span className="text-[10px] font-mono">Structured Data: Schema.org Product</span>
                                 </div>
 
-                                <div className="bg-[#121620] p-4 rounded border border-slate-800 font-sans max-w-2xl space-y-1">
+                                <div className="bg-neutral-50 dark:bg-neutral-900 p-4 rounded border border-neutral-200 dark:border-neutral-800 font-sans max-w-2xl space-y-1">
                                   {/* URL Breadcrumb */}
-                                  <div className="flex items-center gap-1.5 text-xs text-slate-400">
-                                    <span className="text-slate-300">https://muschio.luxury</span>
+                                  <div className="flex items-center gap-1.5 text-xs text-neutral-500 dark:text-neutral-400">
+                                    <span className="text-neutral-700 dark:text-neutral-300">https://muschio.luxury</span>
                                     <span>›</span>
                                     <span>en</span>
                                     <span>›</span>
-                                    <span className="text-slate-400 font-mono">product › {p.slug}</span>
+                                    <span className="text-neutral-500 dark:text-neutral-400 font-mono">product › {p.slug}</span>
                                   </div>
 
                                   {/* SERP Title */}
@@ -683,12 +683,12 @@ export function BulkCsvModal({
                                   </h4>
 
                                   {/* SERP Description */}
-                                  <p className="text-xs text-slate-300 leading-relaxed pt-0.5">
+                                  <p className="text-xs text-neutral-700 dark:text-neutral-300 leading-relaxed pt-0.5">
                                     {p.metaDescription || generateProductMetaDescription(p.nameEn, p.brand, p.concentration, p.topNotes)}
                                   </p>
 
                                   {/* Rich Schema Metadata */}
-                                  <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] text-slate-400 border-t border-slate-800/80 mt-2 font-mono">
+                                  <div className="flex flex-wrap items-center gap-3 pt-2 text-[11px] text-neutral-500 dark:text-neutral-400 border-t border-neutral-200 dark:border-neutral-800/80 mt-2 font-mono">
                                     <span className="text-emerald-400">Rating: 5.0 ★★★★★</span>
                                     <span>•</span>
                                     <span>Price: {p.price}</span>
@@ -712,8 +712,8 @@ export function BulkCsvModal({
         </div>
 
         {/* MODAL FOOTER */}
-        <div className="px-6 py-4 border-t border-slate-800 bg-[#0E1420] flex items-center justify-between">
-          <div className="text-xs text-slate-400 font-sans">
+        <div className="px-6 py-4 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-black flex items-center justify-between">
+          <div className="text-xs text-neutral-500 dark:text-neutral-400 font-sans">
             Ready to import:{" "}
             <span className="text-white font-semibold">
               {parsedResult.validCount + parsedResult.warningCount}
@@ -726,14 +726,14 @@ export function BulkCsvModal({
           <div className="flex items-center gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded text-xs transition-colors"
+              className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-white rounded text-xs transition-colors"
             >
               Cancel
             </button>
             <button
               onClick={handleExecuteImport}
               disabled={parsedResult.validCount + parsedResult.warningCount === 0}
-              className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs rounded flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-950/40"
+              className="px-5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs rounded flex items-center gap-1.5 transition-colors shadow-lg shadow-emerald-950/40"
             >
               <CheckCircle2 size={14} />
               <span>

@@ -118,38 +118,32 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
   };
 
   return (
-    <div className="min-h-screen bg-[#070A0F] flex items-center justify-center p-4 selection:bg-amber-500 selection:text-black">
-      {/* AMBIENT BACKGROUND GLOW */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -left-40 w-96 h-96 bg-amber-500/5 rounded-full blur-3xl" />
-        <div className="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="relative w-full max-w-md bg-[#0C101A]/95 border border-amber-500/20 shadow-2xl shadow-black/80 rounded-2xl p-8 backdrop-blur-xl space-y-6">
+    <div className="min-h-screen bg-neutral-100 dark:bg-black text-neutral-900 dark:text-neutral-100 flex items-center justify-center p-4 selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black">
+      <div className="relative w-full max-w-md bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 shadow-xl rounded-xl p-6 sm:p-8 space-y-6">
         {/* BRAND CREST & TITLE */}
         <div className="text-center space-y-3">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-br from-amber-500/20 via-amber-500/5 to-transparent border border-amber-500/40 shadow-inner shadow-amber-500/20">
-            <span className="font-serif text-amber-300 font-bold text-2xl tracking-tight">M</span>
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700">
+            <span className="font-serif font-bold text-xl tracking-tight">M</span>
           </div>
 
           <div>
-            <h1 className="font-serif text-2xl font-normal tracking-[0.2em] text-white">
+            <h1 className="font-serif text-2xl font-light tracking-[0.25em] text-neutral-900 dark:text-white">
               MUSCHIO
             </h1>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-amber-400/90 font-medium mt-1">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 dark:text-neutral-400 font-medium mt-1">
               HAUTE PARFUMERIE • DUBAI & GCC
             </p>
           </div>
 
-          <div className="pt-2 border-t border-slate-800/80 flex items-center justify-center gap-1.5 text-[11px] text-slate-400 font-sans">
-            <ShieldCheck size={13} className="text-emerald-400" />
+          <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 font-sans">
+            <ShieldCheck size={14} className="text-black dark:text-white" />
             <span>Restricted Administrator Console</span>
           </div>
         </div>
 
         {/* ERROR NOTIFICATION */}
         {errorMsg && (
-          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-sans leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
+          <div className="p-3 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs font-sans leading-relaxed animate-in fade-in slide-in-from-top-1 duration-200">
             {errorMsg}
           </div>
         )}
@@ -157,9 +151,9 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
         {/* LOGIN FORM */}
         <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
           <div className="space-y-1.5">
-            <label className="block text-slate-300 font-medium">Administrator Email</label>
+            <label className="block text-neutral-700 dark:text-neutral-300 font-medium">Administrator Email</label>
             <div className="relative">
-              <Mail size={15} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+              <Mail size={15} className="absolute inset-y-0 start-3 my-auto text-neutral-400" />
               <input
                 type="email"
                 required
@@ -167,25 +161,25 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
                 placeholder="superadmin@muschio.luxury"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="w-full bg-[#080B12] border border-slate-800 text-white ps-10 pe-3 py-2.5 rounded-lg focus:outline-none focus:border-amber-500/60 transition-colors font-mono"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white ps-10 pe-3 py-2.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white transition-colors font-mono"
               />
             </div>
           </div>
 
           <div className="space-y-1.5">
             <div className="flex items-center justify-between">
-              <label className="block text-slate-300 font-medium">Security Password</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 font-medium">Security Password</label>
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[11px] text-slate-400 hover:text-amber-400 transition-colors flex items-center gap-1"
+                className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
               >
                 {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{showPassword ? "Hide" : "Show"}</span>
               </button>
             </div>
             <div className="relative">
-              <Lock size={15} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+              <Lock size={15} className="absolute inset-y-0 start-3 my-auto text-neutral-400" />
               <input
                 type={showPassword ? "text" : "password"}
                 required
@@ -193,29 +187,29 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
                 placeholder="••••••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#080B12] border border-slate-800 text-white ps-10 pe-10 py-2.5 rounded-lg focus:outline-none focus:border-amber-500/60 transition-colors font-mono"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white ps-10 pe-10 py-2.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white transition-colors font-mono"
               />
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
+          <div className="flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-400 pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"
                 checked={rememberMe}
                 onChange={(e) => setRememberMe(e.target.checked)}
-                className="rounded border-slate-700 bg-slate-900 text-amber-500 focus:ring-amber-500/30"
+                className="rounded border-neutral-300 dark:border-neutral-700 bg-white dark:bg-black text-black dark:text-white focus:ring-black dark:focus:ring-white"
               />
               <span>Remember session (12 hrs)</span>
             </label>
-            <span className="font-mono text-emerald-400/90 text-[10px]">256-Bit SSL</span>
+            <span className="font-mono text-[10px] text-neutral-500">256-Bit SSL</span>
           </div>
 
           {/* SUBMIT BUTTON */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600 hover:from-amber-500 hover:to-amber-500 text-slate-950 font-semibold tracking-wider uppercase text-xs rounded-lg shadow-lg shadow-amber-500/10 flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+            className="w-full py-3 bg-black text-white hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 font-semibold tracking-wider uppercase text-xs rounded-md shadow-sm flex items-center justify-center gap-2 transition-all disabled:opacity-50"
           >
             {isLoading ? (
               <>
@@ -232,21 +226,21 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
         </form>
 
         {/* DEMO CREDENTIALS QUICK FILL FOR EASY TESTING */}
-        <div className="pt-4 border-t border-slate-800/80 space-y-2">
+        <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
           <div className="flex items-center justify-between text-[11px]">
-            <span className="text-slate-500">Seeded Master Credentials:</span>
+            <span className="text-neutral-500">Seeded Master Credentials:</span>
             <button
               type="button"
               onClick={handleFillDemo}
-              className="text-amber-400 hover:text-amber-300 font-medium flex items-center gap-1 transition-colors"
+              className="text-neutral-900 dark:text-white hover:underline font-medium flex items-center gap-1 transition-colors"
             >
               <Sparkles size={11} />
               <span>Auto-Fill Credentials</span>
             </button>
           </div>
-          <div className="p-2.5 rounded bg-[#080B12] border border-slate-800/80 text-[11px] font-mono text-slate-400 flex items-center justify-between">
-            <span className="text-slate-300">superadmin@muschio.luxury</span>
-            <span className="text-slate-500">MuschioAdmin2026!</span>
+          <div className="p-2.5 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-mono text-neutral-600 dark:text-neutral-400 flex items-center justify-between">
+            <span className="text-neutral-900 dark:text-neutral-100">superadmin@muschio.luxury</span>
+            <span className="text-neutral-500">MuschioAdmin2026!</span>
           </div>
         </div>
       </div>

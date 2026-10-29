@@ -21,7 +21,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           rel="stylesheet"
         />
       </head>
-      <body className="bg-[#090D14] text-[#F8FAFC] antialiased min-h-screen">
+      <body className="bg-white dark:bg-black text-neutral-900 dark:text-neutral-100 antialiased min-h-screen">
         {children}
       </body>
     </html>

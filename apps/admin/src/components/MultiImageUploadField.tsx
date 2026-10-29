@@ -138,13 +138,13 @@ export function MultiImageUploadField({
   };
 
   return (
-    <div className="space-y-3 pt-2 border-t border-slate-800">
+    <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
-          <ImageIcon size={14} className="text-amber-400" />
-          <span className="text-[11px] font-medium text-slate-200">{label}</span>
-          <span className="text-[10px] px-1.5 py-0.5 bg-slate-800 text-slate-400 rounded-full font-mono">
+          <ImageIcon size={14} className="text-neutral-700 dark:text-neutral-300" />
+          <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">{label}</span>
+          <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-mono border border-neutral-200 dark:border-neutral-700">
             {images.length} {images.length === 1 ? "photo" : "photos"}
           </span>
         </div>
@@ -152,7 +152,7 @@ export function MultiImageUploadField({
           <button
             type="button"
             onClick={() => setShowUrlInput(!showUrlInput)}
-            className="text-[10px] text-amber-400 hover:text-amber-300 transition-colors flex items-center gap-1"
+            className="text-[10px] text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-1"
           >
             <Plus size={11} />
             <span>{showUrlInput ? "Hide URL" : "Add by URL"}</span>
@@ -160,11 +160,11 @@ export function MultiImageUploadField({
         </div>
       </div>
 
-      <p className="text-[10px] text-slate-400 leading-normal">{hint}</p>
+      <p className="text-[10px] text-neutral-500 leading-normal">{hint}</p>
 
       {/* URL Input Bar */}
       {showUrlInput && (
-        <div className="flex items-center gap-2 p-2 bg-[#0A0E17] border border-slate-800 rounded">
+        <div className="flex items-center gap-2 p-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md">
           <input
             type="url"
             placeholder="https://images.unsplash.com/... or https://res.cloudinary.com/..."
@@ -176,13 +176,13 @@ export function MultiImageUploadField({
                 handleAddCustomUrl();
               }
             }}
-            className="flex-1 bg-[#111622] border border-slate-700/60 text-white text-xs px-2.5 py-1.5 rounded focus:outline-none focus:border-amber-500 font-mono"
+            className="flex-1 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white font-mono"
           />
           <button
             type="button"
             onClick={handleAddCustomUrl}
             disabled={!customUrl.trim()}
-            className="px-3 py-1.5 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 text-white text-xs font-medium rounded transition-colors"
+            className="px-3 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 disabled:opacity-50 text-white text-xs font-medium rounded-md transition-colors"
           >
             Add Photo
           </button>
@@ -191,11 +191,11 @@ export function MultiImageUploadField({
 
       {/* Grid of Existing Photos */}
       {images.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 p-3 bg-[#0A0E17] border border-slate-800/80 rounded">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3 p-3 bg-neutral-50 dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg">
           {images.map((url, idx) => (
             <div
               key={`${url}-${idx}`}
-              className="group relative aspect-square rounded-md overflow-hidden bg-[#111622] border border-slate-700/80 hover:border-slate-500 transition-all shadow-sm"
+              className="group relative aspect-square rounded-md overflow-hidden bg-neutral-200 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white transition-all shadow-sm"
             >
               <img
                 src={url}
@@ -208,7 +208,7 @@ export function MultiImageUploadField({
 
               {/* Cover Badge */}
               {idx === 0 ? (
-                <div className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-emerald-950/90 border border-emerald-500/50 text-emerald-400 text-[9px] font-semibold rounded flex items-center gap-0.5 shadow">
+                <div className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[9px] font-semibold rounded flex items-center gap-0.5 shadow">
                   <Star size={9} fill="currentColor" />
                   <span>Cover</span>
                 </div>
@@ -216,7 +216,7 @@ export function MultiImageUploadField({
                 <button
                   type="button"
                   onClick={() => handleSetCover(idx)}
-                  className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-black/80 hover:bg-amber-600 border border-slate-600 hover:border-amber-500 text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-all shadow"
+                  className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-black/80 hover:bg-black text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-all shadow"
                   title="Make this the primary cover photo"
                 >
                   Set Cover
@@ -229,7 +229,7 @@ export function MultiImageUploadField({
                   href={url}
                   target="_blank"
                   rel="noreferrer"
-                  className="p-1 bg-black/80 hover:bg-slate-700 text-slate-300 hover:text-white rounded transition-colors"
+                  className="p-1 bg-black/80 hover:bg-neutral-800 text-neutral-200 hover:text-white rounded transition-colors"
                   title="View full resolution"
                 >
                   <ExternalLink size={10} />
@@ -237,7 +237,7 @@ export function MultiImageUploadField({
                 <button
                   type="button"
                   onClick={() => handleRemoveImage(idx)}
-                  className="p-1 bg-black/80 hover:bg-rose-600 text-slate-300 hover:text-white rounded transition-colors"
+                  className="p-1 bg-black/80 hover:bg-black text-neutral-200 hover:text-white rounded transition-colors"
                   title="Delete image"
                 >
                   <Trash2 size={10} />
@@ -245,7 +245,7 @@ export function MultiImageUploadField({
               </div>
 
               {/* Index Number */}
-              <div className="absolute bottom-1 end-1.5 px-1 bg-black/70 text-slate-400 text-[8px] rounded font-mono">
+              <div className="absolute bottom-1 end-1.5 px-1 bg-black/70 text-white text-[8px] rounded font-mono">
                 #{idx + 1}
               </div>
             </div>
@@ -256,12 +256,12 @@ export function MultiImageUploadField({
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="aspect-square rounded-md border-2 border-dashed border-slate-700/80 hover:border-amber-500/70 bg-[#0E1420]/60 hover:bg-amber-500/5 transition-all flex flex-col items-center justify-center p-2 text-center group cursor-pointer"
+            className="aspect-square rounded-md border border-dashed border-neutral-300 dark:border-neutral-700 hover:border-black dark:hover:border-white bg-white dark:bg-black transition-all flex flex-col items-center justify-center p-2 text-center group cursor-pointer"
           >
-            <div className="p-2 rounded-full bg-slate-800 group-hover:bg-amber-500/20 text-slate-400 group-hover:text-amber-400 transition-colors mb-1">
+            <div className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black text-neutral-600 dark:text-neutral-400 transition-colors mb-1">
               <Plus size={14} />
             </div>
-            <span className="text-[10px] text-slate-400 group-hover:text-slate-200">
+            <span className="text-[10px] text-neutral-600 dark:text-neutral-400 group-hover:text-black dark:group-hover:text-white">
               Add More
             </span>
           </button>
@@ -274,20 +274,20 @@ export function MultiImageUploadField({
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onClick={() => fileInputRef.current?.click()}
-          className="border-2 border-dashed border-slate-700/80 hover:border-amber-500/80 bg-[#0A0E17] hover:bg-[#0E1420] p-6 rounded-lg text-center cursor-pointer transition-all space-y-2 group"
+          className="border border-dashed border-neutral-300 dark:border-neutral-800 hover:border-black dark:hover:border-white bg-neutral-50 dark:bg-neutral-950 hover:bg-neutral-100 dark:hover:bg-neutral-900 p-6 rounded-lg text-center cursor-pointer transition-all space-y-2 group"
         >
-          <div className="mx-auto w-10 h-10 rounded-full bg-slate-800 group-hover:bg-amber-500/20 text-slate-400 group-hover:text-amber-400 flex items-center justify-center transition-colors">
+          <div className="mx-auto w-10 h-10 rounded-full bg-neutral-200 dark:bg-neutral-800 group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black text-neutral-600 dark:text-neutral-400 flex items-center justify-center transition-colors">
             {isUploading ? (
-              <Loader2 size={18} className="animate-spin text-amber-400" />
+              <Loader2 size={18} className="animate-spin text-black dark:text-white" />
             ) : (
               <Upload size={18} />
             )}
           </div>
           <div>
-            <p className="text-xs text-white font-medium">
+            <p className="text-xs text-neutral-900 dark:text-white font-medium">
               Click to select product photos or drag & drop here
             </p>
-            <p className="text-[10px] text-slate-500 mt-0.5">
+            <p className="text-[10px] text-neutral-500 mt-0.5">
               Select multiple files at once • PNG, JPG, WEBP up to 10MB
             </p>
           </div>
@@ -296,26 +296,26 @@ export function MultiImageUploadField({
 
       {/* Upload Feedback */}
       {isUploading && (
-        <div className="flex items-center gap-2 p-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs rounded">
-          <Loader2 size={13} className="animate-spin text-amber-400 shrink-0" />
+        <div className="flex items-center gap-2 p-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs rounded-md">
+          <Loader2 size={13} className="animate-spin text-black dark:text-white shrink-0" />
           <span>{uploadProgress || "Uploading images to Cloudinary..."}</span>
         </div>
       )}
 
       {uploadSuccess && (
-        <div className="flex items-center gap-2 p-2 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs rounded">
+        <div className="flex items-center gap-2 p-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs rounded-md">
           <Check size={13} className="shrink-0" />
           <span>Photos uploaded successfully to Cloudinary!</span>
         </div>
       )}
 
       {uploadError && (
-        <div className="flex items-center justify-between p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs rounded">
+        <div className="flex items-center justify-between p-2 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs rounded-md">
           <span>{uploadError}</span>
           <button
             type="button"
             onClick={() => setUploadError(null)}
-            className="hover:text-white"
+            className="hover:text-black dark:hover:text-white"
           >
             <X size={12} />
           </button>

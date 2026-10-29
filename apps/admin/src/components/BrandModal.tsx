@@ -103,49 +103,49 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-[#111622] border border-slate-800 w-full max-w-2xl rounded-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
+    <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 z-50 overflow-y-auto">
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl rounded-lg shadow-2xl flex flex-col max-h-[92vh] overflow-hidden my-auto">
         {/* HEADER */}
-        <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between bg-[#0E1420]">
+        <div className="px-5 sm:px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-black">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded bg-amber-500/20 border border-amber-500/30 text-amber-400">
+            <div className="p-2 rounded bg-black text-white dark:bg-white dark:text-black">
               <Award size={18} />
             </div>
             <div>
-              <h2 className="font-serif text-lg font-light text-white">
+              <h2 className="font-serif text-lg font-light text-neutral-900 dark:text-white">
                 {brandToEdit ? `Edit Brand: ${brandToEdit.name}` : "Add Brand"}
               </h2>
-              <p className="text-xs text-slate-400 font-sans">
+              <p className="text-xs text-neutral-500 font-sans">
                 Brand details, origin, and SEO settings
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-1 text-slate-400 hover:text-white rounded">
+          <button onClick={onClose} className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded">
             <X size={18} />
           </button>
         </div>
 
         {/* FORM BODY */}
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
           {/* Row 1: Name and Category */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="sm:col-span-2">
-              <label className="block text-slate-400 mb-1">Brand Name *</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Brand Name *</label>
               <input
                 type="text"
                 placeholder="e.g. Amouage or Clive Christian"
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded focus:outline-none focus:border-slate-600"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white"
                 required
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Brand Type</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Brand Type</label>
               <select
                 value={formData.type}
                 onChange={(e) => setFormData({ ...formData, type: e.target.value as "NICHE" | "DESIGNER" })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md"
               >
                 <option value="NICHE">Niche Brand</option>
                 <option value="DESIGNER">Designer Brand</option>
@@ -156,8 +156,8 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
           {/* Row 2: SEO Canonical Slug */}
           <div>
             <div className="flex items-center justify-between mb-1">
-              <label className="text-slate-400">URL Slug *</label>
-              <span className="text-[10px] text-emerald-400 font-mono">
+              <label className="text-neutral-700 dark:text-neutral-300">URL Slug *</label>
+              <span className="text-[10px] text-neutral-500 font-mono">
                 Storefront: /en/brands/{formData.slug || "slug"}
               </span>
             </div>
@@ -166,7 +166,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
               placeholder="e.g. amouage"
               value={formData.slug}
               onChange={(e) => setFormData({ ...formData, slug: slugify(e.target.value) })}
-              className="w-full bg-[#0E1420] border border-slate-800 text-emerald-400 font-mono p-2.5 rounded focus:outline-none focus:border-slate-600"
+              className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white font-mono p-2.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white"
               required
             />
           </div>
@@ -174,39 +174,39 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
           {/* Row 3: Origins & Year */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="block text-slate-400 mb-1">Country (English)</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Country (English)</label>
               <input
                 type="text"
                 placeholder="e.g. Sultanate of Oman"
                 value={formData.countryEn}
                 onChange={(e) => setFormData({ ...formData, countryEn: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Country (Arabic)</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Country (Arabic)</label>
               <input
                 type="text"
                 dir="rtl"
                 placeholder="e.g. سلطنة عُمان"
                 value={formData.countryAr}
                 onChange={(e) => setFormData({ ...formData, countryAr: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Founding Year</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Founding Year</label>
               <input
                 type="number"
                 value={formData.year}
                 onChange={(e) => setFormData({ ...formData, year: Number(e.target.value) })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md font-mono"
               />
             </div>
           </div>
 
           {/* Row 4: Maison Visual Identity */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-neutral-200 dark:border-neutral-800">
             <MediaUploadField
               label="Brand Logo"
               value={formData.logoUrl}
@@ -226,9 +226,9 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
           </div>
 
           {/* Row 5: Editorial Brand Stories */}
-          <div className="space-y-3 pt-1 border-t border-slate-800">
+          <div className="space-y-3 pt-1 border-t border-neutral-200 dark:border-neutral-800">
             <div>
-              <label className="block text-slate-400 mb-1">
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">
                 Brand Description (English)
               </label>
               <textarea
@@ -236,28 +236,28 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
                 placeholder="Established in 1983 in the Sultanate of Oman..."
                 value={formData.storyEn}
                 onChange={(e) => setFormData({ ...formData, storyEn: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md text-xs leading-relaxed"
               />
             </div>
             <div>
-              <label className="block text-slate-400 mb-1">Brand Description (Arabic)</label>
+              <label className="block text-neutral-700 dark:text-neutral-300 mb-1">Brand Description (Arabic)</label>
               <textarea
                 rows={3}
                 dir="rtl"
                 placeholder="تأسست عام 1983 في سلطنة عُمان..."
                 value={formData.storyAr}
                 onChange={(e) => setFormData({ ...formData, storyAr: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md text-xs leading-relaxed"
               />
             </div>
           </div>
 
           {/* Row 6: Google SERP Meta Tags */}
-          <div className="space-y-3 pt-1 border-t border-slate-800">
+          <div className="space-y-3 pt-1 border-t border-neutral-200 dark:border-neutral-800">
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-slate-400">SEO Title (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaTitle.length > 60 ? "text-amber-400" : "text-slate-500"}`}>
+                <label className="text-neutral-700 dark:text-neutral-300">SEO Title (Google)</label>
+                <span className={`text-[10px] font-mono ${formData.metaTitle.length > 60 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaTitle.length}/60 chars
                 </span>
               </div>
@@ -266,14 +266,14 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
                 placeholder={generateBrandMetaTitle(formData.name || "Brand")}
                 value={formData.metaTitle}
                 onChange={(e) => setFormData({ ...formData, metaTitle: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md"
               />
             </div>
 
             <div>
               <div className="flex items-center justify-between mb-1">
-                <label className="text-slate-400">SEO Description (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaDescription.length > 160 ? "text-amber-400" : "text-slate-500"}`}>
+                <label className="text-neutral-700 dark:text-neutral-300">SEO Description (Google)</label>
+                <span className={`text-[10px] font-mono ${formData.metaDescription.length > 160 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaDescription.length}/160 chars
                 </span>
               </div>
@@ -282,44 +282,44 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
                 placeholder={generateBrandMetaDescription(formData.name || "Brand", formData.countryEn)}
                 value={formData.metaDescription}
                 onChange={(e) => setFormData({ ...formData, metaDescription: e.target.value })}
-                className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded leading-relaxed"
+                className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded-md leading-relaxed"
               />
             </div>
           </div>
 
           {/* SERP PREVIEW BOX */}
-          <div className="p-3.5 bg-[#080B10] border border-slate-800 rounded space-y-1 font-sans">
-            <span className="text-[10px] text-emerald-400 font-semibold block flex items-center gap-1">
+          <div className="p-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md space-y-1 font-sans">
+            <span className="text-[10px] text-neutral-900 dark:text-white font-semibold flex items-center gap-1">
               <Globe size={11} />
               <span>Google Search Preview</span>
             </span>
-            <div className="text-xs text-slate-400 flex items-center gap-1">
+            <div className="text-xs text-neutral-500 flex items-center gap-1">
               <span>https://muschio.luxury</span>
               <span>›</span>
               <span>en</span>
               <span>›</span>
-              <span className="font-mono text-slate-300">brands › {formData.slug || "slug"}</span>
+              <span className="font-mono text-neutral-700 dark:text-neutral-300">brands › {formData.slug || "slug"}</span>
             </div>
-            <div className="text-sm text-[#8AB4F8] hover:underline font-medium">
+            <div className="text-sm text-neutral-900 dark:text-white font-medium hover:underline">
               {formData.metaTitle || generateBrandMetaTitle(formData.name || "Brand")}
             </div>
-            <div className="text-xs text-slate-300 leading-relaxed">
+            <div className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
               {formData.metaDescription || generateBrandMetaDescription(formData.name || "Brand", formData.countryEn)}
             </div>
           </div>
 
           {/* FOOTER ACTIONS */}
-          <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+          <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded"
+              className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-amber-600 hover:bg-amber-500 text-white font-medium rounded flex items-center gap-1.5 transition-colors"
+              className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded-md flex items-center gap-1.5 transition-colors"
             >
               <CheckCircle2 size={14} />
               <span>Save Brand</span>

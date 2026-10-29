@@ -30,6 +30,7 @@ import {
   Download,
   Edit3,
   LogOut,
+  Menu,
 } from "lucide-react";
 import {
   BrandItem,
@@ -164,10 +165,10 @@ const SLOT_LABELS: Record<BannerSlot, string> = {
 };
 
 const SLOT_COLORS: Record<BannerSlot, string> = {
-  HERO_SLIDER: "bg-violet-500/20 text-violet-400 border border-violet-500/30",
-  CAMPAIGN_MID: "bg-amber-500/20 text-amber-400 border border-amber-500/30",
-  PROMO_STRIP: "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30",
-  ANNOUNCEMENT_BAR: "bg-rose-500/20 text-rose-400 border border-rose-500/30",
+  HERO_SLIDER: "bg-black text-white dark:bg-white dark:text-black",
+  CAMPAIGN_MID: "bg-neutral-200 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700",
+  PROMO_STRIP: "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800",
+  ANNOUNCEMENT_BAR: "border border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400",
 };
 
 const SECTION_LABELS: Record<string, string> = {
@@ -206,7 +207,8 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
 
 export function App() {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
-  const [adminTheme, setAdminTheme] = usePersistentState<"obsidian" | "executive">("theme", "obsidian");
+  const [adminTheme, setAdminTheme] = usePersistentState<"light" | "dark">("theme", "light");
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
 
   // Admin Security Authentication Session
   const [authSession, setAuthSession] = useState<AdminAuthSession | null>(() => {
@@ -1613,209 +1615,167 @@ export function App() {
   return (
     <div
       className={`min-h-screen ${
-        adminTheme === "obsidian" ? "bg-[#070A0F] text-slate-200" : "bg-[#0C1017] text-slate-100"
-      } flex font-sans antialiased selection:bg-amber-500 selection:text-black`}
+        adminTheme === "light" ? "bg-neutral-100 text-neutral-900" : "bg-black text-white"
+      } flex flex-col md:flex-row font-sans antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black`}
     >
-      {/* SIDEBAR NAVIGATION */}
-      <aside className="w-64 border-e border-slate-800 bg-[#0E1420] flex flex-col justify-between p-4 shrink-0">
+      {/* MOBILE TOP NAVIGATION BAR (< md) */}
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setIsMobileNavOpen(true)}
+            className="p-1.5 -ms-1 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+            aria-label="Open Navigation Menu"
+          >
+            <Menu size={22} />
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white">MUSCHIO</span>
+            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black font-mono">
+              Admin
+            </span>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 capitalize hidden xs:inline">
+            {TAB_TITLES[activeTab]}
+          </span>
+          <button
+            onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
+            className="px-2 py-1 text-xs rounded border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+            title="Toggle Light / Dark"
+          >
+            {adminTheme === "light" ? "DARK" : "LIGHT"}
+          </button>
+          <a
+            href="/"
+            target="_blank"
+            rel="noreferrer"
+            className="p-1.5 rounded text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+            title="Open Live Storefront"
+          >
+            <ExternalLink size={16} />
+          </a>
+        </div>
+      </header>
+
+      {/* MOBILE BACKDROP OVERLAY */}
+      {isMobileNavOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileNavOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Static on Desktop) */}
+      <aside
+        className={`fixed inset-y-0 start-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between p-4 transform transition-transform duration-200 ease-in-out md:static md:w-64 md:translate-x-0 md:shrink-0 ${
+          isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
         <div className="space-y-6">
-          <div className="flex items-center gap-3 px-2">
-            <div className="w-8 h-8 rounded bg-gradient-to-br from-amber-500/20 to-emerald-500/20 border border-amber-500/30 flex items-center justify-center">
-              <span className="font-serif text-amber-300 font-bold text-sm">M</span>
+          <div className="flex items-center justify-between px-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm">
+                M
+              </div>
+              <div>
+                <span className="font-serif tracking-widest text-lg font-bold text-neutral-900 dark:text-white block">MUSCHIO</span>
+                <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono">Admin Panel</span>
+              </div>
             </div>
-            <div>
-              <span className="font-serif tracking-widest text-lg font-bold text-white block">MUSCHIO</span>
-              <span className="text-[10px] uppercase tracking-[0.2em] text-accent block">Admin Panel</span>
-            </div>
+            <button
+              onClick={() => setIsMobileNavOpen(false)}
+              className="md:hidden p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+              aria-label="Close Navigation"
+            >
+              <X size={18} />
+            </button>
           </div>
 
           <nav className="space-y-1 text-xs font-sans">
-            <button
-              onClick={() => setActiveTab("dashboard")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "dashboard" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <LayoutDashboard size={16} />
-                <span>Dashboard</span>
-              </span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("products")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "products" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Package size={16} />
-                <span>Products</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-300">{products.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("brands")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "brands" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Award size={16} />
-                <span>Brands</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300">{brands.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("notes")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "notes" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Layers size={16} />
-                <span>Notes</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-300">{notes.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("inventory")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded transition-colors ${
-                activeTab === "inventory" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Warehouse size={16} />
-              <span>Inventory</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("purchasing")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded transition-colors ${
-                activeTab === "purchasing" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <FileText size={16} />
-              <span>Purchasing</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("returns")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "returns" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <RotateCcw size={16} />
-                <span>Returns</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-400">{returns.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("orders")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "orders" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <ShoppingBag size={16} />
-                <span>Orders</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400">{orders.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("reviews")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "reviews" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Star size={16} />
-                <span>Reviews</span>
-              </span>
-              {pendingReviewsCount > 0 && (
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 font-bold">{pendingReviewsCount}</span>
-              )}
-            </button>
-
-            <button
-              onClick={() => setActiveTab("markets")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded transition-colors ${
-                activeTab === "markets" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <Globe size={16} />
-              <span>Markets</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("banners")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "banners" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <ImageIcon size={16} />
-                <span>Banners</span>
-              </span>
-              <span className="text-[10px] px-1.5 py-0.5 rounded bg-violet-500/20 text-violet-400">{banners.length}</span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("settings")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded transition-colors ${
-                activeTab === "settings" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <span className="flex items-center gap-3">
-                <Share2 size={16} />
-                <span>Settings</span>
-              </span>
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-            </button>
-
-            <button
-              onClick={() => setActiveTab("audit")}
-              className={`w-full flex items-center gap-3 px-3 py-2.5 rounded transition-colors ${
-                activeTab === "audit" ? "bg-accent/20 text-white font-medium border-s-2 border-accent" : "text-slate-400 hover:text-white"
-              }`}
-            >
-              <ShieldCheck size={16} />
-              <span>Audit Log</span>
-            </button>
+            {[
+              { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "products", label: "Products", icon: Package, count: products.length },
+              { id: "brands", label: "Brands", icon: Award, count: brands.length },
+              { id: "notes", label: "Notes", icon: Layers, count: notes.length },
+              { id: "inventory", label: "Inventory", icon: Warehouse },
+              { id: "purchasing", label: "Purchasing", icon: FileText },
+              { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
+              { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
+              { id: "reviews", label: "Reviews", icon: Star, count: pendingReviewsCount > 0 ? pendingReviewsCount : undefined },
+              { id: "markets", label: "Markets", icon: Globe },
+              { id: "banners", label: "Banners", icon: ImageIcon, count: banners.length },
+              { id: "settings", label: "Settings", icon: Share2 },
+              { id: "audit", label: "Audit Log", icon: ShieldCheck },
+            ].map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as AdminTab);
+                    setIsMobileNavOpen(false);
+                  }}
+                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
+                      : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <Icon size={16} />
+                    <span>{item.label}</span>
+                  </span>
+                  {item.count !== undefined && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                        isActive
+                          ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
+                          : "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800"
+                      }`}
+                    >
+                      {item.count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
           </nav>
         </div>
 
-        <div className="p-3 bg-[#0A0D14] border border-slate-800/80 text-[11px] space-y-2 rounded-xl">
+        <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-500/20 to-amber-500/5 border border-amber-500/40 flex items-center justify-center text-amber-300 font-bold text-xs shrink-0">
+              <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
                 {authSession.user.name.charAt(0) || "A"}
               </div>
               <div className="min-w-0">
-                <div className="font-medium text-slate-200 truncate">{authSession.user.name}</div>
-                <div className="text-slate-400 font-mono text-[9px] truncate">{authSession.user.email}</div>
+                <div className="font-medium text-neutral-900 dark:text-white truncate">{authSession.user.name}</div>
+                <div className="text-neutral-500 font-mono text-[9px] truncate">{authSession.user.email}</div>
               </div>
             </div>
           </div>
 
-          <div className="flex items-center justify-between pt-1.5 border-t border-slate-800 text-[10px]">
-            <span className="font-mono px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-300 border border-amber-500/30">
+          <div className="flex items-center justify-between pt-1.5 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
+            <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
               {authSession.user.role.replace("_", " ")}
             </span>
-            <div className="text-emerald-400 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
               <span>Active</span>
             </div>
           </div>
 
           <button
-            onClick={handleLogout}
-            className="w-full py-1.5 px-2 rounded-lg bg-slate-900 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/30 border border-slate-800 text-slate-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
+            onClick={() => {
+              setIsMobileNavOpen(false);
+              handleLogout();
+            }}
+            className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
           >
             <LogOut size={12} />
             <span>Sign Out Session</span>
@@ -1824,43 +1784,41 @@ export function App() {
       </aside>
 
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 p-8 space-y-8 overflow-y-auto">
+      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto overflow-x-hidden">
         {/* HEADER */}
-        <header className="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-slate-800">
+        <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 md:pb-6 border-b border-neutral-200 dark:border-neutral-800">
           <div>
-            <h1 className="font-serif text-2xl font-light text-white capitalize">
+            <h1 className="font-serif text-2xl font-light text-neutral-900 dark:text-white capitalize">
               {TAB_TITLES[activeTab] || activeTab}
             </h1>
-            <p className="text-xs text-slate-400 font-sans mt-0.5">
+            <p className="text-xs text-neutral-500 font-sans mt-0.5">
               {TAB_SUBTITLES[activeTab] || "Muschio Fragrance Store Management"}
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
-              onClick={() => setAdminTheme(adminTheme === "obsidian" ? "executive" : "obsidian")}
-              className="px-3 py-1.5 bg-[#0C101A] border border-slate-800 text-xs text-slate-300 hover:text-white rounded-lg flex items-center gap-2 transition-colors"
-              title="Toggle Console Appearance"
+              onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
+              className="px-3 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md flex items-center gap-2 transition-colors shadow-sm"
+              title="Toggle Monochromatic Black & White Theme"
             >
               <span
-                className={`w-2 h-2 rounded-full transition-all ${
-                  adminTheme === "obsidian"
-                    ? "bg-amber-400 shadow-sm shadow-amber-400/80"
-                    : "bg-cyan-400 shadow-sm shadow-cyan-400/80"
+                className={`w-2 h-2 rounded-full border border-neutral-400 ${
+                  adminTheme === "light" ? "bg-white" : "bg-black"
                 }`}
               />
-              <span className="capitalize">{adminTheme} Mode</span>
+              <span className="capitalize">{adminTheme} (B&W)</span>
             </button>
 
-            <div className="px-3 py-1.5 bg-[#0C101A] border border-slate-800 text-xs font-mono text-slate-300 rounded-lg">
-              UAE VAT: 5.0% • KSA VAT: 15.0%
+            <div className="hidden sm:block px-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-600 dark:text-neutral-400 rounded-md">
+              UAE: 5.0% • KSA: 15.0%
             </div>
 
             <a
               href="/"
               target="_blank"
               rel="noreferrer"
-              className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-medium text-xs font-sans transition-all flex items-center gap-1.5 rounded-lg shadow-md shadow-amber-500/10"
+              className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium text-xs font-sans transition-all flex items-center gap-1.5 rounded-md shadow-sm"
             >
               <Sparkles size={14} />
               <span>Live Storefront ↗</span>
@@ -1872,8 +1830,8 @@ export function App() {
         {activeTab === "dashboard" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Total Net Revenue (MTD)</span>
+              <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Net Revenue (MTD)</span>
                 <div className="font-serif text-3xl text-white font-light">384,250 AED</div>
                 <div className="text-emerald-400 text-xs flex items-center gap-1">
                   <TrendingUp size={12} />
@@ -1881,29 +1839,29 @@ export function App() {
                 </div>
               </div>
 
-              <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Pending Orders</span>
+              <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Orders</span>
                 <div className="font-serif text-3xl text-amber-400 font-light">{activeOrdersCount} Orders</div>
-                <div className="text-slate-400 text-xs font-mono">In processing & dispatch</div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">In processing & dispatch</div>
               </div>
 
-              <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Total Stock</span>
+              <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Stock</span>
                 <div className="font-serif text-3xl text-emerald-400 font-light">{totalStockUnits} Units</div>
-                <div className="text-slate-400 text-xs font-mono">+{totalTesterUnits} Testers</div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">+{totalTesterUnits} Testers</div>
               </div>
 
-              <div className="p-6 bg-[#111622] border border-slate-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-slate-400">Pending Returns</span>
+              <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Returns</span>
                 <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Units</div>
-                <div className="text-slate-400 text-xs">Awaiting inspection</div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs">Awaiting inspection</div>
               </div>
             </div>
 
             {/* Quick Status Bar */}
-            <div className="p-4 bg-[#111622] border border-slate-800 rounded flex items-center justify-between text-xs">
+            <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex items-center justify-between text-xs">
               <div className="flex items-center gap-4">
-                <span className="text-slate-400">Storefront Social Status:</span>
+                <span className="text-neutral-500 dark:text-neutral-400">Storefront Social Status:</span>
                 <span className="inline-flex items-center gap-1.5 text-emerald-400 font-medium">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                   Instagram ({storeSettings.instagramHandle}) & WhatsApp Connected
@@ -1925,20 +1883,20 @@ export function App() {
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-sm">
-                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
                 <input
                   type="text"
                   placeholder="Search by SKU, product name, or brand..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={handleDownloadTemplateDirect}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium rounded flex items-center gap-1.5 border border-slate-700 transition-colors"
+                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-neutral-900 dark:text-neutral-100 text-xs font-medium rounded flex items-center gap-1.5 border border-neutral-300 dark:border-neutral-700 transition-colors"
                   title="Download clean CSV template for bulk import"
                 >
                   <Download size={14} />
@@ -1956,7 +1914,7 @@ export function App() {
 
                 <button
                   onClick={handleOpenAddProduct}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
                 >
                   <Plus size={14} />
                   <span>Add Product</span>
@@ -1964,9 +1922,9 @@ export function App() {
               </div>
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Product (EN / AR)</th>
                     <th className="p-4 text-start">URL Slug</th>
@@ -1994,7 +1952,7 @@ export function App() {
                       <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded border border-slate-700 bg-slate-900/80 overflow-hidden flex-shrink-0 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded border border-neutral-300 dark:border-neutral-700 bg-slate-900/80 overflow-hidden flex-shrink-0 flex items-center justify-center">
                               {p.imageUrl ? (
                                 <img
                                   src={p.imageUrl}
@@ -2008,20 +1966,20 @@ export function App() {
                             <div>
                               <span className="font-semibold text-white block">{p.name}</span>
                               {p.nameAr && (
-                                <span className="text-slate-400 text-xs" dir="rtl">
+                                <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
                                   {p.nameAr}
                                 </span>
                               )}
-                              <span className="text-slate-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                              <span className="text-neutral-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
                             </div>
                           </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-slate-400">
-                            <span className="text-slate-500">/product/</span>
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-500">/product/</span>
                             <span className="text-emerald-400 font-medium">{p.slug}</span>
                           </div>
-                          <span className="text-[10px] text-slate-500 font-sans block mt-0.5">
+                          <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
                             {p.concentration || "Extrait de Parfum"}
                           </span>
                         </td>
@@ -2031,13 +1989,13 @@ export function App() {
                               setActiveTab("brands");
                               setBrandSearch(p.brand);
                             }}
-                            className="text-slate-200 font-medium hover:text-accent hover:underline flex items-center gap-1"
+                            className="text-neutral-900 dark:text-neutral-100 font-medium hover:text-accent hover:underline flex items-center gap-1"
                             title="View brand details"
                           >
                             <span>{p.brand}</span>
                             <Award size={11} className="text-amber-400" />
                           </button>
-                          <span className="text-[10px] text-slate-400 block font-mono">{p.scentFamily || "Woody Amber"}</span>
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono">{p.scentFamily || "Woody Amber"}</span>
                           {p.perfumer && (
                             <span className="text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
                               <Sparkles size={10} className="text-amber-400 flex-shrink-0" />
@@ -2047,18 +2005,18 @@ export function App() {
                         </td>
                         <td className="p-4 text-[11px]">
                           <div className="space-y-0.5">
-                            <span className="text-slate-300 block">
+                            <span className="text-neutral-700 dark:text-neutral-300 block">
                               Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
                             </span>
                             {p.topNotes && p.topNotes.length > 0 && (
-                              <span className="text-slate-500 text-[10px] block truncate max-w-xs">
+                              <span className="text-neutral-500 text-[10px] block truncate max-w-xs">
                                 Opening: {p.topNotes.slice(0, 2).join(", ")}
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="p-4 font-mono">
-                          <div className="font-medium text-slate-100">{p.price}</div>
+                          <div className="font-medium text-neutral-900 dark:text-white">{p.price}</div>
                           {p.variants && p.variants.length > 0 ? (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {p.variants.map((v, i) => {
@@ -2070,7 +2028,7 @@ export function App() {
                                     className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${
                                       v.isDefault
                                         ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
-                                        : "bg-slate-800 text-slate-400 border-slate-700"
+                                        : "bg-slate-800 text-neutral-500 dark:text-neutral-400 border-neutral-300 dark:border-neutral-700"
                                     }`}
                                     title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
                                   >
@@ -2081,20 +2039,20 @@ export function App() {
                               })}
                             </div>
                           ) : (
-                            <span className="text-[10px] text-slate-500 block">{p.volumeMl || 100}ml</span>
+                            <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
                           )}
                         </td>
                         <td className="p-4 font-mono">
                           <span className="text-emerald-400 block">{p.stock} sealed ({p.warehouse})</span>
                           {p.variants && p.variants.length > 1 && (
-                            <span className="text-slate-400 text-[10px] block">
+                            <span className="text-neutral-500 dark:text-neutral-400 text-[10px] block">
                               Total across {p.variants.length} sizes: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)}
                             </span>
                           )}
                           <span className="text-purple-400 text-[11px]">+{p.testerStock} testers</span>
                         </td>
                         <td className="p-4">
-                          <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                          <span className="px-2 py-0.5 bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
                             <CheckCircle2 size={11} />
                             <span>SEO Ready</span>
                           </span>
@@ -2103,7 +2061,7 @@ export function App() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               onClick={() => handleOpenEditProduct(p)}
-                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
                               title="Edit Product"
                             >
                               <Edit3 size={14} />
@@ -2112,14 +2070,14 @@ export function App() {
                               href={`/en/product/${p.slug}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
                               title="View Storefront Page"
                             >
                               <ExternalLink size={14} />
                             </a>
                             <button
                               onClick={() => handleDeleteProduct(p.id, p.name)}
-                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
                               title="Delete Product"
                             >
                               <Trash2 size={14} />
@@ -2138,15 +2096,15 @@ export function App() {
                 onClick={() => setShowProductModal(false)}
               >
                 <div
-                  className="bg-[#111622] border border-slate-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto"
+                  className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-2xl p-6 space-y-4 rounded-lg shadow-2xl max-h-[92vh] overflow-y-auto my-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                     <div>
                       <h3 className="font-serif text-lg text-white font-light">
                         {editingProductId ? "Edit Product" : "Add Product"}
                       </h3>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
                         {editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags"}
                       </p>
                     </div>
@@ -2155,30 +2113,30 @@ export function App() {
                         setShowProductModal(false);
                         setEditingProductId(null);
                       }}
-                      className="text-slate-400 hover:text-white"
+                      className="text-neutral-500 dark:text-neutral-400 hover:text-white"
                     >
                       <X size={18} />
                     </button>
                   </div>
                   <div className="space-y-4 text-xs">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-400 mb-1">SKU Code *</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">SKU Code *</label>
                         <input
                           type="text"
                           placeholder="e.g. AMO-INT53-100"
                           value={productForm.sku}
                           onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Brand *</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Brand *</label>
                         <select
                           value={productForm.brand}
                           onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                         >
                           {brands.map((b) => (
                             <option key={b.id} value={b.name}>
@@ -2190,37 +2148,37 @@ export function App() {
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 mb-1">Product Name (English) *</label>
+                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Name (English) *</label>
                       <input
                         type="text"
                         placeholder="e.g. Royal Taif Extrait de Parfum"
                         value={productForm.name}
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-slate-400 mb-1">Product Name (Arabic)</label>
+                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Name (Arabic)</label>
                       <input
                         type="text"
                         dir="rtl"
                         placeholder="e.g. ورد الطائف إكستريت دي بارفان"
                         value={productForm.nameAr}
                         onChange={(e) => setProductForm({ ...productForm, nameAr: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                       />
                     </div>
 
                     {/* Olfactory Scent Family & Concentration */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-400 mb-1">Scent Family (Olfactory Classification) *</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Scent Family (Olfactory Classification) *</label>
                         <select
                           value={productForm.scentFamily}
                           onChange={(e) => setProductForm({ ...productForm, scentFamily: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         >
                           <option value="Woody Amber">Woody Amber (خشب العنبر)</option>
                           <option value="Amber Floral">Amber Floral (عنبر زهري)</option>
@@ -2236,11 +2194,11 @@ export function App() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Concentration *</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Concentration *</label>
                         <select
                           value={productForm.concentration}
                           onChange={(e) => setProductForm({ ...productForm, concentration: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs"
                         >
                           <option value="EXTRAIT_DE_PARFUM">Extrait de Parfum (30-53%)</option>
                           <option value="PARFUM">Parfum Pure (20-30%)</option>
@@ -2251,18 +2209,18 @@ export function App() {
                     </div>
 
                     {/* Master Perfumer(s) / Nose Details */}
-                    <div className="p-3.5 bg-[#0E1420] border border-slate-800 rounded space-y-3">
+                    <div className="p-3.5 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
                           <Award size={13} />
                           <span>Master Perfumer(s) / Nose (الأنف العطري)</span>
                         </span>
-                        <span className="text-[10px] text-slate-500 font-mono">Storefront: Maison & Perfumer Details</span>
+                        <span className="text-[10px] text-neutral-500 font-mono">Storefront: Maison & Perfumer Details</span>
                       </div>
                       
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-slate-400 text-[10px]">
+                          <label className="text-neutral-500 dark:text-neutral-400 text-[10px]">
                             Perfumer Names (multiple names can be written separated by commas)
                           </label>
                           <span className="text-[10px] text-amber-400/80 font-sans">Multiple Noses Supported</span>
@@ -2272,14 +2230,14 @@ export function App() {
                           placeholder="e.g. Pierre Negrin, Renaud Salmon, Karine Vinchon"
                           value={productForm.perfumer}
                           onChange={(e) => setProductForm({ ...productForm, perfumer: e.target.value })}
-                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         />
                       </div>
 
                       {/* Interactive Perfumer Badges */}
                       {productForm.perfumer.trim() && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                          <span className="text-[10px] text-slate-400">Tagged Perfumers:</span>
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Tagged Perfumers:</span>
                           {productForm.perfumer
                             .split(",")
                             .map((s) => s.trim())
@@ -2310,8 +2268,8 @@ export function App() {
                       )}
 
                       {/* Quick-Add Renowned Noses */}
-                      <div className="pt-1 border-t border-slate-800/80">
-                        <span className="text-[10px] text-slate-400 block mb-1.5">Quick-Add Master Perfumer:</span>
+                      <div className="pt-1 border-t border-neutral-200 dark:border-neutral-800/80">
+                        <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block mb-1.5">Quick-Add Master Perfumer:</span>
                         <div className="flex flex-wrap gap-1">
                           {[
                             "Pierre Negrin",
@@ -2345,8 +2303,8 @@ export function App() {
                                 disabled={isAlreadyAdded}
                                 className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
                                   isAlreadyAdded
-                                    ? "bg-slate-800/60 text-slate-500 border border-slate-800 cursor-default"
-                                    : "bg-[#141C2B] hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60"
+                                    ? "bg-slate-800/60 text-neutral-500 border border-neutral-200 dark:border-neutral-800 cursor-default"
+                                    : "bg-[#141C2B] hover:bg-amber-950/40 text-neutral-700 dark:text-neutral-300 hover:text-amber-300 border border-neutral-300 dark:border-neutral-700/60"
                                 }`}
                               >
                                 {isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}`}
@@ -2357,50 +2315,50 @@ export function App() {
                       </div>
 
                       <div>
-                        <label className="block text-slate-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
                         <input
                           type="text"
                           placeholder="e.g. Master French perfumer famed for architectural incense and royal extraits"
                           value={productForm.perfumerBio}
                           onChange={(e) => setProductForm({ ...productForm, perfumerBio: e.target.value })}
-                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         />
                       </div>
                     </div>
 
                     {/* Editorial Product Descriptions */}
-                    <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
                           <FileText size={13} className="text-amber-400" />
                           <span>Product Editorial Descriptions</span>
                         </span>
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Product Description (English)</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Description (English)</label>
                         <textarea
                           rows={3}
                           placeholder="e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano..."
                           value={productForm.descriptionEn}
                           onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Product Description (Arabic)</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Description (Arabic)</label>
                         <textarea
                           rows={3}
                           dir="rtl"
                           placeholder="e.g. بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان. يفتتح بنفحات الأوريغانو والفلفل الحار..."
                           value={productForm.descriptionAr}
                           onChange={(e) => setProductForm({ ...productForm, descriptionAr: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600 font-sans"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600 font-sans"
                         />
                       </div>
                     </div>
 
                     {/* Dynamic Bottle Volume Variants & Warehouse Inventory Table */}
-                    <div className="p-4 bg-[#0B0F17] border border-slate-800 rounded-lg space-y-3">
+                    <div className="p-4 bg-[#0B0F17] border border-neutral-200 dark:border-neutral-800 rounded-lg space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
@@ -2412,13 +2370,13 @@ export function App() {
                               Dynamic Builder
                             </span>
                           </div>
-                          <p className="text-[11px] text-slate-400 mt-1">
+                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
                             Configure multiple volume options per product (e.g. 30ml, 50ml, 100ml) with dual pricing (Selling Price vs. Base MRP) and warehouse inventory.
                           </p>
                         </div>
                         {/* Quick-add buttons */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-slate-500">Quick Add:</span>
+                          <span className="text-[10px] text-neutral-500">Quick Add:</span>
                           {[30, 50, 100, 200].map((volNum) => (
                             <button
                               key={volNum}
@@ -2450,7 +2408,7 @@ export function App() {
                                   variants: [...productForm.variants, newVariant],
                                 });
                               }}
-                              className="px-2.5 py-1 text-[10px] font-mono bg-slate-800/80 hover:bg-amber-950/40 text-slate-300 hover:text-amber-300 border border-slate-700/60 rounded transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-mono bg-slate-800/80 hover:bg-amber-950/40 text-neutral-700 dark:text-neutral-300 hover:text-amber-300 border border-neutral-300 dark:border-neutral-700/60 rounded transition-colors"
                             >
                               + {volNum}ml
                             </button>
@@ -2459,9 +2417,9 @@ export function App() {
                       </div>
 
                       {/* Variant Table */}
-                      <div className="overflow-x-auto border border-slate-800 rounded-md bg-[#0E1420]">
+                      <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-md bg-white dark:bg-black">
                         <table className="w-full text-start text-xs font-sans">
-                          <thead className="bg-[#121826] text-slate-400 uppercase tracking-wider text-[10px] border-b border-slate-800">
+                          <thead className="bg-[#121826] text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[10px] border-b border-neutral-200 dark:border-neutral-800">
                             <tr>
                               <th className="p-2.5 text-start font-medium">Volume (ml) *</th>
                               <th className="p-2.5 text-start font-medium">Selling Price (AED) *</th>
@@ -2507,10 +2465,10 @@ export function App() {
                                             };
                                             setProductForm({ ...productForm, variants: updated });
                                           }}
-                                          className="w-24 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                          className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
                                           required
                                         />
-                                        <span className="absolute end-2 top-2 text-[10px] text-slate-500 pointer-events-none">ml</span>
+                                        <span className="absolute end-2 top-2 text-[10px] text-neutral-500 pointer-events-none">ml</span>
                                       </div>
                                       <input
                                         type="text"
@@ -2521,7 +2479,7 @@ export function App() {
                                           updated[index] = { ...v, sku: e.target.value };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className="w-24 bg-[#080B10] border border-slate-800/80 text-slate-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-white"
+                                        className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800/80 text-neutral-500 dark:text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-white"
                                         title="Variant SKU (optional / auto-generated)"
                                       />
                                     </div>
@@ -2547,12 +2505,12 @@ export function App() {
                                           };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className={`w-32 bg-[#0A0D14] border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
+                                        className={`w-32 bg-neutral-50 dark:bg-neutral-900 border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
                                           isOverpriced
                                             ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
                                             : isDiscounted
                                             ? "border-emerald-500/60 text-emerald-300"
-                                            : "border-slate-800 text-white focus:border-amber-500/50"
+                                            : "border-neutral-200 dark:border-neutral-800 text-white focus:border-amber-500/50"
                                         }`}
                                         required
                                       />
@@ -2588,7 +2546,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-32 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      className="w-32 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
                                       required
                                     />
                                   </td>
@@ -2611,7 +2569,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-24 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
                                       required
                                     />
                                   </td>
@@ -2628,7 +2586,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-36 bg-[#0A0D14] border border-slate-800 text-white px-2.5 py-1.5 rounded text-xs focus:border-amber-500/50 focus:outline-none"
+                                      className="w-36 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs focus:border-amber-500/50 focus:outline-none"
                                     >
                                       <option value="DXB-MAIN">DXB-MAIN (Dubai)</option>
                                       <option value="RUH-HUB">RUH-HUB (Riyadh)</option>
@@ -2652,7 +2610,7 @@ export function App() {
                                       className={`px-2 py-1 rounded text-xs transition-colors ${
                                         v.isDefault
                                           ? "text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
-                                          : "text-slate-500 hover:text-amber-300 border border-transparent"
+                                          : "text-neutral-500 hover:text-amber-300 border border-transparent"
                                       }`}
                                     >
                                       {v.isDefault ? "★ Primary" : "Set"}
@@ -2676,7 +2634,7 @@ export function App() {
                                       className={`p-1.5 rounded transition-colors ${
                                         productForm.variants.length <= 1
                                           ? "text-slate-700 cursor-not-allowed"
-                                          : "text-slate-400 hover:text-rose-400 hover:bg-rose-500/10"
+                                          : "text-neutral-500 dark:text-neutral-400 hover:text-rose-400 hover:bg-rose-500/10"
                                       }`}
                                     >
                                       <Trash2 size={14} />
@@ -2722,7 +2680,7 @@ export function App() {
                           <Plus size={13} className="text-slate-950" />
                           <span>+ Add Volume Variant</span>
                         </button>
-                        <span className="text-[11px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-mono">
                           {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured · Total Stock:{" "}
                           <strong className="text-emerald-400">
                             {productForm.variants.reduce((sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0), 0)} units
@@ -2732,39 +2690,39 @@ export function App() {
                     </div>
 
                     {/* Scent Notes Pyramid */}
-                    <div className="p-3 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                    <div className="p-3 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                       <span className="text-[11px] font-medium text-purple-400 flex items-center gap-1">
                         <Layers size={13} />
                         <span>Scent Notes (comma-separated, auto-linked to note pages)</span>
                       </span>
                       <div>
-                        <label className="block text-slate-500 text-[10px]">Top Notes</label>
+                        <label className="block text-neutral-500 text-[10px]">Top Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Bergamot, Pink Pepper, Taif Rose"
                           value={productForm.topNotes}
                           onChange={(e) => setProductForm({ ...productForm, topNotes: e.target.value })}
-                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-500 text-[10px]">Heart Notes</label>
+                        <label className="block text-neutral-500 text-[10px]">Heart Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Silver Frankincense, Jasmine, Cedarwood"
                           value={productForm.heartNotes}
                           onChange={(e) => setProductForm({ ...productForm, heartNotes: e.target.value })}
-                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-500 text-[10px]">Base Notes</label>
+                        <label className="block text-neutral-500 text-[10px]">Base Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Cambodian Oud, Ambergris, Sandalwood"
                           value={productForm.baseNotes}
                           onChange={(e) => setProductForm({ ...productForm, baseNotes: e.target.value })}
-                          className="w-full bg-[#111622] border border-slate-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
                         />
                       </div>
                     </div>
@@ -2784,9 +2742,9 @@ export function App() {
                     />
 
                     {/* Google SERP SEO Meta Title & Meta Description */}
-                    <div className="space-y-3 pt-2 border-t border-slate-800">
+                    <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
                           <Globe size={13} className="text-emerald-400" />
                           <span>Search Engine Optimization (SEO) & Google SERP</span>
                         </span>
@@ -2817,10 +2775,10 @@ export function App() {
 
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-slate-400">Meta Title (Google)</label>
+                          <label className="text-neutral-500 dark:text-neutral-400">Meta Title (Google)</label>
                           <span
                             className={`text-[10px] font-mono ${
-                              (productForm.metaTitle || "").length > 60 ? "text-amber-400 font-bold" : "text-slate-500"
+                              (productForm.metaTitle || "").length > 60 ? "text-amber-400 font-bold" : "text-neutral-500"
                             }`}
                           >
                             {(productForm.metaTitle || "").length}/60 chars
@@ -2831,16 +2789,16 @@ export function App() {
                           placeholder={generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
                           value={productForm.metaTitle}
                           onChange={(e) => setProductForm({ ...productForm, metaTitle: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         />
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-slate-400">Meta Description (Google)</label>
+                          <label className="text-neutral-500 dark:text-neutral-400">Meta Description (Google)</label>
                           <span
                             className={`text-[10px] font-mono ${
-                              (productForm.metaDescription || "").length > 160 ? "text-amber-400 font-bold" : "text-slate-500"
+                              (productForm.metaDescription || "").length > 160 ? "text-amber-400 font-bold" : "text-neutral-500"
                             }`}
                           >
                             {(productForm.metaDescription || "").length}/160 chars
@@ -2855,29 +2813,29 @@ export function App() {
                           )}
                           value={productForm.metaDescription}
                           onChange={(e) => setProductForm({ ...productForm, metaDescription: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-slate-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                         />
                       </div>
 
                       {/* Live Google Search Preview Box */}
-                      <div className="p-3 bg-[#080B10] border border-slate-800 rounded space-y-1 font-sans">
+                      <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded space-y-1 font-sans">
                         <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
                           <Globe size={11} />
                           <span>Google Search Preview</span>
                         </span>
-                        <div className="text-xs text-slate-400 flex items-center gap-1 overflow-x-auto text-[11px]">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 overflow-x-auto text-[11px]">
                           <span>https://muschio.luxury</span>
                           <span>›</span>
                           <span>en</span>
                           <span>›</span>
-                          <span className="font-mono text-slate-300 truncate">
+                          <span className="font-mono text-neutral-700 dark:text-neutral-300 truncate">
                             product › {slugify(`${productForm.brand || "brand"}-${productForm.name || "product"}`)}
                           </span>
                         </div>
                         <div className="text-sm text-[#8AB4F8] hover:underline font-medium line-clamp-1">
                           {productForm.metaTitle || generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">
                           {productForm.metaDescription ||
                             generateProductMetaDescription(
                               productForm.name || "Fragrance",
@@ -2888,39 +2846,39 @@ export function App() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div>
-                        <label className="block text-slate-400 mb-1">Showroom & Boutique Testers (Units)</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Showroom & Boutique Testers (Units)</label>
                         <input
                           type="number"
                           min="0"
                           value={productForm.testerStock}
                           onChange={(e) => setProductForm({ ...productForm, testerStock: Number(e.target.value) })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono text-xs"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono text-xs"
                           placeholder="2"
                         />
                       </div>
-                      <div className="p-3 bg-[#0A0D14] border border-slate-800 rounded flex flex-col justify-center text-xs">
-                        <span className="text-slate-400 text-[11px]">Primary Warehouse Fulfillment:</span>
+                      <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded flex flex-col justify-center text-xs">
+                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">Primary Warehouse Fulfillment:</span>
                         <span className="text-amber-400 font-medium">
                           {productForm.variants[0]?.warehouse || "DXB-MAIN (Dubai Hub)"}
                         </span>
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
+                  <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
                     <button
                       onClick={() => {
                         setShowProductModal(false);
                         setEditingProductId(null);
                       }}
-                      className="px-4 py-2 border border-slate-800 text-slate-300 hover:text-white rounded"
+                      className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-white rounded"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveProduct}
-                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded flex items-center gap-1.5"
+                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5"
                     >
                       <CheckCircle2 size={14} />
                       <span>{editingProductId ? "Update Product" : "Save Product"}</span>
@@ -2937,13 +2895,13 @@ export function App() {
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-sm">
-                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
                 <input
                   type="text"
                   placeholder="Search by brand name or country..."
                   value={brandSearch}
                   onChange={(e) => setBrandSearch(e.target.value)}
-                  className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                 />
               </div>
 
@@ -2952,16 +2910,16 @@ export function App() {
                   setBrandToEdit(null);
                   setShowBrandModal(true);
                 }}
-                className="px-3.5 py-2 bg-amber-600 hover:bg-amber-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-amber-950/40"
+                className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-amber-950/40"
               >
                 <Plus size={14} />
                 <span>Add Brand</span>
               </button>
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Brand Name</th>
                     <th className="p-4 text-start">URL Slug</th>
@@ -2987,7 +2945,7 @@ export function App() {
                       <tr key={b.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center p-1">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-neutral-300 dark:border-neutral-700/80 shrink-0 flex items-center justify-center p-1">
                               {b.logoUrl || b.heroImageUrl ? (
                                 <img
                                   src={b.logoUrl || b.heroImageUrl}
@@ -3002,13 +2960,13 @@ export function App() {
                             </div>
                             <div>
                               <span className="font-semibold text-white block text-sm">{b.name}</span>
-                              <span className="text-slate-400 text-[11px]">{b.countryEn || "Prestige House"}</span>
+                              <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{b.countryEn || "Prestige House"}</span>
                             </div>
                           </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-slate-400">
-                            <span className="text-slate-500">/brands/</span>
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-500">/brands/</span>
                             <span className="text-amber-400 font-medium">{b.slug}</span>
                           </div>
                         </td>
@@ -3016,7 +2974,7 @@ export function App() {
                           <span
                             className={`px-2 py-0.5 text-[10px] font-bold rounded ${
                               b.type === "NICHE"
-                                ? "bg-amber-500/10 text-amber-300 border border-amber-500/30"
+                                ? "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 border border-amber-500/30"
                                 : "bg-blue-500/10 text-blue-300 border border-blue-500/30"
                             }`}
                           >
@@ -3024,15 +2982,15 @@ export function App() {
                           </span>
                         </td>
                         <td className="p-4">
-                          <span className="text-slate-200 block">{b.countryEn}</span>
-                          <span className="text-slate-500 text-[10px]">Est. {b.year}</span>
+                          <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
+                          <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
                         </td>
                         <td className="p-4 font-mono">
                           <span className="text-emerald-400 font-medium">
                             {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
                           </span>
                         </td>
-                        <td className="p-4 text-slate-400 max-w-sm truncate text-[11px]">
+                        <td className="p-4 text-neutral-500 dark:text-neutral-400 max-w-sm truncate text-[11px]">
                           {b.storyEn || "Brand description available."}
                         </td>
                         <td className="p-4 text-end">
@@ -3042,7 +3000,7 @@ export function App() {
                                 setBrandToEdit(b);
                                 setShowBrandModal(true);
                               }}
-                              className="p-1 text-slate-400 hover:text-amber-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-amber-400 transition-colors"
                               title="Edit Brand"
                             >
                               <Edit3 size={14} />
@@ -3051,14 +3009,14 @@ export function App() {
                               href={`/en/brands/${b.slug}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
                               title="View Brand Page"
                             >
                               <ExternalLink size={14} />
                             </a>
                             <button
                               onClick={() => handleDeleteBrand(b.id, b.name)}
-                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
                               title="Delete Brand"
                             >
                               <Trash2 size={14} />
@@ -3078,18 +3036,18 @@ export function App() {
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="relative flex-1 max-w-sm">
-                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-slate-500" />
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
                 <input
                   type="text"
                   placeholder="Search by note name, Arabic title, or family..."
                   value={noteSearch}
                   onChange={(e) => setNoteSearch(e.target.value)}
-                  className="w-full bg-[#111622] border border-slate-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-slate-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                 />
               </div>
 
               <div className="flex items-center gap-3">
-                <span className="text-xs text-slate-400 font-mono">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                   {notes.length} notes
                 </span>
                 <button
@@ -3097,7 +3055,7 @@ export function App() {
                     setNoteToEdit(null);
                     setShowNoteModal(true);
                   }}
-                  className="px-3.5 py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-purple-950/40"
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-md shadow-purple-950/40"
                 >
                   <Plus size={14} />
                   <span>Add Note</span>
@@ -3105,9 +3063,9 @@ export function App() {
               </div>
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-x-auto rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Note Name (EN / AR)</th>
                     <th className="p-4 text-start">URL Slug</th>
@@ -3134,7 +3092,7 @@ export function App() {
                       <tr key={n.id} className="hover:bg-slate-800/30 transition-colors">
                         <td className="p-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-slate-700/80 shrink-0 flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-neutral-300 dark:border-neutral-700/80 shrink-0 flex items-center justify-center">
                               {n.heroImageUrl || n.thumbnailUrl ? (
                                 <img
                                   src={n.heroImageUrl || n.thumbnailUrl}
@@ -3149,15 +3107,15 @@ export function App() {
                             </div>
                             <div>
                               <span className="font-semibold text-white block text-sm">{n.nameEn}</span>
-                              <span className="text-slate-400 text-xs" dir="rtl">
+                              <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
                                 {n.nameAr}
                               </span>
                             </div>
                           </div>
                         </td>
                         <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-slate-400">
-                            <span className="text-slate-500">/notes/</span>
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-500">/notes/</span>
                             <span className="text-purple-400 font-medium">{n.slug}</span>
                           </div>
                         </td>
@@ -3166,13 +3124,13 @@ export function App() {
                             {n.family}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-300 text-[11px]">
+                        <td className="p-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
                           {n.originEn || "Middle East"}
                         </td>
                         <td className="p-4 font-mono text-emerald-400 font-medium">
                           {n.perfumesCount} products
                         </td>
-                        <td className="p-4 text-slate-400 max-w-xs truncate text-[11px]">
+                        <td className="p-4 text-neutral-500 dark:text-neutral-400 max-w-xs truncate text-[11px]">
                           {n.descriptionEn || "Sensory description available."}
                         </td>
                         <td className="p-4 text-end">
@@ -3182,7 +3140,7 @@ export function App() {
                                 setNoteToEdit(n);
                                 setShowNoteModal(true);
                               }}
-                              className="p-1 text-slate-400 hover:text-purple-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-purple-400 transition-colors"
                               title="Edit Note"
                             >
                               <Edit3 size={14} />
@@ -3191,14 +3149,14 @@ export function App() {
                               href={`/en/notes/${n.slug}`}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-1 text-slate-400 hover:text-emerald-400 transition-colors"
+                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
                               title="View Note Page"
                             >
                               <ExternalLink size={14} />
                             </a>
                             <button
                               onClick={() => handleDeleteNote(n.id, n.nameEn)}
-                              className="p-1 text-slate-500 hover:text-rose-400 transition-colors"
+                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
                               title="Delete Note"
                             >
                               <Trash2 size={14} />
@@ -3217,21 +3175,21 @@ export function App() {
         {activeTab === "inventory" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-[#111622] border border-slate-800 space-y-2 rounded">
+              <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-white">DXB-MAIN (Dubai Central Hub)</span>
-                  <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">DEFAULT WAREHOUSE</span>
+                  <span className="px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">DEFAULT WAREHOUSE</span>
                 </div>
-                <p className="text-xs text-slate-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "DXB-MAIN").reduce((a, b) => a + b.stock, 0)}</p>
-                <div className="text-[11px] font-mono text-slate-500">Express Delivery: Dubai, Abu Dhabi, Sharjah</div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "DXB-MAIN").reduce((a, b) => a + b.stock, 0)}</p>
+                <div className="text-[11px] font-mono text-neutral-500">Express Delivery: Dubai, Abu Dhabi, Sharjah</div>
               </div>
-              <div className="p-4 bg-[#111622] border border-slate-800 space-y-2 rounded">
+              <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-white">RUH-HUB (Riyadh GCC Hub)</span>
                   <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">REGIONAL WAREHOUSE</span>
                 </div>
-                <p className="text-xs text-slate-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "RUH-HUB").reduce((a, b) => a + b.stock, 0)}</p>
-                <div className="text-[11px] font-mono text-slate-500">Express Delivery: Riyadh, Jeddah, Khobar, GCC</div>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "RUH-HUB").reduce((a, b) => a + b.stock, 0)}</p>
+                <div className="text-[11px] font-mono text-neutral-500">Express Delivery: Riyadh, Jeddah, Khobar, GCC</div>
               </div>
             </div>
           </div>
@@ -3240,16 +3198,16 @@ export function App() {
         {/* 5. PURCHASING */}
         {activeTab === "purchasing" && (
           <div className="space-y-6">
-            <div className="border border-slate-800 bg-[#111622] p-6 space-y-3 rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-3 rounded">
               <h3 className="font-serif text-lg text-white font-light">Supplier Purchase Orders</h3>
-              <p className="text-xs text-slate-400">Active purchase orders with official brand distributors in France, Oman, and Italy.</p>
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">Active purchase orders with official brand distributors in France, Oman, and Italy.</p>
               <div className="divide-y divide-slate-800 text-xs font-mono pt-3">
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="text-slate-200">PO-2026-081 • Amouage Luxury LLC (Oman)</span>
+                  <span className="text-neutral-900 dark:text-neutral-100">PO-2026-081 • Amouage Luxury LLC (Oman)</span>
                   <span className="text-emerald-400">DELIVERED & VERIFIED</span>
                 </div>
                 <div className="py-2.5 flex items-center justify-between">
-                  <span className="text-slate-200">PO-2026-082 • Roja Parfums London (UK)</span>
+                  <span className="text-neutral-900 dark:text-neutral-100">PO-2026-082 • Roja Parfums London (UK)</span>
                   <span className="text-amber-400">IN TRANSIT (AIR FREIGHT)</span>
                 </div>
               </div>
@@ -3260,9 +3218,9 @@ export function App() {
         {/* 6. RETURNS */}
         {activeTab === "returns" && (
           <div className="space-y-6">
-            <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Return # / Customer</th>
                     <th className="p-4 text-start">Returned Item</th>
@@ -3277,13 +3235,13 @@ export function App() {
                     <tr key={r.id} className="hover:bg-slate-800/30">
                       <td className="p-4">
                         <span className="font-semibold text-white block">{r.number}</span>
-                        <span className="text-slate-400 text-[11px]">{r.customer}</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
-                      <td className="p-4 text-slate-300">{r.item}</td>
-                      <td className="p-4 font-mono text-slate-300">{r.condition}</td>
+                      <td className="p-4 text-neutral-700 dark:text-neutral-300">{r.item}</td>
+                      <td className="p-4 font-mono text-neutral-700 dark:text-neutral-300">{r.condition}</td>
                       <td className="p-4 font-mono text-purple-400">{r.disposition}</td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                           {r.status}
                         </span>
                       </td>
@@ -3291,7 +3249,7 @@ export function App() {
                         {r.status !== "COMPLETED" && (
                           <button
                             onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                            className="px-2.5 py-1 bg-purple-600 hover:bg-purple-500 text-white text-[11px] rounded"
+                            className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] rounded"
                           >
                             Approve Restock
                           </button>
@@ -3317,7 +3275,7 @@ export function App() {
                     className={`px-3 py-1.5 text-xs rounded border transition-colors ${
                       orderMarketFilter === mkt
                         ? "bg-accent border-accent text-white"
-                        : "bg-[#111622] border-slate-800 text-slate-400 hover:text-white"
+                        : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-white"
                     }`}
                   >
                     {mkt === "ALL" ? "All Markets" : `Market: ${mkt}`}
@@ -3329,13 +3287,13 @@ export function App() {
                 placeholder="Search by order # or customer..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
-                className="bg-[#111622] border border-slate-800 text-xs text-white px-3 py-1.5 rounded focus:outline-none"
+                className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white px-3 py-1.5 rounded focus:outline-none"
               />
             </div>
 
-            <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Order ID / Client</th>
                     <th className="p-4 text-start">Total Amount</th>
@@ -3359,21 +3317,21 @@ export function App() {
                       <tr key={o.id} className="hover:bg-slate-800/30">
                         <td className="p-4">
                           <span className="font-semibold text-white block">{o.number}</span>
-                          <span className="text-slate-400 text-[11px]">{o.customer}</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{o.customer}</span>
                         </td>
-                        <td className="p-4 font-mono font-medium text-slate-100">{o.amount}</td>
+                        <td className="p-4 font-mono font-medium text-neutral-900 dark:text-white">{o.amount}</td>
                         <td className="p-4 font-mono text-cyan-400">{o.method}</td>
                         <td className="p-4">
-                          <span className="px-2 py-0.5 bg-slate-800 text-slate-200 text-[10px] font-bold rounded">
+                          <span className="px-2 py-0.5 bg-slate-800 text-neutral-900 dark:text-neutral-100 text-[10px] font-bold rounded">
                             {o.market}
                           </span>
                         </td>
-                        <td className="p-4 text-slate-400">{o.date}</td>
+                        <td className="p-4 text-neutral-500 dark:text-neutral-400">{o.date}</td>
                         <td className="p-4">
                           <select
                             value={o.status}
                             onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                            className="bg-[#0E1420] border border-slate-700 text-white text-xs px-2.5 py-1 rounded focus:outline-none"
+                            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-white text-xs px-2.5 py-1 rounded focus:outline-none"
                           >
                             <option value="PAID">PAID</option>
                             <option value="FULFILLING">FULFILLING</option>
@@ -3393,9 +3351,9 @@ export function App() {
         {/* 8. REVIEWS MODERATION */}
         {activeTab === "reviews" && (
           <div className="space-y-6">
-            <div className="border border-slate-800 bg-[#111622] overflow-hidden rounded">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden rounded">
               <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-[#0E1420] text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="p-4 text-start">Product / Customer</th>
                     <th className="p-4 text-start">Title & Rating</th>
@@ -3409,17 +3367,17 @@ export function App() {
                     <tr key={r.id} className="hover:bg-slate-800/30">
                       <td className="p-4">
                         <span className="font-semibold text-white block">{r.product}</span>
-                        <span className="text-slate-400 text-[11px]">{r.customer}</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
                       <td className="p-4">
                         <span className="text-white block font-medium">"{r.title}"</span>
                         <span className="text-amber-400">★ {r.rating} / 5</span>
                       </td>
-                      <td className="p-4 font-mono text-slate-400">
+                      <td className="p-4 font-mono text-neutral-500 dark:text-neutral-400">
                         L: {r.longevity}/5 • S: {r.sillage}/5
                       </td>
                       <td className="p-4">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "APPROVED" ? "bg-emerald-500/20 text-emerald-400" : "bg-amber-500/20 text-amber-400"}`}>
+                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "APPROVED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                           {r.status}
                         </span>
                       </td>
@@ -3427,7 +3385,7 @@ export function App() {
                         {r.status !== "APPROVED" && (
                           <button
                             onClick={() => handleReviewAction(r.id, "APPROVED")}
-                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] rounded"
+                            className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] rounded"
                           >
                             Approve
                           </button>
@@ -3435,7 +3393,7 @@ export function App() {
                         {r.status !== "REJECTED" && (
                           <button
                             onClick={() => handleReviewAction(r.id, "REJECTED")}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded"
+                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-neutral-700 dark:text-neutral-300 text-[11px] rounded"
                           >
                             Reject
                           </button>
@@ -3453,20 +3411,20 @@ export function App() {
         {activeTab === "markets" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="p-5 bg-[#111622] border border-slate-800 space-y-2 rounded">
+              <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-white">United Arab Emirates (AE)</span>
-                <p className="text-xs text-slate-400">Currency: AED • Standard VAT: 5.0%</p>
-                <span className="inline-block px-2 py-0.5 bg-emerald-500/20 text-emerald-400 text-[10px] font-bold rounded">PRIMARY ACTIVE MARKET</span>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: AED • Standard VAT: 5.0%</p>
+                <span className="inline-block px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">PRIMARY ACTIVE MARKET</span>
               </div>
-              <div className="p-5 bg-[#111622] border border-slate-800 space-y-2 rounded">
+              <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-white">Kingdom of Saudi Arabia (SA)</span>
-                <p className="text-xs text-slate-400">Currency: SAR • Standard VAT: 15.0%</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: SAR • Standard VAT: 15.0%</p>
                 <span className="inline-block px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">ACTIVE CROSS-BORDER</span>
               </div>
-              <div className="p-5 bg-[#111622] border border-slate-800 space-y-2 rounded">
+              <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-white">State of Qatar (QA) & Kuwait (KW)</span>
-                <p className="text-xs text-slate-400">Currencies: QAR / KWD • DDP Express</p>
-                <span className="inline-block px-2 py-0.5 bg-slate-800 text-slate-300 text-[10px] font-bold rounded">WHITE-GLOVE GCC</span>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Currencies: QAR / KWD • DDP Express</p>
+                <span className="inline-block px-2 py-0.5 bg-slate-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-bold rounded">WHITE-GLOVE GCC</span>
               </div>
             </div>
           </div>
@@ -3475,17 +3433,17 @@ export function App() {
         {/* 10. BANNERS & HOMEPAGE CMS */}
         {activeTab === "banners" && (
           <div className="space-y-8">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
               <div>
                 <h2 className="font-serif text-lg text-white font-light">Promotional Banners & Sliders</h2>
-                <p className="text-xs text-slate-400">Configure hero sliders, campaign banners, and announcements.</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">Configure hero sliders, campaign banners, and announcements.</p>
               </div>
               <button
                 onClick={() => {
                   resetBannerForm();
                   setShowBannerForm(true);
                 }}
-                className="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
               >
                 <Plus size={14} />
                 <span>Add New Banner</span>
@@ -3495,29 +3453,29 @@ export function App() {
             {/* Banners List */}
             <div className="grid grid-cols-1 gap-4">
               {banners.map((b) => (
-                <div key={b.id} className="p-4 bg-[#111622] border border-slate-800 rounded flex gap-4 items-center">
-                  <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-slate-700 bg-slate-800" />
+                <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
+                  <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-slate-800" />
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-slate-800 text-slate-300"}`}>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-slate-800 text-neutral-700 dark:text-neutral-300"}`}>
                         {SLOT_LABELS[b.slot] || b.slot}
                       </span>
                       <span className="font-serif text-sm text-white">{b.titleEn}</span>
                     </div>
-                    <p className="text-xs text-slate-400 line-clamp-1">{b.subtitleEn}</p>
-                    <span className="text-[10px] font-mono text-slate-500 block">Link: {b.ctaUrl || "/shop"}</span>
+                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
+                    <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleBannerActive(b.id)}
-                      className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-400 hover:bg-slate-800" : "text-slate-500 hover:text-white"}`}
+                      className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-400 hover:bg-slate-800" : "text-neutral-500 hover:text-white"}`}
                       title={b.isActive ? "Deactivate" : "Activate"}
                     >
                       {b.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
                     </button>
                     <button
                       onClick={() => deleteBanner(b.id)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 rounded transition-colors"
+                      className="p-1.5 text-neutral-500 hover:text-rose-400 rounded transition-colors"
                       title="Delete Banner"
                     >
                       <Trash2 size={16} />
@@ -3534,22 +3492,22 @@ export function App() {
                 onClick={resetBannerForm}
               >
                 <div
-                  className="bg-[#111622] border border-slate-800 w-full max-w-lg p-6 space-y-4 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto my-auto"
+                  className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-lg p-6 space-y-4 rounded-lg shadow-2xl max-h-[90vh] overflow-y-auto my-auto"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+                  <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                     <h3 className="font-serif text-lg text-white font-light">Create Campaign Banner</h3>
-                    <button onClick={resetBannerForm} className="text-slate-400 hover:text-white">
+                    <button onClick={resetBannerForm} className="text-neutral-500 dark:text-neutral-400 hover:text-white">
                       <X size={18} />
                     </button>
                   </div>
                   <div className="space-y-3 text-xs">
                     <div>
-                      <label className="block text-slate-400 mb-1">Banner Placement Slot</label>
+                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Banner Placement Slot</label>
                       <select
                         value={bannerForm.slot}
                         onChange={(e) => setBannerForm({ ...bannerForm, slot: e.target.value as BannerSlot })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                       >
                         <option value="HERO_SLIDER">Hero Slider (Top Masthead)</option>
                         <option value="CAMPAIGN_MID">Campaign Mid-Page</option>
@@ -3558,24 +3516,24 @@ export function App() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">Headline (English)</label>
+                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Headline (English)</label>
                       <input
                         type="text"
                         placeholder="The Art of | Noble Sillage."
                         value={bannerForm.titleEn}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleEn: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-400 mb-1">Headline (Arabic)</label>
+                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Headline (Arabic)</label>
                       <input
                         type="text"
                         dir="rtl"
                         placeholder="فن | الحضور المهيب."
                         value={bannerForm.titleAr}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleAr: e.target.value })}
-                        className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                       />
                     </div>
                     <MediaUploadField
@@ -3595,31 +3553,31 @@ export function App() {
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-slate-400 mb-1">CTA Button Text (EN)</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">CTA Button Text (EN)</label>
                         <input
                           type="text"
                           value={bannerForm.ctaTextEn}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaTextEn: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
                         />
                       </div>
                       <div>
-                        <label className="block text-slate-400 mb-1">Target URL</label>
+                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Target URL</label>
                         <input
                           type="text"
                           placeholder="/shop"
                           value={bannerForm.ctaUrl}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaUrl: e.target.value })}
-                          className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
                         />
                       </div>
                     </div>
                   </div>
-                  <div className="flex justify-end gap-2 pt-3 border-t border-slate-800">
-                    <button onClick={resetBannerForm} className="px-4 py-2 border border-slate-800 text-slate-300 rounded">
+                  <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
+                    <button onClick={resetBannerForm} className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 rounded">
                       Cancel
                     </button>
-                    <button onClick={handleSaveBanner} className="px-4 py-2 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded">
+                    <button onClick={handleSaveBanner} className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded">
                       Save Banner
                     </button>
                   </div>
@@ -3628,33 +3586,33 @@ export function App() {
             )}
 
             {/* Homepage Section Order */}
-            <div className="border border-slate-800 bg-[#111622] p-5 rounded space-y-4">
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-5 rounded space-y-4">
               <h3 className="font-serif text-base text-white font-light">Homepage Visual Section Reordering</h3>
               <div className="divide-y divide-slate-800">
                 {sections.map((section, idx) => (
                   <div key={section.id} className="py-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <span className="text-xs font-mono text-slate-500">{idx + 1}.</span>
+                      <span className="text-xs font-mono text-neutral-500">{idx + 1}.</span>
                       <span className="text-xs text-white font-medium">{SECTION_LABELS[section.sectionType] || section.sectionType}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => moveSectionUp(idx)}
                         disabled={idx === 0}
-                        className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                        className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-white disabled:opacity-30"
                       >
                         <ChevronUp size={14} />
                       </button>
                       <button
                         onClick={() => moveSectionDown(idx)}
                         disabled={idx === sections.length - 1}
-                        className="p-1 text-slate-400 hover:text-white disabled:opacity-30"
+                        className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-white disabled:opacity-30"
                       >
                         <ChevronDown size={14} />
                       </button>
                       <button
                         onClick={() => toggleSectionVisible(section.id)}
-                        className={`p-1 ${section.isVisible ? "text-emerald-400" : "text-slate-500"}`}
+                        className={`p-1 ${section.isVisible ? "text-emerald-400" : "text-neutral-500"}`}
                       >
                         {section.isVisible ? <Eye size={14} /> : <EyeOff size={14} />}
                       </button>
@@ -3677,14 +3635,14 @@ export function App() {
             )}
 
             {/* Social Media Links Section */}
-            <div className="p-6 bg-[#111622] border border-slate-800 rounded space-y-6">
-              <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                 <div>
                   <h3 className="font-serif text-lg text-white font-light flex items-center gap-2">
                     <Share2 size={18} className="text-accent" />
                     <span>Official Social Media Channels</span>
                   </h3>
-                  <p className="text-xs text-slate-400 mt-0.5">
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                     Configure official links displayed across Storefront Footer, Mobile Drawer, and Schema.org.
                   </p>
                 </div>
@@ -3692,7 +3650,7 @@ export function App() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
                 {/* Instagram */}
-                <div className="p-4 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-white">Instagram Profile</label>
                     <a
@@ -3706,27 +3664,27 @@ export function App() {
                     </a>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Handle / Username:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Handle / Username:</span>
                     <input
                       type="text"
                       value={storeSettings.instagramHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramHandle: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Full URL:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Full URL:</span>
                     <input
                       type="url"
                       value={storeSettings.instagramUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramUrl: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
 
                 {/* WhatsApp VIP Concierge */}
-                <div className="p-4 bg-[#0E1420] border border-[#25D366]/30 rounded space-y-2">
+                <div className="p-4 bg-white dark:bg-black border border-[#25D366]/30 rounded space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-[#A8E6B8] flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#25D366] animate-pulse"></span>
@@ -3743,36 +3701,36 @@ export function App() {
                     </a>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Display Hotline:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Display Hotline:</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappPhone}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappPhone: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Clean International Number (No +):</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Clean International Number (No +):</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappNumber}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappNumber: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Default Pre-filled Greeting:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Default Pre-filled Greeting:</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappDefaultMsg}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappDefaultMsg: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded text-xs"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded text-xs"
                     />
                   </div>
                 </div>
 
                 {/* TikTok */}
-                <div className="p-4 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-white">TikTok Channel</label>
                     <a
@@ -3786,27 +3744,27 @@ export function App() {
                     </a>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Handle:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Handle:</span>
                     <input
                       type="text"
                       value={storeSettings.tiktokHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokHandle: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">URL:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">URL:</span>
                     <input
                       type="url"
                       value={storeSettings.tiktokUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokUrl: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
 
                 {/* X / Twitter */}
-                <div className="p-4 bg-[#0E1420] border border-slate-800 rounded space-y-2">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-white">X / Twitter</label>
                     <a
@@ -3820,27 +3778,27 @@ export function App() {
                     </a>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">Handle:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">Handle:</span>
                     <input
                       type="text"
                       value={storeSettings.twitterHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterHandle: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[11px] mb-1">URL:</span>
+                    <span className="text-neutral-500 block text-[11px] mb-1">URL:</span>
                     <input
                       type="url"
                       value={storeSettings.twitterUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterUrl: e.target.value })}
-                      className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
 
                 {/* YouTube */}
-                <div className="p-4 bg-[#0E1420] border border-slate-800 rounded space-y-2 md:col-span-2">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2 md:col-span-2">
                   <div className="flex items-center justify-between">
                     <label className="font-semibold text-white">YouTube Luxury Film Atelier</label>
                     <a
@@ -3857,62 +3815,62 @@ export function App() {
                     type="url"
                     value={storeSettings.youtubeUrl}
                     onChange={(e) => setStoreSettings({ ...storeSettings, youtubeUrl: e.target.value })}
-                    className="w-full bg-[#111622] border border-slate-700 text-white p-2 rounded font-mono"
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
                   />
                 </div>
               </div>
             </div>
 
             {/* Announcement Bar & Hotline */}
-            <div className="p-6 bg-[#111622] border border-slate-800 rounded space-y-4 text-xs">
+            <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded space-y-4 text-xs">
               <h3 className="font-serif text-lg text-white font-light">Storefront Announcement Bar & Client Care</h3>
               <div>
-                <label className="block text-slate-400 mb-1">Announcement Bar Text (English)</label>
+                <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Announcement Bar Text (English)</label>
                 <input
                   type="text"
                   value={storeSettings.announcementBarEn}
                   onChange={(e) => setStoreSettings({ ...storeSettings, announcementBarEn: e.target.value })}
-                  className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-sans"
+                  className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-sans"
                 />
               </div>
               <div>
-                <label className="block text-slate-400 mb-1">Announcement Bar Text (Arabic)</label>
+                <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Announcement Bar Text (Arabic)</label>
                 <input
                   type="text"
                   dir="rtl"
                   value={storeSettings.announcementBarAr}
                   onChange={(e) => setStoreSettings({ ...storeSettings, announcementBarAr: e.target.value })}
-                  className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-sans"
+                  className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-sans"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-slate-400 mb-1">Concierge Email</label>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Concierge Email</label>
                   <input
                     type="email"
                     value={storeSettings.conciergeEmail}
                     onChange={(e) => setStoreSettings({ ...storeSettings, conciergeEmail: e.target.value })}
-                    className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                    className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
                   />
                 </div>
                 <div>
-                  <label className="block text-slate-400 mb-1">Free Delivery Minimum (AED)</label>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Free Delivery Minimum (AED)</label>
                   <input
                     type="number"
                     value={storeSettings.freeShippingThreshold}
                     onChange={(e) => setStoreSettings({ ...storeSettings, freeShippingThreshold: Number(e.target.value) })}
-                    className="w-full bg-[#0E1420] border border-slate-800 text-white p-2.5 rounded font-mono"
+                    className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
                   />
                 </div>
               </div>
             </div>
 
             {/* Save Button */}
-            <div className="flex items-center justify-between p-4 bg-slate-900 border border-slate-800 rounded">
-              <span className="text-xs text-slate-400">Updates are saved to persistent local state and syncable across sessions.</span>
+            <div className="flex items-center justify-between p-4 bg-slate-900 border border-neutral-200 dark:border-neutral-800 rounded">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400">Updates are saved to persistent local state and syncable across sessions.</span>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg"
+                className="px-6 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg"
               >
                 <Save size={16} />
                 <span>Save & Sync All Settings</span>
@@ -3923,24 +3881,24 @@ export function App() {
 
         {/* 12. SECURITY & AUDIT */}
         {activeTab === "audit" && (
-          <div className="border border-slate-800 bg-[#111622] p-6 space-y-4 rounded">
+          <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-4 rounded">
             <div className="flex items-center justify-between">
               <div>
                 <h3 className="font-serif text-xl font-light text-white">Immutable Administrative Audit Log</h3>
-                <p className="text-xs text-slate-400">All administrative operations, creations, and transitions are tracked here.</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">All administrative operations, creations, and transitions are tracked here.</p>
               </div>
-              <span className="px-2.5 py-1 bg-slate-800 text-slate-300 font-mono text-[10px] rounded">
+              <span className="px-2.5 py-1 bg-slate-800 text-neutral-700 dark:text-neutral-300 font-mono text-[10px] rounded">
                 {auditLogs.length} Events Logged
               </span>
             </div>
             <div className="divide-y divide-slate-800 text-xs font-mono">
               {auditLogs.map((log, idx) => (
-                <div key={idx} className="py-2.5 flex items-center justify-between text-slate-300">
+                <div key={idx} className="py-2.5 flex items-center justify-between text-neutral-700 dark:text-neutral-300">
                   <div className="space-x-3">
                     <span className="text-accent font-bold">{log.action}</span>
-                    <span className="text-slate-400">[{log.res}]</span>
+                    <span className="text-neutral-500 dark:text-neutral-400">[{log.res}]</span>
                   </div>
-                  <div className="space-x-4 text-slate-500">
+                  <div className="space-x-4 text-neutral-500">
                     <span>{log.user}</span>
                     <span>{log.time}</span>
                   </div>
