@@ -282,7 +282,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           ? `DXB-VIP-${order.orderNumber.replace(/[^0-9]/g, "").slice(-6) || "882104"}`
           : null);
 
-      // Construct verified real-time milestone events
+      // Construct clear, simple milestone events
       const events: Array<{
         id: string;
         status: string;
@@ -296,10 +296,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         {
           id: `evt_created_${order.id}`,
           status: "PENDING",
-          titleEn: "Order Registered & Atelier Reservation",
-          titleAr: "تسجيل الطلب وحجز الزجاجة بالدار",
-          descriptionEn: `Order #${order.orderNumber} successfully registered in Muschio Haute Parfumerie system.`,
-          descriptionAr: `تم تسجيل الطلب رقم #${order.orderNumber} بنجاح وحجز الحصة في نظام الدار.`,
+          titleEn: "Order Placed & Confirmed",
+          titleAr: "تم استلام الطلب وتأكيده",
+          descriptionEn: `Order #${order.orderNumber} has been received and confirmed.`,
+          descriptionAr: `تم استلام طلبك رقم #${order.orderNumber} بنجاح وحجز المنتجات.`,
           timestamp: order.createdAt.toISOString(),
           completed: true,
         },
@@ -310,10 +310,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         events.push({
           id: `evt_paid_${order.id}`,
           status: "PAID",
-          titleEn: "Payment Authorized & Captured",
-          titleAr: "تأكيد الدفع والتسوية المالية",
-          descriptionEn: `Payment of ${order.currency} ${Number(order.totalAmount).toLocaleString()} verified via ${capturedPayment?.provider || "Credit Card"}.`,
-          descriptionAr: `تم تأكيد سحب مبلغ ${Number(order.totalAmount).toLocaleString()} ${order.currency} عبر بطاقة الائتمان.`,
+          titleEn: "Payment Successful",
+          titleAr: "تم الدفع بنجاح",
+          descriptionEn: `Payment of ${order.currency} ${Number(order.totalAmount).toLocaleString()} was received successfully.`,
+          descriptionAr: `تم تأكيد استلام مبلغ ${Number(order.totalAmount).toLocaleString()} ${order.currency} بنجاح.`,
           timestamp: capturedPayment?.createdAt ? capturedPayment.createdAt.toISOString() : order.createdAt.toISOString(),
           completed: true,
         });
@@ -323,10 +323,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         events.push({
           id: `evt_fulfilling_${order.id}`,
           status: "FULFILLING",
-          titleEn: "Atelier Verification & Royal Sealing",
-          titleAr: "فحص أختام الأصالة والتغليف الملكي",
-          descriptionEn: "Batch formulation certified, authenticity seals inspected and luxury packaging finalized.",
-          descriptionAr: "تم فحص ختم الدفعة والباركود الأمني واعتماد التغليف الفاخر بدار العطور.",
+          titleEn: "Preparing & Packaging",
+          titleAr: "جاري تجهيز وتغليف الطلب",
+          descriptionEn: "Your perfumes are being carefully checked and packaged.",
+          descriptionAr: "نقوم الآن بفحص وتغليف طلبك بكل عناية.",
           timestamp: order.updatedAt.toISOString(),
           completed: true,
         });
@@ -336,10 +336,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         events.push({
           id: `evt_shipped_${order.id}`,
           status: "SHIPPED",
-          titleEn: "Climate-Controlled Express Transit",
-          titleAr: "شحن جوي مبرد عبر دول الخليج",
-          descriptionEn: `Handed over to ${shipment?.carrier ? String(shipment.carrier).replace("_", " ") : "Muschio Climate Courier"} (Tracking: ${trackingNumber}).`,
-          descriptionAr: `تم تسليم الشحنة لشركة الشحن الجوي المبرد برقم تتبع: ${trackingNumber}.`,
+          titleEn: "Shipped & On The Way",
+          titleAr: "تم الشحن وهو في الطريق إليك",
+          descriptionEn: `Handed over to ${shipment?.carrier ? String(shipment.carrier).replace("_", " ") : "Courier"} (Tracking: ${trackingNumber}).`,
+          descriptionAr: `تم تسليم الشحنة لشركة الشحن برقم تتبع: ${trackingNumber}.`,
           timestamp: shipment?.shippedAt ? shipment.shippedAt.toISOString() : order.updatedAt.toISOString(),
           completed: true,
         });
@@ -349,10 +349,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         events.push({
           id: `evt_delivered_${order.id}`,
           status: "DELIVERED",
-          titleEn: "White-Glove Doorstep Delivery",
-          titleAr: "تم التسليم الفاخر عند باب العميل",
-          descriptionEn: "The artisanal extrait has been successfully received by the client.",
-          descriptionAr: "تم تسليم العطر الفاخر بنجاح للعميل مع باقة العينات المجانية.",
+          titleEn: "Delivered",
+          titleAr: "تم التوصيل بنجاح",
+          descriptionEn: "Your package has been safely delivered to your doorstep.",
+          descriptionAr: "تم توصيل الطلب بنجاح إلى باب منزلك.",
           timestamp: shipment?.deliveredAt ? shipment.deliveredAt.toISOString() : order.updatedAt.toISOString(),
           completed: true,
         });

@@ -163,34 +163,34 @@ export default function OrderTrackingPage({
   const timelineSteps = [
     {
       num: 1,
-      titleEn: "Order Registered",
-      titleAr: "تسجيل وحجز الطلب",
-      descEn: "Atelier allocation logged & verified",
-      descAr: "حجز الزجاجات في الدار المتخصصة",
+      titleEn: "Order Placed",
+      titleAr: "تم استلام الطلب",
+      descEn: "Order confirmed and received",
+      descAr: "تم تأكيد طلبك بنجاح",
       icon: Clock,
     },
     {
       num: 2,
-      titleEn: "Atelier Preparation",
-      titleAr: "التجهيز والفحص الملكي",
-      descEn: "Batch verified, certified & sealed",
-      descAr: "فحص أختام الأصالة والتغليف الفاخر",
+      titleEn: "Preparing",
+      titleAr: "جاري التجهيز",
+      descEn: "Checking & packaging your items",
+      descAr: "فحص وتغليف المنتجات بعناية",
       icon: Package,
     },
     {
       num: 3,
-      titleEn: "Climate-Controlled Transit",
-      titleAr: "الشحن الجوي المبرد",
-      descEn: "Express temperature-monitored courier",
-      descAr: "شحن مبرد للحفاظ على جزيئات العطر",
+      titleEn: "Shipped",
+      titleAr: "تم الشحن",
+      descEn: "On the way with courier",
+      descAr: "الشحنة في الطريق إليك",
       icon: Truck,
     },
     {
       num: 4,
-      titleEn: "White-Glove Handover",
-      titleAr: "التسليم حتى باب العميل",
-      descEn: "Delivered to recipient doorstep",
-      descAr: "التسليم المعتمد مع باقة العينات المجانية",
+      titleEn: "Delivered",
+      titleAr: "تم التوصيل",
+      descEn: "Delivered to your address",
+      descAr: "تم تسليم الطلب بنجاح",
       icon: Sparkles,
     },
   ];
@@ -199,8 +199,8 @@ export default function OrderTrackingPage({
     "https://wa.me/97148006872?text=" +
     encodeURIComponent(
       isAr
-        ? `مرحباً كونسيرج مسكيو، أود الاستفسار عن شحنتي رقم: ${orderData?.orderNumber || orderQuery}`
-        : `Hello Muschio Concierge, I would like to check the delivery progress of my acquisition #${orderData?.orderNumber || orderQuery}`,
+        ? `مرحباً، أود الاستفسار عن حالة طلبي رقم: ${orderData?.orderNumber || orderQuery}`
+        : `Hello, I would like to check the status of my order #${orderData?.orderNumber || orderQuery}`,
     );
 
   return (
@@ -208,15 +208,15 @@ export default function OrderTrackingPage({
       {/* 1. Header Banner */}
       <div className="border-b border-luxury-border pb-6 space-y-3">
         <span className="eyebrow text-accent">
-          {c("HAUTE PARFUMERIE · GCC REAL-TIME DISPATCH TRACKER", "دار العطور الراقية · تتبع شحنات الخليج المباشر")}
+          {c("ORDER TRACKING", "تتبع الطلب")}
         </span>
         <h1 className="font-serif text-3xl sm:text-5xl text-luxury-text font-normal leading-tight">
-          {c("Track Your Olfactory Acquisition.", "تتبع شحنتك العطرية الخاصة.")}
+          {c("Track Your Order", "تتبع مسار طلبك")}
         </h1>
         <p className="text-xs sm:text-sm text-luxury-muted max-w-2xl leading-relaxed">
           {c(
-            "Follow your artisanal extrait through authentication, batch inspection, temperature-controlled transit across the United Arab Emirates and the GCC, to white-glove doorstep handover.",
-            "تابع مسار عطرك النادر منذ لحظة التحقق من الدفعة والأختام، مروراً بالشحن الجوي المبرد داخل الإمارات ودول الخليج، حتى التسليم الراقي عند بابك.",
+            "See live updates on your order from preparation to delivery at your doorstep.",
+            "تابع مسار طلبك خطوة بخطوة من التجهيز وحتى التوصيل إلى باب منزلك.",
           )}
         </p>
       </div>
@@ -227,7 +227,7 @@ export default function OrderTrackingPage({
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-7">
               <label className="block text-xs font-medium text-luxury-text mb-1.5 uppercase tracking-wider font-sans">
-                {c("Order Reference Number", "الرقم المرجعي للطلب")}
+                {c("Order Number", "رقم الطلب")}
               </label>
               <div className="relative">
                 <input
@@ -244,13 +244,13 @@ export default function OrderTrackingPage({
 
             <div className="md:col-span-5">
               <label className="block text-xs font-medium text-luxury-text mb-1.5 uppercase tracking-wider font-sans">
-                {c("Registered Email or Mobile (Optional)", "البريد أو الهاتف (اختياري)")}
+                {c("Email or Phone (Optional)", "البريد أو الهاتف (اختياري)")}
               </label>
               <input
                 type="text"
                 value={emailOrPhone}
                 onChange={(e) => setEmailOrPhone(e.target.value)}
-                placeholder={c("client@muschio.luxury or +971...", "بريد العميل أو رقم الهاتف")}
+                placeholder={c("example@email.com or +971...", "بريدك الإلكتروني أو رقم هاتفك")}
                 className="glass-input w-full p-3.5 text-xs font-sans"
               />
             </div>
@@ -261,8 +261,8 @@ export default function OrderTrackingPage({
               <HelpCircle size={13} className="text-accent shrink-0" />
               <span>
                 {c(
-                  "Found on your receipt email, SMS/WhatsApp confirmation, or order confirmation screen.",
-                  "الرقم مدون في إشعار الواتساب، والبريد الإلكتروني، وإيصال إتمام الشراء.",
+                  "Found in your confirmation email or WhatsApp message.",
+                  "ستجد رقم الطلب في رسالة التأكيد عبر البريد أو واتساب.",
                 )}
               </span>
             </div>
@@ -275,12 +275,12 @@ export default function OrderTrackingPage({
               {loading ? (
                 <>
                   <RefreshCw size={13} className="animate-spin" />
-                  <span>{c("Locating Dispatch…", "جارٍ التحقق…")}</span>
+                  <span>{c("Searching…", "جاري البحث…")}</span>
                 </>
               ) : (
                 <>
                   <Search size={14} />
-                  <span>{c("Track Acquisition", "تتبع الشحنة")}</span>
+                  <span>{c("Track Order", "تتبع الطلب")}</span>
                 </>
               )}
             </button>
@@ -323,10 +323,10 @@ export default function OrderTrackingPage({
                 <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
               </span>
               <span className="font-mono text-[11px] font-semibold text-luxury-text uppercase tracking-wider">
-                {c("LIVE LOGISTICS RADAR ACTIVE", "رادار الشحن الملكي المباشر نشط")}
+                {c("LIVE UPDATES ACTIVE", "تحديث مباشر لحالة الطلب")}
               </span>
               <span className="text-luxury-muted text-[11px]">
-                · {c(`Auto-synced ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
+                · {c(`Updated ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
               </span>
             </div>
 
@@ -337,7 +337,7 @@ export default function OrderTrackingPage({
               className="text-[11px] font-medium text-accent hover:text-luxury-text flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
               <RefreshCw size={12} className={isSyncing ? "animate-spin text-accent" : ""} />
-              <span>{isSyncing ? c("Syncing…", "جارٍ التحديث…") : c("Sync Now", "تحديث فوري")}</span>
+              <span>{isSyncing ? c("Updating…", "جاري التحديث…") : c("Refresh", "تحديث")}</span>
             </button>
           </div>
 
@@ -371,22 +371,22 @@ export default function OrderTrackingPage({
                   }`}
                 >
                   {status === "DELIVERED"
-                    ? c("DELIVERED · HANDED OVER", "تم التسليم بنجاح")
+                    ? c("DELIVERED", "تم التوصيل بنجاح")
                     : status === "SHIPPED"
-                      ? c("IN TRANSIT · CLIMATE COURIER", "في الطريق · شحن جوي مبرد")
+                      ? c("SHIPPED · ON THE WAY", "تم الشحن · في الطريق إليك")
                       : status === "FULFILLING"
-                        ? c("ATELIER VERIFICATION & SEALING", "قيد الفحص والتغليف الملكي")
+                        ? c("PREPARING YOUR ORDER", "جاري تجهيز وتغليف الطلب")
                         : status === "PAID"
-                          ? c("ORDER PAID · RESERVED", "مدفوع ومحجوز")
-                          : c("REGISTERED · PENDING", "مسجل · بانتظار التجهيز")}
+                          ? c("PAID · PREPARING SOON", "تم استلام الدفعة بنجاح")
+                          : c("ORDER PLACED", "تم استلام الطلب")}
                 </span>
               </div>
             </div>
 
-            {/* GCC Logistics 4-Step Progression */}
+            {/* Order Progression */}
             <div className="space-y-4 pt-2">
               <span className="eyebrow block text-accent text-[11px]">
-                {c("LIVE GCC DISPATCH PROGRESSION", "مراحل الشحن والتوصيل في الخليج")}
+                {c("ORDER PROGRESS", "مراحل تنفيذ الطلب")}
               </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -498,7 +498,7 @@ export default function OrderTrackingPage({
           {Array.isArray(orderData.items) && orderData.items.length > 0 && (
             <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-4">
               <span className="eyebrow block border-b border-luxury-border pb-3">
-                {c("CURATED FLACONS IN SHIPMENT", "العطور المشمولة بالشحنة")}
+                {c("ITEMS IN THIS ORDER", "منتجات الطلب")}
               </span>
 
               <div className="divide-y divide-luxury-border">
@@ -528,7 +528,7 @@ export default function OrderTrackingPage({
               <div className="pt-3 border-t border-luxury-border flex flex-wrap items-center justify-between text-xs text-luxury-muted">
                 <div className="flex items-center gap-1.5">
                   <ShieldCheck size={14} className="text-emerald-600" />
-                  <span>{c("Includes official Certificate of Authenticity", "مرفق شهادة الأصالة الرسمية")}</span>
+                  <span>{c("100% Genuine & Authentic Products Guaranteed", "منتجات أصلية ومضمونة ١٠٠٪")}</span>
                 </div>
                 <div className="font-semibold text-luxury-text font-sans">
                   {c("Total Amount", "المجموع الكلي")}:{" "}
@@ -538,14 +538,14 @@ export default function OrderTrackingPage({
             </div>
           )}
 
-          {/* 4. Real-time Olfactory Dispatch Event Feed */}
+          {/* 4. Real-time Order Updates Feed */}
           {Array.isArray(orderData.events) && orderData.events.length > 0 && (
             <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-5">
               <div className="flex flex-wrap items-center justify-between gap-3 border-b border-luxury-border pb-3">
                 <div className="flex items-center gap-2">
                   <Activity size={15} className="text-accent" />
                   <span className="eyebrow text-luxury-text text-xs">
-                    {c("REAL-TIME OLFACTORY DISPATCH LOG", "سجل التحديثات الحية للشحنة")}
+                    {c("ORDER UPDATES & HISTORY", "سجل تحديثات الطلب")}
                   </span>
                 </div>
                 <div className="flex items-center gap-2">
@@ -554,7 +554,7 @@ export default function OrderTrackingPage({
                     <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                   </span>
                   <span className="text-[10px] font-mono text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-sm">
-                    {c("LIVE AUDIT TRAIL", "سجل مباشر ومعتمد")}
+                    {c("LIVE UPDATES", "تحديث مباشر")}
                   </span>
                 </div>
               </div>
@@ -613,16 +613,16 @@ export default function OrderTrackingPage({
             </div>
           )}
 
-          {/* Concierge Support CTA */}
+          {/* Customer Support CTA */}
           <div className="border border-luxury-border bg-luxury-surface2 p-6 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-start">
               <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-accent block">
-                {c("VIP OLFACTORY CONCIERGE ASSISTANCE", "المساعد العطري الخاص")}
+                {c("NEED HELP WITH YOUR ORDER?", "هل تحتاج مساعدة في طلبك؟")}
               </span>
               <p className="text-xs text-luxury-muted">
                 {c(
-                  "Have specific delivery time preferences or special handling instructions for this acquisition?",
-                  "هل لديك مواعيد تسليم مفضلة أو تعليمات خاصة لتسليم شحنتك؟ مستشارنا العطري جاهز لمساعدتك.",
+                  "Contact our customer support team anytime on WhatsApp for fast help with delivery.",
+                  "تواصل معنا مباشرة عبر واتساب للمساعدة السريعة في أي وقت.",
                 )}
               </p>
             </div>
@@ -634,7 +634,7 @@ export default function OrderTrackingPage({
               className="px-5 py-2.5 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-xs font-medium rounded-sm flex items-center gap-2 shrink-0 transition-colors"
             >
               <MessageSquare size={14} />
-              <span>{c("WhatsApp Concierge", "محادثة المستشار فوراً")}</span>
+              <span>{c("Chat on WhatsApp", "محادثة عبر واتساب")}</span>
               <ArrowRight size={12} className="rtl:rotate-180" />
             </a>
           </div>

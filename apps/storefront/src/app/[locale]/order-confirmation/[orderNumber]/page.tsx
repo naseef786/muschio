@@ -179,34 +179,34 @@ export default function OrderStatusPage({
   const timelineSteps = [
     {
       num: 1,
-      titleEn: "Order Registered",
-      titleAr: "تسجيل الطلب",
-      descEn: "Atelier reservation logged",
-      descAr: "حجز الطلب في الدار",
+      titleEn: "Order Placed",
+      titleAr: "تم استلام الطلب",
+      descEn: "Order confirmed",
+      descAr: "تم تأكيد طلبك",
       icon: Clock,
     },
     {
       num: 2,
-      titleEn: "Atelier Preparation",
-      titleAr: "التجهيز والتغليف",
-      descEn: "Batch verified & hand-sealed",
-      descAr: "فحص الدفعة والتغليف الملكي",
+      titleEn: "Preparing",
+      titleAr: "جاري التجهيز",
+      descEn: "Checking & packaging",
+      descAr: "فحص وتغليف المنتجات",
       icon: PackageCheck,
     },
     {
       num: 3,
-      titleEn: "Climate Transit",
-      titleAr: "الشحن المبرد",
-      descEn: "Temperature-controlled air express",
-      descAr: "شحن جوي مبرد وسريع",
+      titleEn: "Shipped",
+      titleAr: "تم الشحن",
+      descEn: "On the way with courier",
+      descAr: "في الطريق إليك",
       icon: Truck,
     },
     {
       num: 4,
-      titleEn: "White-Glove Handover",
-      titleAr: "التسليم الفاخر",
-      descEn: "GCC doorstep delivery",
-      descAr: "التسليم حتى باب العميل",
+      titleEn: "Delivered",
+      titleAr: "تم التوصيل",
+      descEn: "Delivered to your door",
+      descAr: "تم تسليم الطلب بنجاح",
       icon: Sparkles,
     },
   ];
@@ -276,30 +276,30 @@ export default function OrderStatusPage({
           <div className="space-y-1">
             <h1 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
               {loading
-                ? c("Verifying your order status…", "جارٍ التحقق من تفاصيل طلبك…")
+                ? c("Checking your order…", "جاري مراجعة طلبك…")
                 : !order
-                  ? c("Order reference not found.", "تعذر التحقق من هذا الطلب.")
+                  ? c("Order not found.", "لم يتم العثور على الطلب.")
                   : cancelled
-                    ? c("This order is cancelled. Your bag is saved.", "هذا الطلب ملغي. حقيبتك محفوظة.")
+                    ? c("This order was cancelled.", "تم إلغاء هذا الطلب.")
                     : status === "DELIVERED"
-                      ? c("Order Delivered. Handover confirmed.", "تم تسليم طلبك بنجاح وبأعلى معايير الخدمة.")
+                      ? c("Order Delivered!", "تم تسليم طلبك بنجاح!")
                       : status === "SHIPPED"
-                        ? c("Acquisition in Transit. Climate courier dispatched.", "طلبك في الطريق عبر الشحن الجوي المبرد.")
+                        ? c("Your Order Has Shipped!", "طلبك تم شحنه وهو في الطريق إليك!")
                         : status === "FULFILLING"
-                          ? c("Atelier Preparation. Packaging & batch sealing underway.", "يجري الآن فحص الأختام والتغليف الفاخر في الدار.")
+                          ? c("We Are Preparing Your Order", "جاري تجهيز وتغليف طلبك")
                           : isPaid
-                            ? c("Thank you. Your acquisition is confirmed & paid.", "شكراً لك. تم تأكيد ودفع طلبك بنجاح.")
-                            : c("Order placed. VIP delivery reservation confirmed.", "تم تسجيل طلبك بنجاح. حجز التوصيل مؤكد.")}
+                            ? c("Thank you! Your order is confirmed.", "شكراً لك! تم تأكيد طلبك بنجاح.")
+                            : c("Order Placed Successfully", "تم استلام طلبك بنجاح")}
             </h1>
             <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
               {isPaid
                 ? c(
-                    "Your authentic flacons have been reserved at the master atelier. Quality seals and temperature-controlled dispatch are underway.",
-                    "تم حجز زجاجاتك الأصلية لدى الدار المتخصصة. يجري الآن فحص الأختام والتجهيز للشحن المبرد السريع.",
+                    "We have received your payment and are getting your perfumes ready for delivery.",
+                    "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز عطورك للتوصيل.",
                   )
                 : c(
-                    "Receipt details are synced with our Dubai operations center in real time. Payment authorization updates automatically.",
-                    "يتم تحديث تفاصيل الإيصال مباشرة مع مركز عمليات مسكيو بدبي فور تأكيد العملية.",
+                    "We have received your order details and will keep you updated on the progress.",
+                    "تم استلام تفاصيل طلبك وسنوافيك بالتحديثات أولاً بأول.",
                   )}
             </p>
           </div>
@@ -360,13 +360,13 @@ export default function OrderStatusPage({
       <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm">
         <div className="flex items-center justify-between mb-6">
           <span className="eyebrow text-accent">
-            {c("GCC LOGISTICS & ATELIER PROGRESSION", "مراحل الشحن والتجهيز للخليج العربي")}
+            {c("ORDER PROGRESS", "مراحل تنفيذ الطلب")}
           </span>
           <Link
             href={`/track?ref=${encodeURIComponent(order?.orderNumber || orderNumber)}`}
             className="text-xs font-sans text-accent hover:underline flex items-center gap-1 font-medium"
           >
-            <span>{c("Open Full Tracker", "فتح لوحة التتبع الكاملة")}</span>
+            <span>{c("Track Order Live", "تتبع الطلب مباشرة")}</span>
             <ExternalLink size={12} />
           </Link>
         </div>
