@@ -1302,6 +1302,32 @@ export function App() {
     setShowBannerForm(false);
   };
 
+  const handleOpenEditBanner = (b: BannerItem) => {
+    setEditingBanner(b);
+    setBannerForm({
+      slot: b.slot,
+      eyebrowEn: b.eyebrowEn || "",
+      eyebrowAr: b.eyebrowAr || "",
+      titleEn: b.titleEn || "",
+      titleAr: b.titleAr || "",
+      subtitleEn: b.subtitleEn || "",
+      subtitleAr: b.subtitleAr || "",
+      ctaTextEn: b.ctaTextEn || "",
+      ctaTextAr: b.ctaTextAr || "",
+      ctaUrl: b.ctaUrl || "",
+      secondaryCtaTextEn: b.secondaryCtaTextEn || "",
+      secondaryCtaTextAr: b.secondaryCtaTextAr || "",
+      secondaryCtaUrl: b.secondaryCtaUrl || "",
+      imageUrl: b.imageUrl || "",
+      mobileImageUrl: b.mobileImageUrl || "",
+      overlayLabelEn: b.overlayLabelEn || "",
+      overlayLabelAr: b.overlayLabelAr || "",
+      startsAt: b.startsAt || "",
+      endsAt: b.endsAt || "",
+    });
+    setShowBannerForm(true);
+  };
+
   const handleSaveBanner = () => {
     if (!bannerForm.titleEn || !bannerForm.titleAr || !bannerForm.imageUrl) return;
     if (editingBanner) {
@@ -1422,78 +1448,135 @@ export function App() {
   };
 
   const handleOpenEditProduct = (p: ProductItem) => {
+    if (!p) return;
     setEditingProductId(p.id);
-    const topNotesArr = p.topNotes || [];
-    const prodImages = Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []);
-    const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "");
-    const initialVariants: ProductVariantItem[] = (p.variants && p.variants.length > 0)
-      ? p.variants.map((v, i) => {
-          const rawBase = Number(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)) || 1000;
-          const rawSelling = Number(v.price !== undefined ? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price) : (v.discountPrice ?? rawBase)) || rawBase;
-          const volNum = typeof v.volume === "number" ? v.volume : (v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
-          const stock = v.stock !== undefined ? Number(v.stock) : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : (p.stock || 20));
+
+    // Extract product fields with comprehensive property alias support
+    const pName = p.name || (p as any).nameEn || (p as any).title || "";
+    const pNameAr = p.nameAr || (p as any).name_ar || (p as any).nameArabic || "";
+    const pSku = p.sku || (p as any).skuCode || "";
+    const pBrand = p.brand || (typeof (p as any).brand === "object" ? (p as any).brand?.name : "") || "Amouage";
+    const pScentFamily = p.scentFamily || (typeof (p as any).scentFamily === "object" ? (p as any).scentFamily?.nameEn : "") || "Woody Amber";
+    const pConcentration = p.concentration || "EXTRAIT_DE_PARFUM";
+    const pVolumeMl = typeof p.volumeMl === "number" ? p.volumeMl : (parseInt(String(p.volumeMl || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
+
+    // Notes normalization (supports array of strings, comma-separated string, or note objects)
+    const normalizeNotes = (notes: any): string[] => {
+      if (Array.isArray(notes)) {
+        return notes
+          .map((n: any) => (typeof n === "string" ? n : n?.nameEn || n?.name || ""))
+          .filter(Boolean);
+      }
+      if (typeof notes === "string") {
+        return notes.split(",").map((s) => s.trim()).filter(Boolean);
+      }
+      return [];
+    };
+
+    const topNotesArr = normalizeNotes(p.topNotes);
+    const heartNotesArr = normalizeNotes(p.heartNotes);
+    const baseNotesArr = normalizeNotes(p.baseNotes);
+
+    const prodImages: string[] = Array.isArray(p.images) && p.images.length > 0
+      ? p.images
+      : (p.imageUrl ? [p.imageUrl] : []);
+
+    const perfumerStr = p.perfumer || (Array.isArray(p.perfumers) ? p.perfumers.join(", ") : "") || (p as any).nose || "";
+    const perfumerBioStr = p.perfumerBio || "";
+
+    // Numeric price clean (handles number, "1,850 AED", "1850", or undefined without throwing)
+    const rawPriceClean = p.price !== undefined && p.price !== null
+      ? String(p.price).replace(/[^0-9.]/g, "")
+      : "";
+    const defaultPriceNum = Number(rawPriceClean) || 1000;
+
+    const rawVariants: any[] = Array.isArray(p.variants) && p.variants.length > 0 ? p.variants : [];
+    const initialVariants: ProductVariantItem[] = rawVariants.length > 0
+      ? rawVariants.map((v, i) => {
+          const rawBaseNum = Number(
+            v.basePrice ??
+            v.regularPrice ??
+            v.originalPrice ??
+            (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
+          ) || defaultPriceNum;
+
+          const rawSellingNum = Number(
+            v.price !== undefined && v.price !== null
+              ? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
+              : (v.discountPrice ?? rawBaseNum)
+          ) || rawBaseNum;
+
+          const volNum = typeof v.volume === "number"
+            ? v.volume
+            : (v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
+
+          const stockNum = v.stock !== undefined
+            ? Number(v.stock)
+            : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : (p.stock || 20));
+
           const wh = v.warehouse || p.warehouse || "DXB-MAIN";
 
           return {
-            id: v.id || `var-${p.id}-${i}`,
-            sku: v.sku || (i === 0 ? p.sku : `${p.sku}-${volNum}`),
+            id: v.id || `var-${p.id}-${i}-${Date.now()}`,
+            sku: v.sku || (i === 0 ? (pSku || `SKU-${volNum}`) : `${pSku || "SKU"}-${volNum}`),
             volume: volNum,
             volumeMl: volNum,
-            basePrice: rawBase,
-            regularPrice: rawBase,
-            originalPrice: rawBase,
-            price: rawSelling,
-            discountPrice: rawSelling < rawBase ? rawSelling : null,
-            salePrice: rawSelling < rawBase ? rawSelling : null,
-            stock: stock,
-            stockQuantity: stock,
+            basePrice: rawBaseNum,
+            regularPrice: rawBaseNum,
+            originalPrice: rawBaseNum,
+            price: rawSellingNum,
+            discountPrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
+            salePrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
+            stock: stockNum,
+            stockQuantity: stockNum,
             warehouse: wh,
-            isDefault: v.isDefault ?? i === 0,
+            isDefault: v.isDefault !== undefined ? Boolean(v.isDefault) : i === 0,
           };
         })
       : [
           {
             id: `var-${p.id}-1`,
-            sku: p.sku || "AMO-INT53-100",
-            volume: p.volumeMl || 100,
-            volumeMl: p.volumeMl || 100,
-            basePrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
-            regularPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
-            originalPrice: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
-            price: typeof p.price === "string" ? Number(p.price.replace(/[^0-9.]/g, "")) || 1000 : p.price || 1000,
+            sku: pSku || "AMO-INT53-100",
+            volume: pVolumeMl,
+            volumeMl: pVolumeMl,
+            basePrice: defaultPriceNum,
+            regularPrice: defaultPriceNum,
+            originalPrice: defaultPriceNum,
+            price: defaultPriceNum,
             discountPrice: null,
             salePrice: null,
-            stock: p.stock || 20,
-            stockQuantity: p.stock || 20,
+            stock: p.stock !== undefined ? Number(p.stock) : 20,
+            stockQuantity: p.stock !== undefined ? Number(p.stock) : 20,
             warehouse: p.warehouse || "DXB-MAIN",
             isDefault: true,
           },
         ];
+
     setProductForm({
-      sku: p.sku || "",
-      name: p.name || "",
-      nameAr: p.nameAr || "",
-      brand: p.brand || "Amouage",
-      scentFamily: p.scentFamily || "Woody Amber",
+      sku: pSku,
+      name: pName,
+      nameAr: pNameAr,
+      brand: pBrand,
+      scentFamily: pScentFamily,
       perfumer: perfumerStr,
-      perfumerBio: p.perfumerBio || "",
-      concentration: p.concentration || "EXTRAIT_DE_PARFUM",
-      volumeMl: p.volumeMl || 100,
-      price: p.price ? p.price.replace(" AED", "") : "",
+      perfumerBio: perfumerBioStr,
+      concentration: pConcentration,
+      volumeMl: pVolumeMl,
+      price: rawPriceClean,
       imageUrl: prodImages[0] || p.imageUrl || "",
       images: prodImages,
-      stock: p.stock || 0,
-      testerStock: p.testerStock || 0,
+      stock: p.stock !== undefined ? Number(p.stock) : 20,
+      testerStock: p.testerStock !== undefined ? Number(p.testerStock) : 2,
       warehouse: p.warehouse || "DXB-MAIN",
-      topNotes: Array.isArray(p.topNotes) ? p.topNotes.join(", ") : "",
-      heartNotes: Array.isArray(p.heartNotes) ? p.heartNotes.join(", ") : "",
-      baseNotes: Array.isArray(p.baseNotes) ? p.baseNotes.join(", ") : "",
-      descriptionEn: p.descriptionEn || "",
-      descriptionAr: p.descriptionAr || "",
-      metaTitle: p.metaTitle || generateProductMetaTitle(p.name, p.brand),
+      topNotes: topNotesArr.join(", "),
+      heartNotes: heartNotesArr.join(", "),
+      baseNotes: baseNotesArr.join(", "),
+      descriptionEn: p.descriptionEn || (p as any).description || "",
+      descriptionAr: p.descriptionAr || (p as any).descAr || "",
+      metaTitle: p.metaTitle || generateProductMetaTitle(pName || "Fragrance", pBrand),
       metaDescription:
         p.metaDescription ||
-        generateProductMetaDescription(p.name, p.brand, p.concentration, topNotesArr),
+        generateProductMetaDescription(pName || "Fragrance", pBrand, pConcentration, topNotesArr),
       status: (p.status as any) || "PUBLISHED",
       variants: initialVariants,
     });
@@ -2315,7 +2398,7 @@ export function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Net Revenue (MTD)</span>
-                <div className="font-serif text-3xl text-white font-light">384,250 AED</div>
+                <div className="font-serif text-3xl text-neutral-900 dark:text-white font-light">384,250 AED</div>
                 <div className="text-emerald-400 text-xs flex items-center gap-1">
                   <TrendingUp size={12} />
                   <span>+28.4% vs last month</span>
@@ -2450,7 +2533,7 @@ export function App() {
                               )}
                             </div>
                             <div>
-                              <span className="font-semibold text-white block">{p.name}</span>
+                              <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
                               {p.nameAr && (
                                 <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
                                   {p.nameAr}
@@ -2587,7 +2670,7 @@ export function App() {
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                     <div>
-                      <h3 className="font-serif text-lg text-white font-light">
+                      <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-medium">
                         {editingProductId ? "Edit Product" : "Add Product"}
                       </h3>
                       <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
@@ -2599,7 +2682,8 @@ export function App() {
                         setShowProductModal(false);
                         setEditingProductId(null);
                       }}
-                      className="text-neutral-500 dark:text-neutral-400 hover:text-white"
+                      className="text-neutral-500 hover:text-black dark:hover:text-white p-1 rounded transition-colors"
+                      title="Close Modal"
                     >
                       <X size={18} />
                     </button>
@@ -2607,22 +2691,22 @@ export function App() {
                   <div className="space-y-4 text-xs">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">SKU Code *</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">SKU Code *</label>
                         <input
                           type="text"
                           placeholder="e.g. AMO-INT53-100"
-                          value={productForm.sku}
+                          value={productForm.sku || ""}
                           onChange={(e) => setProductForm({ ...productForm, sku: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono focus:outline-none focus:border-black dark:focus:border-white"
                           required
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Brand *</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Brand *</label>
                         <select
-                          value={productForm.brand}
+                          value={productForm.brand || ""}
                           onChange={(e) => setProductForm({ ...productForm, brand: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                         >
                           {brands.map((b) => (
                             <option key={b.id} value={b.name}>
@@ -2634,37 +2718,37 @@ export function App() {
                     </div>
 
                     <div>
-                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Name (English) *</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Name (English) *</label>
                       <input
                         type="text"
                         placeholder="e.g. Royal Taif Extrait de Parfum"
-                        value={productForm.name}
+                        value={productForm.name || ""}
                         onChange={(e) => setProductForm({ ...productForm, name: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                         required
                       />
                     </div>
 
                     <div>
-                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Name (Arabic)</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Name (Arabic)</label>
                       <input
                         type="text"
                         dir="rtl"
                         placeholder="e.g. ورد الطائف إكستريت دي بارفان"
-                        value={productForm.nameAr}
+                        value={productForm.nameAr || ""}
                         onChange={(e) => setProductForm({ ...productForm, nameAr: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                       />
                     </div>
 
                     {/* Olfactory Scent Family & Concentration */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Scent Family (Olfactory Classification) *</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Scent Family (Olfactory Classification) *</label>
                         <select
-                          value={productForm.scentFamily}
+                          value={productForm.scentFamily || "Woody Amber"}
                           onChange={(e) => setProductForm({ ...productForm, scentFamily: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         >
                           <option value="Woody Amber">Woody Amber (خشب العنبر)</option>
                           <option value="Amber Floral">Amber Floral (عنبر زهري)</option>
@@ -2680,11 +2764,11 @@ export function App() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Concentration *</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Concentration *</label>
                         <select
-                          value={productForm.concentration}
+                          value={productForm.concentration || "EXTRAIT_DE_PARFUM"}
                           onChange={(e) => setProductForm({ ...productForm, concentration: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         >
                           <option value="EXTRAIT_DE_PARFUM">Extrait de Parfum (30-53%)</option>
                           <option value="PARFUM">Parfum Pure (20-30%)</option>
@@ -2695,9 +2779,9 @@ export function App() {
                     </div>
 
                     {/* Master Perfumer(s) / Nose Details */}
-                    <div className="p-3.5 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-3">
+                    <div className="p-3.5 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-amber-400 flex items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-amber-500 dark:text-amber-400 flex items-center gap-1.5">
                           <Award size={13} />
                           <span>Master Perfumer(s) / Nose (الأنف العطري)</span>
                         </span>
@@ -2706,22 +2790,22 @@ export function App() {
                       
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-neutral-500 dark:text-neutral-400 text-[10px]">
+                          <label className="text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">
                             Perfumer Names (multiple names can be written separated by commas)
                           </label>
-                          <span className="text-[10px] text-amber-400/80 font-sans">Multiple Noses Supported</span>
+                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans">Multiple Noses Supported</span>
                         </div>
                         <input
                           type="text"
                           placeholder="e.g. Pierre Negrin, Renaud Salmon, Karine Vinchon"
-                          value={productForm.perfumer}
+                          value={productForm.perfumer || ""}
                           onChange={(e) => setProductForm({ ...productForm, perfumer: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
 
                       {/* Interactive Perfumer Badges */}
-                      {productForm.perfumer.trim() && (
+                      {(productForm.perfumer || "").trim() && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
                           <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Tagged Perfumers:</span>
                           {productForm.perfumer
@@ -2731,7 +2815,7 @@ export function App() {
                             .map((name, i) => (
                               <span
                                 key={i}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-300 text-[11px] font-medium"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-medium"
                               >
                                 <span>{name}</span>
                                 <button
@@ -2743,7 +2827,7 @@ export function App() {
                                       .filter((s) => s && s.toLowerCase() !== name.toLowerCase());
                                     setProductForm({ ...productForm, perfumer: filtered.join(", ") });
                                   }}
-                                  className="text-amber-400/70 hover:text-amber-200 transition-colors ml-0.5"
+                                  className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-200 transition-colors ml-0.5"
                                   title={`Remove ${name}`}
                                 >
                                   <X size={11} />
@@ -2768,7 +2852,7 @@ export function App() {
                             "Renaud Salmon",
                             "Karine Vinchon",
                           ].map((perfumerSuggestion) => {
-                            const currentPerfumers = productForm.perfumer
+                            const currentPerfumers = (productForm.perfumer || "")
                               .split(",")
                               .map((s) => s.trim().toLowerCase())
                               .filter(Boolean);
@@ -2779,7 +2863,7 @@ export function App() {
                                 type="button"
                                 onClick={() => {
                                   if (isAlreadyAdded) return;
-                                  const currentList = productForm.perfumer
+                                  const currentList = (productForm.perfumer || "")
                                     .split(",")
                                     .map((s) => s.trim())
                                     .filter(Boolean);
@@ -2789,8 +2873,8 @@ export function App() {
                                 disabled={isAlreadyAdded}
                                 className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
                                   isAlreadyAdded
-                                    ? "bg-slate-800/60 text-neutral-500 border border-neutral-200 dark:border-neutral-800 cursor-default"
-                                    : "bg-[#141C2B] hover:bg-amber-950/40 text-neutral-700 dark:text-neutral-300 hover:text-amber-300 border border-neutral-300 dark:border-neutral-700/60"
+                                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border border-neutral-200 dark:border-neutral-700 cursor-default"
+                                    : "bg-white dark:bg-neutral-900 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700"
                                 }`}
                               >
                                 {isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}`}
@@ -2801,13 +2885,13 @@ export function App() {
                       </div>
 
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 text-[10px] mb-1">Perfumer Heritage / Bio Note</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] mb-1 font-medium">Perfumer Heritage / Bio Note</label>
                         <input
                           type="text"
                           placeholder="e.g. Master French perfumer famed for architectural incense and royal extraits"
-                          value={productForm.perfumerBio}
+                          value={productForm.perfumerBio || ""}
                           onChange={(e) => setProductForm({ ...productForm, perfumerBio: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                     </div>
@@ -2815,54 +2899,54 @@ export function App() {
                     {/* Editorial Product Descriptions */}
                     <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                          <FileText size={13} className="text-amber-400" />
+                        <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                          <FileText size={13} className="text-amber-500 dark:text-amber-400" />
                           <span>Product Editorial Descriptions</span>
                         </span>
                       </div>
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Description (English)</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Description (English)</label>
                         <textarea
                           rows={3}
                           placeholder="e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano..."
-                          value={productForm.descriptionEn}
+                          value={productForm.descriptionEn || ""}
                           onChange={(e) => setProductForm({ ...productForm, descriptionEn: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Product Description (Arabic)</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Description (Arabic)</label>
                         <textarea
                           rows={3}
                           dir="rtl"
                           placeholder="e.g. بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان. يفتتح بنفحات الأوريغانو والفلفل الحار..."
-                          value={productForm.descriptionAr}
+                          value={productForm.descriptionAr || ""}
                           onChange={(e) => setProductForm({ ...productForm, descriptionAr: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600 font-sans"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-black dark:focus:border-white font-sans"
                         />
                       </div>
                     </div>
 
                     {/* Dynamic Bottle Volume Variants & Warehouse Inventory Table */}
-                    <div className="p-4 bg-[#0B0F17] border border-neutral-200 dark:border-neutral-800 rounded-lg space-y-3">
+                    <div className="p-4 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg space-y-3">
                       <div className="flex flex-wrap items-center justify-between gap-2">
                         <div>
                           <div className="flex items-center gap-2">
-                            <Layers size={14} className="text-amber-400" />
-                            <span className="text-xs font-semibold text-white tracking-wide">
+                            <Layers size={14} className="text-amber-500 dark:text-amber-400" />
+                            <span className="text-xs font-semibold text-neutral-900 dark:text-white tracking-wide">
                               Multi-Volume Variants & Warehouse Inventory (أحجام العطور والمستودعات) *
                             </span>
-                            <span className="text-[10px] text-amber-400/90 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
+                            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
                               Dynamic Builder
                             </span>
                           </div>
-                          <p className="text-[11px] text-neutral-500 dark:text-neutral-400 mt-1">
+                          <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
                             Configure multiple volume options per product (e.g. 30ml, 50ml, 100ml) with dual pricing (Selling Price vs. Base MRP) and warehouse inventory.
                           </p>
                         </div>
                         {/* Quick-add buttons */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-neutral-500">Quick Add:</span>
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Quick Add:</span>
                           {[30, 50, 100, 200].map((volNum) => (
                             <button
                               key={volNum}
@@ -2894,7 +2978,7 @@ export function App() {
                                   variants: [...productForm.variants, newVariant],
                                 });
                               }}
-                              className="px-2.5 py-1 text-[10px] font-mono bg-slate-800/80 hover:bg-amber-950/40 text-neutral-700 dark:text-neutral-300 hover:text-amber-300 border border-neutral-300 dark:border-neutral-700/60 rounded transition-colors"
+                              className="px-2.5 py-1 text-[10px] font-mono bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700 rounded transition-colors"
                             >
                               + {volNum}ml
                             </button>
@@ -2903,9 +2987,9 @@ export function App() {
                       </div>
 
                       {/* Variant Table */}
-                      <div className="overflow-x-auto border border-neutral-200 dark:border-neutral-800 rounded-md bg-white dark:bg-black">
+                      <div className="overflow-x-auto border border-neutral-300 dark:border-neutral-800 rounded-md bg-white dark:bg-neutral-950">
                         <table className="w-full text-start text-xs font-sans">
-                          <thead className="bg-[#121826] text-neutral-500 dark:text-neutral-400 uppercase tracking-wider text-[10px] border-b border-neutral-200 dark:border-neutral-800">
+                          <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider text-[10px] border-b border-neutral-300 dark:border-neutral-800">
                             <tr>
                               <th className="p-2.5 text-start font-medium">Volume (ml) *</th>
                               <th className="p-2.5 text-start font-medium">Selling Price (AED) *</th>
@@ -2916,19 +3000,33 @@ export function App() {
                               <th className="p-2.5 text-end font-medium w-12">Action</th>
                             </tr>
                           </thead>
-                          <tbody className="divide-y divide-slate-800/80">
+                          <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                             {productForm.variants.map((v, index) => {
                               const selling = Number(v.price) || 0;
                               const base = Number(v.basePrice ?? v.regularPrice) || 0;
                               const isOverpriced = selling > base && base > 0;
                               const isDiscounted = selling < base && base > 0 && selling > 0;
                               const savingsPct = isDiscounted ? Math.round(((base - selling) / base) * 100) : 0;
+                              const currentVol = v.volume !== undefined && v.volume !== null
+                                ? (typeof v.volume === "number" ? v.volume : (parseInt(String(v.volume).replace(/[^0-9]/g, "") || "100", 10) || ""))
+                                : "";
+                              const currentSelling = v.price !== undefined && v.price !== null
+                                ? (typeof v.price === "number" ? v.price : (Number(String(v.price).replace(/[^0-9.]/g, "")) || ""))
+                                : "";
+                              const currentBase = v.basePrice !== undefined && v.basePrice !== null
+                                ? (typeof v.basePrice === "number" ? v.basePrice : (Number(String(v.basePrice).replace(/[^0-9.]/g, "")) || ""))
+                                : (v.regularPrice !== undefined && v.regularPrice !== null
+                                    ? (typeof v.regularPrice === "number" ? v.regularPrice : (Number(String(v.regularPrice).replace(/[^0-9.]/g, "")) || ""))
+                                    : "");
+                              const currentStock = v.stock !== undefined && v.stock !== null
+                                ? Number(v.stock)
+                                : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : 0);
 
                               return (
                                 <tr
                                   key={v.id || index}
                                   className={`transition-colors ${
-                                    v.isDefault ? "bg-amber-500/5 hover:bg-amber-500/10" : "hover:bg-slate-800/40"
+                                    v.isDefault ? "bg-amber-500/10 hover:bg-amber-500/15" : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
                                   }`}
                                 >
                                   {/* Volume (ml) */}
@@ -2940,7 +3038,7 @@ export function App() {
                                           min="1"
                                           step="1"
                                           placeholder="100"
-                                          value={v.volume}
+                                          value={currentVol}
                                           onChange={(e) => {
                                             const val = Number(e.target.value) || 0;
                                             const updated = [...productForm.variants];
@@ -2951,7 +3049,7 @@ export function App() {
                                             };
                                             setProductForm({ ...productForm, variants: updated });
                                           }}
-                                          className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                          className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-black dark:focus:border-white focus:outline-none"
                                           required
                                         />
                                         <span className="absolute end-2 top-2 text-[10px] text-neutral-500 pointer-events-none">ml</span>
@@ -2965,7 +3063,7 @@ export function App() {
                                           updated[index] = { ...v, sku: e.target.value };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800/80 text-neutral-500 dark:text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-white"
+                                        className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-neutral-900 dark:focus:text-white focus:outline-none"
                                         title="Variant SKU (optional / auto-generated)"
                                       />
                                     </div>
@@ -2979,7 +3077,7 @@ export function App() {
                                         min="1"
                                         step="1"
                                         placeholder="1590"
-                                        value={v.price}
+                                        value={currentSelling}
                                         onChange={(e) => {
                                           const val = Number(e.target.value) || 0;
                                           const updated = [...productForm.variants];
@@ -2991,22 +3089,22 @@ export function App() {
                                           };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className={`w-32 bg-neutral-50 dark:bg-neutral-900 border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
+                                        className={`w-32 bg-white dark:bg-neutral-900 border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
                                           isOverpriced
-                                            ? "border-rose-500 text-rose-300 ring-1 ring-rose-500/30"
+                                            ? "border-rose-500 text-rose-600 dark:text-rose-300 ring-1 ring-rose-500/30"
                                             : isDiscounted
-                                            ? "border-emerald-500/60 text-emerald-300"
-                                            : "border-neutral-200 dark:border-neutral-800 text-white focus:border-amber-500/50"
+                                            ? "border-emerald-500/60 text-emerald-600 dark:text-emerald-300"
+                                            : "border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white focus:border-black dark:focus:border-white"
                                         }`}
                                         required
                                       />
                                       {isOverpriced && (
-                                        <div className="text-[9px] text-rose-400 font-mono">
+                                        <div className="text-[9px] text-rose-500 font-mono">
                                           ⚠ Exceeds Base ({base} AED)
                                         </div>
                                       )}
                                       {isDiscounted && (
-                                        <div className="text-[9px] text-emerald-400 font-mono">
+                                        <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono">
                                           Save {savingsPct}% ({base - selling} AED off)
                                         </div>
                                       )}
@@ -3020,7 +3118,7 @@ export function App() {
                                       min="1"
                                       step="1"
                                       placeholder="1850"
-                                      value={v.basePrice ?? v.regularPrice ?? ""}
+                                      value={currentBase}
                                       onChange={(e) => {
                                         const val = Number(e.target.value) || 0;
                                         const updated = [...productForm.variants];
@@ -3032,7 +3130,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-32 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      className="w-32 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-black dark:focus:border-white focus:outline-none"
                                       required
                                     />
                                   </td>
@@ -3044,7 +3142,7 @@ export function App() {
                                       min="0"
                                       step="1"
                                       placeholder="20"
-                                      value={v.stock ?? v.stockQuantity ?? 0}
+                                      value={currentStock}
                                       onChange={(e) => {
                                         const val = Math.max(0, Number(e.target.value) || 0);
                                         const updated = [...productForm.variants];
@@ -3055,7 +3153,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-24 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-amber-500/50 focus:outline-none"
+                                      className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-black dark:focus:border-white focus:outline-none"
                                       required
                                     />
                                   </td>
@@ -3072,7 +3170,7 @@ export function App() {
                                         };
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
-                                      className="w-36 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-white px-2.5 py-1.5 rounded text-xs focus:border-amber-500/50 focus:outline-none"
+                                      className="w-36 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white px-2.5 py-1.5 rounded text-xs focus:border-black dark:focus:border-white focus:outline-none"
                                     >
                                       <option value="DXB-MAIN">DXB-MAIN (Dubai)</option>
                                       <option value="RUH-HUB">RUH-HUB (Riyadh)</option>
@@ -3095,8 +3193,8 @@ export function App() {
                                       title={v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant"}
                                       className={`px-2 py-1 rounded text-xs transition-colors ${
                                         v.isDefault
-                                          ? "text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
-                                          : "text-neutral-500 hover:text-amber-300 border border-transparent"
+                                          ? "text-amber-700 dark:text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
+                                          : "text-neutral-500 hover:text-black dark:hover:text-white border border-transparent"
                                       }`}
                                     >
                                       {v.isDefault ? "★ Primary" : "Set"}
@@ -3119,8 +3217,8 @@ export function App() {
                                       title={productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant"}
                                       className={`p-1.5 rounded transition-colors ${
                                         productForm.variants.length <= 1
-                                          ? "text-slate-700 cursor-not-allowed"
-                                          : "text-neutral-500 dark:text-neutral-400 hover:text-rose-400 hover:bg-rose-500/10"
+                                          ? "text-neutral-300 dark:text-neutral-700 cursor-not-allowed"
+                                          : "text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10"
                                       }`}
                                     >
                                       <Trash2 size={14} />
@@ -3161,14 +3259,14 @@ export function App() {
                               variants: [...productForm.variants, newVariant],
                             });
                           }}
-                          className="px-3.5 py-1.5 bg-gradient-to-r from-amber-600 to-amber-500 hover:from-amber-500 hover:to-amber-400 text-slate-950 font-semibold text-xs rounded shadow-md shadow-amber-500/10 flex items-center gap-1.5 transition-all"
+                          className="px-3.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium text-xs rounded shadow flex items-center gap-1.5 transition-all"
                         >
-                          <Plus size={13} className="text-slate-950" />
+                          <Plus size={13} />
                           <span>+ Add Volume Variant</span>
                         </button>
-                        <span className="text-[11px] text-neutral-500 dark:text-neutral-400 font-mono">
+                        <span className="text-[11px] text-neutral-600 dark:text-neutral-400 font-mono">
                           {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured · Total Stock:{" "}
-                          <strong className="text-emerald-400">
+                          <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
                             {productForm.variants.reduce((sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0), 0)} units
                           </strong>
                         </span>
@@ -3176,39 +3274,39 @@ export function App() {
                     </div>
 
                     {/* Scent Notes Pyramid */}
-                    <div className="p-3 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
-                      <span className="text-[11px] font-medium text-purple-400 flex items-center gap-1">
+                    <div className="p-3 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
+                      <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
                         <Layers size={13} />
                         <span>Scent Notes (comma-separated, auto-linked to note pages)</span>
                       </span>
                       <div>
-                        <label className="block text-neutral-500 text-[10px]">Top Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Top Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Bergamot, Pink Pepper, Taif Rose"
-                          value={productForm.topNotes}
+                          value={productForm.topNotes || ""}
                           onChange={(e) => setProductForm({ ...productForm, topNotes: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-500 text-[10px]">Heart Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Heart Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Silver Frankincense, Jasmine, Cedarwood"
-                          value={productForm.heartNotes}
+                          value={productForm.heartNotes || ""}
                           onChange={(e) => setProductForm({ ...productForm, heartNotes: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-500 text-[10px]">Base Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Base Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Cambodian Oud, Ambergris, Sandalwood"
-                          value={productForm.baseNotes}
+                          value={productForm.baseNotes || ""}
                           onChange={(e) => setProductForm({ ...productForm, baseNotes: e.target.value })}
-                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-white p-2 rounded text-xs"
+                          className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                     </div>
@@ -3230,8 +3328,8 @@ export function App() {
                     {/* Google SERP SEO Meta Title & Meta Description */}
                     <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
-                          <Globe size={13} className="text-emerald-400" />
+                        <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                          <Globe size={13} className="text-emerald-600 dark:text-emerald-400" />
                           <span>Search Engine Optimization (SEO) & Google SERP</span>
                         </span>
                         <button
@@ -3251,7 +3349,7 @@ export function App() {
                               ),
                             });
                           }}
-                          className="text-[10px] text-emerald-400 hover:text-emerald-300 flex items-center gap-1 underline underline-offset-2"
+                          className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium"
                           title="Auto-generate SEO title and description based on current name, brand, concentration, and notes"
                         >
                           <Sparkles size={11} />
@@ -3261,10 +3359,10 @@ export function App() {
 
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-neutral-500 dark:text-neutral-400">Meta Title (Google)</label>
+                          <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Title (Google)</label>
                           <span
                             className={`text-[10px] font-mono ${
-                              (productForm.metaTitle || "").length > 60 ? "text-amber-400 font-bold" : "text-neutral-500"
+                              (productForm.metaTitle || "").length > 60 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
                             }`}
                           >
                             {(productForm.metaTitle || "").length}/60 chars
@@ -3273,18 +3371,18 @@ export function App() {
                         <input
                           type="text"
                           placeholder={generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
-                          value={productForm.metaTitle}
+                          value={productForm.metaTitle || ""}
                           onChange={(e) => setProductForm({ ...productForm, metaTitle: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-neutral-500 dark:text-neutral-400">Meta Description (Google)</label>
+                          <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Description (Google)</label>
                           <span
                             className={`text-[10px] font-mono ${
-                              (productForm.metaDescription || "").length > 160 ? "text-amber-400 font-bold" : "text-neutral-500"
+                              (productForm.metaDescription || "").length > 160 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
                             }`}
                           >
                             {(productForm.metaDescription || "").length}/160 chars
@@ -3297,15 +3395,15 @@ export function App() {
                             productForm.brand || "Brand",
                             productForm.concentration
                           )}
-                          value={productForm.metaDescription}
+                          value={productForm.metaDescription || ""}
                           onChange={(e) => setProductForm({ ...productForm, metaDescription: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs leading-relaxed focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
 
                       {/* Live Google Search Preview Box */}
                       <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded space-y-1 font-sans">
-                        <span className="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                           <Globe size={11} />
                           <span>Google Search Preview</span>
                         </span>
@@ -3318,10 +3416,10 @@ export function App() {
                             product › {slugify(`${productForm.brand || "brand"}-${productForm.name || "product"}`)}
                           </span>
                         </div>
-                        <div className="text-sm text-[#8AB4F8] hover:underline font-medium line-clamp-1">
+                        <div className="text-sm text-blue-600 dark:text-[#8AB4F8] hover:underline font-medium line-clamp-1">
                           {productForm.metaTitle || generateProductMetaTitle(productForm.name || "Fragrance", productForm.brand || "Brand")}
                         </div>
-                        <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-relaxed line-clamp-2">
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed line-clamp-2">
                           {productForm.metaDescription ||
                             generateProductMetaDescription(
                               productForm.name || "Fragrance",
@@ -3334,19 +3432,19 @@ export function App() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Showroom & Boutique Testers (Units)</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Showroom & Boutique Testers (Units)</label>
                         <input
                           type="number"
                           min="0"
-                          value={productForm.testerStock}
-                          onChange={(e) => setProductForm({ ...productForm, testerStock: Number(e.target.value) })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono text-xs"
+                          value={productForm.testerStock ?? 0}
+                          onChange={(e) => setProductForm({ ...productForm, testerStock: Number(e.target.value) || 0 })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono text-xs focus:outline-none focus:border-black dark:focus:border-white"
                           placeholder="2"
                         />
                       </div>
                       <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded flex flex-col justify-center text-xs">
                         <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">Primary Warehouse Fulfillment:</span>
-                        <span className="text-amber-400 font-medium">
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">
                           {productForm.variants[0]?.warehouse || "DXB-MAIN (Dubai Hub)"}
                         </span>
                       </div>
@@ -3358,13 +3456,13 @@ export function App() {
                         setShowProductModal(false);
                         setEditingProductId(null);
                       }}
-                      className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-white rounded"
+                      className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       onClick={handleSaveProduct}
-                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5"
+                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5 transition-colors"
                     >
                       <CheckCircle2 size={14} />
                       <span>{editingProductId ? "Update Product" : "Save Product"}</span>
@@ -3387,7 +3485,7 @@ export function App() {
                   placeholder="Search by brand name or country..."
                   value={brandSearch}
                   onChange={(e) => setBrandSearch(e.target.value)}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                 />
               </div>
 
@@ -3445,7 +3543,7 @@ export function App() {
                               )}
                             </div>
                             <div>
-                              <span className="font-semibold text-white block text-sm">{b.name}</span>
+                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
                               <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{b.countryEn || "Prestige House"}</span>
                             </div>
                           </div>
@@ -3710,7 +3808,7 @@ export function App() {
                   placeholder="Search by note name, Arabic title, or family..."
                   value={noteSearch}
                   onChange={(e) => setNoteSearch(e.target.value)}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
                 />
               </div>
 
@@ -3774,7 +3872,7 @@ export function App() {
                               )}
                             </div>
                             <div>
-                              <span className="font-semibold text-white block text-sm">{n.nameEn}</span>
+                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{n.nameEn}</span>
                               <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
                                 {n.nameAr}
                               </span>
@@ -3845,7 +3943,7 @@ export function App() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
-                  <span className="font-serif text-lg text-white">DXB-MAIN (Dubai Central Hub)</span>
+                  <span className="font-serif text-lg text-neutral-900 dark:text-white">DXB-MAIN (Dubai Central Hub)</span>
                   <span className="px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">DEFAULT WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "DXB-MAIN").reduce((a, b) => a + b.stock, 0)}</p>
@@ -3853,7 +3951,7 @@ export function App() {
               </div>
               <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
-                  <span className="font-serif text-lg text-white">RUH-HUB (Riyadh GCC Hub)</span>
+                  <span className="font-serif text-lg text-neutral-900 dark:text-white">RUH-HUB (Riyadh GCC Hub)</span>
                   <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">REGIONAL WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "RUH-HUB").reduce((a, b) => a + b.stock, 0)}</p>
@@ -3867,7 +3965,7 @@ export function App() {
         {activeTab === "purchasing" && (
           <div className="space-y-6">
             <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-3 rounded">
-              <h3 className="font-serif text-lg text-white font-light">Supplier Purchase Orders</h3>
+              <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Supplier Purchase Orders</h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">Active purchase orders with official brand distributors in France, Oman, and Italy.</p>
               <div className="divide-y divide-slate-800 text-xs font-mono pt-3">
                 <div className="py-2.5 flex items-center justify-between">
@@ -3902,7 +4000,7 @@ export function App() {
                   {returns.map((r) => (
                     <tr key={r.id} className="hover:bg-slate-800/30">
                       <td className="p-4">
-                        <span className="font-semibold text-white block">{r.number}</span>
+                        <span className="font-semibold text-neutral-900 dark:text-white block">{r.number}</span>
                         <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
                       <td className="p-4 text-neutral-700 dark:text-neutral-300">{r.item}</td>
@@ -4012,7 +4110,7 @@ export function App() {
                     .map((o) => (
                       <tr key={o.id} className="hover:bg-slate-800/30">
                         <td className="p-4">
-                          <span className="font-semibold text-white block">{o.number}</span>
+                          <span className="font-semibold text-neutral-900 dark:text-white block">{o.number}</span>
                           <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{o.customer}</span>
                         </td>
                         <td className="p-4 font-mono font-medium text-neutral-900 dark:text-white">{o.amount}</td>
@@ -4027,7 +4125,7 @@ export function App() {
                           <select
                             value={o.status}
                             onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-white text-xs px-2.5 py-1 rounded focus:outline-none"
+                            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none"
                           >
                             <option value="PAID">PAID</option>
                             <option value="FULFILLING">FULFILLING</option>
@@ -4084,11 +4182,11 @@ export function App() {
                   {reviews.map((r) => (
                     <tr key={r.id} className="hover:bg-slate-800/30">
                       <td className="p-4">
-                        <span className="font-semibold text-white block">{r.product}</span>
+                        <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
                         <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
                       <td className="p-4">
-                        <span className="text-white block font-medium">"{r.title}"</span>
+                        <span className="text-neutral-900 dark:text-white block font-medium">"{r.title}"</span>
                         <span className="text-amber-400">★ {r.rating} / 5</span>
                       </td>
                       <td className="p-4 font-mono text-neutral-500 dark:text-neutral-400">
@@ -4130,17 +4228,17 @@ export function App() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="font-serif text-lg text-white">United Arab Emirates (AE)</span>
+                <span className="font-serif text-lg text-neutral-900 dark:text-white">United Arab Emirates (AE)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: AED • Standard VAT: 5.0%</p>
                 <span className="inline-block px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">PRIMARY ACTIVE MARKET</span>
               </div>
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="font-serif text-lg text-white">Kingdom of Saudi Arabia (SA)</span>
+                <span className="font-serif text-lg text-neutral-900 dark:text-white">Kingdom of Saudi Arabia (SA)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: SAR • Standard VAT: 15.0%</p>
                 <span className="inline-block px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">ACTIVE CROSS-BORDER</span>
               </div>
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="font-serif text-lg text-white">State of Qatar (QA) & Kuwait (KW)</span>
+                <span className="font-serif text-lg text-neutral-900 dark:text-white">State of Qatar (QA) & Kuwait (KW)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currencies: QAR / KWD • DDP Express</p>
                 <span className="inline-block px-2 py-0.5 bg-slate-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-bold rounded">WHITE-GLOVE GCC</span>
               </div>
@@ -4153,7 +4251,7 @@ export function App() {
           <div className="space-y-8">
             <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
               <div>
-                <h2 className="font-serif text-lg text-white font-light">Promotional Banners & Sliders</h2>
+                <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Promotional Banners & Sliders</h2>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Configure hero sliders, campaign banners, and announcements.</p>
               </div>
               <button
@@ -4172,28 +4270,35 @@ export function App() {
             <div className="grid grid-cols-1 gap-4">
               {banners.map((b) => (
                 <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
-                  <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-slate-800" />
+                  <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
                   <div className="flex-1 space-y-1">
                     <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-slate-800 text-neutral-700 dark:text-neutral-300"}`}>
+                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                         {SLOT_LABELS[b.slot] || b.slot}
                       </span>
-                      <span className="font-serif text-sm text-white">{b.titleEn}</span>
+                      <span className="font-serif text-sm text-neutral-900 dark:text-white font-medium">{b.titleEn}</span>
                     </div>
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
                     <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
+                      onClick={() => handleOpenEditBanner(b)}
+                      className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded transition-colors"
+                      title="Edit Banner"
+                    >
+                      <Edit3 size={16} />
+                    </button>
+                    <button
                       onClick={() => toggleBannerActive(b.id)}
-                      className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-400 hover:bg-slate-800" : "text-neutral-500 hover:text-white"}`}
+                      className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-600 dark:text-emerald-400 hover:bg-neutral-100 dark:hover:bg-neutral-800" : "text-neutral-400 hover:text-black dark:hover:text-white"}`}
                       title={b.isActive ? "Deactivate" : "Activate"}
                     >
                       {b.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
                     </button>
                     <button
                       onClick={() => deleteBanner(b.id)}
-                      className="p-1.5 text-neutral-500 hover:text-rose-400 rounded transition-colors"
+                      className="p-1.5 text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 rounded transition-colors"
                       title="Delete Banner"
                     >
                       <Trash2 size={16} />
@@ -4203,7 +4308,7 @@ export function App() {
               ))}
             </div>
 
-            {/* Add Banner Modal */}
+            {/* Add / Edit Banner Modal */}
             {showBannerForm && (
               <div
                 className="fixed inset-0 bg-black/85 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto"
@@ -4214,18 +4319,20 @@ export function App() {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
-                    <h3 className="font-serif text-lg text-white font-light">Create Campaign Banner</h3>
-                    <button onClick={resetBannerForm} className="text-neutral-500 dark:text-neutral-400 hover:text-white">
+                    <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-medium">
+                      {editingBanner ? "Edit Campaign Banner" : "Create Campaign Banner"}
+                    </h3>
+                    <button onClick={resetBannerForm} className="text-neutral-500 hover:text-black dark:hover:text-white p-1 rounded transition-colors">
                       <X size={18} />
                     </button>
                   </div>
                   <div className="space-y-3 text-xs">
                     <div>
-                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Banner Placement Slot</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Banner Placement Slot</label>
                       <select
                         value={bannerForm.slot}
                         onChange={(e) => setBannerForm({ ...bannerForm, slot: e.target.value as BannerSlot })}
-                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                       >
                         <option value="HERO_SLIDER">Hero Slider (Top Masthead)</option>
                         <option value="CAMPAIGN_MID">Campaign Mid-Page</option>
@@ -4234,24 +4341,24 @@ export function App() {
                       </select>
                     </div>
                     <div>
-                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Headline (English)</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline (English)</label>
                       <input
                         type="text"
                         placeholder="The Art of | Noble Sillage."
                         value={bannerForm.titleEn}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleEn: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Headline (Arabic)</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline (Arabic)</label>
                       <input
                         type="text"
                         dir="rtl"
                         placeholder="فن | الحضور المهيب."
                         value={bannerForm.titleAr}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleAr: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                       />
                     </div>
                     <MediaUploadField
@@ -4271,32 +4378,32 @@ export function App() {
                     />
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">CTA Button Text (EN)</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">CTA Button Text (EN)</label>
                         <input
                           type="text"
                           value={bannerForm.ctaTextEn}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaTextEn: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Target URL</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Target URL</label>
                         <input
                           type="text"
                           placeholder="/shop"
                           value={bannerForm.ctaUrl}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaUrl: e.target.value })}
-                          className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-                    <button onClick={resetBannerForm} className="px-4 py-2 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 rounded">
+                    <button onClick={resetBannerForm} className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors">
                       Cancel
                     </button>
-                    <button onClick={handleSaveBanner} className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded">
-                      Save Banner
+                    <button onClick={handleSaveBanner} className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded transition-colors">
+                      {editingBanner ? "Update Banner" : "Save Banner"}
                     </button>
                   </div>
                 </div>
@@ -4305,13 +4412,13 @@ export function App() {
 
             {/* Homepage Section Order */}
             <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-5 rounded space-y-4">
-              <h3 className="font-serif text-base text-white font-light">Homepage Visual Section Reordering</h3>
-              <div className="divide-y divide-slate-800">
+              <h3 className="font-serif text-base text-neutral-900 dark:text-white font-medium">Homepage Visual Section Reordering</h3>
+              <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
                 {sections.map((section, idx) => (
                   <div key={section.id} className="py-2.5 flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-mono text-neutral-500">{idx + 1}.</span>
-                      <span className="text-xs text-white font-medium">{SECTION_LABELS[section.sectionType] || section.sectionType}</span>
+                      <span className="text-xs text-neutral-900 dark:text-white font-medium">{SECTION_LABELS[section.sectionType] || section.sectionType}</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <button
@@ -4356,7 +4463,7 @@ export function App() {
             <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded space-y-6">
               <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
                 <div>
-                  <h3 className="font-serif text-lg text-white font-light flex items-center gap-2">
+                  <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-light flex items-center gap-2">
                     <Share2 size={18} className="text-accent" />
                     <span>Official Social Media Channels</span>
                   </h3>
@@ -4370,7 +4477,7 @@ export function App() {
                 {/* Instagram */}
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-white">Instagram Profile</label>
+                    <label className="font-semibold text-neutral-900 dark:text-white">Instagram Profile</label>
                     <a
                       href={storeSettings.instagramUrl}
                       target="_blank"
@@ -4387,7 +4494,7 @@ export function App() {
                       type="text"
                       value={storeSettings.instagramHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
@@ -4396,7 +4503,7 @@ export function App() {
                       type="url"
                       value={storeSettings.instagramUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
@@ -4424,7 +4531,7 @@ export function App() {
                       type="text"
                       value={storeSettings.whatsappPhone}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappPhone: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
@@ -4433,7 +4540,7 @@ export function App() {
                       type="text"
                       value={storeSettings.whatsappNumber}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappNumber: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
@@ -4442,7 +4549,7 @@ export function App() {
                       type="text"
                       value={storeSettings.whatsappDefaultMsg}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappDefaultMsg: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded text-xs"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded text-xs"
                     />
                   </div>
                 </div>
@@ -4450,7 +4557,7 @@ export function App() {
                 {/* TikTok */}
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-white">TikTok Channel</label>
+                    <label className="font-semibold text-neutral-900 dark:text-white">TikTok Channel</label>
                     <a
                       href={storeSettings.tiktokUrl}
                       target="_blank"
@@ -4467,7 +4574,7 @@ export function App() {
                       type="text"
                       value={storeSettings.tiktokHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
@@ -4476,7 +4583,7 @@ export function App() {
                       type="url"
                       value={storeSettings.tiktokUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
@@ -4484,7 +4591,7 @@ export function App() {
                 {/* X / Twitter */}
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-white">X / Twitter</label>
+                    <label className="font-semibold text-neutral-900 dark:text-white">X / Twitter</label>
                     <a
                       href={storeSettings.twitterUrl}
                       target="_blank"
@@ -4501,7 +4608,7 @@ export function App() {
                       type="text"
                       value={storeSettings.twitterHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                   <div>
@@ -4510,7 +4617,7 @@ export function App() {
                       type="url"
                       value={storeSettings.twitterUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                     />
                   </div>
                 </div>
@@ -4518,7 +4625,7 @@ export function App() {
                 {/* YouTube */}
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2 md:col-span-2">
                   <div className="flex items-center justify-between">
-                    <label className="font-semibold text-white">YouTube Luxury Film Atelier</label>
+                    <label className="font-semibold text-neutral-900 dark:text-white">YouTube Luxury Film Atelier</label>
                     <a
                       href={storeSettings.youtubeUrl}
                       target="_blank"
@@ -4533,7 +4640,7 @@ export function App() {
                     type="url"
                     value={storeSettings.youtubeUrl}
                     onChange={(e) => setStoreSettings({ ...storeSettings, youtubeUrl: e.target.value })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-white p-2 rounded font-mono"
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
                   />
                 </div>
               </div>
@@ -4541,14 +4648,14 @@ export function App() {
 
             {/* Announcement Bar & Hotline */}
             <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded space-y-4 text-xs">
-              <h3 className="font-serif text-lg text-white font-light">Storefront Announcement Bar & Client Care</h3>
+              <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Storefront Announcement Bar & Client Care</h3>
               <div>
                 <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Announcement Bar Text (English)</label>
                 <input
                   type="text"
                   value={storeSettings.announcementBarEn}
                   onChange={(e) => setStoreSettings({ ...storeSettings, announcementBarEn: e.target.value })}
-                  className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-sans"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-sans"
                 />
               </div>
               <div>
@@ -4558,7 +4665,7 @@ export function App() {
                   dir="rtl"
                   value={storeSettings.announcementBarAr}
                   onChange={(e) => setStoreSettings({ ...storeSettings, announcementBarAr: e.target.value })}
-                  className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-sans"
+                  className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-sans"
                 />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -4568,7 +4675,7 @@ export function App() {
                     type="email"
                     value={storeSettings.conciergeEmail}
                     onChange={(e) => setStoreSettings({ ...storeSettings, conciergeEmail: e.target.value })}
-                    className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono"
                   />
                 </div>
                 <div>
@@ -4577,7 +4684,7 @@ export function App() {
                     type="number"
                     value={storeSettings.freeShippingThreshold}
                     onChange={(e) => setStoreSettings({ ...storeSettings, freeShippingThreshold: Number(e.target.value) })}
-                    className="w-full bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 text-white p-2.5 rounded font-mono"
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono"
                   />
                 </div>
               </div>
@@ -4602,7 +4709,7 @@ export function App() {
           <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-4 rounded">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-serif text-xl font-light text-white">Immutable Administrative Audit Log</h3>
+                <h3 className="font-serif text-xl font-light text-neutral-900 dark:text-white">Immutable Administrative Audit Log</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">All administrative operations, creations, and transitions are tracked here.</p>
               </div>
               <span className="px-2.5 py-1 bg-slate-800 text-neutral-700 dark:text-neutral-300 font-mono text-[10px] rounded">
