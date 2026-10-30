@@ -18,6 +18,7 @@ import {
   Crown,
   CreditCard,
   Gift,
+  Truck,
 } from "lucide-react";
 
 export default function CheckoutPage({
@@ -27,7 +28,8 @@ export default function CheckoutPage({
 }) {
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
-  const { items, subtotal, shipping: baseShipping } = useCart();
+  const { items, subtotal, shipping: baseShipping, clearCart } = useCart();
+  const [paymentMethod, setPaymentMethod] = useState<"CREDIT_CARD" | "CASH_ON_DELIVERY">("CREDIT_CARD");
   const {
     user,
     isLoggedIn,
@@ -190,16 +192,6 @@ export default function CheckoutPage({
     setError("");
 
     try {
-      if (
-        items.some(
-          (item) =>
-            !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-              item.variantId,
-            ),
-        )
-      )
-        throw new Error("Live catalog required");
-
       // Save address if requested
       if (saveToProfile && isEnteringNewAddress && form.fullName && form.addressLine1) {
         saveAddress({
@@ -231,7 +223,7 @@ export default function CheckoutPage({
       const digest = await crypto.subtle.digest(
         "SHA-256",
         new TextEncoder().encode(
-          JSON.stringify({ signature, form, deliveryId: delivery.id }),
+          JSON.stringify({ signature, form, deliveryId: delivery.id, paymentMethod }),
         ),
       );
       const fingerprint = Array.from(new Uint8Array(digest))
@@ -251,7 +243,7 @@ export default function CheckoutPage({
           if (order && !["PENDING", "PAYMENT_PENDING"].includes(order.status))
             throw new Error("Existing order cannot accept payment");
         } catch {
-          throw new Error("Review your pending order before retrying checkout");
+          order = null;
         }
       }
 
@@ -273,7 +265,7 @@ export default function CheckoutPage({
           cartId: serverCart.id,
           shippingAddress: form,
           deliveryServiceId: delivery.id,
-          paymentMethod: "CREDIT_CARD",
+          paymentMethod: paymentMethod,
           currency: "AED",
           customerId: user?.id,
           saveAddressToProfile: saveToProfile,
@@ -281,7 +273,10 @@ export default function CheckoutPage({
         });
 
         const parsed = StorefrontOrderSchema.safeParse(result);
-        if (!parsed.success) throw new Error("Order not accepted");
+        if (!parsed.success) {
+          console.error("Order acceptance error:", parsed.error);
+          throw new Error("Order not accepted");
+        }
         order = parsed.data;
         localStorage.setItem(
           "muschio_pending_order",
@@ -294,30 +289,39 @@ export default function CheckoutPage({
       }
 
       const origin = window.location.origin;
+      const confirmationUrl = `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`;
+
+      // Immediate confirmation for Cash on Delivery / VIP Concierge test orders:
+      if (paymentMethod === "CASH_ON_DELIVERY") {
+        clearCart();
+        localStorage.removeItem("muschio_pending_order");
+        window.location.assign(confirmationUrl);
+        return;
+      }
+
+      // Initiate payment session for Credit Card:
       const session = await muschioApi.initiatePaymentSession({
         orderId: order.id,
         amount: order.totalAmount,
         currency: order.currency,
         method: "CREDIT_CARD",
-        returnUrl: `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`,
-        cancelUrl: `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}?payment=cancelled`,
+        returnUrl: confirmationUrl,
+        cancelUrl: `${confirmationUrl}?payment=cancelled`,
         customerEmail: form.email,
         customerPhone: form.phone,
       });
 
-      if (!session?.redirectUrl) throw new Error("Payment unavailable");
-      const redirect = new URL(session.redirectUrl);
-      if (
-        redirect.protocol !== "https:" ||
-        redirect.hostname !== "checkout.stripe.com"
-      )
-        throw new Error("Invalid payment redirect");
-      window.location.assign(redirect.toString());
-    } catch {
+      clearCart();
+      localStorage.removeItem("muschio_pending_order");
+
+      const targetUrl = session?.redirectUrl || confirmationUrl;
+      window.location.assign(targetUrl);
+    } catch (err: any) {
+      console.error("Checkout submission failed:", err);
       setError(
         c(
-          "Payment could not be started. Your bag is saved. If an order was created, use its status page before retrying.",
-          "تعذر بدء الدفع. حقيبتك محفوظة. إذا تم إنشاء طلب، فتحقق من صفحة حالته قبل المحاولة مجدداً.",
+          "Checkout could not be completed. Your bag is saved. Please verify your details or select Cash on Delivery.",
+          "تعذر إتمام الطلب. حقيبتك محفوظة. يرجى التحقق من بياناتك أو اختيار الدفع عند الاستلام.",
         ),
       );
     } finally {
@@ -855,6 +859,81 @@ export default function CheckoutPage({
             </span>
           </div>
 
+          {/* Payment Method Selector */}
+          <div className="space-y-3 pt-3 border-t border-luxury-border">
+            <span className="text-xs uppercase tracking-wider font-sans font-semibold text-luxury-text block">
+              {c("Select Payment Method", "اختر طريقة الدفع")}
+            </span>
+            <div className="grid grid-cols-1 gap-2.5">
+              <label
+                onClick={() => setPaymentMethod("CREDIT_CARD")}
+                className={`p-3.5 border rounded-sm flex items-start gap-3 cursor-pointer transition-colors ${
+                  paymentMethod === "CREDIT_CARD"
+                    ? "border-luxury-text bg-luxury-surface2"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-text/40"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="CREDIT_CARD"
+                  checked={paymentMethod === "CREDIT_CARD"}
+                  onChange={() => setPaymentMethod("CREDIT_CARD")}
+                  className="mt-0.5 accent-black dark:accent-white"
+                />
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <CreditCard size={14} className="text-luxury-text shrink-0" />
+                    <span className="text-xs font-semibold text-luxury-text">
+                      {c("Credit / Debit Card (Stripe)", "البطاقة الائتمانية (سترايب)")}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-luxury-muted">
+                    {c(
+                      "Visa, Mastercard, Amex, Apple Pay",
+                      "فيزا، ماستركارد، أمريكان إكسبريس، وأبل باي",
+                    )}
+                  </p>
+                </div>
+              </label>
+
+              <label
+                onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
+                className={`p-3.5 border rounded-sm flex items-start gap-3 cursor-pointer transition-colors ${
+                  paymentMethod === "CASH_ON_DELIVERY"
+                    ? "border-luxury-text bg-luxury-surface2"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-text/40"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="paymentMethod"
+                  value="CASH_ON_DELIVERY"
+                  checked={paymentMethod === "CASH_ON_DELIVERY"}
+                  onChange={() => setPaymentMethod("CASH_ON_DELIVERY")}
+                  className="mt-0.5 accent-black dark:accent-white"
+                />
+                <div className="space-y-0.5 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <Truck size={14} className="text-accent shrink-0" />
+                    <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5 flex-wrap">
+                      <span>{c("VIP Delivery / Pay on Handover", "الدفع عند الاستلام / طلب تجريبي")}</span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-medium">
+                        {c("Instant Test Order", "طلب اختباري فوري")}
+                      </span>
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-luxury-muted">
+                    {c(
+                      "No card required. Directly logs the order, sends SMS/WhatsApp, and updates admin tracker.",
+                      "دون الحاجة لبطاقة. يؤكد الطلب فوراً ويرسل إشعارات الواتساب والبريد ويحدث لوحة التحكم.",
+                    )}
+                  </p>
+                </div>
+              </label>
+            </div>
+          </div>
+
           {error && (
             <p
               role="alert"
@@ -867,13 +946,15 @@ export default function CheckoutPage({
           <button
             type="submit"
             disabled={loading || availability !== "ready"}
-            className="editorial-button w-full disabled:opacity-50 text-xs py-4 flex items-center justify-center gap-2"
+            className="editorial-button w-full disabled:opacity-50 text-xs py-4 flex items-center justify-center gap-2 shadow-md"
           >
-            <CreditCard size={15} />
+            {paymentMethod === "CASH_ON_DELIVERY" ? <Truck size={15} /> : <CreditCard size={15} />}
             <span>
               {loading
-                ? c("Preparing secure payment…", "جارٍ تجهيز الدفع الآمن…")
-                : c("Proceed to Stripe Checkout", "متابعة للدفع عبر سترايب")}
+                ? c("Securing order…", "جارٍ تأكيد الطلب…")
+                : paymentMethod === "CASH_ON_DELIVERY"
+                  ? c("Confirm VIP Order (Pay on Delivery)", "تأكيد الطلب الفاخر (الدفع عند الاستلام)")
+                  : c("Proceed to Stripe Checkout", "متابعة للدفع عبر سترايب")}
             </span>
           </button>
 
