@@ -27,7 +27,7 @@ import {
   ExternalLink,
   Award,
   FileSpreadsheet,
-  Download,
+  Upload,
   Edit3,
   LogOut,
   Menu,
@@ -49,7 +49,7 @@ import {
   slugify,
   generateProductMetaTitle,
   generateProductMetaDescription,
-  PRO_SEO_CSV_TEMPLATE,
+  downloadExcelTemplate,
 } from "./seo-utils";
 import { BulkCsvModal } from "./components/BulkCsvModal";
 import { BrandModal } from "./components/BrandModal";
@@ -1848,15 +1848,7 @@ export function App() {
   };
 
   const handleDownloadTemplateDirect = () => {
-    const blob = new Blob([PRO_SEO_CSV_TEMPLATE], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", "muschio_pro_seo_catalog_template.csv");
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    downloadExcelTemplate("muschio_luxury_catalog_template.xlsx");
   };
 
   // Order Actions with Backend Synchronization & Email Trigger
@@ -2380,32 +2372,35 @@ export function App() {
                   placeholder="Search by SKU, product name, or brand..."
                   value={productSearch}
                   onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
+                  type="button"
                   onClick={handleDownloadTemplateDirect}
-                  className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-neutral-900 dark:text-neutral-100 text-xs font-medium rounded flex items-center gap-1.5 border border-neutral-300 dark:border-neutral-700 transition-colors"
-                  title="Download clean CSV template for bulk import"
+                  className="px-3.5 py-2 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs font-medium rounded flex items-center gap-2 border border-neutral-300 dark:border-neutral-700 transition-colors shadow-sm"
+                  title="Download clean Excel (.xlsx) template for bulk import"
                 >
-                  <Download size={14} />
-                  <span>Download CSV Template</span>
+                  <FileSpreadsheet size={15} className="text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-semibold">Download Excel Template</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={() => setShowCsvModal(true)}
-                  className="px-3.5 py-2 bg-gradient-to-r from-accent to-red-700 hover:from-accent-hover hover:to-red-600 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-all shadow-md shadow-red-950/40"
-                  title="Upload products in bulk via CSV"
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-600 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white text-xs font-medium rounded flex items-center gap-2 transition-all shadow-sm"
+                  title="Upload products in bulk via Excel (.xlsx) or CSV"
                 >
-                  <FileSpreadsheet size={14} />
-                  <span className="font-semibold">Bulk CSV Upload</span>
+                  <Upload size={14} />
+                  <span className="font-semibold">Bulk Excel Upload</span>
                 </button>
 
                 <button
+                  type="button"
                   onClick={handleOpenAddProduct}
-                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-sm"
                 >
                   <Plus size={14} />
                   <span>Add Product</span>

@@ -1,4 +1,5 @@
-// Pro SEO Utility functions, CSV Parser, and Meta Generators for Muschio Admin
+// Pro SEO Utility functions, CSV Parser, Excel Parser/Exporter, and Meta Generators for Muschio Admin
+import * as XLSX from "xlsx";
 export function slugify(text) {
     return text
         .toLowerCase()
@@ -85,4 +86,67 @@ AMO-INT53-100,"Interlude 53 Man Extrait","إنترلود 53 إكستريت دي 
 MFK-BR540E-70,"Baccarat Rouge 540 Extrait","باكارات روج 540 إكستريت",mfk-baccarat-rouge-540-extrait,"Maison Francis Kurkdjian","Amber Floral","Francis Kurkdjian","Legendary Master Perfumer and Dior Perfume Creation Director, famed for crystalline olfactory radiance.",EXTRAIT_DE_PARFUM,UNISEX,70,1650,820,34,4,DXB-MAIN,"Bitter Almond, Saffron","Egyptian Jasmine Grandiflorum, Cedarwood","Ambergris, Woody Musk","Luminous Amber Crystal and Floral Radiance","إشراقة الكريستال العنبري والزهور الساحرة","Augments the strength and radiance of the perfume's amber woody floral aura. In this exalted version, jasmine blossoms and woody musks engage in an alchemy of the senses.","يعزز هذا الإصدار الاستثنائي قوة وإشراقة النفحات الخشبية العنبرية والزهرية لدار فرانسيس كوركدجيان.","Baccarat Rouge 540 Extrait by MFK | Authentic UAE","Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed with white-glove GCC delivery.",https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85,"Baccarat Rouge 540 Extrait flacon",PUBLISHED
 ROJA-ELY-100,"Elysium Pour Homme Parfum","إليسيوم بور أوم بارفان",roja-elysium-pour-homme-parfum,"Roja Parfums","Fresh Aromatic Citrus","Roja Dove","The premier British Master Perfumer and fragrance historian, famed for formulating without compromise on rare natural absolutes.",PARFUM,MEN,100,1950,980,25,2,RUH-HUB,"Grapefruit, Lemon, Bergamot, Lime","Lily of the Valley, Rose de Mai, Jasmin de Grasse, Apple","Galbanum, Pink Pepper, Cypriol, Vetiver, Cedarwood, Labdanum, Ambergris, Benzoin, Vanilla","Heroic Elysian Freshness and Royal Musk","الانتعاش الأسطوري والمسك الملكي","An ultra-fresh citrus blend of lemon, bergamot, grapefruit, and lime is further refreshed by thyme and lavender, enriched by an opulent base of ambergris and cedar.","مزيج منعش وفائق الفخامة من الحمضيات النادرة والزعتر واللافندر مع قاعدة ثرية من العنبر الأشهب وخشب الأرز.","Elysium Pour Homme Parfum by Roja Parfums | UAE GCC","Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio. 100% genuine luxury flacons with fast GCC delivery.",https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85,"Roja Parfums Elysium luxury flacon",PUBLISHED
 XER-ALEX2-100,"Alexandria II Eau de Parfum","ألكسندريا 2 أو دي بارفان",xerjoff-alexandria-ii-eau-de-parfum,Xerjoff,"Woody Amber Oud","Chris Maurice","Renowned Spanish nose celebrated for bridging classical Mediterranean perfumery with opulent Middle Eastern accords.",EAU_DE_PARFUM,UNISEX,100,2200,1100,19,3,DXB-MAIN,"Apple, Cinnamon, Rosewood, Lavender","Cedarwood, Lily of the Valley, Bulgarian Rose","Amber, Sandalwood, Musk, Vanilla, Laotian Oud","Aristocratic Laotian Oud and Cinnamon Majesty","فخامة العود اللاوسي والقرفة الملكية","Alexandria II by Xerjoff is an olfactory legend inspired by ancient millennium capitals, opening with cinnamon and apple wrapped in rare Laotian agarwood.","ألكسندريا 2 من زيرجوف أسطورة عطرية مستوحاة من العواصم التاريخية القديمة، يمتزج فيها العود اللاوسي النادر مع نفحات الورد والقرفة.", "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE","Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose. 100% authentic with white-glove GCC delivery.",https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85,"Xerjoff Alexandria II luxury flacon",PUBLISHED`;
+/**
+ * Downloads a pre-formatted Excel (.xlsx) template for bulk product import.
+ */
+export function downloadExcelTemplate(filename = "muschio_luxury_catalog_template.xlsx") {
+    const { headers, rows } = parseCsvContent(PRO_SEO_CSV_TEMPLATE);
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+    // Format generous column widths so all fragrance data and Arabic titles are comfortable to read
+    ws["!cols"] = [
+        { wch: 18 }, // sku
+        { wch: 30 }, // nameEn
+        { wch: 32 }, // nameAr
+        { wch: 34 }, // slug
+        { wch: 22 }, // brand
+        { wch: 20 }, // scentFamily
+        { wch: 22 }, // perfumer
+        { wch: 35 }, // perfumerBio
+        { wch: 22 }, // concentration
+        { wch: 12 }, // gender
+        { wch: 12 }, // volumeMl
+        { wch: 12 }, // priceAed
+        { wch: 14 }, // costPriceAed
+        { wch: 14 }, // sealedStock
+        { wch: 14 }, // testerStock
+        { wch: 16 }, // warehouseCode
+        { wch: 35 }, // topNotes
+        { wch: 35 }, // heartNotes
+        { wch: 35 }, // baseNotes
+        { wch: 40 }, // taglineEn
+        { wch: 40 }, // taglineAr
+        { wch: 55 }, // descriptionEn
+        { wch: 55 }, // descriptionAr
+        { wch: 45 }, // metaTitle
+        { wch: 55 }, // metaDescription
+        { wch: 40 }, // imageUrl
+        { wch: 35 }, // imageAlt
+        { wch: 14 }, // status
+    ];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Muschio Catalog");
+    XLSX.writeFile(wb, filename);
+}
+/**
+ * Parses an uploaded Excel (.xlsx, .xls) file into standardized CSV text and row count.
+ */
+export async function parseExcelFileToCsv(file) {
+    const buffer = await file.arrayBuffer();
+    const data = new Uint8Array(buffer);
+    const wb = XLSX.read(data, { type: "array" });
+    if (!wb.SheetNames || wb.SheetNames.length === 0) {
+        throw new Error("The Excel workbook contains no sheets.");
+    }
+    const firstSheetName = wb.SheetNames[0];
+    if (!firstSheetName) {
+        throw new Error("Could not find first sheet in Excel file.");
+    }
+    const sheet = wb.Sheets[firstSheetName];
+    if (!sheet) {
+        throw new Error("Could not read sheet data from Excel file.");
+    }
+    const csvText = XLSX.utils.sheet_to_csv(sheet);
+    const rows = XLSX.utils.sheet_to_json(sheet);
+    return { csvText, rowCount: rows.length };
+}
 //# sourceMappingURL=seo-utils.js.map
