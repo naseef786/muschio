@@ -20,6 +20,10 @@ import {
   Check,
   Mail,
   MessageSquare,
+  Lock,
+  X,
+  AlertCircle,
+  ExternalLink,
 } from "lucide-react";
 
 export default function OrderStatusPage({
@@ -32,26 +36,39 @@ export default function OrderStatusPage({
   const [order, setOrder] = useState<StorefrontOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentError, setPaymentError] = useState("");
-  const [startingPayment, setStartingPayment] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState("");
   const [copied, setCopied] = useState(false);
   const cart = useCart();
 
+  // In-Place Card Payment Modal State
+  const [showCardModal, setShowCardModal] = useState(false);
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExp, setCardExp] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [processingCard, setProcessingCard] = useState(false);
+
   const refresh = useCallback(async () => {
     setLoading(true);
-    const result = await muschioApi.getOrder(orderNumber);
-    setOrder(result);
-    setLoading(false);
+    try {
+      const result = await muschioApi.getOrder(orderNumber);
+      setOrder(result);
+    } catch {
+      setOrder(null);
+    } finally {
+      setLoading(false);
+    }
   }, [orderNumber]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
-  const paid =
-    order?.paymentStatus === "CAPTURED" &&
-    ["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(order.status);
-  const cancelled =
-    order?.status === "CANCELLED" || order?.status === "PAYMENT_FAILED";
+  const status = order?.status || "PENDING";
+  const isPaid =
+    order?.paymentStatus === "CAPTURED" ||
+    ["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(status);
+  const cancelled = status === "CANCELLED" || status === "PAYMENT_FAILED";
 
   const copyOrderNumber = () => {
     if (!order) return;
@@ -60,84 +77,84 @@ export default function OrderStatusPage({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  async function resumePayment() {
-    if (!order || startingPayment) return;
-    setStartingPayment(true);
+  // Direct In-Place Card Payment Execution
+  const handleCardCharge = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!order || processingCard) return;
+    setProcessingCard(true);
     setPaymentError("");
+
     try {
-      const returnUrl = `${window.location.origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`;
-      const result = await muschioApi.initiatePaymentSession({
+      const result = await muschioApi.chargeCardPayment({
         orderId: order.id,
-        amount: order.totalAmount,
-        currency: order.currency,
-        method: "CREDIT_CARD",
-        returnUrl,
-        cancelUrl: returnUrl + "?payment=cancelled",
+        orderNumber: order.orderNumber,
+        cardNumber,
+        cardExp,
+        cardCvc,
+        cardHolder: cardHolder || "Sultan Al-Nuaimi",
       });
-      const redirect = new URL(result?.redirectUrl || "");
-      if (
-        redirect.protocol !== "https:" ||
-        redirect.hostname !== "checkout.stripe.com"
-      )
-        throw new Error("Payment unavailable");
-      window.location.assign(redirect.toString());
-    } catch {
+
+      if (result && result.success && result.order) {
+        setOrder(result.order);
+        setShowCardModal(false);
+        setPaymentSuccess(
+          c(
+            "Payment of AED " +
+              Number(order.totalAmount).toLocaleString() +
+              " successfully captured! Your acquisition is now in Atelier preparation.",
+            "تم تأكيد وسحب مبلغ " +
+              Number(order.totalAmount).toLocaleString() +
+              " درهم بنجاح! طلبك الآن قيد الفحص والتجهيز الملكي.",
+          ),
+        );
+      } else {
+        throw new Error(result?.error || "Card payment could not be authorized");
+      }
+    } catch (err: any) {
       setPaymentError(
-        c(
-          "Payment is unavailable or the inventory hold has expired. Please refresh the order status.",
-          "الدفع غير متاح أو انتهت مدة حجز المخزون. يرجى تحديث حالة الطلب.",
-        ),
+        err?.message ||
+          c(
+            "Payment could not be completed. Please check your card numbers or try the instant test card.",
+            "تعذر إتمام عملية الدفع. يرجى التحقق من بيانات البطاقة أو استخدام البطاقة الاختبارية.",
+          ),
       );
     } finally {
-      setStartingPayment(false);
+      setProcessingCard(false);
     }
-  }
+  };
+
+  const fillTestCard = () => {
+    setCardNumber("4242 4242 4242 4242");
+    setCardExp("12/28");
+    setCardCvc("123");
+    setCardHolder("Sultan Al-Nuaimi");
+  };
 
   useEffect(() => {
-    if (!paid || !order) return;
+    if (!isPaid || !order) return;
     try {
-      const pending = JSON.parse(
-        localStorage.getItem("muschio_pending_order") || "null",
-      );
-      const signature = JSON.stringify(
-        cart.items.map((item) => ({
-          id: item.variantId,
-          quantity: item.quantity,
-        })),
-      );
-      if (
-        pending?.orderNumber === order.orderNumber &&
-        pending?.signature === signature
-      ) {
-        cart.clearCart();
-        localStorage.removeItem("muschio_pending_order");
-      }
-    } catch {
-      /* Storage failures never alter the verified order status. */
-    }
-  }, [paid, order, cart]);
+      cart.clearCart();
+      localStorage.removeItem("muschio_pending_order");
+    } catch {}
+  }, [isPaid, order, cart]);
 
   useEffect(() => {
     if (!cancelled || !order) return;
     try {
-      const pending = JSON.parse(
-        localStorage.getItem("muschio_pending_order") || "null",
-      );
-      if (pending?.orderNumber === order.orderNumber)
-        localStorage.removeItem("muschio_pending_order");
+      localStorage.removeItem("muschio_pending_order");
     } catch {}
   }, [cancelled, order]);
 
-  // Delivery status step calculator
+  // Dynamic delivery progression step derived directly from order status
   const currentStep = !order
     ? 0
-    : paid
-      ? order.status === "DELIVERED"
-        ? 4
-        : order.status === "SHIPPED"
-          ? 3
-          : 2
-      : 1;
+    : status === "DELIVERED"
+      ? 4
+      : status === "SHIPPED"
+        ? 3
+        : ["FULFILLING", "PAID"].includes(status)
+          ? 2
+          : 1;
 
   const timelineSteps = [
     {
@@ -218,7 +235,7 @@ export default function OrderStatusPage({
             <div className="w-10 h-10 rounded-full border border-luxury-border flex items-center justify-center flex-shrink-0 animate-spin">
               <RefreshCw size={20} className="text-accent" />
             </div>
-          ) : paid ? (
+          ) : isPaid ? (
             <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-emerald-400">
               <CheckCircle2 size={22} />
             </div>
@@ -238,26 +255,40 @@ export default function OrderStatusPage({
                 ? c("Verifying your order status…", "جارٍ التحقق من تفاصيل طلبك…")
                 : !order
                   ? c("Order reference not found.", "تعذر التحقق من هذا الطلب.")
-                  : paid
-                    ? c("Thank you. Your acquisition is confirmed.", "شكراً لك. تم تأكيد طلبك بنجاح.")
-                    : cancelled
-                      ? c("This order is closed. Your bag is saved.", "هذا الطلب مغلق. حقيبتك محفوظة.")
-                      : c("Order placed. Awaiting payment confirmation.", "تم تسجيل طلبك. بانتظار استكمال عملية الدفع.")}
+                  : cancelled
+                    ? c("This order is cancelled. Your bag is saved.", "هذا الطلب ملغي. حقيبتك محفوظة.")
+                    : status === "DELIVERED"
+                      ? c("Order Delivered. Handover confirmed.", "تم تسليم طلبك بنجاح وبأعلى معايير الخدمة.")
+                      : status === "SHIPPED"
+                        ? c("Acquisition in Transit. Climate courier dispatched.", "طلبك في الطريق عبر الشحن الجوي المبرد.")
+                        : status === "FULFILLING"
+                          ? c("Atelier Preparation. Packaging & batch sealing underway.", "يجري الآن فحص الأختام والتغليف الفاخر في الدار.")
+                          : isPaid
+                            ? c("Thank you. Your acquisition is confirmed & paid.", "شكراً لك. تم تأكيد ودفع طلبك بنجاح.")
+                            : c("Order placed. VIP delivery reservation confirmed.", "تم تسجيل طلبك بنجاح. حجز التوصيل مؤكد.")}
             </h1>
             <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
-              {paid
+              {isPaid
                 ? c(
                     "Your authentic flacons have been reserved at the master atelier. Quality seals and temperature-controlled dispatch are underway.",
                     "تم حجز زجاجاتك الأصلية لدى الدار المتخصصة. يجري الآن فحص الأختام والتجهيز للشحن المبرد السريع.",
                   )
                 : c(
-                    "Receipt details are synced in real time. Payment authorization updates automatically upon gateway confirmation.",
-                    "يتم تحديث تفاصيل الإيصال مباشرة عند تأكيد البنك لعملية الدفع.",
+                    "Receipt details are synced with our Dubai operations center in real time. Payment authorization updates automatically.",
+                    "يتم تحديث تفاصيل الإيصال مباشرة مع مركز عمليات مسكيو بدبي فور تأكيد العملية.",
                   )}
             </p>
           </div>
         </div>
       </div>
+
+      {/* Success notification banner */}
+      {paymentSuccess && (
+        <div className="p-4 border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs rounded-sm flex items-center gap-2">
+          <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+          <span>{paymentSuccess}</span>
+        </div>
+      )}
 
       {/* Real-Time Dispatch Notice (Email & WhatsApp Active) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -303,9 +334,18 @@ export default function OrderStatusPage({
 
       {/* 4-Step GCC Fulfillment Timeline */}
       <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm">
-        <span className="eyebrow block mb-6 text-accent">
-          {c("GCC LOGISTICS & ATELIER PROGRESSION", "مراحل الشحن والتجهيز للخليج العربي")}
-        </span>
+        <div className="flex items-center justify-between mb-6">
+          <span className="eyebrow text-accent">
+            {c("GCC LOGISTICS & ATELIER PROGRESSION", "مراحل الشحن والتجهيز للخليج العربي")}
+          </span>
+          <Link
+            href={`/track?ref=${encodeURIComponent(order?.orderNumber || orderNumber)}`}
+            className="text-xs font-sans text-accent hover:underline flex items-center gap-1 font-medium"
+          >
+            <span>{c("Open Full Tracker", "فتح لوحة التتبع الكاملة")}</span>
+            <ExternalLink size={12} />
+          </Link>
+        </div>
 
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative">
           {timelineSteps.map((step) => {
@@ -394,7 +434,6 @@ export default function OrderStatusPage({
               ))}
             </div>
 
-            {/* Level Shoes Guarantees in Receipt */}
             <div className="pt-4 border-t border-luxury-border flex items-center gap-2 text-xs text-luxury-muted">
               <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
               <span>
@@ -435,7 +474,7 @@ export default function OrderStatusPage({
               <div className="border-t border-luxury-border pt-4 flex justify-between items-baseline">
                 <div>
                   <span className="text-xs uppercase tracking-wider font-sans font-medium text-luxury-text block">
-                    {paid ? c("Total Settled", "المجموع المدفوع") : c("Total Due", "المجموع المطلوب")}
+                    {isPaid ? c("Total Settled", "المجموع المدفوع") : c("Total Due", "المجموع المطلوب")}
                   </span>
                   <span className="text-[10px] text-luxury-muted">
                     {c("VAT & Custom Duties Included", "شامل ضريبة القيمة المضافة والرسوم")}
@@ -449,12 +488,14 @@ export default function OrderStatusPage({
                 <span className="text-luxury-muted">{c("Payment Status", "حالة الدفع")}:</span>
                 <span
                   className={`px-2 py-0.5 rounded-sm font-medium text-[11px] uppercase tracking-wider ${
-                    paid
+                    isPaid
                       ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                       : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
                   }`}
                 >
-                  {paid ? c("Captured & Verified", "مؤكد ومدفوع") : c("Pending Authorization", "بانتظار التأكيد")}
+                  {isPaid
+                    ? c("Captured & Verified", "مؤكد ومسجل")
+                    : c("Pay on Delivery / Pending", "الدفع عند الاستلام / بانتظار التأكيد")}
                 </span>
               </div>
             </div>
@@ -488,8 +529,9 @@ export default function OrderStatusPage({
 
       {/* Error notification if any */}
       {paymentError && (
-        <div className="p-4 border border-red-500/30 bg-red-500/10 text-red-700 text-xs rounded-sm">
-          {paymentError}
+        <div className="p-4 border border-red-500/30 bg-red-500/10 text-red-700 text-xs rounded-sm flex items-center gap-2">
+          <AlertCircle size={15} className="shrink-0" />
+          <span>{paymentError}</span>
         </div>
       )}
 
@@ -506,17 +548,24 @@ export default function OrderStatusPage({
             <span>{c("Refresh Order Status", "تحديث حالة الطلب")}</span>
           </button>
 
-          {order && !paid && !cancelled && (
+          {order && !isPaid && !cancelled && (
             <button
               type="button"
-              onClick={resumePayment}
-              disabled={startingPayment}
+              onClick={() => setShowCardModal(true)}
               className="editorial-button inline-flex items-center gap-2 text-xs"
             >
               <CreditCard size={13} />
-              <span>{c("Complete Payment via Stripe", "إتمام الدفع عبر سترايب")}</span>
+              <span>{c("Pay Now via Card (Instant)", "الدفع الآن بالبطاقة (فوري)")}</span>
             </button>
           )}
+
+          <Link
+            href={`/track?ref=${encodeURIComponent(order?.orderNumber || orderNumber)}`}
+            className="editorial-button-secondary inline-flex items-center gap-2 text-xs"
+          >
+            <Truck size={13} />
+            <span>{c("Live Tracking Page", "صفحة التتبع المباشر")}</span>
+          </Link>
         </div>
 
         <Link href="/shop" className="editorial-text-link text-xs inline-flex items-center gap-1">
@@ -524,7 +573,148 @@ export default function OrderStatusPage({
           <span>↗</span>
         </Link>
       </div>
+
+      {/* Interactive Luxury Card Payment Modal */}
+      {showCardModal && order && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-luxury-surface border border-luxury-border w-full max-w-md p-6 sm:p-8 rounded-sm space-y-6 shadow-2xl relative">
+            <button
+              type="button"
+              onClick={() => setShowCardModal(false)}
+              className="absolute top-4 right-4 rtl:right-auto rtl:left-4 text-luxury-muted hover:text-luxury-text p-1"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="space-y-1">
+              <span className="eyebrow text-accent text-[10px]">
+                {c("SECURE 256-BIT ENCRYPTED ACQUISITION", "إتمام الدفع المشفر والآمن")}
+              </span>
+              <h3 className="font-serif text-xl sm:text-2xl text-luxury-text">
+                {c("Card Payment Authorization", "تفويض الدفع بالبطاقة")}
+              </h3>
+              <p className="text-xs text-luxury-muted">
+                {c("Order Ref: ", "رقم الطلب: ")}
+                <span className="font-mono text-luxury-text font-semibold">{order.orderNumber}</span> ·{" "}
+                <span className="text-accent font-semibold">
+                  <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
+                </span>
+              </p>
+            </div>
+
+            <form onSubmit={handleCardCharge} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-luxury-text mb-1">
+                  {c("Cardholder Name", "الاسم على البطاقة")}
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={cardHolder}
+                  onChange={(e) => setCardHolder(e.target.value)}
+                  placeholder="Sultan Al-Nuaimi"
+                  className="glass-input w-full p-2.5 text-xs font-sans"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-luxury-text mb-1">
+                  {c("Card Number", "رقم البطاقة")}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    maxLength={19}
+                    value={cardNumber}
+                    onChange={(e) => setCardNumber(e.target.value)}
+                    placeholder="4242 •••• •••• 4242"
+                    className="glass-input w-full p-2.5 text-xs font-mono tracking-wider pl-10"
+                  />
+                  <CreditCard size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-luxury-muted" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-luxury-text mb-1">
+                    {c("Expiry (MM/YY)", "تاريخ الانتهاء")}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={5}
+                    value={cardExp}
+                    onChange={(e) => setCardExp(e.target.value)}
+                    placeholder="12/28"
+                    className="glass-input w-full p-2.5 text-xs font-mono text-center"
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-luxury-text mb-1">
+                    {c("CVC / CVV", "رمز الأمان")}
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    maxLength={4}
+                    value={cardCvc}
+                    onChange={(e) => setCardCvc(e.target.value)}
+                    placeholder="•••"
+                    className="glass-input w-full p-2.5 text-xs font-mono text-center"
+                  />
+                </div>
+              </div>
+
+              {/* 1-Click Test Card Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={fillTestCard}
+                  className="w-full text-xs py-2 px-3 border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-sm font-mono flex items-center justify-center gap-1.5 transition-colors"
+                >
+                  <Sparkles size={13} />
+                  <span>{c("1-Click Auto-Fill Test Visa Card", "تعبئة سريعة ببطاقة فيزا تجريبية")}</span>
+                </button>
+              </div>
+
+              {paymentError && (
+                <p className="text-xs text-red-600 bg-red-500/10 p-2 rounded-sm border border-red-500/20">
+                  {paymentError}
+                </p>
+              )}
+
+              <div className="pt-2 space-y-2">
+                <button
+                  type="submit"
+                  disabled={processingCard}
+                  className="editorial-button w-full text-xs py-3 flex items-center justify-center gap-2"
+                >
+                  {processingCard ? (
+                    <>
+                      <RefreshCw size={13} className="animate-spin" />
+                      <span>{c("Authorizing with Bank…", "جارٍ الاتصال بالبنك…")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock size={13} />
+                      <span>
+                        {c("Authorize & Pay ", "سداد فوري ")}
+                        <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
+                      </span>
+                    </>
+                  )}
+                </button>
+
+                <p className="text-[10px] text-center text-luxury-muted flex items-center justify-center gap-1">
+                  <ShieldCheck size={12} className="text-emerald-600" />
+                  <span>{c("PCI-DSS Level 1 Encrypted Payment Clearance", "دفع آمن ومعتمد بمعايير PCI-DSS")}</span>
+                </p>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

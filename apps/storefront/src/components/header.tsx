@@ -19,6 +19,7 @@ import {
   BookOpen,
   User,
   ArrowLeftRight,
+  Truck,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
@@ -183,6 +184,14 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             >
               <User size={16} className="opacity-75" />
               <span>{c("My Account", "حسابي")}</span>
+            </Link>
+            <Link
+              className="desktop-utility text-xs tracking-wider uppercase text-luxury-text hover:text-accent font-medium transition-colors hidden lg:flex items-center gap-1.5"
+              href="/track"
+              title={c("Track Order & Dispatch", "تتبع الطلب والشحنة")}
+            >
+              <Truck size={15} className="opacity-75" />
+              <span>{c("Track Order", "تتبع الطلب")}</span>
             </Link>
           </div>
 
@@ -568,6 +577,14 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                   >
                     <span>{c("Muschio Journal", "مجلة موسكيو")}</span>
                     <ArrowRight size={14} className="opacity-50" />
+                  </Link>
+                  <Link
+                    href="/track"
+                    onClick={() => setMenu(false)}
+                    className="flex items-center justify-between p-2.5 rounded-sm bg-luxury-surface text-accent hover:bg-luxury-surface2 transition-colors uppercase text-xs tracking-wider font-medium"
+                  >
+                    <span>{c("Track Order & Dispatch", "تتبع الطلب والشحنة")}</span>
+                    <Truck size={14} className="text-accent" />
                   </Link>
                 </nav>
               </div>

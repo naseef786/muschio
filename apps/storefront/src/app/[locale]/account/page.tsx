@@ -24,6 +24,7 @@ import {
   Check,
   LogOut,
   X,
+  Truck,
 } from "lucide-react";
 
 export default function AccountPage({
@@ -821,15 +822,24 @@ export default function AccountPage({
             </h2>
           </div>
 
-          <button
-            type="button"
-            onClick={loadOrders}
-            disabled={loadingOrders}
-            className="text-xs font-sans text-luxury-muted hover:text-luxury-text flex items-center gap-1.5 transition-colors"
-          >
-            <RefreshCw size={13} className={loadingOrders ? "animate-spin" : ""} />
-            <span>{c("Refresh", "تحديث")}</span>
-          </button>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/track"
+              className="text-xs font-sans text-accent hover:underline flex items-center gap-1 font-medium"
+            >
+              <Truck size={13} />
+              <span>{c("Track An Order", "تتبع أي طلب")}</span>
+            </Link>
+            <button
+              type="button"
+              onClick={loadOrders}
+              disabled={loadingOrders}
+              className="text-xs font-sans text-luxury-muted hover:text-luxury-text flex items-center gap-1.5 transition-colors"
+            >
+              <RefreshCw size={13} className={loadingOrders ? "animate-spin" : ""} />
+              <span>{c("Refresh", "تحديث")}</span>
+            </button>
+          </div>
         </div>
 
         {loadingOrders ? (
@@ -850,9 +860,12 @@ export default function AccountPage({
                 "عند اقتنائك لأي زجاجة عطر أو تصميم صندوق عينات، ستظهر تفاصيل طلبك وروابط التتبع المباشر هنا.",
               )}
             </p>
-            <div className="pt-2">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <Button asChild variant="accent" size="sm">
                 <Link href="/shop">{c("Explore Fragrance Vault", "استكشف خزانة العطور")}</Link>
+              </Button>
+              <Button asChild variant="outline" size="sm">
+                <Link href="/track">{c("Track by Order #", "تتبع برقم الطلب")}</Link>
               </Button>
             </div>
           </div>

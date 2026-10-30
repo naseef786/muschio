@@ -197,6 +197,11 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
           </div>
           <ul className="pt-4 space-y-3 text-xs sm:text-[13px]">
             <li>
+              <Link href="/track" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block text-accent font-medium">
+                {c("Track Order & Dispatch", "تتبع الطلب والشحنة")}
+              </Link>
+            </li>
+            <li>
               <Link href="/guide" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
                 {c("The Fragrance Compendium", "دليل وخفايا العطور")}
               </Link>

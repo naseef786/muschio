@@ -287,6 +287,33 @@ export const muschioApi = {
       body: JSON.stringify(request),
     });
   },
+  async chargeCardPayment(payload: {
+    orderId?: string;
+    orderNumber?: string;
+    cardNumber: string;
+    cardExp: string;
+    cardCvc: string;
+    cardHolder?: string;
+  }): Promise<any | null> {
+    return apiRequest<any>("/payments/card-charge", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+  async getOrderTracking(
+    orderNumber: string,
+    options?: { email?: string; phone?: string },
+  ): Promise<any | null> {
+    const params = new URLSearchParams();
+    if (options?.email) params.append("email", options.email);
+    if (options?.phone) params.append("phone", options.phone);
+    const queryString = params.toString();
+
+    return apiRequest<any>(
+      `/orders/lookup/${encodeURIComponent(orderNumber)}${queryString ? `?${queryString}` : ""}`,
+      { cache: "no-store" },
+    );
+  },
   async getPaymentAvailability(): Promise<{ methods: string[] } | null> {
     return apiRequest<{ methods: string[] }>("/payments/availability", {
       cache: "no-store",

@@ -1978,16 +1978,20 @@ export function App() {
   // Order Actions with Backend Synchronization & Email Trigger
   const updateOrderStatus = async (orderId: string, nextStatus: string, reason?: string) => {
     setOrders((prev) =>
-      prev.map((o) => (o.id === orderId ? { ...o, status: nextStatus } : o))
+      prev.map((o) =>
+        o.id === orderId || o.number === orderId ? { ...o, status: nextStatus } : o
+      )
     );
     addAuditLog("ORDER_STATUS_UPDATE", `${orderId} -> ${nextStatus}`);
 
     try {
+      const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
       const res = await fetch("/api/v1/admin/orders/status", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           orderId,
+          orderNumber: targetOrder?.number,
           status: nextStatus,
           reason: reason || (nextStatus === "CANCELLED" ? "Admin cancelled via control panel" : undefined),
         }),
@@ -1999,6 +2003,9 @@ export function App() {
         } else {
           addToast("order", "Status Updated", `Order ${orderId} set to ${nextStatus}`);
         }
+      } else {
+        const errJson = await res.json().catch(() => null);
+        console.warn("Server responded with error on order status update:", errJson);
       }
     } catch (err) {
       console.warn("Could not sync order status to server:", err);
@@ -4156,7 +4163,7 @@ export function App() {
             {/* Status & Market Filters + Real-Time Live Status */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
               <div className="flex flex-wrap items-center gap-2">
-                {["ALL", "PAID", "FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED"].map((st) => (
+                {["ALL", "PENDING", "PAID", "FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
@@ -4248,6 +4255,7 @@ export function App() {
                             onChange={(e) => updateOrderStatus(o.id, e.target.value)}
                             className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none"
                           >
+                            <option value="PENDING">PENDING</option>
                             <option value="PAID">PAID</option>
                             <option value="FULFILLING">FULFILLING</option>
                             <option value="SHIPPED">SHIPPED</option>
