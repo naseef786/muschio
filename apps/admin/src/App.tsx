@@ -31,6 +31,8 @@ import {
   Edit3,
   LogOut,
   Menu,
+  PanelLeft,
+  PanelLeftClose,
   Bell,
   BellRing,
   Volume2,
@@ -255,6 +257,10 @@ export function App() {
   const [activeTab, setActiveTab] = useState<AdminTab>("dashboard");
   const [adminTheme, setAdminTheme] = usePersistentState<"light" | "dark">("theme", "light");
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = usePersistentState<boolean>(
+    "sidebar_collapsed",
+    false
+  );
 
   // Admin Security Authentication Session
   const [authSession, setAuthSession] = useState<AdminAuthSession | null>(() => {
@@ -876,6 +882,41 @@ export function App() {
   const [liveEvents, setLiveEvents] = useState<LiveEventItem[]>([]);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAudioEnabled, setIsAudioEnabled] = usePersistentState<boolean>("admin_audio_notifications", true);
+  const notificationRef = useRef<HTMLDivElement>(null);
+
+  // Auto-collapse notifications popover on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target as Node)
+      ) {
+        setIsNotificationOpen(false);
+      }
+    };
+    if (isNotificationOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isNotificationOpen]);
+
+  // Keyboard shortcuts: Ctrl+B / Cmd+B to toggle sidebar collapse, Esc to close overlays
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setIsSidebarCollapsed((prev) => !prev);
+      }
+      if (e.key === "Escape") {
+        setIsNotificationOpen(false);
+        setIsMobileNavOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [setIsSidebarCollapsed]);
   const [toasts, setToasts] = useState<LiveToast[]>([]);
   const [enquiries, setEnquiries] = useState<EnquiryItem[]>([
     {
@@ -2100,23 +2141,31 @@ export function App() {
         />
       )}
 
-      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Static on Desktop) */}
+      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Collapsible Static on Desktop) */}
       <aside
-        className={`fixed inset-y-0 start-0 z-50 w-72 max-w-[85vw] bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between p-4 transform transition-transform duration-200 ease-in-out md:static md:w-64 md:translate-x-0 md:shrink-0 ${
+        className={`fixed inset-y-0 start-0 z-50 ${
+          isSidebarCollapsed ? "md:w-20" : "md:w-64"
+        } w-72 max-w-[85vw] bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between ${
+          isSidebarCollapsed ? "p-3" : "p-4"
+        } transform transition-all duration-300 ease-in-out md:static md:translate-x-0 md:shrink-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
         <div className="space-y-6">
-          <div className="flex items-center justify-between px-2">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm">
+          <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between px-2"}`}>
+            <div className="flex items-center gap-3 overflow-hidden">
+              <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm shrink-0">
                 M
               </div>
-              <div>
-                <span className="font-serif tracking-widest text-lg font-bold text-neutral-900 dark:text-white block">MUSCHIO</span>
-                <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono">Admin Panel</span>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="transition-opacity duration-200 overflow-hidden">
+                  <span className="font-serif tracking-widest text-lg font-bold text-neutral-900 dark:text-white block whitespace-nowrap">MUSCHIO</span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Panel</span>
+                </div>
+              )}
             </div>
+
+            {/* Mobile Close Button */}
             <button
               onClick={() => setIsMobileNavOpen(false)}
               className="md:hidden p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
@@ -2124,7 +2173,35 @@ export function App() {
             >
               <X size={18} />
             </button>
+
+            {/* Desktop Collapse Toggle in Sidebar */}
+            {!isSidebarCollapsed && (
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(true)}
+                className="hidden md:flex p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
+                title="Collapse Sidebar (Ctrl+B)"
+                aria-label="Collapse Sidebar"
+              >
+                <PanelLeftClose size={18} />
+              </button>
+            )}
           </div>
+
+          {/* Desktop Expand Icon Button when collapsed */}
+          {isSidebarCollapsed && (
+            <div className="hidden md:flex justify-center -mt-2">
+              <button
+                type="button"
+                onClick={() => setIsSidebarCollapsed(false)}
+                className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                title="Expand Sidebar (Ctrl+B)"
+                aria-label="Expand Sidebar"
+              >
+                <PanelLeft size={16} />
+              </button>
+            </div>
+          )}
 
           <nav className="space-y-1 text-xs font-sans">
             {[
@@ -2152,17 +2229,27 @@ export function App() {
                     setActiveTab(item.id as AdminTab);
                     setIsMobileNavOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between px-3 py-2.5 rounded-md text-xs font-medium transition-colors ${
+                  title={`${item.label}${item.count !== undefined ? ` (${item.count})` : ""}`}
+                  className={`w-full flex items-center ${
+                    isSidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"
+                  } rounded-md text-xs font-medium transition-colors ${
                     isActive
                       ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
                       : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
                   }`}
                 >
-                  <span className="flex items-center gap-3">
-                    <Icon size={16} />
-                    <span>{item.label}</span>
+                  <span className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
+                    <div className="relative flex items-center justify-center">
+                      <Icon size={16} />
+                      {isSidebarCollapsed && item.count !== undefined && (
+                        <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
+                          {item.count > 99 ? "99+" : item.count}
+                        </span>
+                      )}
+                    </div>
+                    {!isSidebarCollapsed && <span>{item.label}</span>}
                   </span>
-                  {item.count !== undefined && (
+                  {!isSidebarCollapsed && item.count !== undefined && (
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                         isActive
@@ -2179,53 +2266,87 @@ export function App() {
           </nav>
         </div>
 
-        <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
-              <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
-                {authSession.user.name.charAt(0) || "A"}
-              </div>
-              <div className="min-w-0">
-                <div className="font-medium text-neutral-900 dark:text-white truncate">{authSession.user.name}</div>
-                <div className="text-neutral-500 font-mono text-[9px] truncate">{authSession.user.email}</div>
+        {/* User Session Footer */}
+        {isSidebarCollapsed ? (
+          <div className="p-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] rounded-xl flex flex-col items-center gap-2">
+            <div
+              className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default"
+              title={`${authSession.user.name} (${authSession.user.role})`}
+            >
+              {authSession.user.name.charAt(0) || "A"}
+            </div>
+            <button
+              onClick={() => {
+                setIsMobileNavOpen(false);
+                handleLogout();
+              }}
+              className="p-1.5 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
+              title="Sign Out Session"
+              aria-label="Sign Out Session"
+            >
+              <LogOut size={12} />
+            </button>
+          </div>
+        ) : (
+          <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
+                  {authSession.user.name.charAt(0) || "A"}
+                </div>
+                <div className="min-w-0">
+                  <div className="font-medium text-neutral-900 dark:text-white truncate">{authSession.user.name}</div>
+                  <div className="text-neutral-500 font-mono text-[9px] truncate">{authSession.user.email}</div>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center justify-between pt-1.5 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
-            <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
-              {authSession.user.role.replace("_", " ")}
-            </span>
-            <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
-              <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
-              <span>Active</span>
+            <div className="flex items-center justify-between pt-1.5 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
+              <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
+                {authSession.user.role.replace("_", " ")}
+              </span>
+              <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
+                <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
+                <span>Active</span>
+              </div>
             </div>
-          </div>
 
-          <button
-            onClick={() => {
-              setIsMobileNavOpen(false);
-              handleLogout();
-            }}
-            className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
-          >
-            <LogOut size={12} />
-            <span>Sign Out Session</span>
-          </button>
-        </div>
+            <button
+              onClick={() => {
+                setIsMobileNavOpen(false);
+                handleLogout();
+              }}
+              className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
+            >
+              <LogOut size={12} />
+              <span>Sign Out Session</span>
+            </button>
+          </div>
+        )}
       </aside>
 
       {/* MAIN VIEWPORT */}
       <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto overflow-x-hidden">
         {/* HEADER */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 md:pb-6 border-b border-neutral-200 dark:border-neutral-800">
-          <div>
-            <h1 className="font-serif text-2xl font-light text-neutral-900 dark:text-white capitalize">
-              {TAB_TITLES[activeTab] || activeTab}
-            </h1>
-            <p className="text-xs text-neutral-500 font-sans mt-0.5">
-              {TAB_SUBTITLES[activeTab] || "Muschio Fragrance Store Management"}
-            </p>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              className="hidden md:flex p-2 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
+              title={isSidebarCollapsed ? "Expand Sidebar (Ctrl+B)" : "Collapse Sidebar (Ctrl+B)"}
+              aria-label={isSidebarCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            >
+              {isSidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+            <div>
+              <h1 className="font-serif text-2xl font-light text-neutral-900 dark:text-white capitalize">
+                {TAB_TITLES[activeTab] || activeTab}
+              </h1>
+              <p className="text-xs text-neutral-500 font-sans mt-0.5">
+                {TAB_SUBTITLES[activeTab] || "Muschio Fragrance Store Management"}
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2 sm:gap-3">
@@ -2262,7 +2383,7 @@ export function App() {
             </button>
 
             {/* Notification Bell with Live Dropdown */}
-            <div className="relative">
+            <div className="relative" ref={notificationRef}>
               <button
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
                 title="Real-Time Orders & Concierge Notifications"
