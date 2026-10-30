@@ -48,21 +48,41 @@ export default function OrderStatusPage({
   const [cardHolder, setCardHolder] = useState("");
   const [processingCard, setProcessingCard] = useState(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await muschioApi.getOrder(orderNumber);
-      setOrder(result);
-    } catch {
-      setOrder(null);
-    } finally {
-      setLoading(false);
-    }
-  }, [orderNumber]);
+  const refresh = useCallback(
+    async (isSilent = false) => {
+      if (!isSilent) setLoading(true);
+      try {
+        const result = await muschioApi.getOrder(orderNumber);
+        if (result) {
+          setOrder(result);
+        }
+      } catch {
+        if (!isSilent) setOrder(null);
+      } finally {
+        if (!isSilent) setLoading(false);
+      }
+    },
+    [orderNumber],
+  );
 
   useEffect(() => {
-    void refresh();
+    void refresh(false);
   }, [refresh]);
+
+  // Real-time automatic background synchronization every 3.5 seconds
+  useEffect(() => {
+    if (!orderNumber) return;
+    const isTerminal = order?.status === "DELIVERED" || order?.status === "CANCELLED";
+    if (isTerminal) return;
+
+    const interval = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible") {
+        void refresh(true);
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [orderNumber, order?.status, refresh]);
 
   const status = order?.status || "PENDING";
   const isPaid =
@@ -204,9 +224,13 @@ export default function OrderStatusPage({
       {/* Header Banner */}
       <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-10 text-start space-y-4 rounded-sm">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-luxury-border pb-4">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="eyebrow text-accent">
               {c("HAUTE PARFUMERIE · CLIENT RECEIPT", "دار العطور الراقية · إيصال العميل المعتمد")}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 text-[10px] font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              {c("LIVE SYNC ACTIVE", "تحديث مباشر نشط")}
             </span>
           </div>
           {order && (
@@ -540,7 +564,7 @@ export default function OrderStatusPage({
         <div className="flex items-center gap-3">
           <button
             type="button"
-            onClick={refresh}
+            onClick={() => void refresh(false)}
             disabled={loading}
             className="editorial-button-secondary inline-flex items-center gap-2 text-xs"
           >

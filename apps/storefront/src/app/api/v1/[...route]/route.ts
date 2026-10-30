@@ -50,8 +50,19 @@ if (!process.env.PAYMENT_PROVIDER) {
 export const dynamic = "force-dynamic";
 
 
-function success(data: any, status = 200) {
-  return NextResponse.json({ success: true, data }, { status });
+function success(data: any, status = 200, headers?: Record<string, string>) {
+  return NextResponse.json(
+    { success: true, data },
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
+        ...headers,
+      },
+    }
+  );
 }
 
 function error(code: string, message: string, status = 400) {
@@ -224,13 +235,24 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       });
       return success(orders.map(storefrontOrder));
     }
-    if (route[0] === "orders" && route[1] === "lookup" && route[2]) {
-      const orderNumber = route[2];
+    // 11b. Single Order Lookup & Real-Time Tracking
+    // Supports:
+    //  - /orders/:orderNumber (used by muschioApi.getOrder)
+    //  - /orders/lookup/:orderNumber (used by muschioApi.getOrderTracking)
+    //  - /orders/live/:orderNumber (used by live polling streams)
+    const isSingleOrderLookup =
+      (route[0] === "orders" && route[1] && route[1] !== "lookup" && route[1] !== "live") ||
+      (route[0] === "orders" && (route[1] === "lookup" || route[1] === "live") && Boolean(route[2]));
+
+    if (isSingleOrderLookup) {
+      const orderIdentifier =
+        route[1] === "lookup" || route[1] === "live" ? route[2] : route[1];
+
       const order = await prisma.order.findFirst({
         where: {
           OR: [
-            { orderNumber },
-            { id: orderNumber },
+            { orderNumber: orderIdentifier },
+            { id: orderIdentifier },
           ],
         },
         include: {
@@ -242,6 +264,16 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         },
       });
       if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
+
+      // Fetch all real-time business events logged for this order
+      const businessEvents = await prisma.businessEvent.findMany({
+        where: {
+          aggregateType: "ORDER",
+          aggregateId: order.id,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
       const base = storefrontOrder(order);
       const shipment = order.fulfillments?.[0]?.shipments?.[0];
       const trackingNumber =
@@ -249,6 +281,98 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         (["SHIPPED", "DELIVERED"].includes(order.status)
           ? `DXB-VIP-${order.orderNumber.replace(/[^0-9]/g, "").slice(-6) || "882104"}`
           : null);
+
+      // Construct verified real-time milestone events
+      const events: Array<{
+        id: string;
+        status: string;
+        titleEn: string;
+        titleAr: string;
+        descriptionEn: string;
+        descriptionAr: string;
+        timestamp: string;
+        completed: boolean;
+      }> = [
+        {
+          id: `evt_created_${order.id}`,
+          status: "PENDING",
+          titleEn: "Order Registered & Atelier Reservation",
+          titleAr: "تسجيل الطلب وحجز الزجاجة بالدار",
+          descriptionEn: `Order #${order.orderNumber} successfully registered in Muschio Haute Parfumerie system.`,
+          descriptionAr: `تم تسجيل الطلب رقم #${order.orderNumber} بنجاح وحجز الحصة في نظام الدار.`,
+          timestamp: order.createdAt.toISOString(),
+          completed: true,
+        },
+      ];
+
+      const capturedPayment = order.payments?.find((p) => p.status === "CAPTURED");
+      if (capturedPayment || ["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(order.status)) {
+        events.push({
+          id: `evt_paid_${order.id}`,
+          status: "PAID",
+          titleEn: "Payment Authorized & Captured",
+          titleAr: "تأكيد الدفع والتسوية المالية",
+          descriptionEn: `Payment of ${order.currency} ${Number(order.totalAmount).toLocaleString()} verified via ${capturedPayment?.provider || "Credit Card"}.`,
+          descriptionAr: `تم تأكيد سحب مبلغ ${Number(order.totalAmount).toLocaleString()} ${order.currency} عبر بطاقة الائتمان.`,
+          timestamp: capturedPayment?.createdAt ? capturedPayment.createdAt.toISOString() : order.createdAt.toISOString(),
+          completed: true,
+        });
+      }
+
+      if (["FULFILLING", "SHIPPED", "DELIVERED"].includes(order.status)) {
+        events.push({
+          id: `evt_fulfilling_${order.id}`,
+          status: "FULFILLING",
+          titleEn: "Atelier Verification & Royal Sealing",
+          titleAr: "فحص أختام الأصالة والتغليف الملكي",
+          descriptionEn: "Batch formulation certified, authenticity seals inspected and luxury packaging finalized.",
+          descriptionAr: "تم فحص ختم الدفعة والباركود الأمني واعتماد التغليف الفاخر بدار العطور.",
+          timestamp: order.updatedAt.toISOString(),
+          completed: true,
+        });
+      }
+
+      if (["SHIPPED", "DELIVERED"].includes(order.status)) {
+        events.push({
+          id: `evt_shipped_${order.id}`,
+          status: "SHIPPED",
+          titleEn: "Climate-Controlled Express Transit",
+          titleAr: "شحن جوي مبرد عبر دول الخليج",
+          descriptionEn: `Handed over to ${shipment?.carrier ? String(shipment.carrier).replace("_", " ") : "Muschio Climate Courier"} (Tracking: ${trackingNumber}).`,
+          descriptionAr: `تم تسليم الشحنة لشركة الشحن الجوي المبرد برقم تتبع: ${trackingNumber}.`,
+          timestamp: shipment?.shippedAt ? shipment.shippedAt.toISOString() : order.updatedAt.toISOString(),
+          completed: true,
+        });
+      }
+
+      if (order.status === "DELIVERED") {
+        events.push({
+          id: `evt_delivered_${order.id}`,
+          status: "DELIVERED",
+          titleEn: "White-Glove Doorstep Delivery",
+          titleAr: "تم التسليم الفاخر عند باب العميل",
+          descriptionEn: "The artisanal extrait has been successfully received by the client.",
+          descriptionAr: "تم تسليم العطر الفاخر بنجاح للعميل مع باقة العينات المجانية.",
+          timestamp: shipment?.deliveredAt ? shipment.deliveredAt.toISOString() : order.updatedAt.toISOString(),
+          completed: true,
+        });
+      }
+
+      // Add any additional custom business events
+      for (const be of businessEvents) {
+        if (!events.some((e) => e.titleEn.toLowerCase().includes(be.eventName.toLowerCase()))) {
+          events.push({
+            id: be.id,
+            status: (be.payload as any)?.newStatus || order.status,
+            titleEn: (be.payload as any)?.reason || be.eventName.replace(/_/g, " "),
+            titleAr: "تحديث المسار الملكي للشحنة",
+            descriptionEn: `Status updated to ${(be.payload as any)?.newStatus || order.status} by Muschio Logistics.`,
+            descriptionAr: `تم تحديث مسار الشحنة في النظام.`,
+            timestamp: be.createdAt.toISOString(),
+            completed: true,
+          });
+        }
+      }
 
       return success({
         ...base,
@@ -262,6 +386,8 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           shipment?.estimatedDelivery ||
           new Date(order.createdAt.getTime() + 2 * 24 * 60 * 60 * 1000).toISOString(),
         createdAt: order.createdAt.toISOString(),
+        updatedAt: order.updatedAt.toISOString(),
+        events: events.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
       });
     }
 

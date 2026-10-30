@@ -20,6 +20,7 @@ import {
   MessageSquare,
   AlertCircle,
   HelpCircle,
+  Activity,
 } from "lucide-react";
 
 export default function OrderTrackingPage({
@@ -40,13 +41,20 @@ export default function OrderTrackingPage({
   const [searchError, setSearchError] = useState("");
   const [copiedRef, setCopiedRef] = useState(false);
   const [copiedTracking, setCopiedTracking] = useState(false);
+  const [secondsAgo, setSecondsAgo] = useState(0);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [statusToast, setStatusToast] = useState<string | null>(null);
 
   const performLookup = useCallback(
-    async (ref: string, contact?: string) => {
+    async (ref: string, contact?: string, isSilent = false) => {
       const cleanRef = ref.trim();
       if (!cleanRef) return;
-      setLoading(true);
-      setSearchError("");
+      if (!isSilent) {
+        setLoading(true);
+        setSearchError("");
+      } else {
+        setIsSyncing(true);
+      }
 
       try {
         const result = await muschioApi.getOrderTracking(cleanRef, {
@@ -55,8 +63,20 @@ export default function OrderTrackingPage({
         });
 
         if (result && result.orderNumber) {
-          setOrderData(result);
-        } else {
+          setOrderData((prev: any) => {
+            if (prev && prev.status !== result.status) {
+              setStatusToast(
+                c(
+                  `Real-Time Update: Order status updated to "${result.status}"!`,
+                  `تحديث مباشر: تم تحديث حالة الشحنة إلى "${result.status}"!`,
+                ),
+              );
+              setTimeout(() => setStatusToast(null), 7000);
+            }
+            return result;
+          });
+          setSecondsAgo(0);
+        } else if (!isSilent) {
           setOrderData(null);
           setSearchError(
             c(
@@ -66,25 +86,51 @@ export default function OrderTrackingPage({
           );
         }
       } catch {
-        setOrderData(null);
-        setSearchError(
-          c(
-            "Could not look up order status at this moment. Please verify your reference or reach out to our VIP Concierge.",
-            "تعذر الاستعلام عن حالة الطلب حالياً. يرجى التحقق من الرقم أو التواصل مع خدمة كونسيرج مسكيو.",
-          ),
-        );
+        if (!isSilent) {
+          setOrderData(null);
+          setSearchError(
+            c(
+              "Could not look up order status at this moment. Please verify your reference or reach out to our VIP Concierge.",
+              "تعذر الاستعلام عن حالة الطلب حالياً. يرجى التحقق من الرقم أو التواصل مع خدمة كونسيرج مسكيو.",
+            ),
+          );
+        }
       } finally {
-        setLoading(false);
+        if (!isSilent) setLoading(false);
+        setIsSyncing(false);
       }
     },
     [c],
   );
 
+  // Initial lookup on mount or param change
   useEffect(() => {
     if (initialRef) {
       void performLookup(initialRef);
     }
   }, [initialRef, performLookup]);
+
+  // Real-Time Background Synchronization every 3.5 seconds
+  useEffect(() => {
+    if (!orderData?.orderNumber) return;
+    const currentRef = orderData.orderNumber;
+    const isTerminal = ["DELIVERED", "CANCELLED"].includes(orderData.status);
+
+    const syncTimer = setInterval(() => {
+      if (typeof document !== "undefined" && document.visibilityState === "visible" && !isTerminal) {
+        void performLookup(currentRef, undefined, true);
+      }
+    }, 3500);
+
+    const secondsTimer = setInterval(() => {
+      setSecondsAgo((s) => s + 1);
+    }, 1000);
+
+    return () => {
+      clearInterval(syncTimer);
+      clearInterval(secondsTimer);
+    };
+  }, [orderData?.orderNumber, orderData?.status, performLookup]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -251,7 +297,50 @@ export default function OrderTrackingPage({
 
       {/* 3. Live Tracking Results Screen */}
       {orderData && (
-        <div className="space-y-8 animate-fadeIn">
+        <div className="space-y-6 animate-fadeIn">
+          {/* Real-time Status Change Toast */}
+          {statusToast && (
+            <div className="p-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 text-xs rounded-sm flex items-center justify-between gap-3 animate-pulse shadow-sm">
+              <div className="flex items-center gap-2.5">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                <span className="font-medium text-xs">{statusToast}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setStatusToast(null)}
+                className="text-xs opacity-70 hover:opacity-100 p-1"
+              >
+                ✕
+              </button>
+            </div>
+          )}
+
+          {/* Live Radar Sync Ribbon */}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-luxury-surface border border-luxury-border rounded-sm text-xs shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="font-mono text-[11px] font-semibold text-luxury-text uppercase tracking-wider">
+                {c("LIVE LOGISTICS RADAR ACTIVE", "رادار الشحن الملكي المباشر نشط")}
+              </span>
+              <span className="text-luxury-muted text-[11px]">
+                · {c(`Auto-synced ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => void performLookup(orderData.orderNumber, undefined, false)}
+              disabled={isSyncing || loading}
+              className="text-[11px] font-medium text-accent hover:text-luxury-text flex items-center gap-1.5 transition-colors disabled:opacity-50"
+            >
+              <RefreshCw size={12} className={isSyncing ? "animate-spin text-accent" : ""} />
+              <span>{isSyncing ? c("Syncing…", "جارٍ التحديث…") : c("Sync Now", "تحديث فوري")}</span>
+            </button>
+          </div>
+
           {/* Top Status & Summary Bar */}
           <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4 border-b border-luxury-border pb-4">
@@ -445,6 +534,81 @@ export default function OrderTrackingPage({
                   {c("Total Amount", "المجموع الكلي")}:{" "}
                   <PriceDisplay price={orderData.totalAmount} locale={locale} />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* 4. Real-time Olfactory Dispatch Event Feed */}
+          {Array.isArray(orderData.events) && orderData.events.length > 0 && (
+            <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-5">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-luxury-border pb-3">
+                <div className="flex items-center gap-2">
+                  <Activity size={15} className="text-accent" />
+                  <span className="eyebrow text-luxury-text text-xs">
+                    {c("REAL-TIME OLFACTORY DISPATCH LOG", "سجل التحديثات الحية للشحنة")}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span className="text-[10px] font-mono text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-sm">
+                    {c("LIVE AUDIT TRAIL", "سجل مباشر ومعتمد")}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-1">
+                {orderData.events.map((evt: any, idx: number) => {
+                  const isLatest = idx === 0;
+                  const dateObj = new Date(evt.timestamp);
+                  const formattedTime = dateObj.toLocaleTimeString(
+                    locale === "ar" ? "ar-AE" : "en-AE",
+                    { hour: "2-digit", minute: "2-digit", second: "2-digit" },
+                  );
+                  const formattedDate = dateObj.toLocaleDateString(
+                    locale === "ar" ? "ar-AE" : "en-AE",
+                    { month: "short", day: "numeric", year: "numeric" },
+                  );
+
+                  return (
+                    <div
+                      key={evt.id || idx}
+                      className={`relative flex items-start gap-4 p-3.5 border transition-all rounded-sm ${
+                        isLatest
+                          ? "border-accent/60 bg-luxury-surface2/80 shadow-sm"
+                          : "border-luxury-border bg-luxury-surface2/30 opacity-85"
+                      }`}
+                    >
+                      <div className="mt-0.5 shrink-0">
+                        <div
+                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold ${
+                            isLatest
+                              ? "bg-accent text-luxury-bg shadow-sm"
+                              : "bg-emerald-500/20 text-emerald-600 border border-emerald-500/30"
+                          }`}
+                        >
+                          ✓
+                        </div>
+                      </div>
+
+                      <div className="flex-1 space-y-1 text-start">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <h4 className="text-xs font-semibold text-luxury-text font-sans">
+                            {c(evt.titleEn, evt.titleAr)}
+                          </h4>
+                          <span className="text-[10px] font-mono text-luxury-muted">
+                            {formattedTime} · {formattedDate}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-luxury-muted leading-relaxed">
+                          {c(evt.descriptionEn, evt.descriptionAr)}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
