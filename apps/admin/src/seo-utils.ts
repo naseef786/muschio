@@ -92,6 +92,32 @@ export interface ProductItem {
   variants?: ProductVariantItem[];
 }
 
+export interface CollectionItem {
+  id: string;
+  nameEn: string;
+  nameAr: string;
+  slug: string;
+  descriptionEn?: string;
+  descriptionAr?: string;
+  heroImageUrl?: string;
+  isFeatured: boolean;
+  productCount?: number;
+  productIds?: string[];
+  products?: Array<{
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameAr?: string;
+    brand: string;
+    price: number | string;
+    image: string;
+    concentration?: string;
+    displayOrder?: number;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface ParsedCsvProduct {
   sku: string;
   nameEn: string;

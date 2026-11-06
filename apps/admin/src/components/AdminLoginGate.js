@@ -29,22 +29,6 @@ export function AdminLoginGate({ onLoginSuccess }) {
             });
             const data = await res.json();
             if (!res.ok || !data.success || !data.data?.token) {
-                // Fallback for seeded credentials in case of network/offline demo
-                if (email.trim().toLowerCase() === "superadmin@muschio.luxury" &&
-                    password === "MuschioAdmin2026!") {
-                    const fallbackSession = {
-                        token: "muschio_sec_token_" + Date.now(),
-                        user: {
-                            id: "admin-super-001",
-                            email: "superadmin@muschio.luxury",
-                            name: "Director of Haute Parfumerie",
-                            role: "SUPER_ADMIN",
-                        },
-                    };
-                    persistSession(fallbackSession);
-                    onLoginSuccess(fallbackSession);
-                    return;
-                }
                 throw new Error(data.error?.message || "Invalid administrator credentials. Access denied.");
             }
             const session = {

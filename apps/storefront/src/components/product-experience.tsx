@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, Package, ShoppingBag, ArrowLeftRight } from "lucide-react";
+import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
-import { ProductCard } from "./product-card";
+import { CollectionSlider } from "./collection-slider";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
 import { useCompare } from "../context/compare-context";
@@ -132,13 +132,30 @@ export function ProductExperience({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const [selectedVariantId, setSelectedVariantId] = useState(
-    product.variants.find((v) => v.isDefault && (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
-    product.variants.find((v) => v.isDefault)?.id ||
-    product.variants.find((v) => !v.isSampleVial && (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
-    product.variants.find((v) => (v.availableQuantity ?? v.stockQuantity ?? 1) > 0)?.id ||
-    product.variants[0]?.id,
-  );
+  // Commercial flacon variants (filter out 2ml discovery vials)
+  const commercialVariants = useMemo(() => {
+    const list = product.variants.filter(
+      (v) => !v.isSampleVial && (v.volumeMl ? v.volumeMl > 5 : true),
+    );
+    const toSort = list.length > 0 ? list : product.variants;
+    return [...toSort].sort((a, b) => {
+      const volA = a.volumeMl ?? (typeof a.volume === "number" ? a.volume : parseInt(String(a.volume || "").replace(/[^0-9]/g, "")) || 0);
+      const volB = b.volumeMl ?? (typeof b.volume === "number" ? b.volume : parseInt(String(b.volume || "").replace(/[^0-9]/g, "")) || 0);
+      return volA - volB;
+    });
+  }, [product.variants]);
+
+  const initialVariant = useMemo(() => {
+    return (
+      commercialVariants.find((v) => v.isDefault && (v.availableQuantity ?? v.stockQuantity ?? v.stock ?? 1) > 0) ||
+      commercialVariants.find((v) => v.isDefault) ||
+      commercialVariants.find((v) => (v.availableQuantity ?? v.stockQuantity ?? v.stock ?? 1) > 0) ||
+      commercialVariants[0] ||
+      product.variants[0]
+    );
+  }, [commercialVariants, product.variants]);
+
+  const [selectedVariantId, setSelectedVariantId] = useState(initialVariant?.id);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.slug);
@@ -171,15 +188,15 @@ export function ProductExperience({
     return () => observer.disconnect();
   }, []);
 
-  // Accordion open states
-  const [openAccordion, setOpenAccordion] = useState<string | null>("maison");
+  // Accordion open states (Level Shoes luxury standard: Description open by default)
+  const [openAccordion, setOpenAccordion] = useState<string | null>("description");
 
   const toggleAccordion = (id: string) => {
     setOpenAccordion((prev) => (prev === id ? null : id));
   };
 
   const selectedVariant =
-    product.variants.find((v) => v.id === selectedVariantId) || product.variants[0];
+    product.variants.find((v) => v.id === selectedVariantId) || commercialVariants[0] || product.variants[0];
   const selectedPricing = getVariantPricing(selectedVariant);
 
   const images = product.images.length > 0 ? product.images : ["/product-placeholder.svg"];
@@ -317,7 +334,7 @@ export function ProductExperience({
         {/* Left Column: Gallery (7 Cols Desktop) */}
         <div className="lg:col-span-7">
           <div className="lg:sticky lg:top-24 space-y-4">
-            {/* Primary Main Image Canvas (4:5 Ratio, Contain, Soft Off-white Background) */}
+            {/* Primary Main Image Canvas (4:5 Ratio, Full Bleed Luxury Canvas, Zero Padding) */}
             <div className="relative aspect-[4/5] w-full bg-[#F8F8F8] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 overflow-hidden flex items-center justify-center rounded-sm">
               <Image
                 src={currentImage}
@@ -325,7 +342,7 @@ export function ProductExperience({
                 fill
                 priority
                 sizes="(max-width: 1024px) 100vw, 55vw"
-                className="object-contain p-6 sm:p-10 md:p-14 transition-transform duration-500 ease-out hover:scale-105"
+                className="object-cover object-center transition-transform duration-500 ease-out hover:scale-105"
               />
 
               {/* Floating Luxury Action Dock (Circular Wishlist, Compare & Share) */}
@@ -420,7 +437,7 @@ export function ProductExperience({
                     type="button"
                     onClick={() => setSelectedImageIndex(idx)}
                     aria-label={`View image ${idx + 1}`}
-                    className={`relative w-20 h-24 aspect-[4/5] bg-[#F8F8F8] dark:bg-neutral-900/60 border rounded-sm transition-all flex-shrink-0 ${
+                    className={`relative w-20 h-24 aspect-[4/5] bg-[#F8F8F8] dark:bg-neutral-900/60 border rounded-sm transition-all flex-shrink-0 overflow-hidden ${
                       selectedImageIndex === idx
                         ? "border-neutral-900 dark:border-white ring-1 ring-neutral-900 dark:ring-white"
                         : "border-neutral-100 dark:border-neutral-800 opacity-75 hover:opacity-100"
@@ -431,7 +448,7 @@ export function ProductExperience({
                       alt={`View ${idx + 1}`}
                       fill
                       sizes="80px"
-                      className="object-contain p-2"
+                      className="object-cover object-center"
                     />
                   </button>
                 ))}
@@ -479,61 +496,47 @@ export function ProductExperience({
                   )}
                 </div>
 
-                {/* Live Real-time Vault Stock Status */}
+                {/* Out of Stock Notice (Level Shoes Luxury: in-stock is implicit; only display out of stock) */}
                 {(() => {
                   const stock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
-                  const wh = selectedVariant.warehouse || "DXB-MAIN";
                   if (stock <= 0) {
                     return (
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-rose-500/10 border border-rose-500/25 rounded-none text-xs text-rose-600 dark:text-rose-400 font-medium">
-                        <span className="w-2 h-2 rounded-full bg-rose-500" />
-                        <span>{c(`Currently Sold Out (${wh}) — Flacon Awaiting Restock`, `الكمية نفدت حالياً (${wh}) — بانتظار دفعة جديدة`)}</span>
+                      <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs font-sans tracking-wide uppercase text-neutral-600 dark:text-neutral-400 font-medium">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-400" />
+                        <span>{c("Currently Out of Stock", "غير متوفر حالياً")}</span>
                       </div>
                     );
                   }
-                  if (stock <= 5) {
-                    return (
-                      <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-amber-500/10 border border-amber-500/25 rounded-none text-xs text-amber-600 dark:text-amber-400 font-medium">
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-                        <span>
-                          {c(
-                            `Rare Stock — Only ${stock} flacon${stock === 1 ? "" : "s"} remaining in ${wh}`,
-                            `كمية نادرة ومحدودة — متبقي ${stock} فقط في مستودع ${wh}`
-                          )}
-                        </span>
-                      </div>
-                    );
-                  }
-                  return (
-                    <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-none text-xs text-emerald-700 dark:text-emerald-400 font-medium">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                      <span>{c(`In Stock (${wh}) — Ready for White-Glove GCC Delivery`, `متوفر بالخزينة (${wh}) — جاهز للتوصيل الفاخر المبرد`)}</span>
-                    </div>
-                  );
+                  return null;
                 })()}
               </div>
             )}
 
             {/* Volume / Size Variant Selection (Level Shoes Style Selector Pills) */}
-            {product.variants.length > 0 && (
+            {commercialVariants.length > 0 && (
               <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium uppercase tracking-wider text-neutral-900 dark:text-neutral-100 font-sans">
-                    {c("Select Volume", "اختر الحجم")}
+                    {c("Select Flacon Volume", "اختر حجم الزجاجة")}
                   </span>
-                  <span className="text-neutral-400 font-mono text-xs">
+                  <span className="text-neutral-500 font-mono text-xs">
                     {typeof selectedVariant?.volume === "number"
                       ? `${selectedVariant.volume}ml`
                       : (selectedVariant?.volume || c(selectedVariant?.sizeLabelEn || "", selectedVariant?.sizeLabelAr || ""))}
                   </span>
                 </div>
-                <div className="flex flex-wrap gap-2.5">
-                  {product.variants.map((v) => {
+
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
+                  {commercialVariants.map((v) => {
                     const isSelected = v.id === selectedVariantId;
                     const stock = v.stock ?? v.availableQuantity ?? v.stockQuantity ?? 25;
                     const isOutOfStock = stock <= 0;
-                    const volRaw = typeof v.volume === "number" ? `${v.volume}ml` : (v.volume || c(v.sizeLabelEn, v.sizeLabelAr));
-                    const volLabel = volRaw.replace(/\s*Flacon/i, "").replace(/\s*Extrait/i, "").trim();
+                    const volNum =
+                      v.volumeMl ??
+                      (typeof v.volume === "number"
+                        ? v.volume
+                        : parseInt(String(v.volume || "").replace(/[^0-9]/g, "")) || 100);
+                    const volLabel = `${volNum}ml`;
                     const vPricing = getVariantPricing(v);
 
                     return (
@@ -541,28 +544,45 @@ export function ProductExperience({
                         key={v.id}
                         type="button"
                         onClick={() => setSelectedVariantId(v.id)}
-                        className={`px-4 py-2.5 text-xs font-sans tracking-wide transition-all rounded-sm border ${
+                        disabled={isOutOfStock}
+                        className={`group relative flex flex-col items-start p-3 text-start transition-all rounded-none border ${
                           isSelected
-                            ? "border-neutral-900 text-neutral-900 bg-neutral-900/5 dark:border-white dark:text-white dark:bg-white/10 font-semibold"
-                            : "border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:border-neutral-400 dark:hover:border-neutral-600 bg-transparent font-normal"
-                        } ${isOutOfStock ? "opacity-40 border-dashed cursor-not-allowed" : ""}`}
-                        title={
-                          isOutOfStock
-                            ? c("Out of stock", "غير متوفر")
-                            : vPricing.hasDiscount
-                            ? `${volLabel} - ${vPricing.sellingPrice} AED (MRP: ${vPricing.regularPrice} AED | Save ${vPricing.discountPercent}%)`
-                            : `${volLabel} - ${vPricing.sellingPrice} AED`
-                        }
+                            ? "border-black dark:border-white bg-neutral-900/[0.04] dark:bg-white/[0.08] shadow-sm"
+                            : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 bg-transparent"
+                        } ${isOutOfStock ? "opacity-40 cursor-not-allowed border-dashed" : "cursor-pointer"}`}
                       >
-                        <span>{volLabel}</span>
+                        {/* Top row: Volume and Selected Dot */}
+                        <div className="w-full flex items-center justify-between gap-1 mb-1">
+                          <span className={`text-xs font-semibold tracking-wide font-sans ${isSelected ? "text-black dark:text-white" : "text-neutral-800 dark:text-neutral-200"}`}>
+                            {volLabel}
+                          </span>
+                          {isSelected && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
+                          )}
+                        </div>
+
+                        {/* Price row */}
+                        <div className="flex items-baseline gap-1.5 font-sans">
+                          <span className={`text-xs font-semibold ${isSelected ? "text-black dark:text-white" : "text-neutral-700 dark:text-neutral-300"}`}>
+                            {formatCurrency(vPricing.sellingPrice, "AED", locale)}
+                          </span>
+                          {vPricing.hasDiscount && (
+                            <span className="text-[10px] text-neutral-400 line-through">
+                              {formatCurrency(vPricing.regularPrice, "AED", locale)}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Discount badge */}
                         {vPricing.hasDiscount && !isOutOfStock && (
-                          <span className="ms-1.5 px-1 py-0.5 text-[10px] font-sans font-semibold text-accent bg-accent/10 rounded">
-                            -{vPricing.discountPercent}%
+                          <span className="mt-1 inline-block text-[9px] font-medium text-accent uppercase tracking-wider">
+                            {c(`Save ${vPricing.discountPercent}%`, `خصم ${vPricing.discountPercent}%`)}
                           </span>
                         )}
+
                         {isOutOfStock && (
-                          <span className="ms-1.5 text-[9px] uppercase tracking-wider opacity-80 font-semibold text-rose-500">
-                            {c("(Sold Out)", "(نفد)")}
+                          <span className="mt-1 text-[9px] uppercase tracking-wider text-rose-500 font-medium">
+                            {c("Sold Out", "نفد الحجم")}
                           </span>
                         )}
                       </button>
@@ -704,145 +724,151 @@ export function ProductExperience({
                 </span>
               </div>
               <div className="flex flex-col items-center gap-1.5 p-2">
-                <Package size={18} className="text-neutral-900 dark:text-neutral-100" />
+                <RotateCcw size={18} className="text-neutral-900 dark:text-neutral-100" />
                 <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
-                  {c("2ml Sample Included", "عينة ٢ مل مرفقة")}
+                  {c("Free 7-Day Returns", "إرجاع مجاني ٧ أيام")}
                 </span>
                 <span className="text-[10px] text-neutral-400">
-                  {c("Test Before Opening", "جرّب قبل الفتح")}
+                  {c("Complimentary Pickup", "استلام مجاني")}
                 </span>
               </div>
             </div>
 
-            {/* Description Paragraph */}
-            <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800">
-              <p className="text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 font-sans">
-                {c(product.descriptionEn, product.descriptionAr)}
-              </p>
-            </div>
-
-            {/* Olfactory Architecture Section (3-Column Visual Accord Block) */}
-            <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-sans font-medium uppercase tracking-[0.16em] text-neutral-500">
-                  {c("Olfactory Architecture", "الهندسة العطرية")}
-                </span>
-                <span className="text-[11px] text-neutral-400 font-sans tracking-wide">
-                  {c("Pyramid of Accords", "هرم النغمات")}
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                {/* Column 1: Top Notes */}
-                <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                        {c("Top Notes", "الافتتاحية")}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                        {c("0–30 min", "٠–٣٠ د")}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-neutral-500 mt-1">
-                      {c("Light, citrus, spice", "نغمات منعشة وحمضيات وتوابل خفيفة")}
-                    </p>
-                  </div>
-
-                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                    {topNotes.length > 0 ? (
-                      topNotes.map((n) => (
-                        <Link
-                          key={n.id}
-                          href={`/notes/${n.slug}`}
-                          className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                        >
-                          {n.name}
-                        </Link>
-                      ))
-                    ) : (
-                      <span className="text-xs text-neutral-400 italic">
-                        {c("Citrus & Sparkle", "حمضيات ونغمات أولى")}
-                      </span>
-                    )}
-                  </div>
+            {/* Olfactory Architecture Section (Visual Accord Block) */}
+            {topNotes.length + heartNotes.length + baseNotes.length > 0 && (
+              <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-sans font-medium uppercase tracking-[0.16em] text-neutral-500">
+                    {c("Olfactory Architecture", "الهندسة العطرية")}
+                  </span>
+                  <span className="text-[11px] text-neutral-400 font-sans tracking-wide">
+                    {c("Pyramid of Accords", "هرم النغمات")}
+                  </span>
                 </div>
 
-                {/* Column 2: Heart Notes */}
-                <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                        {c("Heart Notes", "قلب العطر")}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                        {c("2–4 hrs", "٢–٤ س")}
-                      </span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Column 1: Top Notes */}
+                  {topNotes.length > 0 && (
+                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                            {c("Top Notes", "الافتتاحية")}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                            {c("0–30 min", "٠–٣٠ د")}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 mt-1">
+                          {c("Initial sparkle & impressions", "نغمات البداية والافتتاحية")}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                        {topNotes.map((n) => (
+                          <Link
+                            key={n.id}
+                            href={`/notes/${n.slug}`}
+                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                          >
+                            {n.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-[11px] text-neutral-500 mt-1">
-                      {c("Floral, resin, herbal", "أزهار وراتنجات ونفحات عشبية")}
-                    </p>
-                  </div>
+                  )}
 
-                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                    {heartNotes.length > 0 ? (
-                      heartNotes.map((n) => (
-                        <Link
-                          key={n.id}
-                          href={`/notes/${n.slug}`}
-                          className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                        >
-                          {n.name}
-                        </Link>
-                      ))
-                    ) : (
-                      <span className="text-xs text-neutral-400 italic">
-                        {c("Floral & Resinous accords", "أزهار وراتنجات مركزية")}
-                      </span>
-                    )}
-                  </div>
-                </div>
+                  {/* Column 2: Heart Notes */}
+                  {heartNotes.length > 0 && (
+                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                            {c("Heart Notes", "قلب العطر")}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                            {c("2–4 hrs", "٢–٤ س")}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 mt-1">
+                          {c("Core character & radiance", "جوهر العطر ونفحاته المركزية")}
+                        </p>
+                      </div>
 
-                {/* Column 3: Base Notes */}
-                <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                        {c("Base Notes", "القاعدة العطرية")}
-                      </span>
-                      <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                        {c("6+ hrs", "٦+ س")}
-                      </span>
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                        {heartNotes.map((n) => (
+                          <Link
+                            key={n.id}
+                            href={`/notes/${n.slug}`}
+                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                          >
+                            {n.name}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
-                    <p className="text-[11px] text-neutral-500 mt-1">
-                      {c("Oud, musk, amber, woods", "عود، مسك، عنبر، وأخشاب ثمينة")}
-                    </p>
-                  </div>
+                  )}
 
-                  <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                    {baseNotes.length > 0 ? (
-                      baseNotes.map((n) => (
-                        <Link
-                          key={n.id}
-                          href={`/notes/${n.slug}`}
-                          className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                        >
-                          {n.name}
-                        </Link>
-                      ))
-                    ) : (
-                      <span className="text-xs text-neutral-400 italic">
-                        {c("Deep woods & Ambers", "أخشاب وعنبر معتق")}
-                      </span>
-                    )}
-                  </div>
+                  {/* Column 3: Base Notes */}
+                  {baseNotes.length > 0 && (
+                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                            {c("Base Notes", "القاعدة العطرية")}
+                          </span>
+                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                            {c("6+ hrs", "٦+ س")}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-neutral-500 mt-1">
+                          {c("Enduring foundation & trail", "عمق العطر والنفحات المستمرة")}
+                        </p>
+                      </div>
+
+                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                        {baseNotes.map((n) => (
+                          <Link
+                            key={n.id}
+                            href={`/notes/${n.slug}`}
+                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                          >
+                            {n.name}
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Level Shoes Style Clean Accordions */}
             <div className="border-b border-neutral-100 dark:border-neutral-800">
-              {/* Accordion 1: Maison Heritage & Perfumer */}
+              {/* Accordion 1: Description */}
+              <div className="pdp-accordion-item">
+                <button
+                  type="button"
+                  onClick={() => toggleAccordion("description")}
+                  className="pdp-accordion-header"
+                  aria-expanded={openAccordion === "description"}
+                >
+                  <span>{c("Description", "وصف العطر")}</span>
+                  <ChevronDown
+                    size={16}
+                    className={`transition-transform duration-200 ${
+                      openAccordion === "description" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openAccordion === "description" && (
+                  <div className="pdp-accordion-content text-sm leading-relaxed text-neutral-700 dark:text-neutral-300 font-sans">
+                    <p>{c(product.descriptionEn, product.descriptionAr)}</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Accordion 2: Maison Heritage & Perfumer */}
               <div className="pdp-accordion-item">
                 <button
                   type="button"
@@ -883,6 +909,12 @@ export function ProductExperience({
                           <span className="font-medium text-neutral-900 dark:text-neutral-100">{product.longevity}</span>
                         </div>
                       )}
+                      {product.sillage && (
+                        <div>
+                          <span className="text-neutral-400 block">{c("Sillage", "الفوحان")}</span>
+                          <span className="font-medium text-neutral-900 dark:text-neutral-100">{product.sillage}</span>
+                        </div>
+                      )}
                     </div>
                     {product.perfumerBio && (
                       <p className="text-xs text-neutral-500 pt-2 border-t border-neutral-100 dark:border-neutral-800">
@@ -893,7 +925,7 @@ export function ProductExperience({
                 )}
               </div>
 
-              {/* Accordion 2: Scent Care & Gulf Climate Rituals */}
+              {/* Accordion 3: Scent Care & Gulf Climate Rituals */}
               <div className="pdp-accordion-item">
                 <button
                   type="button"
@@ -927,7 +959,7 @@ export function ProductExperience({
                 )}
               </div>
 
-              {/* Accordion 3: White-Glove Delivery & Returns */}
+              {/* Accordion 4: Complimentary Delivery & Returns */}
               <div className="pdp-accordion-item">
                 <button
                   type="button"
@@ -935,7 +967,7 @@ export function ProductExperience({
                   className="pdp-accordion-header"
                   aria-expanded={openAccordion === "shipping"}
                 >
-                  <span>{c("Delivery, Samples & Guarantees", "التوصيل والعينات والضمان")}</span>
+                  <span>{c("Complimentary Delivery & Returns", "التوصيل والإرجاع المجاني")}</span>
                   <ChevronDown
                     size={16}
                     className={`transition-transform duration-200 ${
@@ -947,14 +979,14 @@ export function ProductExperience({
                   <div className="pdp-accordion-content text-xs space-y-2 font-sans">
                     <p>
                       {c(
-                        "• Express courier dispatch across the United Arab Emirates (1–2 business days) and Kingdom of Saudi Arabia (2–4 business days).",
-                        "• شحن سريع داخل الإمارات (١-٢ يوم عمل) والمملكة العربية السعودية (٢-٤ أيام عمل).",
+                        "• Express courier dispatch across the United Arab Emirates (1–2 business days) and Kingdom of Saudi Arabia (2–4 business days). Complimentary on all orders above AED 500.",
+                        "• شحن سريع داخل الإمارات (١-٢ يوم عمل) والمملكة العربية السعودية (٢-٤ أيام عمل). مجاني لجميع الطلبات فوق ٥٠٠ د.إ.",
                       )}
                     </p>
                     <p>
                       {c(
-                        "• Every full bottle includes an official 2ml discovery vial. Please test the sample first; returns are accepted on unopened, sealed flacons within 14 days.",
-                        "• تتضمن كل زجاجة عينة تجريبية ٢ مل رسمية. يُرجى اختبار العينة أولاً؛ تُقبل الإرجاعات للزجاجات المغلفة وغير المفتوحة خلال ١٤ يوماً.",
+                        "• Free returns within 7 days on unopened, factory-sealed flacons. Complimentary door-to-door courier collection arranged upon request.",
+                        "• إرجاع مجاني خلال ٧ أيام للزجاجات المغلفة وغير المفتوحة. نوفر خدمة استلام مجانية من باب منزلك عند الطلب.",
                       )}
                     </p>
                   </div>
@@ -967,79 +999,62 @@ export function ProductExperience({
 
       {/* 4. More From This House Section */}
       {houseProducts.length > 0 && (
-        <section className="py-14 border-b border-neutral-100 dark:border-neutral-800">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <span className="eyebrow">{c("FROM THE SAME MAISON", "من الدار نفسها")}</span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-neutral-900 dark:text-neutral-50 mt-1">
-                {c(`More from ${product.brand.name}`, `عطور أخرى من ${product.brand.name}`)}
-              </h2>
-            </div>
-            <Link
-              href={`/brands/${brandSlug}`}
-              className="editorial-text-link"
-            >
-              {c("View Maison", "عرض الدار")} ↗
-            </Link>
-          </div>
-          <div className="product-grid">
-            {houseProducts.slice(0, 4).map((p) => {
+        <div className="py-14 border-b border-neutral-100 dark:border-neutral-800">
+          <CollectionSlider
+            eyebrow={c("FROM THE SAME MAISON", "من الدار نفسها")}
+            title={c(`More from ${product.brand.name}`, `عطور أخرى من ${product.brand.name}`)}
+            viewAllHref={`/brands/${brandSlug}`}
+            viewAllText={c("View Maison", "عرض الدار")}
+            products={houseProducts.map((p) => {
               const cardPricing = getProductCardPricing(p);
-              return (
-                <ProductCard
-                  key={p.slug}
-                  slug={p.slug}
-                  nameEn={p.nameEn}
-                  nameAr={p.nameAr}
-                  brand={p.brand?.name || p.brand || product.brand.name}
-                  concentration={p.concentration}
-                  price={cardPricing.price}
-                  compareAtPrice={cardPricing.compareAtPrice}
-                  variants={p.variants}
-                  image={p.images?.[0] || p.image || "/product-placeholder.svg"}
-                  locale={locale}
-                />
-              );
+              return {
+                slug: p.slug,
+                nameEn: p.nameEn,
+                nameAr: p.nameAr,
+                brand: p.brand?.name || p.brand || product.brand.name,
+                concentration: p.concentration,
+                price: cardPricing.price,
+                compareAtPrice: cardPricing.compareAtPrice,
+                variants: p.variants,
+                image: p.images?.[0] || p.image || "/product-placeholder.svg",
+                secondaryImage: p.images?.[1],
+                locale: locale,
+              };
             })}
-          </div>
-        </section>
+            locale={locale as "en" | "ar"}
+            enableTabs={false}
+          />
+        </div>
       )}
 
       {/* 5. You May Also Like Section (Level Shoes Recommendation Style) */}
       {relatedProducts.length > 0 && (
-        <section className="py-14">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <span className="eyebrow">{c("CURATED RECOMMENDATIONS", "ترشيحات مختارة")}</span>
-              <h2 className="font-serif text-2xl sm:text-3xl text-neutral-900 dark:text-neutral-50 mt-1">
-                {c("You May Also Appreciate", "قد ينال إعجابك أيضاً")}
-              </h2>
-            </div>
-            <Link href="/shop" className="editorial-text-link">
-              {c("Shop All Fragrances", "تسوق كل العطور")} ↗
-            </Link>
-          </div>
-          <div className="product-grid">
-            {relatedProducts.slice(0, 4).map((p) => {
+        <div className="py-14">
+          <CollectionSlider
+            eyebrow={c("CURATED RECOMMENDATIONS", "ترشيحات مختارة")}
+            title={c("You May Also Appreciate", "قد ينال إعجابك أيضاً")}
+            viewAllHref="/shop"
+            viewAllText={c("Shop All Fragrances", "تسوق كل العطور")}
+            products={relatedProducts.map((p) => {
               const cardPricing = getProductCardPricing(p);
-              return (
-                <ProductCard
-                  key={p.slug}
-                  slug={p.slug}
-                  nameEn={p.nameEn}
-                  nameAr={p.nameAr}
-                  brand={p.brand?.name || p.brand}
-                  concentration={p.concentration}
-                  price={cardPricing.price}
-                  compareAtPrice={cardPricing.compareAtPrice}
-                  variants={p.variants}
-                  image={p.images?.[0] || p.image || "/product-placeholder.svg"}
-                  locale={locale}
-                />
-              );
+              return {
+                slug: p.slug,
+                nameEn: p.nameEn,
+                nameAr: p.nameAr,
+                brand: p.brand?.name || p.brand,
+                concentration: p.concentration,
+                price: cardPricing.price,
+                compareAtPrice: cardPricing.compareAtPrice,
+                variants: p.variants,
+                image: p.images?.[0] || p.image || "/product-placeholder.svg",
+                secondaryImage: p.images?.[1],
+                locale: locale,
+              };
             })}
-          </div>
-        </section>
+            locale={locale as "en" | "ar"}
+            enableTabs={false}
+          />
+        </div>
       )}
 
       {/* 6. Sticky Mobile Buy Bar (Level Shoes Standard) */}
@@ -1086,26 +1101,38 @@ export function ProductExperience({
           </button>
 
           {/* Mobile Quick Add to Bag (triggers mini-cart drawer) */}
-          <button
-            type="button"
-            onClick={handleAddToCart}
-            disabled={isAdding}
-            className="py-2.5 px-5 bg-neutral-950 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm"
-          >
-            {isAdding ? (
-              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-            ) : addedSuccess ? (
-              <>
-                <Check size={14} />
-                <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
-              </>
-            ) : (
-              <>
-                <ShoppingBag size={14} />
-                <span>{c("Add to Bag", "أضف للحقيبة")}</span>
-              </>
-            )}
-          </button>
+          {(() => {
+            const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 25;
+            const isOutOfStock = currentStock <= 0;
+            return (
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                disabled={isAdding || isOutOfStock}
+                className={`py-2.5 px-5 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm ${
+                  isOutOfStock
+                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-200 dark:border-neutral-700"
+                    : "bg-neutral-950 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"
+                }`}
+              >
+                {isAdding ? (
+                  <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : addedSuccess ? (
+                  <>
+                    <Check size={14} />
+                    <span>{c("Added ✓", "تمت الإضافة ✓")}</span>
+                  </>
+                ) : isOutOfStock ? (
+                  <span>{c("Out of Stock", "غير متوفر")}</span>
+                ) : (
+                  <>
+                    <ShoppingBag size={14} />
+                    <span>{c("Add to Bag", "أضف للحقيبة")}</span>
+                  </>
+                )}
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>

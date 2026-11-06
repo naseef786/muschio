@@ -2,7 +2,7 @@ import React from "react";
 import Image from "next/image";
 import { Link } from "../../navigation";
 import { ArrowUpRight, ShieldCheck, Truck, Package, Sparkles } from "lucide-react";
-import { ProductCard } from "../../components/product-card";
+import { CollectionSlider } from "../../components/collection-slider";
 import { muschioApi } from "../../lib/api";
 
 const photo = (id: string, width = 1200) =>
@@ -75,10 +75,11 @@ export default async function HomePage({
     : c(DEFAULT_HERO.overlayLabelEn, DEFAULT_HERO.overlayLabelAr);
 
   // Dynamic live data from backend API
-  const [liveProducts, liveBrands, liveNotes] = await Promise.all([
-    muschioApi.getProducts({ limit: 4 }),
+  const [liveProducts, liveBrands, liveNotes, liveCollections] = await Promise.all([
+    muschioApi.getProducts({ limit: 16 }),
     muschioApi.getBrands(),
-    muschioApi.getNotes({ limit: 4 }),
+    muschioApi.getNotes({ limit: 6 }),
+    muschioApi.getCollections({ featured: true }),
   ]);
 
   const featuredProducts = (liveProducts || []).map((p) => {
@@ -97,6 +98,31 @@ export default async function HomePage({
       variants: p.variants,
     };
   });
+
+  const formattedCollections = (liveCollections || []).map((col: any) => ({
+    id: col.id,
+    nameEn: col.nameEn,
+    nameAr: col.nameAr,
+    slug: col.slug,
+    descriptionEn: col.descriptionEn,
+    descriptionAr: col.descriptionAr,
+    products: (col.products || []).map((p: any) => {
+      const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
+      return {
+        slug: p.slug,
+        nameEn: p.nameEn,
+        nameAr: p.nameAr,
+        brand: p.brand?.name || p.brand || "",
+        concentration: (p.concentration || "").replaceAll("_", " "),
+        price: v?.price || p.price || 0,
+        compareAtPrice: v?.compareAtPrice,
+        image: p.images?.[0] || p.image || "/product-placeholder.svg",
+        secondaryImage: p.images?.[1],
+        badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
+        variants: p.variants || [],
+      };
+    }),
+  }));
 
   const prestigeHouses = (liveBrands || []).slice(0, 5).map((b) => ({
     name: b.name,
@@ -194,42 +220,22 @@ export default async function HomePage({
         </div>
       </section>
 
-      {/* 3. Level Shoes Curated Product Selection Grid */}
+      {/* 3. Curated Collection Slider */}
       <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-        <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
-          <div>
-            <span className="eyebrow mb-1">
-              {c("SIGNATURE SELECTION", "المختارات المميزة")}
-            </span>
-            <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
-              {c("Curated Masterpieces", "تحف عطرية مختارة")}
-            </h2>
-          </div>
-          <Link href="/shop" className="editorial-text-link">
-            {c("Shop All", "تسوق الكل")} ↗
-          </Link>
-        </div>
-
-        {/* 4-Column Product Grid */}
-        <div className="product-grid">
-          {featuredProducts.map((product) => (
-            <ProductCard
-              key={product.slug}
-              slug={product.slug}
-              nameEn={product.nameEn}
-              nameAr={product.nameAr}
-              brand={product.brand}
-              concentration={product.concentration}
-              price={product.price}
-              compareAtPrice={product.compareAtPrice}
-              variants={product.variants}
-              image={product.image}
-              secondaryImage={product.secondaryImage}
-              badge={product.badge}
-              locale={locale}
-            />
-          ))}
-        </div>
+        <CollectionSlider
+          eyebrow={c("SIGNATURE SELECTION", "المختارات المميزة")}
+          title={c("Curated Masterpieces", "تحف عطرية مختارة")}
+          subtitle={c(
+            "Explore our rare extraits de parfum, aged attars, and private collections hand-curated for olfactory connoisseurs.",
+            "استكشف أنقى خلاصات العطور العالمية والأدهان المعتقة المنتقاة بعناية لصفوة عشاق العطور.",
+          )}
+          viewAllHref="/shop"
+          viewAllText={c("Shop All Flacons", "تسوق جميع العطور")}
+          products={featuredProducts}
+          collections={formattedCollections}
+          locale={locale}
+          enableTabs={true}
+        />
       </section>
 
       {/* 4. Shop By Fragrance House */}
@@ -248,12 +254,12 @@ export default async function HomePage({
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
           {prestigeHouses.map((house) => (
             <Link
               key={house.slug}
               href={`/brands/${house.slug}`}
-              className="border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
+              className="w-[260px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
             >
               <div>
                 <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted block">
@@ -288,12 +294,12 @@ export default async function HomePage({
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 gap-4 pb-2">
           {rawNotes.map((n) => (
             <Link
               key={n.slug}
               href={`/notes/${n.slug}`}
-              className="border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
+              className="w-[240px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
             >
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-accent font-medium">

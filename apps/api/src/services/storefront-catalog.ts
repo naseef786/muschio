@@ -11,10 +11,19 @@ export function storefrontProduct(product: any) {
     gender: product.gender,
     images: product.images || [],
     brand: {
-      name: product.brand.name,
-      slug: product.brand.slug,
-      type: product.brand.type,
+      name: product.brand?.name || "Haute Niche",
+      slug: product.brand?.slug || "niche",
+      type: product.brand?.type || "NICHE",
+      countryOfOrigin: product.brand?.countryOfOrigin || null,
     },
+    countryOfOrigin: product.countryOfOrigin || product.brand?.countryOfOrigin || null,
+    origin: product.countryOfOrigin || product.brand?.countryOfOrigin || null,
+    sillage: product.sillage || null,
+    longevity: product.longevity || null,
+    perfumer: product.perfumer || null,
+    perfumerBio: product.perfumerBio || null,
+    ratingAverage: product.ratingAverage ? Number(product.ratingAverage) : 5.0,
+    ratingCount: product.ratingCount ? Number(product.ratingCount) : 0,
     scentFamily: product.scentFamily
       ? {
           slug: product.scentFamily.slug,

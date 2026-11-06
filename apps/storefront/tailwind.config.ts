@@ -11,7 +11,8 @@ const config: Config = {
   theme: {
     extend: {
       fontFamily: {
-        sans: ["var(--font-figtree)", "var(--font-sans)", "Figtree", "Inter", "sans-serif"],
+        sans: ["var(--font-figtree)", "Figtree", "Inter", "sans-serif"],
+        serif: ["var(--font-figtree)", "Figtree", "serif"],
       },
     },
   },

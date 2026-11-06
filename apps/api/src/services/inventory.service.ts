@@ -119,7 +119,7 @@ export class InventoryService {
   /**
    * Releases expired reservations and returns stock to available pool.
    */
-  static async reconcileExpiredReservations() {
+  static async reconcileExpiredReservations(): Promise<{ releasedCount: number }> {
     try {
       const now = new Date();
       const expired = await prisma.inventoryReservation.findMany({
@@ -131,55 +131,54 @@ export class InventoryService {
 
       if (expired.length === 0) return { releasedCount: 0 };
 
-      return await prisma.$transaction(async (tx) => {
-        let releasedCount = 0;
-        const orderIds = new Set<string>();
-        for (const res of [...expired].sort(
-          (a, b) =>
-            (a.orderId || "").localeCompare(b.orderId || "") ||
-            a.variantId.localeCompare(b.variantId),
-        )) {
-          if (res.orderId && !orderIds.has(res.orderId)) {
-            await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${res.orderId} FOR UPDATE`;
-            orderIds.add(res.orderId);
-          }
-          await tx.$queryRaw`SELECT id FROM "InventoryReservation" WHERE id = ${res.id} FOR UPDATE`;
-          const claimed = await tx.inventoryReservation.updateMany({
+      let releasedCount = 0;
+      const orderIds = new Set<string>();
+
+      for (const res of expired) {
+        try {
+          const claimed = await prisma.inventoryReservation.updateMany({
             where: { id: res.id, isReleased: false, expiresAt: { lte: now } },
             data: { isReleased: true },
           });
-          if (!claimed.count) continue;
-          await tx.inventory.update({
-            where: { variantId: res.variantId },
-            data: {
-              reservedQuantity: { decrement: res.quantity },
-            },
-          });
 
-          await tx.inventoryReservation.update({
-            where: { id: res.id },
-            data: { isReleased: true },
-          });
-
-          releasedCount += res.quantity;
+          if (claimed.count > 0) {
+            await prisma.inventory.updateMany({
+              where: { variantId: res.variantId },
+              data: {
+                reservedQuantity: { decrement: res.quantity },
+              },
+            });
+            releasedCount += res.quantity;
+            if (res.orderId) {
+              orderIds.add(res.orderId);
+            }
+          }
+        } catch (itemErr) {
+          console.warn(`[Inventory] Error releasing reservation ${res.id}:`, itemErr);
         }
-        for (const orderId of orderIds) {
-          const remaining = await tx.inventoryReservation.count({
+      }
+
+      for (const orderId of orderIds) {
+        try {
+          const remaining = await prisma.inventoryReservation.count({
             where: { orderId, isReleased: false },
           });
-          if (remaining === 0)
-            await tx.order.updateMany({
+          if (remaining === 0) {
+            await prisma.order.updateMany({
               where: {
                 id: orderId,
                 status: { in: ["PENDING", "PAYMENT_PENDING"] },
               },
               data: { status: "PAYMENT_FAILED" },
             });
-        }
-        return { releasedCount };
-      });
+          }
+        } catch {}
+      }
+
+      return { releasedCount };
     } catch (e) {
-      throw e;
+      console.error("[Inventory Reconciliation Error]", e);
+      return { releasedCount: 0 };
     }
   }
 

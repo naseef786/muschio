@@ -19,35 +19,15 @@ import {
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
 
-
-if (!process.env.DATABASE_URL) {
-  process.env.DATABASE_URL =
-    "postgresql://neondb_owner:npg_sQVMUZS9i7gC@ep-noisy-band-b4h6frtw-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require";
-}
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
-}
-if (!process.env.ADMIN_JWT_SECRET) {
-  process.env.ADMIN_JWT_SECRET = "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
-}
-if (!process.env.CLOUDINARY_CLOUD_NAME) {
-  process.env.CLOUDINARY_CLOUD_NAME = "zwkad4sz";
-}
-if (!process.env.CLOUDINARY_API_KEY) {
-  process.env.CLOUDINARY_API_KEY = "287343912324243";
-}
-if (!process.env.CLOUDINARY_API_SECRET) {
-  process.env.CLOUDINARY_API_SECRET = "YFAeE_1UdoL5Xlr05jOYspbNQnA";
-}
-if (!process.env.PAYMENTS_ENABLED) {
-  process.env.PAYMENTS_ENABLED = "true";
-}
-if (!process.env.PAYMENT_PROVIDER) {
-  process.env.PAYMENT_PROVIDER = "stripe";
-}
-
-
 export const dynamic = "force-dynamic";
+
+async function verifyAdminAuth(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+  return await AdminService.verifyToken(token);
+}
 
 
 function success(data: any, status = 200, headers?: Record<string, string>) {
@@ -110,6 +90,14 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     const path = route.join("/");
     const url = new URL(req.url);
 
+    // Require administrator authorization for all admin endpoints
+    if (route[0] === "admin") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) {
+        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      }
+    }
+
     // 1. Brands
     if (path === "brands") {
       const brands = await CatalogService.getBrands();
@@ -165,6 +153,81 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       const result = await CatalogService.getProductBySlug(slug);
       if (!result) return error("PRODUCT_NOT_FOUND", "Product not found", 404);
       return success({ product: storefrontProduct(result.product) });
+    }
+
+    // 4b. Collections (Public)
+    if (path === "collections") {
+      const isFeaturedParam = url.searchParams.get("featured");
+      const where: any = {};
+      if (isFeaturedParam === "true") where.isFeatured = true;
+
+      const collections = await prisma.collection.findMany({
+        where,
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        include: {
+          products: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              product: {
+                include: {
+                  brand: true,
+                  variants: { orderBy: { price: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return success(
+        collections.map((c) => ({
+          id: c.id,
+          nameEn: c.nameEn,
+          nameAr: c.nameAr,
+          slug: c.slug,
+          descriptionEn: c.descriptionEn,
+          descriptionAr: c.descriptionAr,
+          heroImageUrl: c.heroImageUrl,
+          isFeatured: c.isFeatured,
+          products: c.products.map((pc) => storefrontProduct(pc.product)),
+        }))
+      );
+    }
+
+    if (route[0] === "collections" && route[1]) {
+      const slugOrId = route[1];
+      const collection = await prisma.collection.findFirst({
+        where: {
+          OR: [{ slug: slugOrId }, { id: slugOrId }],
+        },
+        include: {
+          products: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              product: {
+                include: {
+                  brand: true,
+                  variants: { orderBy: { price: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      if (!collection) return error("COLLECTION_NOT_FOUND", "Collection not found", 404);
+
+      return success({
+        id: collection.id,
+        nameEn: collection.nameEn,
+        nameAr: collection.nameAr,
+        slug: collection.slug,
+        descriptionEn: collection.descriptionEn,
+        descriptionAr: collection.descriptionAr,
+        heroImageUrl: collection.heroImageUrl,
+        isFeatured: collection.isFeatured,
+        products: collection.products.map((pc) => storefrontProduct(pc.product)),
+      });
     }
 
     // 5. Discovery Sets
@@ -424,6 +487,54 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success(products);
     }
 
+    // 14b. Admin Collections List
+    if (path === "admin/collections") {
+      const collections = await prisma.collection.findMany({
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        include: {
+          products: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              product: {
+                include: {
+                  brand: true,
+                  variants: { orderBy: { price: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return success(
+        collections.map((c) => ({
+          id: c.id,
+          nameEn: c.nameEn,
+          nameAr: c.nameAr,
+          slug: c.slug,
+          descriptionEn: c.descriptionEn,
+          descriptionAr: c.descriptionAr,
+          heroImageUrl: c.heroImageUrl,
+          isFeatured: c.isFeatured,
+          productCount: c.products.length,
+          productIds: c.products.map((p) => p.productId),
+          products: c.products.map((p) => ({
+            id: p.product.id,
+            slug: p.product.slug,
+            nameEn: p.product.nameEn,
+            nameAr: p.product.nameAr,
+            brand: p.product.brand.name,
+            price: p.product.variants[0]?.price || 0,
+            image: p.product.images[0] || "/product-placeholder.svg",
+            concentration: p.product.concentration,
+            displayOrder: p.displayOrder,
+          })),
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        }))
+      );
+    }
+
     // 15. Admin Orders List
     if (path === "admin/orders") {
       const limit = Number(url.searchParams.get("limit") || "100");
@@ -435,11 +546,44 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           shippingAddress: true,
           payments: { orderBy: { createdAt: "desc" } },
           customer: true,
+          fulfillments: { include: { shipments: true } },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
       });
       return success(orders);
+    }
+
+    // 15b. Single Admin Order Detailed Inspection
+    if (route[0] === "admin" && route[1] === "orders" && route[2] && route[2] !== "live") {
+      const orderIdOrNum = route[2];
+      const order = await prisma.order.findFirst({
+        where: {
+          OR: [{ id: orderIdOrNum }, { orderNumber: orderIdOrNum }],
+        },
+        include: {
+          items: true,
+          shippingAddress: true,
+          payments: { orderBy: { createdAt: "desc" } },
+          customer: true,
+          fulfillments: { include: { shipments: true } },
+        },
+      });
+
+      if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
+
+      const events = await prisma.businessEvent.findMany({
+        where: {
+          aggregateType: "ORDER",
+          aggregateId: order.id,
+        },
+        orderBy: { createdAt: "asc" },
+      });
+
+      return success({
+        ...order,
+        events,
+      });
     }
 
     // 16. Admin Real-Time Live Tracker (Events, Live Orders, Counters)
@@ -519,6 +663,14 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     try {
       body = await req.json();
     } catch {}
+
+    // Require administrator authorization for all admin endpoints (except login)
+    if (route[0] === "admin" && path !== "admin/auth/login") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) {
+        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      }
+    }
 
     // 1. Guest Session
     if (path === "sessions/guest") {
@@ -696,6 +848,22 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           redirectUrl: returnUrl,
           status: "test_mode",
         });
+      }
+    }
+
+    // 7c. Stripe Webhook Handler (PCI-DSS & SCA Compliant Settlement)
+    if (path === "payments/webhook" || path === "payments/stripe-webhook") {
+      const signature = req.headers.get("stripe-signature");
+      if (!signature) {
+        return error("BAD_REQUEST", "Stripe-Signature header is missing", 400);
+      }
+      try {
+        const rawBody = Buffer.from(JSON.stringify(body || {}), "utf-8");
+        const result = await PaymentService.handleStripeWebhook(rawBody, signature);
+        return success(result);
+      } catch (err: any) {
+        console.error("Stripe webhook processing error:", err);
+        return error("WEBHOOK_ERROR", err?.message || "Webhook processing failed", err?.statusCode || 400);
       }
     }
 
@@ -1243,6 +1411,171 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(note, 201);
     }
 
+    // 14c. Admin Create / Update Collection
+    if (path === "admin/collections") {
+      const {
+        id: existingId,
+        nameEn,
+        nameAr,
+        slug: customSlug,
+        descriptionEn,
+        descriptionAr,
+        heroImageUrl,
+        isFeatured = false,
+        productIds = [],
+      } = body || {};
+
+      if (!nameEn) return error("INVALID_INPUT", "Collection name (English) is required", 400);
+
+      const baseSlug = (customSlug || nameEn)
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\u0600-\u06FF]+/g, "-")
+        .replace(/(^-|-$)/g, "");
+      let slug = baseSlug || `collection-${Date.now().toString().slice(-4)}`;
+
+      // Check if existingId exists in DB
+      let existingRecord = null;
+      if (existingId) {
+        existingRecord = await prisma.collection.findUnique({
+          where: { id: existingId },
+        });
+      }
+
+      // Ensure slug uniqueness
+      const slugCollision = await prisma.collection.findFirst({
+        where: {
+          slug,
+          ...(existingRecord ? { id: { not: existingRecord.id } } : {}),
+        },
+      });
+      if (slugCollision) {
+        slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+      }
+
+      let collection;
+
+      if (existingRecord) {
+        collection = await prisma.collection.update({
+          where: { id: existingRecord.id },
+          data: {
+            nameEn: String(nameEn).trim(),
+            nameAr: String(nameAr || nameEn).trim(),
+            slug,
+            descriptionEn: descriptionEn || null,
+            descriptionAr: descriptionAr || null,
+            heroImageUrl: heroImageUrl || null,
+            isFeatured: Boolean(isFeatured),
+          },
+        });
+
+        // Re-sync product collection relations
+        await prisma.productCollection.deleteMany({
+          where: { collectionId: existingRecord.id },
+        });
+      } else {
+        collection = await prisma.collection.create({
+          data: {
+            nameEn: String(nameEn).trim(),
+            nameAr: String(nameAr || nameEn).trim(),
+            slug,
+            descriptionEn: descriptionEn || null,
+            descriptionAr: descriptionAr || null,
+            heroImageUrl: heroImageUrl || null,
+            isFeatured: Boolean(isFeatured),
+          },
+        });
+      }
+
+      // Add products in admin's explicit preferred order
+      if (Array.isArray(productIds) && productIds.length > 0) {
+        for (let i = 0; i < productIds.length; i++) {
+          const rawId = String(productIds[i] || "").trim();
+          if (!rawId) continue;
+          try {
+            const prod = await prisma.product.findFirst({
+              where: {
+                OR: [{ id: rawId }, { slug: rawId }],
+              },
+              select: { id: true },
+            });
+            if (prod) {
+              await prisma.productCollection.create({
+                data: {
+                  collectionId: collection.id,
+                  productId: prod.id,
+                  displayOrder: i,
+                },
+              });
+            }
+          } catch {
+            // Ignore potential duplicates
+          }
+        }
+      }
+
+      // Fetch the full updated collection with products
+      const fullCollection = await prisma.collection.findUnique({
+        where: { id: collection.id },
+        include: {
+          products: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              product: {
+                include: {
+                  brand: true,
+                  variants: { orderBy: { price: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      });
+
+      return success(
+        {
+          id: fullCollection!.id,
+          nameEn: fullCollection!.nameEn,
+          nameAr: fullCollection!.nameAr,
+          slug: fullCollection!.slug,
+          descriptionEn: fullCollection!.descriptionEn,
+          descriptionAr: fullCollection!.descriptionAr,
+          heroImageUrl: fullCollection!.heroImageUrl,
+          isFeatured: fullCollection!.isFeatured,
+          productCount: fullCollection!.products.length,
+          productIds: fullCollection!.products.map((p) => p.productId),
+          products: fullCollection!.products.map((p) => ({
+            id: p.product.id,
+            slug: p.product.slug,
+            nameEn: p.product.nameEn,
+            nameAr: p.product.nameAr,
+            brand: p.product.brand?.name || "",
+            price: p.product.variants[0]?.price || 0,
+            images: p.product.images || [],
+            isFeatured: p.product.isFeatured,
+          })),
+          createdAt: fullCollection!.createdAt,
+          updatedAt: fullCollection!.updatedAt,
+        },
+        existingRecord ? 200 : 201
+      );
+    }
+
+    // 14d. Admin Toggle Collection Featured Status
+    if (route[0] === "admin" && route[1] === "collections" && route[2] && route[3] === "toggle") {
+      const collectionId = route[2];
+      const existing = await prisma.collection.findUnique({
+        where: { id: collectionId },
+      });
+      if (!existing) return error("NOT_FOUND", "Collection not found", 404);
+
+      const updated = await prisma.collection.update({
+        where: { id: collectionId },
+        data: { isFeatured: !existing.isFeatured },
+      });
+      return success(updated);
+    }
+
     // 15. Customer & Concierge Enquiries Submission
     if (path === "enquiries") {
       const { name, email, phone, subject, message, fragranceInterest } = body || {};
@@ -1598,6 +1931,14 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
   try {
     const route = params.route || [];
 
+    // Require administrator authorization for all admin delete endpoints
+    if (route[0] === "admin") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) {
+        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      }
+    }
+
     // 1. Cart Items: Remove
     if (route[0] === "cart" && route[1] === "items" && route[2]) {
       const itemId = route[2];
@@ -1644,6 +1985,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
         });
       }
       return success({ success: true, deleted: productIdOrSlug });
+    }
+
+    // 5. Admin Delete Collection
+    if (route[0] === "admin" && route[1] === "collections" && route[2]) {
+      const collectionId = route[2];
+      await prisma.productCollection.deleteMany({
+        where: { collectionId },
+      });
+      try {
+        await prisma.collection.delete({
+          where: { id: collectionId },
+        });
+      } catch (err) {
+        // Safe fallback if record already deleted or not in database
+      }
+      return success({ success: true, deleted: collectionId });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);

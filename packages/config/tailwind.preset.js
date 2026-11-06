@@ -34,8 +34,8 @@ module.exports = {
         },
       },
       fontFamily: {
-        serif: ["var(--font-serif)", "Cormorant Garamond", "Playfair Display", "serif"],
-        sans: ["var(--font-figtree)", "var(--font-sans)", "Figtree", "Inter", "Plus Jakarta Sans", "sans-serif"],
+        sans: ["var(--font-figtree)", "Figtree", "Inter", "Plus Jakarta Sans", "-apple-system", "BlinkMacSystemFont", "sans-serif"],
+        serif: ["var(--font-figtree)", "Figtree", "Cormorant Garamond", "serif"],
         arabic: ["var(--font-arabic)", "Cairo", "Tajawal", "sans-serif"],
       },
       letterSpacing: {

@@ -48,6 +48,7 @@ import {
   NoteItem,
   ProductItem,
   ProductVariantItem,
+  CollectionItem,
   slugify,
   generateProductMetaTitle,
   generateProductMetaDescription,
@@ -56,13 +57,16 @@ import {
 import { BulkCsvModal } from "./components/BulkCsvModal";
 import { BrandModal } from "./components/BrandModal";
 import { NoteModal } from "./components/NoteModal";
+import { CollectionModal } from "./components/CollectionModal";
 import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
+import { OrderDetailModal } from "./components/OrderDetailModal";
 
 type AdminTab =
   | "dashboard"
   | "products"
+  | "collections"
   | "brands"
   | "notes"
   | "inventory"
@@ -79,6 +83,7 @@ type AdminTab =
 const TAB_TITLES: Record<AdminTab, string> = {
   dashboard: "Dashboard",
   products: "Products",
+  collections: "Collections",
   brands: "Brands",
   notes: "Notes",
   inventory: "Inventory",
@@ -96,6 +101,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
 const TAB_SUBTITLES: Record<AdminTab, string> = {
   dashboard: "Store operations, inventory, and order activity",
   products: "Manage catalog products, pricing, and stock",
+  collections: "Curate fragrance collections and showcase them in storefront sliders according to your preference",
   brands: "Manage perfume brands and brand profiles",
   notes: "Manage scent notes and fragrance notes pyramid",
   inventory: "Warehouse locations and stock allocation",
@@ -454,6 +460,17 @@ export function App() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+
+  const filteredProducts = useMemo(() => {
+    if (!productSearch.trim()) return products;
+    const q = productSearch.toLowerCase();
+    return products.filter((p) =>
+      p.name.toLowerCase().includes(q) ||
+      p.sku.toLowerCase().includes(q) ||
+      p.brand.toLowerCase().includes(q) ||
+      (p.nameAr && p.nameAr.includes(q))
+    );
+  }, [products, productSearch]);
   const [productForm, setProductForm] = useState({
     sku: "",
     name: "",
@@ -491,6 +508,37 @@ export function App() {
       },
     ] as ProductVariantItem[],
   });
+
+  // 1.5. COLLECTIONS & PREFERENCE CURATIONS
+  const [collections, setCollections] = usePersistentState<CollectionItem[]>("admin_collections", [
+    {
+      id: "col-signature",
+      nameEn: "Royal Oudh & Extraits",
+      nameAr: "العود الملكي وخلاصات العطور",
+      slug: "royal-oudh-extraits",
+      descriptionEn: "Masterpieces of Arabian haute parfumerie formulated with aged Omani frankincense and wild agarwood.",
+      descriptionAr: "روائع العطور النيشية الفاخرة الممزوجة باللبان الحوجري والعود المعتق.",
+      heroImageUrl: "https://images.unsplash.com/photo-1615397349754-cfa2066a298e?auto=format&fit=crop&w=1200&q=80",
+      isFeatured: true,
+      productCount: 4,
+      productIds: ["p1", "p2", "p3", "p4"],
+    },
+    {
+      id: "col-oriental",
+      nameEn: "Sovereign Rose & Florals",
+      nameAr: "الورد السلطاني والأزهار النادرة",
+      slug: "sovereign-rose-florals",
+      descriptionEn: "Rare Taif Rose and aristocratic Florentine Iris blended into sublime high-concentration extraits.",
+      descriptionAr: "ورد الطائف النادر وسوسن فلورنسا الفاخر في توليفات عطرية ملكية لا تُنسى.",
+      heroImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=80",
+      isFeatured: true,
+      productCount: 3,
+      productIds: ["p2", "p3", "p1"],
+    },
+  ]);
+  const [collectionSearch, setCollectionSearch] = useState("");
+  const [showCollectionModal, setShowCollectionModal] = useState(false);
+  const [collectionToEdit, setCollectionToEdit] = useState<CollectionItem | null>(null);
 
   // 2. BRANDS & PRESTIGE MAISONS (PRO SEO)
   const [brands, setBrands] = usePersistentState<BrandItem[]>("brands", [
@@ -602,6 +650,17 @@ export function App() {
   const [showBrandModal, setShowBrandModal] = useState(false);
   const [brandToEdit, setBrandToEdit] = useState<BrandItem | null>(null);
 
+  const filteredBrands = useMemo(() => {
+    if (!brandSearch.trim()) return brands;
+    const q = brandSearch.toLowerCase();
+    return brands.filter(
+      (b) =>
+        b.name.toLowerCase().includes(q) ||
+        b.countryEn.toLowerCase().includes(q) ||
+        b.slug.toLowerCase().includes(q)
+    );
+  }, [brands, brandSearch]);
+
   // 3. SCENT NOTES (PRO SEO)
   const [notes, setNotes] = usePersistentState<NoteItem[]>("notes", [
     {
@@ -710,14 +769,30 @@ export function App() {
   const [showNoteModal, setShowNoteModal] = useState(false);
   const [noteToEdit, setNoteToEdit] = useState<NoteItem | null>(null);
 
-  // Sync live products, brands, and notes from Neon PostgreSQL database
+  const filteredNotes = useMemo(() => {
+    if (!noteSearch.trim()) return notes;
+    const q = noteSearch.toLowerCase();
+    return notes.filter(
+      (n) =>
+        n.nameEn.toLowerCase().includes(q) ||
+        n.nameAr.includes(q) ||
+        n.family.toLowerCase().includes(q) ||
+        n.slug.toLowerCase().includes(q)
+    );
+  }, [notes, noteSearch]);
+
+  // Sync live products, brands, notes, and collections from Neon PostgreSQL database
   useEffect(() => {
     let active = true;
+    const token = authSession?.token;
+    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+
     Promise.all([
-      fetch("/api/v1/admin/products").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+      fetch("/api/v1/admin/products", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/brands").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/notes").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([prodRes, brandRes, noteRes]) => {
+      fetch("/api/v1/admin/collections", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([prodRes, brandRes, noteRes, colRes]) => {
       if (!active) return;
       if (prodRes?.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
         const dbProducts: ProductItem[] = prodRes.data.map((p: any) => {
@@ -834,6 +909,23 @@ export function App() {
           perfumesCount: 2,
         })));
       }
+      if (colRes?.data && Array.isArray(colRes.data) && colRes.data.length > 0) {
+        setCollections(colRes.data.map((c: any) => ({
+          id: c.id,
+          nameEn: c.nameEn,
+          nameAr: c.nameAr,
+          slug: c.slug,
+          descriptionEn: c.descriptionEn || "",
+          descriptionAr: c.descriptionAr || "",
+          heroImageUrl: c.heroImageUrl || "",
+          isFeatured: Boolean(c.isFeatured),
+          productCount: c.productCount || (c.productIds ? c.productIds.length : (c.products ? c.products.length : 0)),
+          productIds: c.productIds || c.products?.map((p: any) => p.id) || [],
+          products: c.products || [],
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        })));
+      }
     });
     return () => {
       active = false;
@@ -841,7 +933,7 @@ export function App() {
   }, []);
 
   // 3. ORDERS
-  const [orders, setOrders] = usePersistentState("orders", [
+  const [orders, setOrders] = usePersistentState<any[]>("orders", [
     {
       id: "ord-1",
       number: "MSC-2026-981245",
@@ -877,6 +969,24 @@ export function App() {
   const [orderSearch, setOrderSearch] = useState("");
   const [orderMarketFilter, setOrderMarketFilter] = useState("ALL");
   const [orderStatusFilter, setOrderStatusFilter] = useState("ALL");
+  const [selectedOrderForDetail, setSelectedOrderForDetail] = useState<any | null>(null);
+  const [showOrderDetailModal, setShowOrderDetailModal] = useState(false);
+
+  const filteredOrders = useMemo(() => {
+    return orders.filter((o) => {
+      if (orderMarketFilter !== "ALL" && o.market !== orderMarketFilter) return false;
+      if (orderStatusFilter !== "ALL" && o.status !== orderStatusFilter) return false;
+      if (orderSearch.trim()) {
+        const q = orderSearch.toLowerCase();
+        return (
+          (o.number && o.number.toLowerCase().includes(q)) ||
+          (o.customer && o.customer.toLowerCase().includes(q)) ||
+          (o.email && o.email.toLowerCase().includes(q))
+        );
+      }
+      return true;
+    });
+  }, [orders, orderMarketFilter, orderStatusFilter, orderSearch]);
 
   // Real-Time Notification & Live Event State
   const [liveEvents, setLiveEvents] = useState<LiveEventItem[]>([]);
@@ -1028,9 +1138,11 @@ export function App() {
     let active = true;
     const fetchLiveDbData = async () => {
       try {
+        const token = authSession?.token;
+        const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
         const [ordersRes, enquiriesRes] = await Promise.all([
-          fetch("/api/v1/admin/orders").catch(() => null),
-          fetch("/api/v1/admin/enquiries").catch(() => null),
+          fetch("/api/v1/admin/orders", { headers: authHeaders }).catch(() => null),
+          fetch("/api/v1/admin/enquiries", { headers: authHeaders }).catch(() => null),
         ]);
 
         if (ordersRes && ordersRes.ok) {
@@ -1038,13 +1150,15 @@ export function App() {
           if (json.success && Array.isArray(json.data) && json.data.length > 0 && active) {
             setOrders(
               json.data.map((o: any) => ({
+                ...o,
                 id: o.id,
                 number: o.orderNumber,
+                orderNumber: o.orderNumber,
                 customer: o.shippingAddress?.fullName || o.customer?.firstName || o.guestEmail || "Client",
                 amount: `${Number(o.totalAmount).toLocaleString()} ${o.currency || "AED"}`,
                 method: o.payments?.[0]?.provider || "CARD",
                 status: o.status,
-                market: o.marketId || o.shippingAddress?.countryCode || "AE",
+                market: o.marketId || o.shippingAddress?.country || o.shippingAddress?.countryCode || "AE",
                 date: new Date(o.createdAt).toLocaleDateString("en-GB", {
                   month: "short",
                   day: "numeric",
@@ -1071,14 +1185,16 @@ export function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authSession?.token]);
 
   // Real-time live poller (polls every 4.5 seconds)
   useEffect(() => {
-    if (!isLiveActive) return;
+    if (!isLiveActive || !authSession?.token) return;
     const timer = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/admin/orders/live?since=${encodeURIComponent(lastPollTimeRef.current)}`);
+        const res = await fetch(`/api/v1/admin/orders/live?since=${encodeURIComponent(lastPollTimeRef.current)}`, {
+          headers: { Authorization: `Bearer ${authSession.token}` },
+        });
         if (!res.ok) return;
         const json = await res.json();
         if (!json.success || !json.data) return;
@@ -1865,6 +1981,149 @@ export function App() {
     addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
   };
 
+  // Collection Actions
+  const handleSaveCollection = async (collectionData: Partial<CollectionItem>) => {
+    try {
+      const token = authSession?.token;
+      const res = await fetch("/api/v1/admin/collections", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(collectionData),
+      });
+      if (res.ok) {
+        const json = await res.json();
+        const saved = json.data;
+        if (saved) {
+          const orderedProducts = (collectionData.productIds || []).map((pId) => {
+            const prod = products.find((p) => p.id === pId);
+            return {
+              id: pId,
+              slug: prod?.slug || pId,
+              nameEn: prod?.name || pId,
+              nameAr: prod?.nameAr,
+              brand: prod?.brand || "",
+              price: prod?.price || 0,
+              image: prod?.imageUrl || "/product-placeholder.svg",
+              concentration: prod?.concentration,
+            };
+          });
+
+          const fullItem: CollectionItem = {
+            id: saved.id,
+            nameEn: saved.nameEn,
+            nameAr: saved.nameAr,
+            slug: saved.slug,
+            descriptionEn: saved.descriptionEn || "",
+            descriptionAr: saved.descriptionAr || "",
+            heroImageUrl: saved.heroImageUrl || "",
+            isFeatured: Boolean(saved.isFeatured),
+            productIds: collectionData.productIds || [],
+            productCount: (collectionData.productIds || []).length,
+            products: orderedProducts,
+            createdAt: saved.createdAt,
+            updatedAt: saved.updatedAt,
+          };
+
+          setCollections((prev) => {
+            const idx = prev.findIndex((c) => c.id === saved.id);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = fullItem;
+              return next;
+            }
+            return [fullItem, ...prev];
+          });
+          setShowCollectionModal(false);
+          setCollectionToEdit(null);
+          addAuditLog("COLLECTION_SAVED", `Collection "${saved.nameEn}" [${saved.isFeatured ? "Featured" : "Standard"}]`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn("DB collection save failed:", err);
+    }
+
+    // Fallback local update
+    const newId = collectionData.id || `col-${Date.now()}`;
+    const orderedProducts = (collectionData.productIds || []).map((pId) => {
+      const prod = products.find((p) => p.id === pId);
+      return {
+        id: pId,
+        slug: prod?.slug || pId,
+        nameEn: prod?.name || pId,
+        nameAr: prod?.nameAr,
+        brand: prod?.brand || "",
+        price: prod?.price || 0,
+        image: prod?.imageUrl || "/product-placeholder.svg",
+        concentration: prod?.concentration,
+      };
+    });
+
+    const fullItem: CollectionItem = {
+      id: newId,
+      nameEn: collectionData.nameEn || "Curated Collection",
+      nameAr: collectionData.nameAr || collectionData.nameEn || "مجموعة عطرية",
+      slug: collectionData.slug || slugify(collectionData.nameEn || "collection"),
+      descriptionEn: collectionData.descriptionEn || "",
+      descriptionAr: collectionData.descriptionAr || "",
+      heroImageUrl: collectionData.heroImageUrl || "",
+      isFeatured: Boolean(collectionData.isFeatured),
+      productIds: collectionData.productIds || [],
+      productCount: (collectionData.productIds || []).length,
+      products: orderedProducts,
+    };
+
+    setCollections((prev) => {
+      const idx = prev.findIndex((c) => c.id === newId);
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = fullItem;
+        return next;
+      }
+      return [fullItem, ...prev];
+    });
+    setShowCollectionModal(false);
+    setCollectionToEdit(null);
+    addAuditLog("COLLECTION_SAVED", `Collection "${fullItem.nameEn}"`);
+  };
+
+  const handleDeleteCollection = async (id: string, name: string) => {
+    try {
+      const token = authSession?.token;
+      await fetch(`/api/v1/admin/collections/${id}`, {
+        method: "DELETE",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    } catch (err) {
+      console.warn("DB collection delete failed:", err);
+    }
+    setCollections((prev) => prev.filter((c) => c.id !== id));
+    addAuditLog("COLLECTION_DELETED", `Collection ${id} (${name})`);
+  };
+
+  const handleToggleFeaturedCollection = async (collection: CollectionItem) => {
+    try {
+      const token = authSession?.token;
+      await fetch(`/api/v1/admin/collections/${collection.id}/toggle`, {
+        method: "POST",
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
+    } catch (err) {
+      console.warn("DB collection toggle failed:", err);
+    }
+    setCollections((prev) =>
+      prev.map((c) => (c.id === collection.id ? { ...c, isFeatured: !c.isFeatured } : c))
+    );
+    addAuditLog("COLLECTION_FEATURED_TOGGLED", `Collection "${collection.nameEn}" featured: ${!collection.isFeatured}`);
+  };
+
   // Brand Actions
   const handleSaveBrand = async (brand: BrandItem) => {
     try {
@@ -1976,30 +2235,90 @@ export function App() {
   };
 
   // Order Actions with Backend Synchronization & Email Trigger
-  const updateOrderStatus = async (orderId: string, nextStatus: string, reason?: string) => {
+  const updateOrderStatus = async (
+    orderId: string,
+    nextStatus: string,
+    trackingNumber?: string,
+    carrier?: string,
+    reason?: string
+  ) => {
     setOrders((prev) =>
       prev.map((o) =>
-        o.id === orderId || o.number === orderId ? { ...o, status: nextStatus } : o
+        o.id === orderId || o.number === orderId
+          ? {
+              ...o,
+              status: nextStatus,
+              ...(trackingNumber
+                ? {
+                    fulfillments: [
+                      {
+                        ...(o.fulfillments?.[0] || {}),
+                        shipments: [
+                          {
+                            carrier: carrier || "DHL_EXPRESS",
+                            trackingNumber,
+                            status: "IN_TRANSIT",
+                          },
+                        ],
+                      },
+                    ],
+                  }
+                : {}),
+            }
+          : o
       )
     );
+
+    if (
+      selectedOrderForDetail &&
+      (selectedOrderForDetail.id === orderId || selectedOrderForDetail.number === orderId)
+    ) {
+      setSelectedOrderForDetail((prev: any) => ({
+        ...prev,
+        status: nextStatus,
+        ...(trackingNumber
+          ? {
+              fulfillments: [
+                {
+                  ...(prev?.fulfillments?.[0] || {}),
+                  shipments: [
+                    {
+                      carrier: carrier || "DHL_EXPRESS",
+                      trackingNumber,
+                      status: "IN_TRANSIT",
+                    },
+                  ],
+                },
+              ],
+            }
+          : {}),
+      }));
+    }
+
     addAuditLog("ORDER_STATUS_UPDATE", `${orderId} -> ${nextStatus}`);
 
     try {
+      const token = authSession?.token;
       const targetOrder = orders.find((o) => o.id === orderId || o.number === orderId);
       const res = await fetch("/api/v1/admin/orders/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           orderId,
-          orderNumber: targetOrder?.number,
+          orderNumber: targetOrder?.number || targetOrder?.id,
           status: nextStatus,
+          trackingNumber,
+          carrier,
           reason: reason || (nextStatus === "CANCELLED" ? "Admin cancelled via control panel" : undefined),
         }),
       });
       if (res.ok) {
         if (nextStatus === "CANCELLED") {
           playLuxuryChime("cancel");
-          addToast("cancel", "Order Cancelled", `Order ${orderId} status set to CANCELLED. Notification email sent.`);
+          addToast("cancel", "Order Cancelled", `Order ${orderId} status set to CANCELLED.`);
         } else {
           addToast("order", "Status Updated", `Order ${orderId} set to ${nextStatus}`);
         }
@@ -2015,9 +2334,13 @@ export function App() {
   // Dispatch / Resend Order Notifications (WhatsApp & Email)
   const handleResendNotification = async (orderId: string, channel: "whatsapp" | "email") => {
     try {
+      const token = authSession?.token;
       const res = await fetch("/api/v1/admin/orders/notify", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ orderId, channels: [channel] }),
       });
       if (res.ok) {
@@ -2044,9 +2367,13 @@ export function App() {
     addAuditLog("ENQUIRY_STATUS_UPDATE", `${enquiryId} -> ${nextStatus}`);
 
     try {
+      const token = authSession?.token;
       await fetch("/api/v1/admin/enquiries/status", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ enquiryId, status: nextStatus }),
       });
       addToast("enquiry", "Enquiry Updated", `Status marked as ${nextStatus}`);
@@ -2214,6 +2541,7 @@ export function App() {
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "products", label: "Products", icon: Package, count: products.length },
+              { id: "collections", label: "Collections", icon: Sparkles, count: collections.length },
               { id: "brands", label: "Brands", icon: Award, count: brands.length },
               { id: "notes", label: "Notes", icon: Layers, count: notes.length },
               { id: "inventory", label: "Inventory", icon: Warehouse },
@@ -2333,7 +2661,7 @@ export function App() {
       </aside>
 
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 min-w-0 p-4 sm:p-6 md:p-8 space-y-6 md:space-y-8 overflow-y-auto overflow-x-hidden">
+      <main className="flex-1 min-w-0 p-4 sm:p-5 lg:p-7 space-y-6 overflow-y-auto">
         {/* HEADER */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 md:pb-6 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-3">
@@ -2619,170 +2947,264 @@ export function App() {
               </div>
             </div>
 
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+            {/* MOBILE PRODUCTS CARDS (< md) */}
+            <div className="space-y-3 md:hidden">
+              {filteredProducts.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  No products matching your search criteria.
+                </div>
+              ) : (
+                filteredProducts.map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-14 h-14 rounded-md border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shrink-0 flex items-center justify-center p-1">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <Package size={20} className="text-neutral-400" />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-sm text-neutral-900 dark:text-white truncate block">
+                            {p.name}
+                          </span>
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                            {p.brand}
+                          </span>
+                        </div>
+                        {p.nameAr && (
+                          <span className="text-neutral-500 text-xs block truncate mt-0.5" dir="rtl">
+                            {p.nameAr}
+                          </span>
+                        )}
+                        <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">
+                          SKU: {p.sku}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 text-xs">
+                      <div>
+                        <span className="font-mono font-bold text-sm text-neutral-900 dark:text-white block">
+                          {p.price}
+                        </span>
+                        <span className="text-[10px] text-neutral-500">
+                          {p.variants?.length ? `${p.variants.length} volume sizes` : `${p.volumeMl || 100}ml`}
+                        </span>
+                      </div>
+                      <div className="text-end">
+                        <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold block text-xs">
+                          {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
+                        </span>
+                        <span className="text-[10px] text-purple-500 font-mono">
+                          +{p.testerStock || 0} testers
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 gap-2">
+                      <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800 text-[10px] font-medium rounded flex items-center gap-1">
+                        <CheckCircle2 size={11} className="text-emerald-500" />
+                        <span>SEO Ready</span>
+                      </span>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEditProduct(p)}
+                          className="px-2.5 py-1.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 shadow-sm"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                        <a
+                          href={`/en/product/${p.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                          title="View Live Page"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteProduct(p.id, p.name)}
+                          className="p-1.5 rounded border border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          title="Delete Product"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP PRODUCTS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[1100px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="p-4 text-start">Product (EN / AR)</th>
-                    <th className="p-4 text-start">URL Slug</th>
-                    <th className="p-4 text-start">Brand</th>
-                    <th className="p-4 text-start">Notes</th>
-                    <th className="p-4 text-start">Price</th>
-                    <th className="p-4 text-start">Stock</th>
-                    <th className="p-4 text-start">Status</th>
-                    <th className="p-4 text-end">Actions</th>
+                    <th className="py-3.5 px-4 text-start min-w-[260px]">Product (EN / AR)</th>
+                    <th className="py-3.5 px-4 text-start min-w-[160px]">URL Slug</th>
+                    <th className="py-3.5 px-4 text-start min-w-[160px]">Brand & House</th>
+                    <th className="py-3.5 px-4 text-start min-w-[150px]">Scent Notes</th>
+                    <th className="py-3.5 px-4 text-start min-w-[140px]">Price & Sizes</th>
+                    <th className="py-3.5 px-4 text-start min-w-[160px]">Stock & Warehouse</th>
+                    <th className="py-3.5 px-4 text-start min-w-[110px]">Status</th>
+                    <th className="py-3.5 px-4 text-end min-w-[100px]">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {products
-                    .filter((p) => {
-                      if (!productSearch.trim()) return true;
-                      const q = productSearch.toLowerCase();
-                      return (
-                        p.name.toLowerCase().includes(q) ||
-                        p.sku.toLowerCase().includes(q) ||
-                        p.brand.toLowerCase().includes(q) ||
-                        (p.nameAr && p.nameAr.includes(q))
-                      );
-                    })
-                    .map((p) => (
-                      <tr key={p.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded border border-neutral-300 dark:border-neutral-700 bg-slate-900/80 overflow-hidden flex-shrink-0 flex items-center justify-center">
-                              {p.imageUrl ? (
-                                <img
-                                  src={p.imageUrl}
-                                  alt={p.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <Package size={16} className="text-slate-600" />
-                              )}
-                            </div>
-                            <div>
-                              <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
-                              {p.nameAr && (
-                                <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
-                                  {p.nameAr}
-                                </span>
-                              )}
-                              <span className="text-neutral-500 font-mono text-[11px] block mt-0.5">{p.sku}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                            <span className="text-neutral-500">/product/</span>
-                            <span className="text-emerald-400 font-medium">{p.slug}</span>
-                          </div>
-                          <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
-                            {p.concentration || "Extrait de Parfum"}
-                          </span>
-                        </td>
-                        <td className="p-4">
-                          <button
-                            onClick={() => {
-                              setActiveTab("brands");
-                              setBrandSearch(p.brand);
-                            }}
-                            className="text-neutral-900 dark:text-neutral-100 font-medium hover:text-accent hover:underline flex items-center gap-1"
-                            title="View brand details"
-                          >
-                            <span>{p.brand}</span>
-                            <Award size={11} className="text-amber-400" />
-                          </button>
-                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono">{p.scentFamily || "Woody Amber"}</span>
-                          {p.perfumer && (
-                            <span className="text-[10px] text-amber-400/90 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
-                              <Sparkles size={10} className="text-amber-400 flex-shrink-0" />
-                              <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
-                            </span>
-                          )}
-                        </td>
-                        <td className="p-4 text-[11px]">
-                          <div className="space-y-0.5">
-                            <span className="text-neutral-700 dark:text-neutral-300 block">
-                              Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
-                            </span>
-                            {p.topNotes && p.topNotes.length > 0 && (
-                              <span className="text-neutral-500 text-[10px] block truncate max-w-xs">
-                                Opening: {p.topNotes.slice(0, 2).join(", ")}
-                              </span>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {filteredProducts.map((p) => (
+                    <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shrink-0 flex items-center justify-center p-0.5">
+                            {p.imageUrl ? (
+                              <img
+                                src={p.imageUrl}
+                                alt={p.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <Package size={16} className="text-neutral-400" />
                             )}
                           </div>
-                        </td>
-                        <td className="p-4 font-mono">
-                          <div className="font-medium text-neutral-900 dark:text-white">{p.price}</div>
-                          {p.variants && p.variants.length > 0 ? (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {p.variants.map((v, i) => {
-                                const orig = Number(v.regularPrice ?? v.price);
-                                const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
-                                return (
-                                  <span
-                                    key={v.id || i}
-                                    className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${
-                                      v.isDefault
-                                        ? "bg-amber-500/15 text-amber-300 border-amber-500/40"
-                                        : "bg-slate-800 text-neutral-500 dark:text-neutral-400 border-neutral-300 dark:border-neutral-700"
-                                    }`}
-                                    title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
-                                  >
-                                    {v.volume}
-                                    {hasDisc && <span className="ms-0.5 text-emerald-400 font-bold">%</span>}
-                                  </span>
-                                );
-                              })}
-                            </div>
-                          ) : (
-                            <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
-                          )}
-                        </td>
-                        <td className="p-4 font-mono">
-                          <span className="text-emerald-400 block">{p.stock} sealed ({p.warehouse})</span>
-                          {p.variants && p.variants.length > 1 && (
-                            <span className="text-neutral-500 dark:text-neutral-400 text-[10px] block">
-                              Total across {p.variants.length} sizes: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)}
+                          <div>
+                            <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
+                            {p.nameAr && (
+                              <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
+                                {p.nameAr}
+                              </span>
+                            )}
+                            <span className="text-neutral-400 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                          <span className="text-neutral-400">/product/</span>
+                          <span className="text-emerald-500 font-medium">{p.slug}</span>
+                        </div>
+                        <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
+                          {p.concentration || "Extrait de Parfum"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <button
+                          onClick={() => {
+                            setActiveTab("brands");
+                            setBrandSearch(p.brand);
+                          }}
+                          className="text-neutral-900 dark:text-neutral-100 font-medium hover:text-accent hover:underline flex items-center gap-1"
+                          title="View brand details"
+                        >
+                          <span>{p.brand}</span>
+                          <Award size={11} className="text-amber-400" />
+                        </button>
+                        <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono mt-0.5">
+                          {p.scentFamily || "Woody Amber"}
+                        </span>
+                        {p.perfumer && (
+                          <span className="text-[10px] text-amber-500 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
+                            <Sparkles size={10} className="text-amber-400 shrink-0" />
+                            <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 text-[11px]">
+                        <div className="space-y-0.5">
+                          <span className="text-neutral-700 dark:text-neutral-300 block">
+                            Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
+                          </span>
+                          {p.topNotes && p.topNotes.length > 0 && (
+                            <span className="text-neutral-400 text-[10px] block truncate max-w-xs">
+                              Opening: {p.topNotes.slice(0, 2).join(", ")}
                             </span>
                           )}
-                          <span className="text-purple-400 text-[11px]">+{p.testerStock} testers</span>
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2 py-0.5 bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 border border-emerald-500/30 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
-                            <CheckCircle2 size={11} />
-                            <span>SEO Ready</span>
-                          </span>
-                        </td>
-                        <td className="p-4 text-end">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleOpenEditProduct(p)}
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
-                              title="Edit Product"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <a
-                              href={`/en/product/${p.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
-                              title="View Storefront Page"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteProduct(p.id, p.name)}
-                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
-                              title="Delete Product"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        <div className="font-semibold text-neutral-900 dark:text-white">{p.price}</div>
+                        {p.variants && p.variants.length > 0 ? (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {p.variants.map((v, i) => {
+                              const orig = Number(v.regularPrice ?? v.price);
+                              const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
+                              return (
+                                <span
+                                  key={v.id || i}
+                                  className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${
+                                    v.isDefault
+                                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40"
+                                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700"
+                                  }`}
+                                  title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
+                                >
+                                  {v.volume}
+                                  {hasDisc && <span className="ms-0.5 text-emerald-500 font-bold">%</span>}
+                                </span>
+                              );
+                            })}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
+                        ) : (
+                          <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium block">
+                          {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
+                        </span>
+                        {p.variants && p.variants.length > 1 && (
+                          <span className="text-neutral-500 text-[10px] block">
+                            Total: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)} flacons
+                          </span>
+                        )}
+                        <span className="text-purple-500 dark:text-purple-400 text-[11px] block mt-0.5">
+                          +{p.testerStock} testers
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                          <CheckCircle2 size={11} className="text-emerald-500" />
+                          <span>SEO Ready</span>
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-end">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => handleOpenEditProduct(p)}
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Edit Product"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <a
+                            href={`/en/product/${p.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="View Storefront Page"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteProduct(p.id, p.name)}
+                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Delete Product"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -3116,7 +3538,7 @@ export function App() {
 
                       {/* Variant Table */}
                       <div className="overflow-x-auto border border-neutral-300 dark:border-neutral-800 rounded-md bg-white dark:bg-neutral-950">
-                        <table className="w-full text-start text-xs font-sans">
+                        <table className="w-full text-start text-xs font-sans min-w-[720px]">
                           <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider text-[10px] border-b border-neutral-300 dark:border-neutral-800">
                             <tr>
                               <th className="p-2.5 text-start font-medium">Volume (ml) *</th>
@@ -3602,6 +4024,276 @@ export function App() {
           </div>
         )}
 
+        {/* 2. COLLECTIONS & PREFERENCE CURATIONS */}
+        {activeTab === "collections" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search collections by name or slug..."
+                  value={collectionSearch}
+                  onChange={(e) => setCollectionSearch(e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-neutral-500">
+                  {collections.filter((c) => c.isFeatured).length} of {collections.length} featured on slider
+                </span>
+                <button
+                  onClick={() => {
+                    setCollectionToEdit(null);
+                    setShowCollectionModal(true);
+                  }}
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Plus size={14} />
+                  <span>Create Collection</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Collections Grid */}
+            {collections.length === 0 ? (
+              <div className="border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg p-12 text-center bg-white dark:bg-neutral-950">
+                <Sparkles size={36} className="mx-auto text-amber-500/60 mb-3" />
+                <h3 className="text-sm font-medium text-neutral-900 dark:text-white mb-1">
+                  No Curated Collections Yet
+                </h3>
+                <p className="text-xs text-neutral-500 max-w-sm mx-auto mb-4">
+                  Create custom collections and order products according to your preference to showcase them directly on the storefront slider.
+                </p>
+                <button
+                  onClick={() => {
+                    setCollectionToEdit(null);
+                    setShowCollectionModal(true);
+                  }}
+                  className="px-4 py-2 bg-black dark:bg-white dark:text-black text-white text-xs font-medium rounded hover:opacity-90 inline-flex items-center gap-1.5"
+                >
+                  <Plus size={14} />
+                  <span>Create First Collection</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {collections
+                  .filter((col) => {
+                    if (!collectionSearch.trim()) return true;
+                    const q = collectionSearch.toLowerCase();
+                    return (
+                      col.nameEn.toLowerCase().includes(q) ||
+                      (col.nameAr && col.nameAr.toLowerCase().includes(q)) ||
+                      col.slug.toLowerCase().includes(q)
+                    );
+                  })
+                  .map((col) => {
+                    // Resolve products for this collection in exact preferred order
+                    const colProductIds = col.productIds || col.products?.map((p) => p.id) || [];
+                    const resolvedProducts = colProductIds
+                      .map((pId) => {
+                        const direct = col.products?.find((p) => p.id === pId);
+                        if (direct) return direct;
+                        const fromCatalog = products.find((p) => p.id === pId);
+                        if (fromCatalog) {
+                          return {
+                            id: fromCatalog.id,
+                            slug: fromCatalog.slug,
+                            nameEn: fromCatalog.name,
+                            nameAr: fromCatalog.nameAr,
+                            brand: fromCatalog.brand,
+                            price: fromCatalog.price,
+                            image: fromCatalog.imageUrl,
+                            concentration: fromCatalog.concentration,
+                          };
+                        }
+                        return null;
+                      })
+                      .filter(Boolean) as Array<{
+                        id: string;
+                        slug: string;
+                        nameEn: string;
+                        nameAr?: string;
+                        brand: string;
+                        price: number | string;
+                        image: string;
+                        concentration?: string;
+                      }>;
+
+                    return (
+                      <div
+                        key={col.id}
+                        className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 rounded-lg overflow-hidden flex flex-col justify-between hover:border-neutral-400 dark:hover:border-neutral-700 transition-all shadow-sm"
+                      >
+                        <div>
+                          {/* Card Banner / Hero */}
+                          <div className="relative h-36 bg-gradient-to-r from-neutral-900 to-neutral-800 overflow-hidden flex items-center justify-center">
+                            {col.heroImageUrl ? (
+                              <img
+                                src={col.heroImageUrl}
+                                alt={col.nameEn}
+                                className="w-full h-full object-cover opacity-80"
+                              />
+                            ) : (
+                              <div className="text-center p-4">
+                                <Sparkles size={24} className="mx-auto text-amber-400/50 mb-1" />
+                                <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                                  Muschio Curation
+                                </span>
+                              </div>
+                            )}
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                            {/* Top Badges */}
+                            <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2">
+                              <button
+                                onClick={() => handleToggleFeaturedCollection(col)}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors shadow-sm backdrop-blur-md ${
+                                  col.isFeatured
+                                    ? "bg-amber-500/90 text-black hover:bg-amber-400"
+                                    : "bg-black/60 text-neutral-300 hover:text-white hover:bg-black/80 border border-white/10"
+                                }`}
+                                title="Click to toggle display on storefront slider"
+                              >
+                                <Sparkles size={11} className={col.isFeatured ? "fill-black" : ""} />
+                                <span>{col.isFeatured ? "Featured on Slider" : "Standard"}</span>
+                              </button>
+
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-black/60 text-white backdrop-blur-md border border-white/10">
+                                {resolvedProducts.length} Flacons
+                              </span>
+                            </div>
+
+                            {/* Title & Slug in Banner */}
+                            <div className="absolute bottom-3 inset-x-3">
+                              <h3 className="font-serif text-base text-white font-medium line-clamp-1">
+                                {col.nameEn}
+                              </h3>
+                              {col.nameAr && (
+                                <p className="text-[11px] text-amber-200/90 font-serif line-clamp-1" dir="rtl">
+                                  {col.nameAr}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Body: Details & Preferred Product Order */}
+                          <div className="p-4 space-y-3">
+                            <div className="flex items-center justify-between text-[11px]">
+                              <span className="text-neutral-500 font-mono">/collections/{col.slug}</span>
+                              <span className="text-[10px] text-neutral-400">
+                                Priority Ordered
+                              </span>
+                            </div>
+
+                            {col.descriptionEn && (
+                              <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">
+                                {col.descriptionEn}
+                              </p>
+                            )}
+
+                            {/* Ordered Product Previews */}
+                            <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-500">
+                                  Admin Slide Sequence
+                                </span>
+                                <span className="text-[10px] text-neutral-400">
+                                  Exact Preference
+                                </span>
+                              </div>
+
+                              {resolvedProducts.length === 0 ? (
+                                <p className="text-xs text-neutral-400 italic py-2">
+                                  No products added yet. Click edit to curate flacons.
+                                </p>
+                              ) : (
+                                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                  {resolvedProducts.slice(0, 6).map((p, idx) => (
+                                    <div
+                                      key={p.id}
+                                      className="flex items-center gap-2 p-1.5 rounded bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 text-xs"
+                                    >
+                                      <span className="w-4 h-4 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold text-[9px] shrink-0">
+                                        {idx + 1}
+                                      </span>
+                                      <div className="w-7 h-7 rounded bg-white dark:bg-neutral-800 overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700">
+                                        <img
+                                          src={p.image}
+                                          alt={p.nameEn}
+                                          className="w-full h-full object-cover"
+                                        />
+                                      </div>
+                                      <div className="min-w-0 flex-1">
+                                        <p className="font-medium text-neutral-900 dark:text-white truncate text-[11px]">
+                                          {p.nameEn}
+                                        </p>
+                                        <p className="text-[9px] text-neutral-500 truncate">
+                                          {p.brand} {p.concentration ? `· ${p.concentration}` : ""}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                  {resolvedProducts.length > 6 && (
+                                    <div className="text-[10px] text-center text-neutral-500 py-1 font-mono">
+                                      +{resolvedProducts.length - 6} more flacons in sequence
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Card Footer Actions */}
+                        <div className="p-3 border-t border-neutral-100 dark:border-neutral-900 bg-neutral-50/50 dark:bg-neutral-950/50 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => {
+                              setCollectionToEdit(col);
+                              setShowCollectionModal(true);
+                            }}
+                            className="px-3 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                          >
+                            <Edit3 size={12} />
+                            <span>Edit & Order</span>
+                          </button>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => handleToggleFeaturedCollection(col)}
+                              title={col.isFeatured ? "Unfeature from storefront slider" : "Feature on storefront slider"}
+                              className={`p-1.5 rounded transition-colors ${
+                                col.isFeatured
+                                  ? "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                                  : "text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                              }`}
+                            >
+                              <Sparkles size={14} className={col.isFeatured ? "fill-current" : ""} />
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete collection "${col.nameEn}"?`)) {
+                                  handleDeleteCollection(col.id, col.nameEn);
+                                }
+                              }}
+                              title="Delete collection"
+                              className="p-1.5 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* 2.5. BRANDS */}
         {activeTab === "brands" && (
           <div className="space-y-6">
@@ -3629,114 +4321,186 @@ export function App() {
               </button>
             </div>
 
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
-                  <tr>
-                    <th className="p-4 text-start">Brand Name</th>
-                    <th className="p-4 text-start">URL Slug</th>
-                    <th className="p-4 text-start">Category</th>
-                    <th className="p-4 text-start">Country & Year</th>
-                    <th className="p-4 text-start">Products</th>
-                    <th className="p-4 text-start">Description</th>
-                    <th className="p-4 text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {brands
-                    .filter((b) => {
-                      if (!brandSearch.trim()) return true;
-                      const q = brandSearch.toLowerCase();
-                      return (
-                        b.name.toLowerCase().includes(q) ||
-                        b.countryEn.toLowerCase().includes(q) ||
-                        b.slug.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-neutral-300 dark:border-neutral-700/80 shrink-0 flex items-center justify-center p-1">
-                              {b.logoUrl || b.heroImageUrl ? (
-                                <img
-                                  src={b.logoUrl || b.heroImageUrl}
-                                  alt={b.name}
-                                  className="w-full h-full object-contain"
-                                />
-                              ) : (
-                                <span className="font-serif text-amber-300 font-bold text-sm">
-                                  {b.name.charAt(0)}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
-                              <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{b.countryEn || "Prestige House"}</span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                            <span className="text-neutral-500">/brands/</span>
-                            <span className="text-amber-400 font-medium">{b.slug}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
+            {/* MOBILE BRANDS CARDS (< md) */}
+            <div className="space-y-3 md:hidden">
+              {filteredBrands.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  No brands matching your search criteria.
+                </div>
+              ) : (
+                filteredBrands.map((b) => (
+                  <div
+                    key={b.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center p-1">
+                        {b.logoUrl || b.heroImageUrl ? (
+                          <img src={b.logoUrl || b.heroImageUrl} alt={b.name} className="w-full h-full object-contain" />
+                        ) : (
+                          <span className="font-serif text-amber-500 font-bold text-base">{b.name.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-sm text-neutral-900 dark:text-white truncate block">
+                            {b.name}
+                          </span>
                           <span
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                            className={`px-2 py-0.5 text-[9px] font-bold rounded ${
                               b.type === "NICHE"
-                                ? "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700 border border-amber-500/30"
-                                : "bg-blue-500/10 text-blue-300 border border-blue-500/30"
+                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                                : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
                             }`}
                           >
-                            {b.type === "NICHE" ? "Niche Brand" : "Designer"}
+                            {b.type === "NICHE" ? "Niche" : "Designer"}
                           </span>
-                        </td>
-                        <td className="p-4">
-                          <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
-                          <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
-                        </td>
-                        <td className="p-4 font-mono">
-                          <span className="text-emerald-400 font-medium">
-                            {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
-                          </span>
-                        </td>
-                        <td className="p-4 text-neutral-500 dark:text-neutral-400 max-w-sm truncate text-[11px]">
-                          {b.storyEn || "Brand description available."}
-                        </td>
-                        <td className="p-4 text-end">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                setBrandToEdit(b);
-                                setShowBrandModal(true);
-                              }}
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-amber-400 transition-colors"
-                              title="Edit Brand"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <a
-                              href={`/en/brands/${b.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
-                              title="View Brand Page"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteBrand(b.id, b.name)}
-                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
-                              title="Delete Brand"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                        </div>
+                        <span className="text-[11px] text-neutral-500 block mt-0.5">
+                          {b.countryEn || "Prestige House"} • Est. {b.year}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 text-xs">
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products cataloged
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBrandToEdit(b);
+                            setShowBrandModal(true);
+                          }}
+                          className="px-2.5 py-1.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 shadow-sm"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                        <a
+                          href={`/en/brands/${b.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                          title="View Live Page"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteBrand(b.id, b.name)}
+                          className="p-1.5 rounded border border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          title="Delete Brand"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP BRANDS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[920px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                  <tr>
+                    <th className="py-3.5 px-4 text-start min-w-[220px]">Brand Name</th>
+                    <th className="py-3.5 px-4 text-start min-w-[150px]">URL Slug</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Category</th>
+                    <th className="py-3.5 px-4 text-start min-w-[130px]">Country & Year</th>
+                    <th className="py-3.5 px-4 text-start min-w-[110px]">Products</th>
+                    <th className="py-3.5 px-4 text-start min-w-[190px]">Description</th>
+                    <th className="py-3.5 px-4 text-end min-w-[100px]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {filteredBrands.map((b) => (
+                    <tr key={b.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center p-1">
+                            {b.logoUrl || b.heroImageUrl ? (
+                              <img
+                                src={b.logoUrl || b.heroImageUrl}
+                                alt={b.name}
+                                className="w-full h-full object-contain"
+                              />
+                            ) : (
+                              <span className="font-serif text-amber-500 font-bold text-sm">
+                                {b.name.charAt(0)}
+                              </span>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
+                          <div>
+                            <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
+                            <span className="text-neutral-500 text-[11px]">{b.countryEn || "Prestige House"}</span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                          <span className="text-neutral-400">/brands/</span>
+                          <span className="text-amber-500 font-medium">{b.slug}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                            b.type === "NICHE"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                              : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                          }`}
+                        >
+                          {b.type === "NICHE" ? "Niche Brand" : "Designer"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
+                        <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono">
+                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                          {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-neutral-500 max-w-sm truncate text-[11px]">
+                        {b.storyEn || "Brand description available."}
+                      </td>
+                      <td className="py-3.5 px-4 text-end">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setBrandToEdit(b);
+                              setShowBrandModal(true);
+                            }}
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Edit Brand"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <a
+                            href={`/en/brands/${b.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="View Brand Page"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteBrand(b.id, b.name)}
+                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Delete Brand"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -3957,108 +4721,178 @@ export function App() {
               </div>
             </div>
 
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
-                  <tr>
-                    <th className="p-4 text-start">Note Name (EN / AR)</th>
-                    <th className="p-4 text-start">URL Slug</th>
-                    <th className="p-4 text-start">Family</th>
-                    <th className="p-4 text-start">Origin</th>
-                    <th className="p-4 text-start">Products</th>
-                    <th className="p-4 text-start">Description</th>
-                    <th className="p-4 text-end">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {notes
-                    .filter((n) => {
-                      if (!noteSearch.trim()) return true;
-                      const q = noteSearch.toLowerCase();
-                      return (
-                        n.nameEn.toLowerCase().includes(q) ||
-                        n.nameAr.includes(q) ||
-                        n.family.toLowerCase().includes(q) ||
-                        n.slug.toLowerCase().includes(q)
-                      );
-                    })
-                    .map((n) => (
-                      <tr key={n.id} className="hover:bg-slate-800/30 transition-colors">
-                        <td className="p-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-slate-800 border border-neutral-300 dark:border-neutral-700/80 shrink-0 flex items-center justify-center">
-                              {n.heroImageUrl || n.thumbnailUrl ? (
-                                <img
-                                  src={n.heroImageUrl || n.thumbnailUrl}
-                                  alt={n.nameEn}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <span className="font-serif text-purple-400 font-bold text-sm">
-                                  {n.nameEn.charAt(0)}
-                                </span>
-                              )}
-                            </div>
-                            <div>
-                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{n.nameEn}</span>
-                              <span className="text-neutral-500 dark:text-neutral-400 text-xs" dir="rtl">
-                                {n.nameAr}
-                              </span>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="p-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                            <span className="text-neutral-500">/notes/</span>
-                            <span className="text-purple-400 font-medium">{n.slug}</span>
-                          </div>
-                        </td>
-                        <td className="p-4">
-                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
+            {/* MOBILE NOTES CARDS (< md) */}
+            <div className="space-y-3 md:hidden">
+              {filteredNotes.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  No scent notes matching your search criteria.
+                </div>
+              ) : (
+                filteredNotes.map((n) => (
+                  <div
+                    key={n.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center">
+                        {n.heroImageUrl || n.thumbnailUrl ? (
+                          <img src={n.heroImageUrl || n.thumbnailUrl} alt={n.nameEn} className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="font-serif text-purple-500 font-bold text-base">{n.nameEn.charAt(0)}</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-semibold text-sm text-neutral-900 dark:text-white truncate block">
+                            {n.nameEn}
+                          </span>
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[9px] font-bold rounded">
                             {n.family}
                           </span>
-                        </td>
-                        <td className="p-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
-                          {n.originEn || "Middle East"}
-                        </td>
-                        <td className="p-4 font-mono text-emerald-400 font-medium">
-                          {n.perfumesCount} products
-                        </td>
-                        <td className="p-4 text-neutral-500 dark:text-neutral-400 max-w-xs truncate text-[11px]">
-                          {n.descriptionEn || "Sensory description available."}
-                        </td>
-                        <td className="p-4 text-end">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => {
-                                setNoteToEdit(n);
-                                setShowNoteModal(true);
-                              }}
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-purple-400 transition-colors"
-                              title="Edit Note"
-                            >
-                              <Edit3 size={14} />
-                            </button>
-                            <a
-                              href={`/en/notes/${n.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1 text-neutral-500 dark:text-neutral-400 hover:text-emerald-400 transition-colors"
-                              title="View Note Page"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                            <button
-                              onClick={() => handleDeleteNote(n.id, n.nameEn)}
-                              className="p-1 text-neutral-500 hover:text-rose-400 transition-colors"
-                              title="Delete Note"
-                            >
-                              <Trash2 size={14} />
-                            </button>
+                        </div>
+                        {n.nameAr && (
+                          <span className="text-neutral-500 text-xs block truncate mt-0.5" dir="rtl">
+                            {n.nameAr}
+                          </span>
+                        )}
+                        <span className="text-[11px] text-neutral-400 block mt-0.5">
+                          Origin: {n.originEn || "Middle East"}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 text-xs">
+                      <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold">
+                        {n.perfumesCount} products featured
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNoteToEdit(n);
+                            setShowNoteModal(true);
+                          }}
+                          className="px-2.5 py-1.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 shadow-sm"
+                        >
+                          <Edit3 size={12} />
+                          <span>Edit</span>
+                        </button>
+                        <a
+                          href={`/en/notes/${n.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 rounded border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                          title="View Note Page"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteNote(n.id, n.nameEn)}
+                          className="p-1.5 rounded border border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                          title="Delete Note"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP NOTES TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[920px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                  <tr>
+                    <th className="py-3.5 px-4 text-start min-w-[220px]">Note Name (EN / AR)</th>
+                    <th className="py-3.5 px-4 text-start min-w-[150px]">URL Slug</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Family</th>
+                    <th className="py-3.5 px-4 text-start min-w-[130px]">Origin</th>
+                    <th className="py-3.5 px-4 text-start min-w-[110px]">Products</th>
+                    <th className="py-3.5 px-4 text-start min-w-[190px]">Description</th>
+                    <th className="py-3.5 px-4 text-end min-w-[100px]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {filteredNotes.map((n) => (
+                    <tr key={n.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center">
+                            {n.heroImageUrl || n.thumbnailUrl ? (
+                              <img
+                                src={n.heroImageUrl || n.thumbnailUrl}
+                                alt={n.nameEn}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <span className="font-serif text-purple-500 font-bold text-sm">
+                                {n.nameEn.charAt(0)}
+                              </span>
+                            )}
                           </div>
-                        </td>
-                      </tr>
-                    ))}
+                          <div>
+                            <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{n.nameEn}</span>
+                            <span className="text-neutral-500 text-xs block" dir="rtl">
+                              {n.nameAr}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                          <span className="text-neutral-400">/notes/</span>
+                          <span className="text-purple-500 font-medium">{n.slug}</span>
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
+                          {n.family}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
+                        {n.originEn || "Middle East"}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                        {n.perfumesCount} products
+                      </td>
+                      <td className="py-3.5 px-4 text-neutral-500 max-w-xs truncate text-[11px]">
+                        {n.descriptionEn || "Sensory description available."}
+                      </td>
+                      <td className="py-3.5 px-4 text-end">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => {
+                              setNoteToEdit(n);
+                              setShowNoteModal(true);
+                            }}
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Edit Note"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <a
+                            href={`/en/notes/${n.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="View Note Page"
+                          >
+                            <ExternalLink size={14} />
+                          </a>
+                          <button
+                            onClick={() => handleDeleteNote(n.id, n.nameEn)}
+                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                            title="Delete Note"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -4112,38 +4946,106 @@ export function App() {
         {/* 6. RETURNS */}
         {activeTab === "returns" && (
           <div className="space-y-6">
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Returns & Reverse Logistics</h2>
+              <span className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400 rounded">
+                {returns.length} Return Cases
+              </span>
+            </div>
+
+            {/* MOBILE RETURNS CARDS (hidden on md+, visible on mobile) */}
+            <div className="block md:hidden space-y-3">
+              {returns.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
+                  No return requests in queue.
+                </div>
+              ) : (
+                returns.map((r) => (
+                  <div
+                    key={r.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="font-mono font-semibold text-xs text-neutral-900 dark:text-white block">
+                          {r.number}
+                        </span>
+                        <span className="text-[11px] text-neutral-500">{r.customer}</span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                          r.status === "COMPLETED"
+                            ? "bg-black text-white dark:bg-white dark:text-black"
+                            : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </div>
+
+                    <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 text-[11px]">Returned Item:</span>
+                        <span className="font-medium text-neutral-900 dark:text-white">{r.item}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 text-[11px]">Inspection Condition:</span>
+                        <span className="font-mono text-neutral-700 dark:text-neutral-300">{r.condition}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 text-[11px]">Disposition Action:</span>
+                        <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">{r.disposition}</span>
+                      </div>
+                    </div>
+
+                    {r.status !== "COMPLETED" && (
+                      <button
+                        type="button"
+                        onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
+                        className="w-full py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded shadow-sm transition-colors text-center"
+                      >
+                        Approve Restock
+                      </button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP RETURNS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[850px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="p-4 text-start">Return # / Customer</th>
-                    <th className="p-4 text-start">Returned Item</th>
-                    <th className="p-4 text-start">Condition</th>
-                    <th className="p-4 text-start">Restock Action</th>
-                    <th className="p-4 text-start">Status</th>
-                    <th className="p-4 text-end">Action</th>
+                    <th className="py-3.5 px-4 text-start min-w-[180px]">Return # / Customer</th>
+                    <th className="py-3.5 px-4 text-start min-w-[200px]">Returned Item</th>
+                    <th className="py-3.5 px-4 text-start min-w-[140px]">Condition</th>
+                    <th className="py-3.5 px-4 text-start min-w-[160px]">Restock Action</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Status</th>
+                    <th className="py-3.5 px-4 text-end min-w-[130px]">Action</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                   {returns.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-800/30">
-                      <td className="p-4">
+                    <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 px-4">
                         <span className="font-semibold text-neutral-900 dark:text-white block">{r.number}</span>
                         <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
-                      <td className="p-4 text-neutral-700 dark:text-neutral-300">{r.item}</td>
-                      <td className="p-4 font-mono text-neutral-700 dark:text-neutral-300">{r.condition}</td>
-                      <td className="p-4 font-mono text-purple-400">{r.disposition}</td>
-                      <td className="p-4">
+                      <td className="py-3.5 px-4 text-neutral-800 dark:text-neutral-200 font-medium">{r.item}</td>
+                      <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">{r.condition}</td>
+                      <td className="py-3.5 px-4 font-mono text-purple-600 dark:text-purple-400 font-semibold">{r.disposition}</td>
+                      <td className="py-3.5 px-4">
                         <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                           {r.status}
                         </span>
                       </td>
-                      <td className="p-4 text-end">
+                      <td className="py-3.5 px-4 text-end">
                         {r.status !== "COMPLETED" && (
                           <button
+                            type="button"
                             onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                            className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] rounded"
+                            className="px-3 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
                           >
                             Approve Restock
                           </button>
@@ -4211,82 +5113,243 @@ export function App() {
               />
             </div>
 
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+            {/* MOBILE ORDERS CARDS (< md) */}
+            <div className="space-y-3 md:hidden">
+              {filteredOrders.length === 0 ? (
+                <div className="p-8 text-center text-neutral-500 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  No orders matching the current filter.
+                </div>
+              ) : (
+                filteredOrders.map((o) => (
+                  <div
+                    key={o.id}
+                    onClick={() => {
+                      setSelectedOrderForDetail(o);
+                      setShowOrderDetailModal(true);
+                    }}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm hover:border-neutral-400 dark:hover:border-neutral-600 transition-all cursor-pointer space-y-3"
+                  >
+                    {/* Top Row: Order #, Status, Market */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-sm text-neutral-900 dark:text-white">
+                          {o.number}
+                        </span>
+                        <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-mono font-bold rounded">
+                          {o.market}
+                        </span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-mono font-semibold uppercase rounded ${
+                          o.status === "DELIVERED"
+                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                            : o.status === "SHIPPED"
+                            ? "bg-blue-500/10 text-blue-600 border border-blue-500/30"
+                            : o.status === "FULFILLING"
+                            ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
+                            : o.status === "PAID"
+                            ? "bg-cyan-500/10 text-cyan-600 border border-cyan-500/30"
+                            : o.status === "CANCELLED"
+                            ? "bg-rose-500/10 text-rose-600 border border-rose-500/30"
+                            : "bg-amber-500/10 text-amber-600 border border-amber-500/30"
+                        }`}
+                      >
+                        {o.status}
+                      </span>
+                    </div>
+
+                    {/* Customer & Date */}
+                    <div className="flex items-center justify-between text-xs">
+                      <div>
+                        <span className="font-medium text-neutral-900 dark:text-neutral-100 block">
+                          {o.customer}
+                        </span>
+                        {o.email && (
+                          <span className="text-[11px] text-neutral-500 font-mono block">
+                            {o.email}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] font-mono text-neutral-400">{o.date}</span>
+                    </div>
+
+                    {/* Financials & Line Items */}
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 text-xs">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-bold text-base text-neutral-900 dark:text-white">
+                          {o.amount}
+                        </span>
+                        <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 uppercase">
+                          {o.method}
+                        </span>
+                      </div>
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
+                        <Package size={10} />
+                        {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
+                      </span>
+                    </div>
+
+                    {/* Action Controls */}
+                    <div
+                      className="pt-2 border-t border-neutral-100 dark:border-neutral-900 flex items-center justify-between gap-2"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <select
+                        value={o.status}
+                        onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                        className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1.5 rounded focus:outline-none font-medium flex-1 max-w-[130px]"
+                      >
+                        <option value="PENDING">PENDING</option>
+                        <option value="PAID">PAID</option>
+                        <option value="FULFILLING">FULFILLING</option>
+                        <option value="SHIPPED">SHIPPED</option>
+                        <option value="DELIVERED">DELIVERED</option>
+                        <option value="CANCELLED">CANCELLED</option>
+                      </select>
+
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedOrderForDetail(o);
+                            setShowOrderDetailModal(true);
+                          }}
+                          className="px-3 py-1.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 shadow-sm"
+                        >
+                          <Eye size={12} />
+                          <span>Details</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResendNotification(o.id, "whatsapp")}
+                          title="Send WhatsApp"
+                          className="p-1.5 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30"
+                        >
+                          <MessageSquare size={13} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleResendNotification(o.id, "email")}
+                          title="Send Email"
+                          className="p-1.5 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700"
+                        >
+                          <Mail size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP ORDERS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[980px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="p-4 text-start">Order ID / Client</th>
-                    <th className="p-4 text-start">Total Amount</th>
-                    <th className="p-4 text-start">Payment Provider</th>
-                    <th className="p-4 text-start">Market</th>
-                    <th className="p-4 text-start">Date / Timeline</th>
-                    <th className="p-4 text-start">Status Workflow</th>
-                    <th className="p-4 text-end">Dispatch Alerts</th>
+                    <th className="py-3.5 px-4 text-start min-w-[200px]">Order ID / Client</th>
+                    <th className="py-3.5 px-4 text-start min-w-[110px]">Line Items</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Total Amount</th>
+                    <th className="py-3.5 px-4 text-start min-w-[130px]">Payment Provider</th>
+                    <th className="py-3.5 px-4 text-start min-w-[80px]">Market</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Date / Timeline</th>
+                    <th className="py-3.5 px-4 text-start min-w-[140px]">Status Workflow</th>
+                    <th className="py-3.5 px-4 text-end min-w-[180px]">Inspect & Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
-                  {orders
-                    .filter((o) => {
-                      if (orderMarketFilter !== "ALL" && o.market !== orderMarketFilter) return false;
-                      if (orderStatusFilter !== "ALL" && o.status !== orderStatusFilter) return false;
-                      if (orderSearch.trim()) {
-                        const q = orderSearch.toLowerCase();
-                        return o.number.toLowerCase().includes(q) || o.customer.toLowerCase().includes(q);
-                      }
-                      return true;
-                    })
-                    .map((o) => (
-                      <tr key={o.id} className="hover:bg-slate-800/30">
-                        <td className="p-4">
-                          <span className="font-semibold text-neutral-900 dark:text-white block">{o.number}</span>
-                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{o.customer}</span>
-                        </td>
-                        <td className="p-4 font-mono font-medium text-neutral-900 dark:text-white">{o.amount}</td>
-                        <td className="p-4 font-mono text-cyan-400">{o.method}</td>
-                        <td className="p-4">
-                          <span className="px-2 py-0.5 bg-slate-800 text-neutral-900 dark:text-neutral-100 text-[10px] font-bold rounded">
-                            {o.market}
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {filteredOrders.map((o) => (
+                    <tr
+                      key={o.id}
+                      onClick={() => {
+                        setSelectedOrderForDetail(o);
+                        setShowOrderDetailModal(true);
+                      }}
+                      className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors"
+                    >
+                      <td className="py-3.5 px-4">
+                        <span className="font-semibold text-neutral-900 dark:text-white block hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">
+                          {o.number}
+                        </span>
+                        <span className="text-neutral-600 dark:text-neutral-400 text-[11px] block mt-0.5">
+                          {o.customer}
+                        </span>
+                        {o.email && (
+                          <span className="text-neutral-400 dark:text-neutral-500 text-[10px] block font-mono">
+                            {o.email}
                           </span>
-                        </td>
-                        <td className="p-4 text-neutral-500 dark:text-neutral-400">{o.date}</td>
-                        <td className="p-4">
-                          <select
-                            value={o.status}
-                            onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none"
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
+                          <Package size={11} className="text-neutral-400" />
+                          {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-semibold text-neutral-900 dark:text-white">
+                        {o.amount}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-cyan-600 dark:text-cyan-400">
+                        {o.method}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[10px] font-bold rounded">
+                          {o.market}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                        {o.date}
+                      </td>
+                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                        <select
+                          value={o.status}
+                          onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none font-medium"
+                        >
+                          <option value="PENDING">PENDING</option>
+                          <option value="PAID">PAID</option>
+                          <option value="FULFILLING">FULFILLING</option>
+                          <option value="SHIPPED">SHIPPED</option>
+                          <option value="DELIVERED">DELIVERED</option>
+                          <option value="CANCELLED">CANCELLED</option>
+                        </select>
+                      </td>
+                      <td className="py-3.5 px-4 text-end" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedOrderForDetail(o);
+                              setShowOrderDetailModal(true);
+                            }}
+                            title="Inspect Full Order Dossier & Tracking"
+                            className="px-2.5 py-1 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-[11px] flex items-center gap-1 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
                           >
-                            <option value="PENDING">PENDING</option>
-                            <option value="PAID">PAID</option>
-                            <option value="FULFILLING">FULFILLING</option>
-                            <option value="SHIPPED">SHIPPED</option>
-                            <option value="DELIVERED">DELIVERED</option>
-                            <option value="CANCELLED">CANCELLED</option>
-                          </select>
-                        </td>
-                        <td className="p-4 text-end">
-                          <div className="flex items-center justify-end gap-1.5">
-                            <button
-                              type="button"
-                              onClick={() => handleResendNotification(o.id, "whatsapp")}
-                              title="Send / Resend WhatsApp Notification to Client"
-                              className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
-                            >
-                              <MessageSquare size={12} />
-                              <span className="hidden sm:inline">WhatsApp</span>
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleResendNotification(o.id, "email")}
-                              title="Send / Resend Email Notification to Client"
-                              className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
-                            >
-                              <Mail size={12} />
-                              <span className="hidden sm:inline">Email</span>
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            <Eye size={12} />
+                            <span>Details</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResendNotification(o.id, "whatsapp")}
+                            title="Send WhatsApp"
+                            className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                          >
+                            <MessageSquare size={12} />
+                            <span className="hidden xl:inline">WhatsApp</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleResendNotification(o.id, "email")}
+                            title="Send Email"
+                            className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                          >
+                            <Mail size={12} />
+                            <span className="hidden xl:inline">Email</span>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -4296,53 +5359,142 @@ export function App() {
         {/* 8. REVIEWS MODERATION */}
         {activeTab === "reviews" && (
           <div className="space-y-6">
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-hidden rounded">
-              <table className="w-full text-start text-xs font-sans">
-                <thead className="bg-white dark:bg-black text-neutral-500 dark:text-neutral-400 uppercase tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
+              <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Fragrance Reviews Moderation</h2>
+              <span className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400 rounded">
+                {reviews.length} Verified Reviews
+              </span>
+            </div>
+
+            {/* MOBILE REVIEWS CARDS (hidden on md+, visible on mobile) */}
+            <div className="block md:hidden space-y-3">
+              {reviews.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
+                  No customer reviews waiting for moderation.
+                </div>
+              ) : (
+                reviews.map((r) => (
+                  <div
+                    key={r.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <span className="font-semibold text-xs text-neutral-900 dark:text-white block">
+                          {r.product}
+                        </span>
+                        <span className="text-[11px] text-neutral-500">By {r.customer}</span>
+                      </div>
+                      <span
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${
+                          r.status === "APPROVED"
+                            ? "bg-black text-white dark:bg-white dark:text-black"
+                            : r.status === "REJECTED"
+                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
+                            : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
+                        }`}
+                      >
+                        {r.status}
+                      </span>
+                    </div>
+
+                    <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="text-amber-500 font-semibold text-xs">★ {r.rating} / 5</span>
+                        <span className="text-neutral-900 dark:text-white font-medium text-xs">"{r.title}"</span>
+                      </div>
+                      <div className="font-mono text-[11px] text-neutral-500 flex items-center gap-3">
+                        <span>Longevity: <strong className="text-neutral-700 dark:text-neutral-300">{r.longevity}/5</strong></span>
+                        <span>•</span>
+                        <span>Sillage: <strong className="text-neutral-700 dark:text-neutral-300">{r.sillage}/5</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      {r.status !== "APPROVED" && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewAction(r.id, "APPROVED")}
+                          className="flex-1 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded shadow-sm text-center"
+                        >
+                          Approve
+                        </button>
+                      )}
+                      {r.status !== "REJECTED" && (
+                        <button
+                          type="button"
+                          onClick={() => handleReviewAction(r.id, "REJECTED")}
+                          className="flex-1 py-1.5 border border-rose-300 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-medium rounded text-center"
+                        >
+                          Reject
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP REVIEWS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[850px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="p-4 text-start">Product / Customer</th>
-                    <th className="p-4 text-start">Title & Rating</th>
-                    <th className="p-4 text-start">Longevity / Sillage</th>
-                    <th className="p-4 text-start">Status</th>
-                    <th className="p-4 text-end">Action</th>
+                    <th className="py-3.5 px-4 text-start min-w-[200px]">Product / Customer</th>
+                    <th className="py-3.5 px-4 text-start min-w-[240px]">Title & Rating</th>
+                    <th className="py-3.5 px-4 text-start min-w-[170px]">Longevity / Sillage</th>
+                    <th className="py-3.5 px-4 text-start min-w-[120px]">Status</th>
+                    <th className="py-3.5 px-4 text-end min-w-[140px]">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                   {reviews.map((r) => (
-                    <tr key={r.id} className="hover:bg-slate-800/30">
-                      <td className="p-4">
+                    <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                      <td className="py-3.5 px-4">
                         <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
                         <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
                       </td>
-                      <td className="p-4">
+                      <td className="py-3.5 px-4">
                         <span className="text-neutral-900 dark:text-white block font-medium">"{r.title}"</span>
-                        <span className="text-amber-400">★ {r.rating} / 5</span>
+                        <span className="text-amber-500 font-medium">★ {r.rating} / 5</span>
                       </td>
-                      <td className="p-4 font-mono text-neutral-500 dark:text-neutral-400">
+                      <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">
                         L: {r.longevity}/5 • S: {r.sillage}/5
                       </td>
-                      <td className="p-4">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "APPROVED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
+                      <td className="py-3.5 px-4">
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                            r.status === "APPROVED"
+                              ? "bg-black text-white dark:bg-white dark:text-black"
+                              : r.status === "REJECTED"
+                              ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
+                              : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
+                          }`}
+                        >
                           {r.status}
                         </span>
                       </td>
-                      <td className="p-4 text-end space-x-2">
-                        {r.status !== "APPROVED" && (
-                          <button
-                            onClick={() => handleReviewAction(r.id, "APPROVED")}
-                            className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] rounded"
-                          >
-                            Approve
-                          </button>
-                        )}
-                        {r.status !== "REJECTED" && (
-                          <button
-                            onClick={() => handleReviewAction(r.id, "REJECTED")}
-                            className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-neutral-700 dark:text-neutral-300 text-[11px] rounded"
-                          >
-                            Reject
-                          </button>
-                        )}
+                      <td className="py-3.5 px-4 text-end">
+                        <div className="flex items-center justify-end gap-2">
+                          {r.status !== "APPROVED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleReviewAction(r.id, "APPROVED")}
+                              className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                            >
+                              Approve
+                            </button>
+                          )}
+                          {r.status !== "REJECTED" && (
+                            <button
+                              type="button"
+                              onClick={() => handleReviewAction(r.id, "REJECTED")}
+                              className="px-2.5 py-1.5 border border-rose-300 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-[11px] rounded"
+                            >
+                              Reject
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -4835,25 +5987,26 @@ export function App() {
 
         {/* 12. SECURITY & AUDIT */}
         {activeTab === "audit" && (
-          <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-4 rounded">
-            <div className="flex items-center justify-between">
+          <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-4 sm:p-6 space-y-4 rounded-lg shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2 border-b border-neutral-200 dark:border-neutral-800">
               <div>
                 <h3 className="font-serif text-xl font-light text-neutral-900 dark:text-white">Immutable Administrative Audit Log</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">All administrative operations, creations, and transitions are tracked here.</p>
               </div>
-              <span className="px-2.5 py-1 bg-slate-800 text-neutral-700 dark:text-neutral-300 font-mono text-[10px] rounded">
+              <span className="self-start sm:self-auto px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono text-[10px] rounded">
                 {auditLogs.length} Events Logged
               </span>
             </div>
-            <div className="divide-y divide-slate-800 text-xs font-mono">
+            <div className="divide-y divide-neutral-200 dark:divide-neutral-800 text-xs font-mono">
               {auditLogs.map((log, idx) => (
-                <div key={idx} className="py-2.5 flex items-center justify-between text-neutral-700 dark:text-neutral-300">
-                  <div className="space-x-3">
-                    <span className="text-accent font-bold">{log.action}</span>
+                <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 text-neutral-700 dark:text-neutral-300">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-purple-600 dark:text-purple-400 font-bold">{log.action}</span>
                     <span className="text-neutral-500 dark:text-neutral-400">[{log.res}]</span>
                   </div>
-                  <div className="space-x-4 text-neutral-500">
-                    <span>{log.user}</span>
+                  <div className="flex items-center gap-3 text-neutral-500 text-[11px]">
+                    <span className="font-medium text-neutral-700 dark:text-neutral-300">{log.user}</span>
+                    <span>•</span>
                     <span>{log.time}</span>
                   </div>
                 </div>
@@ -4897,6 +6050,17 @@ export function App() {
       </div>
 
       {/* PRO SEO MODALS */}
+      <CollectionModal
+        isOpen={showCollectionModal}
+        onClose={() => {
+          setShowCollectionModal(false);
+          setCollectionToEdit(null);
+        }}
+        collectionToEdit={collectionToEdit}
+        onSave={handleSaveCollection}
+        allProducts={products}
+      />
+
       <BulkCsvModal
         isOpen={showCsvModal}
         onClose={() => setShowCsvModal(false)}
@@ -4923,6 +6087,17 @@ export function App() {
         }}
         noteToEdit={noteToEdit}
         onSave={handleSaveNoteModal}
+      />
+
+      <OrderDetailModal
+        isOpen={showOrderDetailModal}
+        order={selectedOrderForDetail}
+        onClose={() => {
+          setShowOrderDetailModal(false);
+          setSelectedOrderForDetail(null);
+        }}
+        onUpdateStatus={updateOrderStatus}
+        onResendNotification={handleResendNotification}
       />
     </div>
   );

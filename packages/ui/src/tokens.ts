@@ -28,8 +28,8 @@ export const LUXURY_THEME = {
     },
   },
   typography: {
-    serif: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
-    sans: "'Inter', system-ui, -apple-system, sans-serif",
+    serif: "'Figtree', 'Cormorant Garamond', Georgia, serif",
+    sans: "'Figtree', 'Inter', system-ui, -apple-system, sans-serif",
     arabic: "'Cairo', 'Tajawal', sans-serif",
   },
   regional: {

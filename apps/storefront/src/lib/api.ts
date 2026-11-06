@@ -12,13 +12,6 @@ import {
 import { z } from "zod";
 import { StorefrontProductSchema, StorefrontProduct } from "@muschio/types";
 import { StorefrontOrderSchema, StorefrontOrder } from "@muschio/types";
-import {
-  getPreviewStorefrontProducts,
-  getPreviewStorefrontProductBySlug,
-  getPreviewBrands,
-  getPreviewNotes,
-  getPreviewScentFamilies,
-} from "./preview-catalog";
 
 export function resolveApiBase(): string {
   // If window is defined (browser/client-side, e.g. mobile Safari / Chrome)
@@ -107,7 +100,7 @@ async function apiRequest<T>(
       (options?.method && options.method !== "GET")
         ? { cache: "no-store" as const }
         : { next: { revalidate: 60 } }),
-      signal: options?.signal ?? AbortSignal.timeout(8000),
+      signal: options?.signal ?? AbortSignal.timeout(20000),
     });
 
     if (!res.ok) {
@@ -125,6 +118,81 @@ async function apiRequest<T>(
     }
     return null;
   }
+}
+
+function normalizeRawStorefrontProduct(raw: any): StorefrontProduct {
+  const brandName = raw.brand?.name || "Haute Niche";
+  const brandSlug = raw.brand?.slug || brandName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  const rawVariants = Array.isArray(raw.variants) ? raw.variants : [];
+
+  const variants = rawVariants.map((v: any, idx: number) => {
+    const volNum = v.volumeMl ?? (typeof v.volume === "number" ? v.volume : parseInt(String(v.volume || "").replace(/[^0-9]/g, "")) || 100);
+    const volLabel = typeof v.volume === "string" && v.volume ? v.volume : `${volNum}ml`;
+    const regPrice = Number(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price)) || 0;
+    const rawDisc = v.discountPrice !== null && v.discountPrice !== undefined
+      ? Number(v.discountPrice)
+      : (v.salePrice ? Number(v.salePrice) : (v.compareAtPrice && v.compareAtPrice > v.price ? Number(v.price) : null));
+    const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regPrice;
+    const sellingPrice = hasDisc ? rawDisc! : (Number(v.price) || regPrice);
+    const stock = Number(v.stock ?? v.stockQuantity ?? v.availableQuantity ?? 25);
+
+    return {
+      id: String(v.id || `v-${idx}`),
+      sku: String(v.sku || `${raw.slug}-${volNum}`),
+      volume: volLabel,
+      volumeMl: volNum,
+      sizeLabelEn: v.sizeLabelEn || `${volLabel} Flacon`,
+      sizeLabelAr: v.sizeLabelAr || `${volNum} مل`,
+      basePrice: regPrice,
+      regularPrice: regPrice,
+      originalPrice: regPrice,
+      price: sellingPrice,
+      compareAtPrice: hasDisc ? regPrice : (v.compareAtPrice ? Number(v.compareAtPrice) : null),
+      discountPrice: hasDisc ? rawDisc : null,
+      salePrice: hasDisc ? rawDisc : null,
+      isSampleVial: Boolean(v.isSampleVial),
+      stock,
+      stockQuantity: stock,
+      availableQuantity: stock,
+      warehouse: v.warehouse || "DXB-MAIN",
+      isDefault: Boolean(v.isDefault),
+    };
+  });
+
+  return {
+    id: String(raw.id || raw.slug),
+    slug: String(raw.slug),
+    nameEn: String(raw.nameEn || raw.name || ""),
+    nameAr: String(raw.nameAr || raw.name || raw.nameEn || ""),
+    descriptionEn: String(raw.descriptionEn || ""),
+    descriptionAr: String(raw.descriptionAr || ""),
+    concentration: String(raw.concentration || "EXTRAIT_DE_PARFUM"),
+    gender: String(raw.gender || "UNISEX"),
+    images: Array.isArray(raw.images) && raw.images.length > 0 ? raw.images : ["/product-placeholder.svg"],
+    brand: {
+      name: brandName,
+      slug: brandSlug,
+      type: raw.brand?.type || "NICHE",
+    },
+    scentFamily: raw.scentFamily
+      ? {
+          slug: raw.scentFamily.slug || "woody-amber",
+          nameEn: raw.scentFamily.nameEn || "Woody Amber",
+          nameAr: raw.scentFamily.nameAr || "عنبر خشبي",
+        }
+      : null,
+    perfumer: raw.perfumer || null,
+    perfumerBio: raw.perfumerBio || null,
+    variants,
+    notes: Array.isArray(raw.notes)
+      ? raw.notes.map((n: any) => ({
+          nameEn: String(n.nameEn || n.name || ""),
+          nameAr: String(n.nameAr || n.name || n.nameEn || ""),
+          position: (["TOP", "HEART", "BASE"].includes(n.position) ? n.position : "TOP") as "TOP" | "HEART" | "BASE",
+          slug: String(n.slug || n.slugEn || ""),
+        }))
+      : [],
+  };
 }
 
 export const muschioApi = {
@@ -154,6 +222,8 @@ export const muschioApi = {
           const parsed = StorefrontProductSchema.safeParse(item);
           if (parsed.success) {
             validated.push(parsed.data);
+          } else if (item && (item as any).slug) {
+            validated.push(normalizeRawStorefrontProduct(item));
           } else {
             console.warn(`Product ${item?.slug} failed schema validation:`, parsed.error.issues);
           }
@@ -168,11 +238,7 @@ export const muschioApi = {
     } catch (e) {
       console.error("Error in getProducts:", e);
     }
-    const fallback = getPreviewStorefrontProducts();
-    if (params?.limit && typeof params.limit === "number") {
-      return fallback.slice(0, params.limit);
-    }
-    return fallback;
+    return [];
   },
 
   async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {
@@ -181,15 +247,16 @@ export const muschioApi = {
         `/products/${encodeURIComponent(slug)}`,
       );
       const rawProduct = (result as any)?.product ?? result;
-      const parsed = StorefrontProductSchema.safeParse(rawProduct);
-      if (parsed.success && parsed.data) return parsed.data;
-      if (!parsed.success && rawProduct) {
-        console.warn(`Product ${slug} failed schema validation:`, parsed.error.issues);
+      if (rawProduct && rawProduct.slug) {
+        const parsed = StorefrontProductSchema.safeParse(rawProduct);
+        if (parsed.success && parsed.data) return parsed.data;
+        console.warn(`Product ${slug} schema warning:`, parsed.error?.issues);
+        return normalizeRawStorefrontProduct(rawProduct);
       }
     } catch (e) {
       console.error(`Error in getProductBySlug(${slug}):`, e);
     }
-    return getPreviewStorefrontProductBySlug(slug);
+    return null;
   },
 
   // Notes
@@ -201,18 +268,12 @@ export const muschioApi = {
     } catch {
       // Fallback
     }
-    const fallback = getPreviewNotes() as Note[];
-    if (params?.limit && typeof params.limit === "number") {
-      return fallback.slice(0, params.limit);
-    }
-    return fallback;
+    return [];
   },
 
   async getNoteBySlug(slug: string): Promise<Note | null> {
     const res = await apiRequest<Note>(`/notes/${slug}`);
-    if (res) return res;
-    const all = getPreviewNotes();
-    return all.find((n) => n.slug === slug) || null;
+    return res || null;
   },
 
   async getPerfumesByNoteSlug(slug: string): Promise<any | null> {
@@ -227,14 +288,12 @@ export const muschioApi = {
     } catch {
       // Fallback
     }
-    return getPreviewBrands();
+    return [];
   },
 
   async getBrandBySlug(slug: string): Promise<any | null> {
     const res = await apiRequest<any>(`/brands/${encodeURIComponent(slug)}`);
-    if (res) return res;
-    const all = getPreviewBrands();
-    return all.find((b) => b.slug === slug) || null;
+    return res || null;
   },
 
   // Scent Families
@@ -245,7 +304,7 @@ export const muschioApi = {
     } catch {
       // Fallback
     }
-    return getPreviewScentFamilies();
+    return [];
   },
 
   // Cart
@@ -276,6 +335,21 @@ export const muschioApi = {
   // Checkout & Payments
   async submitCheckout(payload: CheckoutPayload): Promise<any | null> {
     return apiRequest<any>("/checkout", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async initiatePayment(payload: {
+    orderId: string;
+    amount: number | any;
+    currency?: string;
+    returnUrl: string;
+    cancelUrl?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+  }): Promise<{ redirectUrl?: string; status?: string; id?: string } | null> {
+    return apiRequest<any>("/payments/initiate", {
       method: "POST",
       body: JSON.stringify(payload),
     });
@@ -484,6 +558,16 @@ export const muschioApi = {
 
   async getHomepageSections(): Promise<any[] | null> {
     return apiRequest<any[]>("/content/sections");
+  },
+
+  // Collections (Admin Curated & Managed)
+  async getCollections(params?: { featured?: boolean }): Promise<any[] | null> {
+    const query = params?.featured ? "?featured=true" : "";
+    return apiRequest<any[]>(`/collections${query}`);
+  },
+
+  async getCollectionBySlug(slug: string): Promise<any | null> {
+    return apiRequest<any>(`/collections/${encodeURIComponent(slug)}`);
   },
 
   // Editorial Journal

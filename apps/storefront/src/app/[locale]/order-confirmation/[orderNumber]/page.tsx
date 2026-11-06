@@ -500,8 +500,14 @@ export default function OrderStatusPage({
                   <span className="text-xs uppercase tracking-wider font-sans font-medium text-luxury-text block">
                     {isPaid ? c("Total Settled", "المجموع المدفوع") : c("Total Due", "المجموع المطلوب")}
                   </span>
-                  <span className="text-[10px] text-luxury-muted">
+                  <span className="text-[10px] text-luxury-muted block">
                     {c("VAT & Custom Duties Included", "شامل ضريبة القيمة المضافة والرسوم")}
+                  </span>
+                  <span className="text-[9px] font-mono text-luxury-muted block mt-0.5">
+                    {c(
+                      `Includes 5% UAE VAT (AED ${(order.totalAmount - order.totalAmount / 1.05).toFixed(2)}) · TRN: 100492817200003`,
+                      `شامل 5% ضريبة القيمة المضافة (${(order.totalAmount - order.totalAmount / 1.05).toFixed(2)} د.إ) · الرقم الضريبي: 100492817200003`
+                    )}
                   </span>
                 </div>
                 <PriceDisplay price={order.totalAmount} locale={locale} />

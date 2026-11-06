@@ -66,6 +66,29 @@ export class AdminService {
     };
   }
 
+  static async verifyToken(token: string) {
+    if (!token || typeof token !== "string") return null;
+    const secret = signingSecret("ADMIN_JWT_SECRET");
+    try {
+      const payload = jwt.verify(token, secret, {
+        algorithms: ["HS256"],
+        issuer: "muschio-api",
+        audience: "muschio-admin",
+      }) as any;
+
+      if (!payload?.id || payload?.purpose !== "admin") return null;
+
+      const user = await prisma.adminUser.findFirst({
+        where: { id: payload.id, isActive: true },
+        select: { id: true, email: true, role: true, name: true },
+      });
+
+      return user;
+    } catch {
+      return null;
+    }
+  }
+
   static async getDashboardMetrics() {
     const [
       totalProducts,

@@ -23,30 +23,17 @@ import {
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
+import { muschioApi } from "../lib/api";
 import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
 
 const POPULAR_SEARCHES = [
+  { nameEn: "Creed Aventus", nameAr: "كريد أفينتوس", href: "/shop?search=Aventus" },
   { nameEn: "Amouage", nameAr: "أمواج", href: "/shop?search=Amouage" },
   { nameEn: "Baccarat Rouge", nameAr: "باكارات روج", href: "/shop?search=Baccarat" },
-  { nameEn: "Oud", nameAr: "عود", href: "/notes/cambodian-oud" },
-  { nameEn: "Taif Rose", nameAr: "ورد الطائف", href: "/notes/taif-rose" },
-  { nameEn: "Roja Parfums", nameAr: "روجا دوف", href: "/shop?search=Roja" },
-];
-
-const SEARCHABLE_ITEMS = [
-  { type: "product", nameEn: "Interlude 53 Man Extrait", nameAr: "إنترلود 53 إكستري", brand: "Amouage", href: "/product/amouage-interlude-53-man" },
-  { type: "product", nameEn: "Baccarat Rouge 540 Extrait", nameAr: "باكارات روج 540 إكستري", brand: "Maison Francis Kurkdjian", href: "/product/mfk-baccarat-rouge-540-extrait" },
-  { type: "product", nameEn: "Elysium Pour Homme Parfum", nameAr: "إليزيوم بور هوم بارفان", brand: "Roja Parfums", href: "/product/roja-parfums-elysium-pour-homme-parfum" },
-  { type: "product", nameEn: "Alexandria II Eau de Parfum", nameAr: "ألكسندريا 2 أو دي بارفان", brand: "Xerjoff", href: "/product/xerjoff-alexandria-ii" },
-  { type: "product", nameEn: "Tobacco Vanille Eau de Parfum", nameAr: "توباكو فانيلا أو دي بارفان", brand: "Tom Ford", href: "/product/tom-ford-tobacco-vanille" },
-  { type: "note", nameEn: "Cambodian Oud", nameAr: "عود كمبودي", brand: "Base Note", href: "/notes/cambodian-oud" },
-  { type: "note", nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", brand: "Heart Note", href: "/notes/taif-rose" },
-  { type: "note", nameEn: "Silver Frankincense", nameAr: "لبان حوجري فضي", brand: "Heart Note", href: "/notes/silver-frankincense" },
-  { type: "house", nameEn: "Amouage (Oman)", nameAr: "أمواج (عُمان)", brand: "Haute Niche", href: "/brands/amouage" },
-  { type: "house", nameEn: "Roja Parfums (London)", nameAr: "روجا دوف (لندن)", brand: "Haute Niche", href: "/brands/roja-parfums" },
+  { nameEn: "Oud & Woods", nameAr: "العود والأخشاب", href: "/shop?search=Oud" },
 ];
 
 function SearchDialog({
@@ -131,15 +118,33 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cart]);
 
+  const [liveCatalog, setLiveCatalog] = useState<Array<{ nameEn: string; nameAr: string; brand: string; href: string }>>([]);
+
+  useEffect(() => {
+    if (!search) return;
+    muschioApi.getProducts({ limit: 50 }).then((prods) => {
+      if (prods && prods.length > 0) {
+        setLiveCatalog(
+          prods.map((p) => ({
+            nameEn: p.nameEn,
+            nameAr: p.nameAr,
+            brand: p.brand.name,
+            href: `/product/${p.slug}`,
+          })),
+        );
+      }
+    });
+  }, [search]);
+
   const searchResults = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return [];
-    return SEARCHABLE_ITEMS.filter((item) =>
+    return liveCatalog.filter((item) =>
       [item.nameEn, item.nameAr, item.brand].some((field) =>
         field.toLowerCase().includes(q),
       ),
     );
-  }, [query]);
+  }, [query, liveCatalog]);
 
   return (
     <>
