@@ -237,13 +237,13 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     }
 
     // 6. Editorial Journal
-    if (path === "blog") {
+    if (path === "blog" || path === "journal") {
       const page = Number(url.searchParams.get("page") || "1");
       const limit = Number(url.searchParams.get("limit") || "10");
       const result = await JournalService.getPosts(page, limit);
       return success(result.items);
     }
-    if (route[0] === "blog" && route[1]) {
+    if ((route[0] === "blog" || route[0] === "journal") && route[1]) {
       const slug = route[1];
       const post = await JournalService.getPostBySlug(slug);
       if (!post) return error("POST_NOT_FOUND", "Post not found", 404);
@@ -251,12 +251,12 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     }
 
     // 7. Content / Banners / Sections
-    if (path === "content/banners") {
+    if (path === "content/banners" || path === "banners") {
       const slot = url.searchParams.get("slot") as any;
       const banners = await BannerService.getActiveBanners(slot);
       return success(banners);
     }
-    if (path === "content/sections") {
+    if (path === "content/sections" || path === "sections") {
       const sections = await BannerService.getVisibleSections();
       return success(sections);
     }
@@ -665,7 +665,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     } catch {}
 
     // Require administrator authorization for all admin endpoints (except login)
-    if (route[0] === "admin" && path !== "admin/auth/login") {
+    if (route[0] === "admin" && path !== "admin/auth/login" && path !== "admin/login") {
       const admin = await verifyAdminAuth(req);
       if (!admin) {
         return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
@@ -678,7 +678,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     }
 
     // 2. Auth: Customer & Admin Login
-    if (path === "admin/auth/login") {
+    if (path === "admin/auth/login" || path === "admin/login") {
       const { email, password } = body || {};
       if (!email || !password) {
         return error("INVALID_INPUT", "Email and password are required", 400);

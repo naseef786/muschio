@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 import { NoteFilterQuery } from "@muschio/types";
 import { NoteStatus } from "@prisma/client";
+import { storefrontProduct } from "./storefront-catalog";
 
 export class NotesService {
   static async getNotes(query: Partial<NoteFilterQuery> = {}) {
@@ -58,12 +59,30 @@ export class NotesService {
   }
 
   static async getNoteBySlug(slug: string) {
-    const note = await prisma.note.findFirst({
+    const normalized = slug.trim();
+    let note = await prisma.note.findFirst({
       where: {
-        OR: [{ slugEn: slug }, { slugAr: slug }],
+        OR: [
+          { slugEn: { equals: normalized, mode: "insensitive" } },
+          { slugAr: { equals: normalized, mode: "insensitive" } },
+        ],
         status: NoteStatus.PUBLISHED,
       },
     });
+
+    if (!note) {
+      note = await prisma.note.findFirst({
+        where: {
+          OR: [
+            { slugEn: { contains: normalized, mode: "insensitive" } },
+            { nameEn: { contains: normalized, mode: "insensitive" } },
+            { slugAr: { contains: normalized, mode: "insensitive" } },
+            { nameAr: { contains: normalized, mode: "insensitive" } },
+          ],
+          status: NoteStatus.PUBLISHED,
+        },
+      });
+    }
 
     if (!note) return null;
 
@@ -99,13 +118,31 @@ export class NotesService {
   static async getPerfumesByNoteSlug(slug: string, options: { page?: number; limit?: number; sort?: string } = {}) {
     const { page = 1, limit = 20, sort = "featured" } = options;
     const skip = (page - 1) * limit;
+    const normalized = slug.trim();
 
-    const note = await prisma.note.findFirst({
+    let note = await prisma.note.findFirst({
       where: {
-        OR: [{ slugEn: slug }, { slugAr: slug }],
+        OR: [
+          { slugEn: { equals: normalized, mode: "insensitive" } },
+          { slugAr: { equals: normalized, mode: "insensitive" } },
+        ],
         status: NoteStatus.PUBLISHED,
       },
     });
+
+    if (!note) {
+      note = await prisma.note.findFirst({
+        where: {
+          OR: [
+            { slugEn: { contains: normalized, mode: "insensitive" } },
+            { nameEn: { contains: normalized, mode: "insensitive" } },
+            { slugAr: { contains: normalized, mode: "insensitive" } },
+            { nameAr: { contains: normalized, mode: "insensitive" } },
+          ],
+          status: NoteStatus.PUBLISHED,
+        },
+      });
+    }
 
     if (!note) return null;
 
@@ -149,7 +186,7 @@ export class NotesService {
     return {
       note,
       products: relations.map((rel) => ({
-        product: rel.product,
+        product: storefrontProduct(rel.product),
         position: rel.position,
         prominence: rel.prominence,
       })),

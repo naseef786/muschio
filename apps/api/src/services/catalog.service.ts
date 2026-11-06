@@ -6,6 +6,7 @@ import {
   GenderCategory,
   Concentration,
 } from "@muschio/types";
+import { storefrontProduct } from "./storefront-catalog";
 
 export class CatalogService {
   static async getProducts(filters: ProductFilter) {
@@ -145,8 +146,11 @@ export class CatalogService {
   }
 
   static async getProductBySlug(slug: string) {
-    const product = await prisma.product.findUnique({
-      where: { slug, isPublished: true },
+    const product = await prisma.product.findFirst({
+      where: {
+        slug: { equals: slug, mode: "insensitive" },
+        isPublished: true,
+      },
       include: {
         brand: true,
         scentFamily: true,
@@ -205,8 +209,10 @@ export class CatalogService {
   }
 
   static async getBrandBySlug(slug: string) {
-    const brand = await prisma.brand.findUnique({
-      where: { slug },
+    const brand = await prisma.brand.findFirst({
+      where: {
+        slug: { equals: slug, mode: "insensitive" },
+      },
       include: {
         products: {
           where: { isPublished: true },
@@ -243,23 +249,7 @@ export class CatalogService {
       heroImageUrl: brand.heroImageUrl,
       countryOfOrigin: brand.countryOfOrigin,
       isFeatured: brand.isFeatured,
-      products: brand.products.map((p) => ({
-        id: p.id,
-        slug: p.slug,
-        nameEn: p.nameEn,
-        nameAr: p.nameAr,
-        concentration: p.concentration,
-        gender: p.gender,
-        images: p.images,
-        brand: brand.name,
-        ...(() => {
-          const defaultVar = p.variants.find((v: any) => v.isDefault) || p.variants[0];
-          return {
-            price: Number(defaultVar?.price || 0),
-            compareAtPrice: defaultVar?.compareAtPrice ? Number(defaultVar.compareAtPrice) : null,
-          };
-        })(),
-      })),
+      products: brand.products.map(storefrontProduct),
     };
   }
 
