@@ -183,69 +183,57 @@ export default function AIScentDiscoveryPage({
         return;
       }
     } catch {
-      // Offline fallback
+      // Live catalog dynamic fallback
     }
 
-    setTimeout(() => {
-      setResult({
-        auraTitle: isAr
-          ? "الهالة العطرية: عود بخوري ملكي فاحم"
-          : "Olfactory Aura: Regal Incense & Resinous Agarwood",
-        analysis: isAr
-          ? "بناءً على تفضيلك للأمسيات الملكية والنفحات الصمغية مع اللبان الحوجري والعود الكمبودي المعتق، طابق مستشارنا العطري تفضيلاتك مع أندر خلاصات الإكستري المعتقة لستة أشهر في مسقط."
-          : "Based on your preference for aristocratic sillage, Omani Silver Frankincense, and aged wild agarwood, our sommelier has identified two masterwork extraits formulating over 50% perfume oil concentrations.",
-        recommendations: [
-          {
-            slug: "amouage-interlude-53-man",
-            nameEn: "Interlude 53 Man Extrait de Parfum",
-            nameAr: "إنترلود 53 مان إكستري دو بارفان",
-            brand: "Amouage",
-            concentration: "Extrait de Parfum (53%)",
-            price: 1850,
-            matchPercentage: 99,
-            image: "https://res.cloudinary.com/zwkad4sz/image/upload/v1793203985/muschio/products/amouage-interlude-53-man-primary.jpg",
-            reason: isAr
-              ? "توافق تام بنسبة ٩٩٪ بفضل تركيز الزيت ٥٣٪ المعتق لستة أشهر مع لبان حوجري فضي وعود كمبودي."
-              : "Direct 99% match via 53% perfume oil maceration, Silver Frankincense, and aged Cambodian Oud.",
-            accords: isAr
-              ? ["دخاني", "بلسمي", "عود ملكي"]
-              : ["Smoky", "Balsamic", "Royal Oud"],
-          },
-          {
-            slug: "mfk-baccarat-rouge-540-extrait",
-            nameEn: "Baccarat Rouge 540 Extrait de Parfum",
-            nameAr: "باكارات روج 540 إكستري دو بارفان",
-            brand: "Maison Francis Kurkdjian",
-            concentration: "Extrait de Parfum",
-            price: 1650,
-            matchPercentage: 94,
-            image:
-              "https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=800&q=85",
-            reason: isAr
-              ? "إشراقة الزعفران الكشميري والعنبر الأشهب الطبيعي لهالة ملكية ساحرة في المناسبات الكبرى."
-              : "Luminous Kashmiri Saffron and Grandiflorum Jasmine providing glowing evening projection.",
-            accords: isAr
-              ? ["عنبري", "زعفران", "إشراقة بلورية"]
-              : ["Amber", "Saffron", "Luminous"],
-          },
-        ],
-      });
-      setLoading(false);
-    }, 700);
+    try {
+      const liveProducts = await muschioApi.getProducts({ limit: 2 });
+      if (liveProducts && liveProducts.length > 0) {
+        setResult({
+          auraTitle: isAr
+            ? "الهالة العطرية: مختارات حصرية من المتجر"
+            : "Olfactory Aura: Live Curated Fragrance Selection",
+          analysis: isAr
+            ? "بناءً على تفضيلاتك للنفحات الفاخرة، انتقينا لك هذه العطور الملكية المعتمدة والمتاحة حالياً في متجرنا."
+            : "Based on your olfactory preferences, our sommelier has matched you with these verified live flacons from our vault.",
+          recommendations: liveProducts.map((p) => {
+            const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
+            return {
+              slug: p.slug,
+              nameEn: p.nameEn,
+              nameAr: p.nameAr,
+              brand: p.brand.name,
+              concentration: p.concentration.replaceAll("_", " "),
+              price: v?.price || 0,
+              matchPercentage: 96,
+              image: p.images?.[0] || "/product-placeholder.svg",
+              reason: isAr
+                ? "عطر نيش فاخر يجسد الحضور المهيب والفوحان الأرستقراطي."
+                : "Authenticated haute flacon embodying regal projection and refined sillage.",
+              accords: p.notes?.map((n: any) => (isAr ? n.nameAr || n.nameEn : n.nameEn)).slice(0, 3) || [],
+            };
+          }),
+        });
+      }
+    } catch {}
+    setLoading(false);
   };
 
   const handleAddToCart = async (rec: Recommendation) => {
     try {
+      const realProd = await muschioApi.getProductBySlug(rec.slug);
+      const v = realProd?.variants?.find((variant: any) => !variant.isSampleVial) || realProd?.variants?.[0];
       await addItem({
-        variantId: `${rec.slug}-standard`,
+        variantId: v?.id || `${rec.slug}-standard`,
         slug: rec.slug,
         title: rec.nameEn,
         titleAr: rec.nameAr,
         brand: rec.brand,
-        price: rec.price,
+        price: v?.price || rec.price,
+        compareAtPrice: v?.compareAtPrice,
         quantity: 1,
         image: rec.image,
-        sizeLabel: "100ml Extrait",
+        sizeLabel: v?.volume ? `${v.volume} Extrait` : "100ml Flacon",
       });
       setAddedItemSlug(rec.slug);
       setCartDrawerOpen(true);

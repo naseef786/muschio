@@ -127,7 +127,6 @@ export default async function ProductPage({
       houseProducts={houseProducts}
       relatedProducts={relatedProducts}
       locale={locale}
-      preview={false}
     />
   );
 }

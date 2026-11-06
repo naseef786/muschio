@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Link } from "../../../navigation";
 import { useCompare, CompareItem } from "../../../context/compare-context";
 import { useCart } from "../../../context/cart-context";
-import { PREVIEW_CATALOG } from "../../../lib/preview-catalog";
+import { muschioApi } from "../../../lib/api";
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -37,42 +37,60 @@ export default function ComparePage({
   const [copiedLink, setCopiedLink] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
 
+  const addProductToCompare = useCallback(
+    (local: any) => {
+      const topNotes =
+        local.notes
+          ?.filter((n: any) => n.position === "TOP")
+          .map((n: any) => (isAr ? n.nameAr || n.nameEn : n.nameEn)) || [];
+      const heartNotes =
+        local.notes
+          ?.filter((n: any) => n.position === "HEART")
+          .map((n: any) => (isAr ? n.nameAr || n.nameEn : n.nameEn)) || [];
+      const baseNotes =
+        local.notes
+          ?.filter((n: any) => n.position === "BASE")
+          .map((n: any) => (isAr ? n.nameAr || n.nameEn : n.nameEn)) || [];
+
+      const v = local.variants?.find((variant: any) => !variant.isSampleVial) || local.variants?.[0];
+
+      addItem({
+        slug: local.slug,
+        nameEn: local.nameEn,
+        nameAr: local.nameAr,
+        brand: local.brand?.name || local.brand || "Haute Parfumerie",
+        brandType: local.brand?.type || "NICHE",
+        concentration: (local.concentration || "").replaceAll("_", " "),
+        perfumer: local.perfumer,
+        perfumerBio: local.perfumerBio,
+        origin: local.countryOfOrigin || local.origin || "Haute Parfumerie",
+        scentFamily: local.scentFamily?.nameEn || local.scentFamily || "Woody Amber",
+        longevity: local.longevity || "20+ Hours",
+        sillage: local.sillage || "Royal Sillage",
+        price: Number(v?.price || 0),
+        image: local.images?.[0] || "/product-placeholder.svg",
+        volumeMl: v?.volumeMl || 100,
+        variantId: v?.id,
+        topNotes,
+        heartNotes,
+        baseNotes,
+      });
+    },
+    [addItem, isAr]
+  );
+
   // If query string has ?items=slug1,slug2, hydrate items if compare list is empty
   useEffect(() => {
     const queryItems = searchParams.get("items");
     if (queryItems && items.length === 0) {
       const slugs = queryItems.split(",").map((s) => s.trim()).filter(Boolean);
-      for (const slug of slugs) {
-        const local = PREVIEW_CATALOG[slug];
-        if (local) {
-          const topNotes = local.notes?.filter((n: any) => n.position === "TOP").map((n: any) => n.name) || [];
-          const heartNotes = local.notes?.filter((n: any) => n.position === "HEART").map((n: any) => n.name) || [];
-          const baseNotes = local.notes?.filter((n: any) => n.position === "BASE").map((n: any) => n.name) || [];
-          addItem({
-            slug: local.slug,
-            nameEn: local.nameEn,
-            nameAr: local.nameAr,
-            brand: local.brand,
-            brandType: "NICHE",
-            concentration: local.concentration,
-            perfumer: local.perfumer,
-            perfumerBio: local.perfumerBio,
-            origin: local.origin,
-            scentFamily: local.scentFamily || "Woody Amber",
-            longevity: local.longevity || "20+ Hours",
-            sillage: local.sillage || "Royal Sillage",
-            price: local.variants?.[0]?.price || 1500,
-            image: local.images?.[0] || "/product-placeholder.svg",
-            volumeMl: local.variants?.[0]?.volumeMl || 100,
-            variantId: local.variants?.[0]?.id,
-            topNotes,
-            heartNotes,
-            baseNotes,
-          });
-        }
-      }
+      Promise.all(slugs.map((s) => muschioApi.getProductBySlug(s))).then((products) => {
+        products.forEach((prod) => {
+          if (prod) addProductToCompare(prod);
+        });
+      });
     }
-  }, [searchParams, items.length, addItem]);
+  }, [searchParams, items.length, addProductToCompare]);
 
   // Find shared notes across compared items
   const sharedNotes = useMemo(() => {
@@ -128,37 +146,14 @@ export default function ComparePage({
   };
 
   // Sample curated pairs for instant comparison when empty
-  const handleLoadCuratedPair = (slug1: string, slug2: string) => {
+  const handleLoadCuratedPair = async (slug1: string, slug2: string) => {
     clearCompare();
-    [slug1, slug2].forEach((slug) => {
-      const local = PREVIEW_CATALOG[slug];
-      if (local) {
-        const topNotes = local.notes?.filter((n: any) => n.position === "TOP").map((n: any) => n.name) || [];
-        const heartNotes = local.notes?.filter((n: any) => n.position === "HEART").map((n: any) => n.name) || [];
-        const baseNotes = local.notes?.filter((n: any) => n.position === "BASE").map((n: any) => n.name) || [];
-        addItem({
-          slug: local.slug,
-          nameEn: local.nameEn,
-          nameAr: local.nameAr,
-          brand: local.brand,
-          brandType: "NICHE",
-          concentration: local.concentration,
-          perfumer: local.perfumer,
-          perfumerBio: local.perfumerBio,
-          origin: local.origin,
-          scentFamily: local.scentFamily || "Woody Amber",
-          longevity: local.longevity || "20+ Hours",
-          sillage: local.sillage || "Royal Sillage",
-          price: local.variants?.[0]?.price || 1500,
-          image: local.images?.[0] || "/product-placeholder.svg",
-          volumeMl: local.variants?.[0]?.volumeMl || 100,
-          variantId: local.variants?.[0]?.id,
-          topNotes,
-          heartNotes,
-          baseNotes,
-        });
-      }
-    });
+    const [p1, p2] = await Promise.all([
+      muschioApi.getProductBySlug(slug1),
+      muschioApi.getProductBySlug(slug2),
+    ]);
+    if (p1) addProductToCompare(p1);
+    if (p2) addProductToCompare(p2);
   };
 
   return (
@@ -251,35 +246,35 @@ export default function ComparePage({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-start">
             <button
               onClick={() =>
-                handleLoadCuratedPair("amouage-interlude-53-man", "roja-elysium-pour-homme-parfum")
+                handleLoadCuratedPair("amouage-interlude-53-man", "creed-aventus-millesime")
               }
               className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
             >
               <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Spicy Smoky vs Fresh Citrus", "دخاني حار مقابل حمضيات منعشة")}
+                {c("Smoky Resins vs Noble Citrus", "دخاني صمغي مقابل حمضيات نبيلة")}
               </span>
               <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                Amouage Interlude 53 vs Roja Elysium
+                Amouage Interlude 53 vs Creed Aventus
               </h4>
               <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare 53% Extrait with British Royal Freshness", "مقارنة تركيز 53% مع الانتعاش البريطاني الملكي")}
+                {c("Compare 53% Extrait with Millesime Aromatic Woods", "مقارنة تركيز 53% مع فخامة أخشاب الميليسيم")}
               </span>
             </button>
 
             <button
               onClick={() =>
-                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "xerjoff-alexandria-ii-eau-de-parfum")
+                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "amouage-guidance-extrait")
               }
               className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
             >
               <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Amber Crystal vs Laotian Oud", "كريستال عنبري مقابل عود لاوسي")}
+                {c("Amber Floral vs Luminous Woods", "كريستال عنبري مقابل أخشاب مضيئة")}
               </span>
               <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                MFK Baccarat 540 vs Xerjoff Alexandria II
+                MFK Baccarat 540 vs Amouage Guidance 46
               </h4>
               <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare Crystalline Sillage with Royal Italian Oud", "مقارنة الإشراقة الكريستالية مع فخامة العود الإيطالي")}
+                {c("Compare Grandiflorum Jasmine with Frankincense & Pear", "مقارنة ياسمين غرانديفلوروم مع اللبان الحوجري")}
               </span>
             </button>
           </div>

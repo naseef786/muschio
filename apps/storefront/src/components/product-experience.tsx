@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart, Share2, ChevronDown, Check, Sparkles, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
+import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
 import { CollectionSlider } from "./collection-slider";
 import { useWishlist } from "../context/wishlist-context";
@@ -57,7 +57,6 @@ export interface ProductDetailProps {
   relatedProducts?: Array<any>;
   houseProducts?: Array<any>;
   locale: "en" | "ar";
-  preview: boolean;
 }
 
 export function getVariantPricing(v?: ProductDetailProps["product"]["variants"][0]) {
@@ -127,7 +126,6 @@ export function ProductExperience({
   relatedProducts = [],
   houseProducts = [],
   locale,
-  preview,
 }: ProductDetailProps) {
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
@@ -589,22 +587,6 @@ export function ProductExperience({
                     );
                   })}
                 </div>
-              </div>
-            )}
-
-            {/* Truthful Preview / Availability Banner */}
-            {preview && (
-              <div className="p-4 bg-[#F9F9FB] dark:bg-neutral-900/40 border border-neutral-100 dark:border-neutral-800 text-xs leading-relaxed text-neutral-700 dark:text-neutral-300 rounded-sm">
-                <div className="flex items-center gap-2 font-medium text-accent mb-1">
-                  <Sparkles size={14} />
-                  <span>{c("Maison Collection Preview", "معاينة مجموعة الميزون")}</span>
-                </div>
-                <p className="text-neutral-500 text-xs">
-                  {c(
-                    "This creation is part of our verified olfactory catalog. Online self-checkout is currently in preview mode. To reserve this flacon or request private consultation, contact our fragrance concierge.",
-                    "هذا العطر جزء من مجموعتنا المعتمدة. الشراء الإلكتروني المباشر في وضع المعاينة حالياً. لحجز الزجاجة أو الاستشارة الخاصة، يُرجى التواصل مع مستشار العطور.",
-                  )}
-                </p>
               </div>
             )}
 
