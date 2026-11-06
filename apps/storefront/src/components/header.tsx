@@ -119,6 +119,41 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
   }, [cart]);
 
   const [liveCatalog, setLiveCatalog] = useState<Array<{ nameEn: string; nameAr: string; brand: string; href: string }>>([]);
+  const [navBrands, setNavBrands] = useState<Array<{ name: string; slug: string; origin?: string }>>([]);
+  const [navNotes, setNavNotes] = useState<Array<{ nameEn: string; nameAr: string; slug: string; categoryEn?: string; categoryAr?: string }>>([]);
+
+  useEffect(() => {
+    let active = true;
+    Promise.all([
+      muschioApi.getBrands(),
+      muschioApi.getNotes({ limit: 4 }),
+    ]).then(([brands, notes]) => {
+      if (!active) return;
+      if (Array.isArray(brands) && brands.length > 0) {
+        setNavBrands(
+          brands.slice(0, 5).map((b: any) => ({
+            name: b.name,
+            slug: b.slug,
+            origin: b.countryOfOrigin || undefined,
+          })),
+        );
+      }
+      if (Array.isArray(notes) && notes.length > 0) {
+        setNavNotes(
+          notes.slice(0, 3).map((n: any) => ({
+            nameEn: n.nameEn,
+            nameAr: n.nameAr,
+            slug: n.slugEn || n.slug,
+            categoryEn: n.categoryEn || undefined,
+            categoryAr: n.categoryAr || undefined,
+          })),
+        );
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!search) return;
@@ -384,26 +419,27 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[420px] space-y-3 text-start normal-case">
               <span className="eyebrow">{c("Curated Haute Maisons", "دور العطور المعتمدة")}</span>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                <Link href="/brands/amouage" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col">
-                  <span className="font-medium text-luxury-text">Amouage</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Sultanate of Oman", "سلطنة عمان")}</span>
-                </Link>
-                <Link href="/brands/roja-parfums" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col">
-                  <span className="font-medium text-luxury-text">Roja Parfums</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("London, Mayfair", "لندن، مايفير")}</span>
-                </Link>
-                <Link href="/brands/maison-francis-kurkdjian" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col">
-                  <span className="font-medium text-luxury-text">MFK Paris</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Paris, France", "باريس، فرنسا")}</span>
-                </Link>
-                <Link href="/brands/xerjoff" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col">
-                  <span className="font-medium text-luxury-text">Xerjoff</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Turin, Italy", "تورينو، إيطاليا")}</span>
-                </Link>
-                <Link href="/brands/tom-ford" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col">
-                  <span className="font-medium text-luxury-text">Tom Ford Privé</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("New York", "نيويورك")}</span>
-                </Link>
+                {(navBrands.length > 0
+                  ? navBrands
+                  : [
+                      { name: "Amouage", slug: "amouage", origin: c("Sultanate of Oman", "سلطنة عمان") },
+                      { name: "Roja Parfums", slug: "roja-parfums", origin: c("London, Mayfair", "لندن، مايفير") },
+                      { name: "MFK Paris", slug: "maison-francis-kurkdjian", origin: c("Paris, France", "باريس، فرنسا") },
+                      { name: "Xerjoff", slug: "xerjoff", origin: c("Turin, Italy", "تورينو، إيطاليا") },
+                      { name: "Tom Ford Privé", slug: "tom-ford", origin: c("New York", "نيويورك") },
+                    ]
+                ).map((b) => (
+                  <Link
+                    key={b.slug}
+                    href={`/brands/${b.slug}`}
+                    className="p-2 rounded hover:bg-luxury-surface2 flex flex-col"
+                  >
+                    <span className="font-medium text-luxury-text">{b.name}</span>
+                    {b.origin && (
+                      <span className="text-[10px] text-luxury-muted uppercase">{b.origin}</span>
+                    )}
+                  </Link>
+                ))}
                 <Link href="/brands" className="p-2 rounded hover:bg-luxury-surface2 flex flex-col justify-center text-accent font-medium uppercase text-[11px]">
                   <span>{c("All Houses (A–Z) →", "جميع الدور (أ–ي) ←")}</span>
                 </Link>
@@ -424,18 +460,25 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[380px] space-y-3 text-start normal-case">
               <span className="eyebrow">{c("Rare Raw Materials", "مكونات نادرة")}</span>
               <div className="space-y-1.5 text-xs">
-                <Link href="/notes/cambodian-oud" className="p-2 rounded hover:bg-luxury-surface2 flex items-center justify-between">
-                  <span className="font-medium text-luxury-text">{c("Cambodian Oud", "عود كمبودي معتق")}</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Base Note", "نوتة قاعدة")}</span>
-                </Link>
-                <Link href="/notes/taif-rose" className="p-2 rounded hover:bg-luxury-surface2 flex items-center justify-between">
-                  <span className="font-medium text-luxury-text">{c("Royal Taif Rose", "ورد الطائف الملكي")}</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Heart Note", "نوتة قلب")}</span>
-                </Link>
-                <Link href="/notes/silver-frankincense" className="p-2 rounded hover:bg-luxury-surface2 flex items-center justify-between">
-                  <span className="font-medium text-luxury-text">{c("Silver Frankincense", "لبان حوجري فضي")}</span>
-                  <span className="text-[10px] text-luxury-muted uppercase">{c("Sacred Resin", "صمغ مقدس")}</span>
-                </Link>
+                {(navNotes.length > 0
+                  ? navNotes
+                  : [
+                      { nameEn: "Cambodian Oud", nameAr: "عود كمبودي معتق", slug: "cambodian-oud", categoryEn: "Base Note", categoryAr: "نوتة قاعدة" },
+                      { nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose", categoryEn: "Heart Note", categoryAr: "نوتة قلب" },
+                      { nameEn: "Silver Frankincense", nameAr: "لبان حوجري فضي", slug: "silver-frankincense", categoryEn: "Sacred Resin", categoryAr: "صمغ مقدس" },
+                    ]
+                ).map((n) => (
+                  <Link
+                    key={n.slug}
+                    href={`/notes/${n.slug}`}
+                    className="p-2 rounded hover:bg-luxury-surface2 flex items-center justify-between"
+                  >
+                    <span className="font-medium text-luxury-text">{c(n.nameEn, n.nameAr)}</span>
+                    <span className="text-[10px] text-luxury-muted uppercase">
+                      {c(n.categoryEn || "Rare Essence", n.categoryAr || "خلاصة نادرة")}
+                    </span>
+                  </Link>
+                ))}
                 <Link href="/notes" className="pt-2 block text-xs font-medium text-accent hover:underline uppercase tracking-wider">
                   {c("Explore Olfactory Compendium →", "استكشف معجم النوتات ←")}
                 </Link>

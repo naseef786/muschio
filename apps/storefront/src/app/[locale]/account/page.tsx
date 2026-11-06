@@ -252,8 +252,8 @@ export default function AccountPage({
                       "شحن جوي مبرد مجاني لكافة الطلبات، وأولوية حجز الدفعات الخاصة، ومستشار عطري مخصص.",
                     )
                   : c(
-                      "Earn 5% Olfactory Loyalty credits on every acquisition, complimentary 2ml sample vial, and priority dispatch.",
-                      "كسب ٥٪ رصيد ولاء عطري على كل عملية شراء، وعينة ٢ مل مجانية، وأولوية في التجهيز.",
+                      "Earn 5% Olfactory Loyalty credits on every acquisition, complimentary 7-day returns, and priority dispatch.",
+                      "كسب ٥٪ رصيد ولاء عطري على كل عملية شراء، وإرجاع مجاني حتى ٧ أيام، وأولوية في التجهيز.",
                     )}
               </p>
             </div>

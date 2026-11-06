@@ -47,33 +47,73 @@ export function CollectionSlider({
   const [scrollProgress, setScrollProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>("all");
 
-  const hasCustomCollections = Boolean(collections && collections.length > 0);
+  const validCollections = React.useMemo(() => {
+    return (collections || []).filter((col) => col.products && col.products.length > 0);
+  }, [collections]);
 
-  // Dynamic tabs: if custom collections are passed from admin curations, show them!
+  // Dynamic tabs: only show collections/categories that actually exist in the live catalog
   const tabs = React.useMemo(() => {
-    if (hasCustomCollections && collections) {
+    if (validCollections.length > 0) {
       return [
         { id: "all", labelEn: "All Curations", labelAr: "جميع المختارات" },
-        ...collections.map((col) => ({
+        ...validCollections.map((col) => ({
           id: col.id,
           labelEn: col.nameEn,
           labelAr: col.nameAr,
         })),
       ];
     }
-    return [
+
+    const availableTabs = [
       { id: "all", labelEn: "All Curations", labelAr: "جميع المختارات" },
-      { id: "extraits", labelEn: "Extraits de Parfum", labelAr: "خلاصات العطور" },
-      { id: "rare-attars", labelEn: "Aged Attars & Ouds", labelAr: "الأدهان والعود المعتق" },
-      { id: "private-blend", labelEn: "Private Blends", labelAr: "المجموعات الخاصة" },
     ];
-  }, [hasCustomCollections, collections]);
+
+    const hasExtraits = products.some((p) => {
+      const conc = (p.concentration || "").toLowerCase();
+      const name = `${p.nameEn} ${p.nameAr || ""}`.toLowerCase();
+      return conc.includes("extrait") || name.includes("extrait");
+    });
+    if (hasExtraits) {
+      availableTabs.push({ id: "extraits", labelEn: "Extraits de Parfum", labelAr: "خلاصات العطور" });
+    }
+
+    const hasOuds = products.some((p) => {
+      const conc = (p.concentration || "").toLowerCase();
+      const name = `${p.nameEn} ${p.nameAr || ""}`.toLowerCase();
+      return (
+        conc.includes("attar") ||
+        name.includes("oud") ||
+        name.includes("attar") ||
+        name.includes("عود") ||
+        name.includes("دهن")
+      );
+    });
+    if (hasOuds) {
+      availableTabs.push({ id: "rare-attars", labelEn: "Aged Attars & Ouds", labelAr: "الأدهان والعود المعتق" });
+    }
+
+    const hasPrivate = products.some((p) => {
+      const badge = (p.badge || "").toLowerCase();
+      const conc = (p.concentration || "").toLowerCase();
+      return (
+        badge.includes("private") ||
+        badge.includes("haute") ||
+        conc.includes("parfum") ||
+        conc.includes("pure")
+      );
+    });
+    if (hasPrivate) {
+      availableTabs.push({ id: "private-blend", labelEn: "Private Blends", labelAr: "المجموعات الخاصة" });
+    }
+
+    return availableTabs;
+  }, [validCollections, products]);
 
   const displayProducts = React.useMemo(() => {
     if (!enableTabs || activeTab === "all") return products;
 
-    if (hasCustomCollections && collections) {
-      const matchedCollection = collections.find((col) => col.id === activeTab);
+    if (validCollections.length > 0) {
+      const matchedCollection = validCollections.find((col) => col.id === activeTab);
       if (matchedCollection && matchedCollection.products && matchedCollection.products.length > 0) {
         return matchedCollection.products;
       }
@@ -108,8 +148,8 @@ export function CollectionSlider({
       return true;
     });
 
-    return filtered.length > 0 ? filtered : products;
-  }, [products, collections, hasCustomCollections, activeTab, enableTabs]);
+    return filtered;
+  }, [products, validCollections, activeTab, enableTabs]);
 
   // Reset scroll when switching tabs
   useEffect(() => {
@@ -280,7 +320,7 @@ export function CollectionSlider({
       </div>
 
       {/* 2. Optional Collection Filter Tabs */}
-      {enableTabs && (
+      {enableTabs && tabs.length > 1 && (
         <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-4 pt-1">
           {tabs.map((tab) => {
             const isActive = activeTab === tab.id;
@@ -304,17 +344,25 @@ export function CollectionSlider({
 
       {/* 3. Horizontal Smooth Slider Track */}
       <div className="relative group/slider mt-2">
-        <div
-          ref={sliderRef}
-          onMouseDown={handleMouseDown}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUpOrLeave}
-          onMouseLeave={handleMouseUpOrLeave}
-          className={`flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2 px-1 ${
-            isMouseDown ? "cursor-grabbing select-none" : "cursor-grab"
-          }`}
-          style={{ WebkitOverflowScrolling: "touch" }}
-        >
+        {displayProducts.length === 0 ? (
+          <div className="py-16 text-center border border-luxury-border bg-luxury-surface text-xs text-luxury-muted">
+            {c(
+              "No creations currently featured in this curation.",
+              "لا توجد إصدارات حالياً في هذه المجموعة العطرية.",
+            )}
+          </div>
+        ) : (
+          <div
+            ref={sliderRef}
+            onMouseDown={handleMouseDown}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUpOrLeave}
+            onMouseLeave={handleMouseUpOrLeave}
+            className={`flex gap-4 sm:gap-6 overflow-x-auto no-scrollbar scroll-smooth snap-x snap-mandatory py-2 px-1 ${
+              isMouseDown ? "cursor-grabbing select-none" : "cursor-grab"
+            }`}
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
           {displayProducts.map((product) => (
             <div
               key={product.slug}
@@ -344,6 +392,7 @@ export function CollectionSlider({
             </div>
           ))}
         </div>
+        )}
 
         {/* 4. Luxury Scroll Progress Indicator */}
         <div className="mt-6 flex items-center justify-between gap-4">

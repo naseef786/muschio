@@ -263,18 +263,18 @@ export default function ComparePage({
 
             <button
               onClick={() =>
-                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "amouage-guidance-extrait")
+                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "xerjoff-alexandria-ii")
               }
               className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
             >
               <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Amber Floral vs Luminous Woods", "كريستال عنبري مقابل أخشاب مضيئة")}
+                {c("Amber Floral vs Royal Woods", "كريستال عنبري مقابل أخشاب ملكية")}
               </span>
               <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                MFK Baccarat 540 vs Amouage Guidance 46
+                MFK Baccarat 540 vs Xerjoff Alexandria II
               </h4>
               <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare Grandiflorum Jasmine with Frankincense & Pear", "مقارنة ياسمين غرانديفلوروم مع اللبان الحوجري")}
+                {c("Compare Glowing Ambergris with Aged Laos Agarwood", "مقارنة العنبر المتوهج مع خشب عود لاوس المعتق")}
               </span>
             </button>
           </div>

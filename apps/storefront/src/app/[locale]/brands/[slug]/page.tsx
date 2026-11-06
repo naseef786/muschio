@@ -109,8 +109,17 @@ export default async function BrandDetailPage({
                 nameAr={perfume.nameAr}
                 brand={brand.name}
                 concentration={perfume.concentration}
-                price={perfume.price}
-                compareAtPrice={perfume.compareAtPrice}
+                price={
+                  perfume.variants?.find((v: any) => !v.isSampleVial)?.price ||
+                  perfume.variants?.[0]?.price ||
+                  perfume.price ||
+                  0
+                }
+                compareAtPrice={
+                  perfume.variants?.find((v: any) => !v.isSampleVial)?.compareAtPrice ||
+                  perfume.variants?.[0]?.compareAtPrice ||
+                  perfume.compareAtPrice
+                }
                 variants={perfume.variants}
                 image={perfume.images?.[0] || "/placeholder-flacon.png"}
                 badge={brand.type === "NICHE" ? "Haute Niche" : undefined}

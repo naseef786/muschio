@@ -1,7 +1,7 @@
 import React from "react";
 import Image from "next/image";
 import { Link } from "../../navigation";
-import { ArrowUpRight, ShieldCheck, Truck, Package, Sparkles } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
 import { muschioApi } from "../../lib/api";
 
@@ -435,14 +435,14 @@ export default async function HomePage({
             </p>
           </div>
           <div className="flex flex-col items-center space-y-2 p-4 border-t lg:border-t-0 lg:border-s border-luxury-border">
-            <Package size={24} className="text-accent" />
+            <RotateCcw size={24} className="text-accent" />
             <h4 className="text-xs font-sans font-medium uppercase tracking-wider text-luxury-text">
-              {c("Complimentary 2ml Sample", "عينة ٢ مل مجانية مع كل طلب")}
+              {c("Free Returns up to 7 Days", "إرجاع مجاني حتى ٧ أيام")}
             </h4>
             <p className="text-xs text-luxury-muted leading-relaxed">
               {c(
-                "Every sealed full bottle arrives with an official 2ml discovery vial to test before breaking seals.",
-                "كل زجاجة مغلفة تأتي مع عينة ٢ مل لتجربتها أولاً مع ضمان الإرجاع للعبوات غير المفتوحة.",
+                "Complimentary white-glove courier returns within 7 days on all unopened, factory-sealed flacons.",
+                "استلام مجاني وإرجاع سلس خلال ٧ أيام لكافة الزجاجات المغلفة والمحفوظة بحالتها الأصلية.",
               )}
             </p>
           </div>
