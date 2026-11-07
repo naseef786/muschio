@@ -599,11 +599,15 @@ export function App() {
             try {
                 const token = authSession?.token;
                 const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
-                const [ordersRes, enquiriesRes, bannersRes, sectionsRes] = await Promise.all([
+                const [ordersRes, enquiriesRes, bannersRes, sectionsRes, settingsRes, reviewsRes, returnsRes, auditRes] = await Promise.all([
                     fetch("/api/v1/admin/orders", { headers: authHeaders }).catch(() => null),
                     fetch("/api/v1/admin/enquiries", { headers: authHeaders }).catch(() => null),
                     fetch("/api/v1/admin/banners", { headers: authHeaders }).catch(() => null),
                     fetch("/api/v1/admin/sections", { headers: authHeaders }).catch(() => null),
+                    fetch("/api/v1/admin/settings", { headers: authHeaders }).catch(() => null),
+                    fetch("/api/v1/admin/reviews", { headers: authHeaders }).catch(() => null),
+                    fetch("/api/v1/admin/returns", { headers: authHeaders }).catch(() => null),
+                    fetch("/api/v1/admin/audit-logs", { headers: authHeaders }).catch(() => null),
                 ]);
                 if (ordersRes && ordersRes.ok) {
                     const json = await ordersRes.json();
@@ -643,6 +647,67 @@ export function App() {
                     const json = await sectionsRes.json();
                     if (json.success && Array.isArray(json.data) && active) {
                         setSections(json.data);
+                    }
+                }
+                if (settingsRes && settingsRes.ok) {
+                    const json = await settingsRes.json();
+                    if (json.success && json.data && active) {
+                        setStoreSettings(json.data);
+                    }
+                }
+                if (reviewsRes && reviewsRes.ok) {
+                    const json = await reviewsRes.json();
+                    if (json.success && Array.isArray(json.data) && active) {
+                        setReviews(json.data.map((r) => ({
+                            id: r.id,
+                            customer: r.customer ? `${r.customer.firstName} ${r.customer.lastName || ""}`.trim() : "Collector",
+                            product: r.product?.nameEn || "Fragrance Flacon",
+                            rating: r.rating,
+                            review: r.body,
+                            title: r.title,
+                            status: r.status,
+                            date: new Date(r.createdAt).toLocaleDateString("en-GB", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                            }),
+                        })));
+                    }
+                }
+                if (returnsRes && returnsRes.ok) {
+                    const json = await returnsRes.json();
+                    if (json.success && Array.isArray(json.data) && active) {
+                        setReturns(json.data.map((r) => {
+                            const firstItem = r.items?.[0];
+                            const prodName = firstItem?.orderItem?.variant?.product?.nameEn || "Complimentary Flacon";
+                            const disposition = firstItem?.inspection?.disposition || (r.status === "COMPLETED" ? "RESTOCK_SELLABLE" : "PENDING_INSPECTION");
+                            const condition = firstItem?.inspection?.condition || "PENDING";
+                            return {
+                                id: r.id,
+                                number: r.returnNumber,
+                                customer: r.customer ? `${r.customer.firstName} ${r.customer.lastName || ""}`.trim() : "Client",
+                                item: prodName,
+                                condition,
+                                disposition,
+                                status: r.status,
+                                date: new Date(r.createdAt).toLocaleDateString("en-GB", {
+                                    month: "short",
+                                    day: "numeric",
+                                    year: "numeric",
+                                }),
+                            };
+                        }));
+                    }
+                }
+                if (auditRes && auditRes.ok) {
+                    const json = await auditRes.json();
+                    if (json.success && Array.isArray(json.data) && active) {
+                        setAuditLogs(json.data.map((a) => ({
+                            action: a.action,
+                            res: typeof a.diff === "string" ? a.diff : JSON.stringify(a.diff || a.resourceType),
+                            user: a.adminUser?.email || "superadmin@muschio.luxury",
+                            time: new Date(a.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+                        })));
                     }
                 }
             }
@@ -760,8 +825,20 @@ export function App() {
     // 9. AUDIT LOGS
     const [auditLogs, setAuditLogs] = usePersistentState("audit", []);
     const addAuditLog = (action, res) => {
-        const time = new Date().toLocaleTimeString();
-        setAuditLogs((prev) => [{ action, res, user: "superadmin@muschio.luxury", time }, ...prev.slice(0, 49)]);
+        const time = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+        setAuditLogs((prev) => [{ action, res, user: authSession?.user?.email || "superadmin@muschio.luxury", time }, ...prev.slice(0, 49)]);
+        try {
+            const token = authSession?.token;
+            fetch("/api/v1/admin/audit-logs", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ action, diff: res }),
+            }).catch(() => null);
+        }
+        catch { }
     };
     // Banner form state
     const [bannerSlotFilter, setBannerSlotFilter] = useState("ALL");
@@ -1707,21 +1784,73 @@ export function App() {
         }
     };
     // Return Actions
-    const handleInspectReturn = (returnId, disposition) => {
+    const handleInspectReturn = async (returnId, disposition) => {
         setReturns((prev) => prev.map((r) => r.id === returnId ? { ...r, disposition, status: "COMPLETED" } : r));
         addAuditLog("RETURN_INSPECTION_COMPLETED", `${returnId} disposition=${disposition}`);
+        try {
+            const token = authSession?.token;
+            await fetch("/api/v1/admin/returns/inspect", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ returnRequestId: returnId, disposition }),
+            });
+            addToast("return", "Return Inspection Completed", `Disposition set to ${disposition}`);
+        }
+        catch (err) {
+            console.warn("Could not save return inspection to server:", err);
+        }
     };
     // Review Actions
-    const handleReviewAction = (reviewId, status) => {
+    const handleReviewAction = async (reviewId, status) => {
         setReviews((prev) => prev.map((r) => (r.id === reviewId ? { ...r, status } : r)));
         addAuditLog("REVIEW_MODERATED", `${reviewId} status=${status}`);
+        try {
+            const token = authSession?.token;
+            await fetch("/api/v1/admin/reviews/status", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify({ reviewId, status }),
+            });
+            addToast("review", "Review Moderated", `Status updated to ${status}`);
+        }
+        catch (err) {
+            console.warn("Could not update review status on server:", err);
+        }
     };
     // Settings Save
-    const handleSaveSettings = (e) => {
+    const handleSaveSettings = async (e) => {
         e.preventDefault();
-        addAuditLog("STORE_SETTINGS_SAVED", "Social handles and Concierge info persisted");
-        setSettingsFeedback("Settings and Social Links saved successfully! Sync active.");
-        setTimeout(() => setSettingsFeedback(""), 4000);
+        setSettingsFeedback("Persisting configuration to Neon PostgreSQL...");
+        try {
+            const token = authSession?.token;
+            const res = await fetch("/api/v1/admin/settings", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                },
+                body: JSON.stringify(storeSettings),
+            });
+            if (res.ok) {
+                addAuditLog("STORE_SETTINGS_SAVED", "Social handles and Concierge info persisted to DB");
+                setSettingsFeedback("Settings and Social Links saved successfully to PostgreSQL! Sync active.");
+                addToast("settings", "Store Settings Saved", "All store configuration active on storefront");
+            }
+            else {
+                setSettingsFeedback("Settings updated locally, but server returned an error.");
+            }
+        }
+        catch (err) {
+            console.warn("Could not persist settings to server:", err);
+            setSettingsFeedback("Network issue: settings saved locally.");
+        }
+        setTimeout(() => setSettingsFeedback(""), 4500);
     };
     // Dynamic Dashboard Metrics
     const totalStockUnits = useMemo(() => products.reduce((acc, p) => acc + (p.stock || 0), 0), [products]);

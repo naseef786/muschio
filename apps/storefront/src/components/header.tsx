@@ -30,6 +30,7 @@ import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
+import { CurrencySwitcher } from "./currency-switcher";
 
 const POPULAR_SEARCHES = [
   { nameEn: "Creed Aventus", nameAr: "كريد أفينتوس", href: "/shop?search=Aventus" },
@@ -252,14 +253,32 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     };
   }, []);
 
+  const [announcement, setAnnouncement] = useState<{ en: string; ar: string }>({
+    en: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
+    ar: "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
+  });
+
+  useEffect(() => {
+    fetch("/api/v1/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.data) {
+          if (data.data.announcementBarEn || data.data.announcementBarAr) {
+            setAnnouncement({
+              en: data.data.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
+              ar: data.data.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
+            });
+          }
+        }
+      })
+      .catch(() => null);
+  }, []);
+
   return (
     <>
       {/* 1. Restrained Announcement Bar */}
       <div className="announcement-bar">
-        {c(
-          "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
-          "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
-        )}
+        {c(announcement.en, announcement.ar)}
       </div>
 
       {/* 2. Compact Sticky Luxury Header */}
@@ -311,8 +330,11 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             MUSCHIO
           </Link>
 
-          {/* Right Actions (Theme Switcher + Language + Wishlist + Bag) */}
+          {/* Right Actions (Theme Switcher + Currency + Language + Wishlist + Bag) */}
           <div className="header-actions">
+            {/* Currency Switcher */}
+            <CurrencySwitcher locale={locale} />
+
             {/* Desktop Theme Switcher */}
             <ThemeToggle
               locale={locale}
@@ -831,6 +853,11 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 {/* Theme Switcher Toggle */}
                 <div className="border border-luxury-border bg-luxury-canvas px-3 py-1 flex items-center justify-center">
                   <ThemeToggle locale={locale} showLabel={true} />
+                </div>
+
+                {/* Currency Switcher */}
+                <div className="border border-luxury-border bg-luxury-canvas px-3 py-1 flex items-center justify-center">
+                  <CurrencySwitcher locale={locale} />
                 </div>
               </div>
 

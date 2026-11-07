@@ -134,3 +134,7 @@ export { storefrontOrder } from "./services/storefront-order";
 export { CloudinaryService } from "./services/cloudinary.service";
 export { AdminService } from "./services/admin.service";
 export { SearchService } from "./services/search.service";
+export { SettingsService } from "./services/settings.service";
+export { ReviewsService } from "./services/reviews.service";
+export { ReturnsService } from "./services/returns.service";
+export { AuditService } from "./services/audit.service";

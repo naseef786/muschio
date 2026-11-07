@@ -141,9 +141,20 @@ export class CheckoutService {
         }
       }
 
+      // Dynamic GCC Country VAT: 15% for Saudi Arabia (ZATCA), 5% for UAE/BH/OM, 0% for KW/QA
+      const destinationCountry = (shippingAddress.country || "AE").toUpperCase();
+      let vatRate = 0.05;
+      if (destinationCountry === "SA" || destinationCountry === "KSA") {
+        vatRate = 0.15;
+      } else if (destinationCountry === "KW" || destinationCountry === "QA") {
+        vatRate = 0.0;
+      } else if (destinationCountry === "BH" || destinationCountry === "OM" || destinationCountry === "AE") {
+        vatRate = 0.05;
+      }
+
       const taxableBase = subtotal.minus(discountAmount);
-      const taxAmount = taxableBase.greaterThan(0)
-        ? taxableBase.minus(taxableBase.dividedBy(1.05)).toDecimalPlaces(2)
+      const taxAmount = taxableBase.greaterThan(0) && vatRate > 0
+        ? taxableBase.minus(taxableBase.dividedBy(1 + vatRate)).toDecimalPlaces(2)
         : new Prisma.Decimal(0);
 
       const totalAmount = subtotal

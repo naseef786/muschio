@@ -1,18 +1,29 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
   const isAr = locale === "ar";
+  const [waNumber, setWaNumber] = useState("97148006872");
+  const [waMsg, setWaMsg] = useState(
+    isAr
+      ? "مرحباً بكم في مسكيو للعطور الفاخرة، أود الاستفسار عن مجموعة العطور."
+      : "Hello Muschio Haute Parfumerie, I would like to inquire about your fragrance collection."
+  );
 
-  const whatsappUrl =
-    "https://wa.me/97148006872?text=" +
-    encodeURIComponent(
-      isAr
-        ? "مرحباً بكم في مسكيو للعطور الفاخرة، أود الاستفسار عن مجموعة العطور."
-        : "Hello Muschio Haute Parfumerie, I would like to inquire about your fragrance collection.",
-    );
+  useEffect(() => {
+    fetch("/api/v1/settings")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data?.success && data?.data) {
+          if (data.data.whatsappNumber) setWaNumber(data.data.whatsappNumber);
+          if (data.data.whatsappDefaultMsg) setWaMsg(data.data.whatsappDefaultMsg);
+        }
+      })
+      .catch(() => null);
+  }, []);
 
+  const whatsappUrl = `https://wa.me/${waNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(waMsg)}`;
   const titleText = isAr ? "تواصل عبر واتساب" : "Chat on WhatsApp";
 
   return (

@@ -16,6 +16,10 @@ import {
   CloudinaryService,
   AdminService,
   SearchService,
+  SettingsService,
+  ReviewsService,
+  ReturnsService,
+  AuditService,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
@@ -719,6 +723,38 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     if (path === "admin/sections") {
       const sections = await BannerService.getAllSections();
       return success(sections);
+    }
+
+    // 21. Store Settings (Public & Admin)
+    if (path === "settings" || path === "admin/settings") {
+      const settings = await SettingsService.getSettings();
+      return success(settings);
+    }
+
+    // 22. Public Product Reviews
+    if (path === "reviews") {
+      const productId = url.searchParams.get("productId");
+      if (!productId) return error("MISSING_PRODUCT_ID", "productId is required", 400);
+      const reviews = await ReviewsService.getProductReviews(productId);
+      return success(reviews);
+    }
+
+    // 23. Admin Reviews Moderation
+    if (path === "admin/reviews") {
+      const reviews = await ReviewsService.getAllReviews();
+      return success(reviews);
+    }
+
+    // 24. Admin Returns & Reverse Logistics
+    if (path === "admin/returns") {
+      const returns = await ReturnsService.getReturnRequests();
+      return success(returns);
+    }
+
+    // 25. Admin Audit Trail
+    if (path === "admin/audit-logs") {
+      const logs = await AuditService.getLogs(100);
+      return success(logs);
     }
 
 
@@ -2033,6 +2069,136 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(upserted);
     }
 
+    // Admin Review Status Moderation (PATCH)
+    if (route[0] === "admin" && route[1] === "reviews" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const reviewId = route[2];
+      const status = body.status;
+      if (!status) return error("INVALID_INPUT", "status is required", 400);
+      const updated = await ReviewsService.updateReviewStatus(reviewId, status, admin.id);
+      return success(updated);
+    }
+
+    // Admin Return Inspection & Restock (PATCH)
+    if (route[0] === "admin" && route[1] === "returns" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const returnRequestId = route[2];
+      const updated = await ReturnsService.inspectReturnRequest({
+        returnRequestId,
+        disposition: body.disposition || "RESTOCK_SELLABLE",
+        condition: body.condition,
+        adminUserId: admin.id,
+        notes: body.notes,
+      });
+      return success(updated);
+    }
+    if (path === "admin/settings") {
+      const admin = await verifyAdminAuth(req);
+      const updated = await SettingsService.updateSettings(body, admin?.id);
+      return success(updated);
+    }
+
+    // 24. Public Customer Review Submission
+    if (path === "reviews") {
+      const auth = getAuth(req);
+      let customerId = auth.customerId || body.customerId;
+      if (!customerId) {
+        if (body.email) {
+          let cust = await prisma.customer.findUnique({ where: { email: body.email } });
+          if (!cust) {
+            cust = await prisma.customer.create({
+              data: {
+                email: body.email,
+                firstName: body.name || body.firstName || "Client",
+                lastName: body.lastName || "",
+              },
+            });
+          }
+          customerId = cust.id;
+        } else {
+          const defaultCust = await prisma.customer.findFirst();
+          customerId = defaultCust?.id || "guest";
+        }
+      }
+
+      if (!body.productId) return error("MISSING_PRODUCT_ID", "productId is required", 400);
+
+      const review = await ReviewsService.submitReview({
+        customerId,
+        productId: body.productId,
+        orderItemId: body.orderItemId,
+        rating: Number(body.rating) || 5,
+        title: body.title,
+        body: body.body || body.comment || "",
+        longevityRating: body.longevityRating ? Number(body.longevityRating) : undefined,
+        sillageRating: body.sillageRating ? Number(body.sillageRating) : undefined,
+        imageUrls: body.imageUrls,
+      });
+      return success(review, 201);
+    }
+
+    // 25. Admin Review Status Moderation
+    if (path === "admin/reviews/status") {
+      const admin = await verifyAdminAuth(req);
+      const reviewId = body.reviewId || body.id;
+      const status = body.status;
+      if (!reviewId || !status) return error("INVALID_INPUT", "reviewId and status are required", 400);
+      const updated = await ReviewsService.updateReviewStatus(reviewId, status, admin?.id);
+      return success(updated);
+    }
+
+    // 26. Customer Return Request (7-Day Guarantee)
+    if (path === "returns") {
+      const auth = getAuth(req);
+      let customerId = auth.customerId || body.customerId;
+      if (!customerId) {
+        const order = await prisma.order.findUnique({ where: { id: body.orderId } });
+        customerId = order?.customerId || (await prisma.customer.findFirst())?.id || "guest";
+      }
+      if (!body.orderId) return error("MISSING_ORDER_ID", "orderId is required", 400);
+
+      const returnReq = await ReturnsService.requestReturn({
+        orderId: body.orderId,
+        customerId,
+        reason: body.reason || "Customer requested return within 7-day guarantee window",
+        requestedAction: body.requestedAction || "REFUND",
+        items: body.items || [],
+      });
+      return success(returnReq, 201);
+    }
+
+    // 27. Admin Return Inspection & Restock
+    if (path === "admin/returns/inspect") {
+      const admin = await verifyAdminAuth(req);
+      const returnRequestId = body.returnRequestId || body.id;
+      const disposition = body.disposition || "RESTOCK_SELLABLE";
+      const condition = body.condition;
+      if (!returnRequestId) return error("INVALID_INPUT", "returnRequestId is required", 400);
+      const updated = await ReturnsService.inspectReturnRequest({
+        returnRequestId,
+        disposition,
+        condition,
+        adminUserId: admin?.id,
+        notes: body.notes,
+      });
+      return success(updated);
+    }
+
+    // 28. Admin Audit Log Record
+    if (path === "admin/audit-logs") {
+      const admin = await verifyAdminAuth(req);
+      const logged = await AuditService.log({
+        adminUserId: admin?.id,
+        action: body.action || "ADMIN_ACTION",
+        resourceType: body.resourceType || "SYSTEM",
+        resourceId: body.resourceId || "general",
+        diff: body.diff || body.res,
+      });
+      return success(logged);
+    }
+
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
@@ -2105,6 +2271,136 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
       }
       const upserted = await BannerService.upsertSection({ sectionType, ...body });
       return success(upserted);
+    }
+
+    // Admin Review Status Moderation (PATCH)
+    if (route[0] === "admin" && route[1] === "reviews" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const reviewId = route[2];
+      const status = body.status;
+      if (!status) return error("INVALID_INPUT", "status is required", 400);
+      const updated = await ReviewsService.updateReviewStatus(reviewId, status, admin.id);
+      return success(updated);
+    }
+
+    // Admin Return Inspection & Restock (PATCH)
+    if (route[0] === "admin" && route[1] === "returns" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const returnRequestId = route[2];
+      const updated = await ReturnsService.inspectReturnRequest({
+        returnRequestId,
+        disposition: body.disposition || "RESTOCK_SELLABLE",
+        condition: body.condition,
+        adminUserId: admin.id,
+        notes: body.notes,
+      });
+      return success(updated);
+    }
+    if (path === "admin/settings") {
+      const admin = await verifyAdminAuth(req);
+      const updated = await SettingsService.updateSettings(body, admin?.id);
+      return success(updated);
+    }
+
+    // 24. Public Customer Review Submission
+    if (path === "reviews") {
+      const auth = getAuth(req);
+      let customerId = auth.customerId || body.customerId;
+      if (!customerId) {
+        if (body.email) {
+          let cust = await prisma.customer.findUnique({ where: { email: body.email } });
+          if (!cust) {
+            cust = await prisma.customer.create({
+              data: {
+                email: body.email,
+                firstName: body.name || body.firstName || "Client",
+                lastName: body.lastName || "",
+              },
+            });
+          }
+          customerId = cust.id;
+        } else {
+          const defaultCust = await prisma.customer.findFirst();
+          customerId = defaultCust?.id || "guest";
+        }
+      }
+
+      if (!body.productId) return error("MISSING_PRODUCT_ID", "productId is required", 400);
+
+      const review = await ReviewsService.submitReview({
+        customerId,
+        productId: body.productId,
+        orderItemId: body.orderItemId,
+        rating: Number(body.rating) || 5,
+        title: body.title,
+        body: body.body || body.comment || "",
+        longevityRating: body.longevityRating ? Number(body.longevityRating) : undefined,
+        sillageRating: body.sillageRating ? Number(body.sillageRating) : undefined,
+        imageUrls: body.imageUrls,
+      });
+      return success(review, 201);
+    }
+
+    // 25. Admin Review Status Moderation
+    if (path === "admin/reviews/status") {
+      const admin = await verifyAdminAuth(req);
+      const reviewId = body.reviewId || body.id;
+      const status = body.status;
+      if (!reviewId || !status) return error("INVALID_INPUT", "reviewId and status are required", 400);
+      const updated = await ReviewsService.updateReviewStatus(reviewId, status, admin?.id);
+      return success(updated);
+    }
+
+    // 26. Customer Return Request (7-Day Guarantee)
+    if (path === "returns") {
+      const auth = getAuth(req);
+      let customerId = auth.customerId || body.customerId;
+      if (!customerId) {
+        const order = await prisma.order.findUnique({ where: { id: body.orderId } });
+        customerId = order?.customerId || (await prisma.customer.findFirst())?.id || "guest";
+      }
+      if (!body.orderId) return error("MISSING_ORDER_ID", "orderId is required", 400);
+
+      const returnReq = await ReturnsService.requestReturn({
+        orderId: body.orderId,
+        customerId,
+        reason: body.reason || "Customer requested return within 7-day guarantee window",
+        requestedAction: body.requestedAction || "REFUND",
+        items: body.items || [],
+      });
+      return success(returnReq, 201);
+    }
+
+    // 27. Admin Return Inspection & Restock
+    if (path === "admin/returns/inspect") {
+      const admin = await verifyAdminAuth(req);
+      const returnRequestId = body.returnRequestId || body.id;
+      const disposition = body.disposition || "RESTOCK_SELLABLE";
+      const condition = body.condition;
+      if (!returnRequestId) return error("INVALID_INPUT", "returnRequestId is required", 400);
+      const updated = await ReturnsService.inspectReturnRequest({
+        returnRequestId,
+        disposition,
+        condition,
+        adminUserId: admin?.id,
+        notes: body.notes,
+      });
+      return success(updated);
+    }
+
+    // 28. Admin Audit Log Record
+    if (path === "admin/audit-logs") {
+      const admin = await verifyAdminAuth(req);
+      const logged = await AuditService.log({
+        adminUserId: admin?.id,
+        action: body.action || "ADMIN_ACTION",
+        resourceType: body.resourceType || "SYSTEM",
+        resourceId: body.resourceId || "general",
+        diff: body.diff || body.res,
+      });
+      return success(logged);
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);

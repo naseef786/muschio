@@ -1,3 +1,5 @@
+"use client";
+
 import * as React from "react";
 import { Currency } from "@muschio/types";
 import { cn } from "../utils/cn";
@@ -10,37 +12,87 @@ export interface PriceDisplayProps extends React.HTMLAttributes<HTMLDivElement> 
   locale?: "en" | "ar";
 }
 
-export function formatCurrency(amount: number, currency: Currency = "AED", locale: "en" | "ar" = "en"): string {
-  const currencyLabels: Record<Currency, { en: string; ar: string }> = {
-    AED: { en: "AED", ar: "د.إ" },
-    SAR: { en: "SAR", ar: "ر.س" },
-    USD: { en: "USD", ar: "$" },
-    QAR: { en: "QAR", ar: "ر.ق" },
-    KWD: { en: "KWD", ar: "د.ك" },
-    OMR: { en: "OMR", ar: "ر.ع" },
-    BHD: { en: "BHD", ar: "د.ب" },
-  };
+const GCC_RATES: Record<Currency, number> = {
+  AED: 1.0,
+  SAR: 1.021,
+  QAR: 0.992,
+  KWD: 0.0832,
+  BHD: 0.1027,
+  OMR: 0.1048,
+  USD: 0.2723,
+};
 
+const CURRENCY_LABELS: Record<Currency, { en: string; ar: string }> = {
+  AED: { en: "AED", ar: "د.إ" },
+  SAR: { en: "SAR", ar: "ر.س" },
+  USD: { en: "USD", ar: "$" },
+  QAR: { en: "QAR", ar: "ر.ق" },
+  KWD: { en: "KWD", ar: "د.ك" },
+  OMR: { en: "OMR", ar: "ر.ع" },
+  BHD: { en: "BHD", ar: "د.ب" },
+};
+
+export function formatCurrency(amount: number, currency: Currency = "AED", locale: "en" | "ar" = "en"): string {
   const formattedNumber = new Intl.NumberFormat(locale === "ar" ? "ar-AE" : "en-AE", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(amount);
 
-  const label = currencyLabels[currency][locale];
+  const label = CURRENCY_LABELS[currency]?.[locale] || currency;
   return locale === "ar" ? `${formattedNumber} ${label}` : `${label} ${formattedNumber}`;
 }
 
 export function PriceDisplay({
   price,
   compareAtPrice,
-  currency = "AED",
+  currency,
   size = "md",
   locale = "en",
   className,
   ...props
 }: PriceDisplayProps) {
-  const isDiscounted = compareAtPrice && compareAtPrice > price;
-  const discountPercent = isDiscounted ? Math.round(((compareAtPrice - price) / compareAtPrice) * 100) : 0;
+  const [selectedCurrency, setSelectedCurrency] = React.useState<Currency>(currency || "AED");
+
+  React.useEffect(() => {
+    if (currency) {
+      setSelectedCurrency(currency);
+      return;
+    }
+
+    try {
+      const saved = localStorage.getItem("muschio_preferred_currency") as Currency;
+      if (saved && GCC_RATES[saved]) {
+        setSelectedCurrency(saved);
+      }
+    } catch {}
+
+    const onCurrencyChange = (e: any) => {
+      if (e?.detail?.currency && GCC_RATES[e.detail.currency as Currency]) {
+        setSelectedCurrency(e.detail.currency as Currency);
+      }
+    };
+
+    window.addEventListener("muschio_currency_change", onCurrencyChange);
+    return () => window.removeEventListener("muschio_currency_change", onCurrencyChange);
+  }, [currency]);
+
+  const activeCurr = currency || selectedCurrency;
+  const rate = GCC_RATES[activeCurr] || 1;
+
+  // Convert from baseline AED price to active currency
+  const convertedPrice =
+    activeCurr === "KWD" || activeCurr === "BHD" || activeCurr === "OMR"
+      ? Math.round(price * rate * 10) / 10
+      : Math.round(price * rate);
+
+  const convertedCompare = compareAtPrice
+    ? activeCurr === "KWD" || activeCurr === "BHD" || activeCurr === "OMR"
+      ? Math.round(compareAtPrice * rate * 10) / 10
+      : Math.round(compareAtPrice * rate)
+    : null;
+
+  const isDiscounted = convertedCompare && convertedCompare > convertedPrice;
+  const discountPercent = isDiscounted ? Math.round(((convertedCompare - convertedPrice) / convertedCompare) * 100) : 0;
 
   return (
     <div className={cn("inline-flex items-baseline gap-2 flex-wrap", className)} {...props}>
@@ -52,7 +104,7 @@ export function PriceDisplay({
           "text-2xl md:text-3xl": size === "xl",
         })}
       >
-        {formatCurrency(price, currency, locale)}
+        {formatCurrency(convertedPrice, activeCurr, locale)}
       </span>
 
       {isDiscounted && (
@@ -64,7 +116,7 @@ export function PriceDisplay({
               "text-lg": size === "xl",
             })}
           >
-            {formatCurrency(compareAtPrice, currency, locale)}
+            {formatCurrency(convertedCompare, activeCurr, locale)}
           </span>
           <span className="text-xs uppercase font-sans font-medium text-accent tracking-wider">
             {locale === "ar" ? `وفر ${discountPercent}%` : `Save ${discountPercent}%`}

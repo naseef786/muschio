@@ -55,7 +55,7 @@ export function generateProductJsonLd(params: ProductJsonLdParams, locale = "en"
         "@type": "MerchantReturnPolicy",
         applicableCountry: ["AE", "SA", "QA", "KW", "BH", "OM"],
         returnPolicyCategory: "https://schema.org/MerchantReturnFiniteReturnWindow",
-        merchantReturnDays: 14,
+        merchantReturnDays: 7,
         returnMethod: "https://schema.org/ReturnByMail",
         returnFees: "https://schema.org/FreeReturn",
       },
