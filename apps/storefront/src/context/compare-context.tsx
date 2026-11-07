@@ -86,17 +86,22 @@ export function CompareProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback(
     (item: CompareItem): boolean => {
-      if (items.some((i) => i.slug === item.slug)) {
-        return true;
-      }
-      if (items.length >= MAX_COMPARE_ITEMS) {
-        return false;
-      }
-      setItems((prev) => [...prev, item]);
+      setItems((prev) => {
+        const existingIdx = prev.findIndex((i) => i.slug === item.slug);
+        if (existingIdx >= 0) {
+          const next = [...prev];
+          next[existingIdx] = { ...next[existingIdx], ...item };
+          return next;
+        }
+        if (prev.length >= MAX_COMPARE_ITEMS) {
+          return prev;
+        }
+        return [...prev, item];
+      });
       setIsDockOpen(true);
       return true;
     },
-    [items]
+    []
   );
 
   const removeItem = useCallback((slug: string) => {

@@ -85,7 +85,15 @@ export function ProductCard({
       const volB = b.volumeMl ?? (typeof b.volume === "number" ? b.volume : parseInt(String(b.volume || "").replace(/[^0-9]/g, "")) || 0);
       return volA - volB;
     });
-  }, [variants, slug]);
+  }, [variants]);
+
+  const isOutOfStock = useMemo(() => {
+    if (activeVariants.length === 0) return false;
+    return activeVariants.every((v) => {
+      const stock = v.stock ?? v.stockQuantity ?? v.availableQuantity ?? 0;
+      return stock <= 0;
+    });
+  }, [activeVariants]);
 
   // Determine pricing
   const { displayPrice, displayCompareAtPrice, isDiscounted } = useMemo(() => {
@@ -199,6 +207,15 @@ export function ProductCard({
       <div
         className={`relative ${aspectClass} w-full bg-[#F8F8F8] dark:bg-neutral-900 overflow-hidden rounded-none`}
       >
+        {/* Out of Stock Indicator */}
+        {isOutOfStock && (
+          <div className="absolute top-3 start-3 z-20">
+            <span className="px-2 py-0.5 text-[10px] uppercase font-sans tracking-wider bg-white/95 dark:bg-black/90 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
+              {isAr ? "غير متوفر" : "Out of Stock"}
+            </span>
+          </div>
+        )}
+
         {/* Minimalist Floating Heart (Level Shoes pattern) */}
         <button
           type="button"

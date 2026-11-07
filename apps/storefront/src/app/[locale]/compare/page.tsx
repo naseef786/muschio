@@ -58,15 +58,15 @@ export default function ComparePage({
         slug: local.slug,
         nameEn: local.nameEn,
         nameAr: local.nameAr,
-        brand: local.brand?.name || local.brand || "Haute Parfumerie",
+        brand: local.brand?.name || local.brand || "",
         brandType: local.brand?.type || "NICHE",
         concentration: (local.concentration || "").replaceAll("_", " "),
-        perfumer: local.perfumer,
-        perfumerBio: local.perfumerBio,
-        origin: local.countryOfOrigin || local.origin || "Haute Parfumerie",
-        scentFamily: local.scentFamily?.nameEn || local.scentFamily || "Woody Amber",
-        longevity: local.longevity || "20+ Hours",
-        sillage: local.sillage || "Royal Sillage",
+        perfumer: local.perfumer || local.perfumers?.[0]?.perfumer?.name || undefined,
+        perfumerBio: local.perfumerBio || local.perfumers?.[0]?.perfumer?.bioEn || undefined,
+        origin: local.countryOfOrigin || local.origin || local.brand?.countryOfOrigin || undefined,
+        scentFamily: local.scentFamily?.nameEn || (typeof local.scentFamily === "string" ? local.scentFamily : undefined),
+        longevity: local.longevity || undefined,
+        sillage: local.sillage || undefined,
         price: Number(v?.price || 0),
         image: local.images?.[0] || "/product-placeholder.svg",
         volumeMl: v?.volumeMl || 100,
@@ -78,6 +78,18 @@ export default function ComparePage({
     },
     [addItem, isAr]
   );
+
+  // Re-hydrate any existing items from the live database on mount (clears any stale mock data)
+  useEffect(() => {
+    if (items.length > 0) {
+      items.forEach((it) => {
+        muschioApi.getProductBySlug(it.slug).then((live) => {
+          if (live) addProductToCompare(live);
+        });
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // If query string has ?items=slug1,slug2, hydrate items if compare list is empty
   useEffect(() => {
@@ -263,18 +275,18 @@ export default function ComparePage({
 
             <button
               onClick={() =>
-                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "xerjoff-alexandria-ii")
+                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "amouage-guidance-extrait")
               }
               className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
             >
               <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Amber Floral vs Royal Woods", "كريستال عنبري مقابل أخشاب ملكية")}
+                {c("Amber Floral vs Luminous Woods", "كريستال عنبري مقابل أخشاب مضيئة")}
               </span>
               <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                MFK Baccarat 540 vs Xerjoff Alexandria II
+                MFK Baccarat 540 vs Amouage Guidance 46
               </h4>
               <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare Glowing Ambergris with Aged Laos Agarwood", "مقارنة العنبر المتوهج مع خشب عود لاوس المعتق")}
+                {c("Compare Glowing Ambergris with Omani Frankincense & Vanilla", "مقارنة العنبر المتوهج مع اللبان العُماني والفانيليا")}
               </span>
             </button>
           </div>
@@ -415,9 +427,13 @@ export default function ComparePage({
                   </td>
                   {items.map((item) => (
                     <td key={item.slug} className="p-4 text-luxury-text">
-                      <span className="inline-block px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent font-medium text-[11px]">
-                        {item.scentFamily || c("Woody Amber", "عنبر خشبي")}
-                      </span>
+                      {item.scentFamily ? (
+                        <span className="inline-block px-2.5 py-1 rounded-full bg-accent/15 border border-accent/30 text-accent font-medium text-[11px]">
+                          {item.scentFamily}
+                        </span>
+                      ) : (
+                        <span className="text-luxury-muted text-[11px]">—</span>
+                      )}
                     </td>
                   ))}
                   {items.length < 4 && <td className="p-4 bg-luxury-surface2/10"></td>}
@@ -433,13 +449,19 @@ export default function ComparePage({
                   </td>
                   {items.map((item) => (
                     <td key={item.slug} className="p-4 text-luxury-text space-y-1">
-                      <span className="font-semibold text-luxury-text block text-sm">
-                        {item.perfumer || c("Master Perfumer", "أنف عطري عالمي")}
-                      </span>
-                      {item.perfumerBio && (
-                        <p className="text-[11px] text-luxury-muted line-clamp-2 leading-relaxed">
-                          {item.perfumerBio}
-                        </p>
+                      {item.perfumer ? (
+                        <>
+                          <span className="font-semibold text-luxury-text block text-sm">
+                            {item.perfumer}
+                          </span>
+                          {item.perfumerBio && (
+                            <p className="text-[11px] text-luxury-muted line-clamp-2 leading-relaxed">
+                              {item.perfumerBio}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-luxury-muted text-[11px]">—</span>
                       )}
                     </td>
                   ))}
@@ -472,9 +494,7 @@ export default function ComparePage({
                             );
                           })
                         ) : (
-                          <span className="text-luxury-muted italic text-[11px]">
-                            {c("Calabrian Bergamot, Pink Pepper", "حمضيات إيطالية، فلفل وردي")}
-                          </span>
+                          <span className="text-luxury-muted text-[11px]">—</span>
                         )}
                       </div>
                     </td>
@@ -508,9 +528,7 @@ export default function ComparePage({
                             );
                           })
                         ) : (
-                          <span className="text-luxury-muted italic text-[11px]">
-                            {c("Silver Frankincense, Taif Rose", "لبان حوجري فضي، ورد الطائف")}
-                          </span>
+                          <span className="text-luxury-muted text-[11px]">—</span>
                         )}
                       </div>
                     </td>
@@ -544,9 +562,7 @@ export default function ComparePage({
                             );
                           })
                         ) : (
-                          <span className="text-luxury-muted italic text-[11px]">
-                            {c("Cambodian Oud, Ambergris, Leather", "عود كمبودي، عنبر أشهب، جلود")}
-                          </span>
+                          <span className="text-luxury-muted text-[11px]">—</span>
                         )}
                       </div>
                     </td>
@@ -564,14 +580,20 @@ export default function ComparePage({
                   </td>
                   {items.map((item) => (
                     <td key={item.slug} className="p-4 text-luxury-text">
-                      <span className="font-semibold text-luxury-text block">
-                        {item.concentration || "Extrait de Parfum (30-53%)"}
-                      </span>
-                      <span className="text-[10px] text-luxury-muted">
-                        {item.concentration?.includes("53%")
-                          ? c("Maximum High-Density Maceration", "أعلى تركيز بالزيوت الملكية النقية")
-                          : c("Haute Purity Extrait", "خلاصة عطرية فائقة النقاوة")}
-                      </span>
+                      {item.concentration ? (
+                        <>
+                          <span className="font-semibold text-luxury-text block">
+                            {item.concentration}
+                          </span>
+                          {item.concentration.includes("53%") && (
+                            <span className="text-[10px] text-luxury-muted">
+                              {c("Maximum High-Density Maceration", "أعلى تركيز بالزيوت الملكية النقية")}
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-luxury-muted text-[11px]">—</span>
+                      )}
                     </td>
                   ))}
                   {items.length < 4 && <td className="p-4 bg-luxury-surface2/10"></td>}
@@ -587,18 +609,28 @@ export default function ComparePage({
                   </td>
                   {items.map((item) => (
                     <td key={item.slug} className="p-4 text-luxury-text space-y-1">
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <Clock size={12} className="text-accent" />
-                        <span className="font-medium text-luxury-text">
-                          {item.longevity || "20+ Hours"}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1.5 text-[11px]">
-                        <Wind size={12} className="text-amber-500" />
-                        <span className="text-luxury-muted">
-                          {item.sillage || "Royal Projection"}
-                        </span>
-                      </div>
+                      {item.longevity || item.sillage ? (
+                        <>
+                          {item.longevity && (
+                            <div className="flex items-center gap-1.5 text-[11px]">
+                              <Clock size={12} className="text-accent" />
+                              <span className="font-medium text-luxury-text">
+                                {item.longevity}
+                              </span>
+                            </div>
+                          )}
+                          {item.sillage && (
+                            <div className="flex items-center gap-1.5 text-[11px]">
+                              <Wind size={12} className="text-amber-500" />
+                              <span className="text-luxury-muted">
+                                {item.sillage}
+                              </span>
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-luxury-muted text-[11px]">—</span>
+                      )}
                     </td>
                   ))}
                   {items.length < 4 && <td className="p-4 bg-luxury-surface2/10"></td>}
@@ -642,9 +674,13 @@ export default function ComparePage({
                       <span className="font-semibold block text-luxury-text">
                         {item.brand}
                       </span>
-                      <span className="text-[11px] text-luxury-muted">
-                        {item.origin || (item.brand === "Amouage" ? "Sultanate of Oman" : "Paris, France")}
-                      </span>
+                      {item.origin ? (
+                        <span className="text-[11px] text-luxury-muted">
+                          {item.origin}
+                        </span>
+                      ) : (
+                        <span className="text-luxury-muted text-[11px]">—</span>
+                      )}
                     </td>
                   ))}
                   {items.length < 4 && <td className="p-4 bg-luxury-surface2/10"></td>}

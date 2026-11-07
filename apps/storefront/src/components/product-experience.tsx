@@ -265,7 +265,7 @@ export function ProductExperience({
 
   const handleAddToCart = async () => {
     if (!selectedVariant || isAdding) return;
-    const currentStock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+    const currentStock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 0;
     if (currentStock <= 0) return;
 
     setIsAdding(true);
@@ -496,7 +496,7 @@ export function ProductExperience({
 
                 {/* Out of Stock Notice (Level Shoes Luxury: in-stock is implicit; only display out of stock) */}
                 {(() => {
-                  const stock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 25;
+                  const stock = selectedVariant.stock ?? selectedVariant.availableQuantity ?? selectedVariant.stockQuantity ?? 0;
                   if (stock <= 0) {
                     return (
                       <div className="inline-flex items-center gap-2 px-3 py-1 bg-neutral-100 dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-xs font-sans tracking-wide uppercase text-neutral-600 dark:text-neutral-400 font-medium">
@@ -527,7 +527,7 @@ export function ProductExperience({
                 <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5">
                   {commercialVariants.map((v) => {
                     const isSelected = v.id === selectedVariantId;
-                    const stock = v.stock ?? v.availableQuantity ?? v.stockQuantity ?? 25;
+                    const stock = v.stock ?? v.availableQuantity ?? v.stockQuantity ?? 0;
                     const isOutOfStock = stock <= 0;
                     const volNum =
                       v.volumeMl ??
@@ -593,7 +593,7 @@ export function ProductExperience({
             {/* Primary Action Buttons (Level Shoes Add to Bag Standard) */}
             <div ref={mainCtaRef} className="space-y-3 pt-2">
               {(() => {
-                const currentStock = selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 25;
+                const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 0;
                 const isOutOfStock = currentStock <= 0;
                 return (
                   <button
