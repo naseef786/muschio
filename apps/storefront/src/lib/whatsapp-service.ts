@@ -3,9 +3,10 @@
  * 
  * Automated transactional WhatsApp notifications for orders, cancellations, and concierge tracking.
  * Supports:
- * 1. Meta WhatsApp Cloud API (Graph API)
- * 2. Graceful simulation mode with console preview when WHATSAPP_ACCESS_TOKEN is not configured
+ * 1. Meta WhatsApp Cloud API (Graph API) — WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID
+ * 2. Twilio WhatsApp REST API — TWILIO_ACCOUNT_SID + TWILIO_AUTH_TOKEN + TWILIO_WHATSAPP_FROM
  * 3. Deep link click-to-chat generator for storefront and admin panel
+ * 4. Graceful simulation mode with informative logging when credentials are not configured
  */
 
 interface SendWhatsAppParams {
@@ -15,20 +16,49 @@ interface SendWhatsAppParams {
 }
 
 export class WhatsAppService {
-  private static getAccessToken(): string | undefined {
+  private static getMetaAccessToken(): string | undefined {
     return process.env.WHATSAPP_ACCESS_TOKEN;
   }
 
-  private static getPhoneNumberId(): string | undefined {
+  private static getMetaPhoneNumberId(): string | undefined {
     return process.env.WHATSAPP_PHONE_NUMBER_ID;
   }
 
-  private static getAdminWhatsApp(): string {
+  private static getTwilioSid(): string | undefined {
+    return process.env.TWILIO_ACCOUNT_SID;
+  }
+
+  private static getTwilioAuthToken(): string | undefined {
+    return process.env.TWILIO_AUTH_TOKEN;
+  }
+
+  private static getTwilioFrom(): string {
+    return process.env.TWILIO_WHATSAPP_FROM || "whatsapp:+14155238886";
+  }
+
+  public static getAdminWhatsApp(): string {
     return process.env.WHATSAPP_ADMIN_PHONE || "97148006872";
   }
 
-  private static getStoreUrl(): string {
-    return process.env.NEXT_PUBLIC_STORE_URL || "https://muschio.luxury";
+  public static getStoreUrl(): string {
+    return process.env.NEXT_PUBLIC_STORE_URL || "https://www.muschio.ae";
+  }
+
+  public static getStatus() {
+    if (this.getMetaAccessToken() && this.getMetaPhoneNumberId()) {
+      return { provider: "meta", configured: true };
+    }
+    if (this.getTwilioSid() && this.getTwilioAuthToken()) {
+      return { provider: "twilio", configured: true };
+    }
+    return {
+      provider: "none",
+      configured: false,
+      missing: [
+        "Meta Cloud API: WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID",
+        "or Twilio: TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN",
+      ],
+    };
   }
 
   /**
@@ -62,59 +92,109 @@ export class WhatsAppService {
   }
 
   /**
-   * Send WhatsApp Message via Meta WhatsApp Cloud API (or simulated development logger)
+   * Send WhatsApp Message via Meta WhatsApp Cloud API or Twilio WhatsApp API
    */
-  public static async sendWhatsAppMessage({ to, body, previewUrl = true }: SendWhatsAppParams) {
+  public static async sendWhatsAppMessage({ to, body, previewUrl = true }: SendWhatsAppParams): Promise<{
+    success: boolean;
+    simulated: boolean;
+    provider?: string;
+    id?: string;
+    error?: any;
+    message?: string;
+  }> {
     const cleanTo = this.normalizePhoneNumber(to);
     if (!cleanTo || cleanTo.length < 8) {
       console.warn(`[WhatsAppService] Invalid recipient phone number: "${to}"`);
-      return { success: false, error: "Invalid phone number" };
+      return { success: false, simulated: false, error: `Invalid phone number: ${to}` };
     }
 
-    const token = this.getAccessToken();
-    const phoneId = this.getPhoneNumberId();
-
-    if (!token || !phoneId) {
-      console.log(`\n=========================================================`);
-      console.log(`[Muschio WhatsApp Business Service (SIMULATION MODE)]`);
-      console.log(`To: +${cleanTo}`);
-      console.log(`Message Body:\n${body}`);
-      console.log(`Notice: Define WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID in .env for live Meta Cloud delivery.`);
-      console.log(`=========================================================\n`);
-      return { success: true, simulated: true, id: `sim-wa-${Date.now()}` };
-    }
-
-    try {
-      const res = await fetch(`https://graph.facebook.com/v19.0/${phoneId}/messages`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messaging_product: "whatsapp",
-          recipient_type: "individual",
-          to: cleanTo,
-          type: "text",
-          text: {
-            preview_url: previewUrl,
-            body,
+    // 1. Meta WhatsApp Cloud API (Graph API)
+    const metaToken = this.getMetaAccessToken();
+    const metaPhoneId = this.getMetaPhoneNumberId();
+    if (metaToken && metaPhoneId) {
+      try {
+        const res = await fetch(`https://graph.facebook.com/v19.0/${metaPhoneId}/messages`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${metaToken}`,
+            "Content-Type": "application/json",
           },
-        }),
-      });
+          body: JSON.stringify({
+            messaging_product: "whatsapp",
+            recipient_type: "individual",
+            to: cleanTo,
+            type: "text",
+            text: {
+              preview_url: previewUrl,
+              body,
+            },
+          }),
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("[WhatsAppService] Meta Cloud API Error:", data);
-        return { success: false, error: data };
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("[WhatsAppService:Meta] API Error:", data);
+          return { success: false, simulated: false, provider: "meta", error: data };
+        }
+
+        const messageId = data?.messages?.[0]?.id || `meta-${Date.now()}`;
+        return { success: true, simulated: false, provider: "meta", id: messageId };
+      } catch (err: any) {
+        console.error("[WhatsAppService:Meta] Exception:", err);
+        return { success: false, simulated: false, provider: "meta", error: err.message };
       }
-
-      const messageId = data?.messages?.[0]?.id || `wa-${Date.now()}`;
-      return { success: true, simulated: false, id: messageId };
-    } catch (err: any) {
-      console.error("[WhatsAppService] Failed to send WhatsApp message:", err);
-      return { success: false, error: err.message };
     }
+
+    // 2. Twilio WhatsApp REST API
+    const twilioSid = this.getTwilioSid();
+    const twilioAuthToken = this.getTwilioAuthToken();
+    if (twilioSid && twilioAuthToken) {
+      try {
+        const auth = Buffer.from(`${twilioSid}:${twilioAuthToken}`).toString("base64");
+        const fromNumber = this.getTwilioFrom();
+        const bodyParams = new URLSearchParams();
+        bodyParams.append("From", fromNumber.startsWith("whatsapp:") ? fromNumber : `whatsapp:${fromNumber}`);
+        bodyParams.append("To", `whatsapp:+${cleanTo}`);
+        bodyParams.append("Body", body);
+
+        const res = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${twilioSid}/Messages.json`, {
+          method: "POST",
+          headers: {
+            Authorization: `Basic ${auth}`,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: bodyParams.toString(),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("[WhatsAppService:Twilio] API Error:", data);
+          return { success: false, simulated: false, provider: "twilio", error: data };
+        }
+
+        return { success: true, simulated: false, provider: "twilio", id: data.sid || `tw-${Date.now()}` };
+      } catch (err: any) {
+        console.error("[WhatsAppService:Twilio] Exception:", err);
+        return { success: false, simulated: false, provider: "twilio", error: err.message };
+      }
+    }
+
+    // 3. Graceful Simulation Mode
+    console.log(`\n=========================================================`);
+    console.log(`[Muschio WhatsApp Business Service (SIMULATION MODE)]`);
+    console.log(`To: +${cleanTo}`);
+    console.log(`Message Body:\n${body}`);
+    console.log(`Notice: No WhatsApp API credentials configured.`);
+    console.log(`Configure WHATSAPP_ACCESS_TOKEN and WHATSAPP_PHONE_NUMBER_ID (or TWILIO_ACCOUNT_SID) in Vercel to deliver live messages.`);
+    console.log(`=========================================================\n`);
+
+    return {
+      success: true,
+      simulated: true,
+      provider: "none",
+      message: "Simulation mode: Set WHATSAPP_ACCESS_TOKEN + WHATSAPP_PHONE_NUMBER_ID or Twilio credentials in Vercel to send live WhatsApp messages.",
+      id: `sim-wa-${Date.now()}`,
+    };
   }
 
   /**
@@ -128,7 +208,7 @@ export class WhatsAppService {
 
     if (!recipientPhone) {
       console.warn(`[WhatsAppService] No phone number available for order ${order.orderNumber}`);
-      return { success: false, error: "No phone number" };
+      return { success: false, error: "No phone number available" };
     }
 
     const customerName =
@@ -188,7 +268,7 @@ Need temperature-controlled evening handover or custom royal gift wrapping? Repl
       order.customer?.phone ||
       order.customerPhone;
 
-    if (!recipientPhone) return { success: false, error: "No phone" };
+    if (!recipientPhone) return { success: false, error: "No phone number available" };
 
     const customerName =
       order.shippingAddress?.fullName ||
@@ -265,8 +345,8 @@ Items: ${order.items?.length || 1} flacons
    * 5. Generate Direct Customer WhatsApp Chat Link for Admin
    */
   public static generateCustomerWhatsAppLink(phone: string, customerName: string, orderNumber: string): string {
-    const cleanPhone = this.normalizePhoneNumber(phone);
-    const text = `Hello ${customerName}, this is Muschio Haute Parfumerie Concierge regarding your order #${orderNumber}.`;
-    return `https://wa.me/${cleanPhone}?text=${encodeURIComponent(text)}`;
+    const clean = this.normalizePhoneNumber(phone);
+    const text = `Hello ${customerName}, this is Muschio Haute Parfumerie Concierge reaching out regarding your order #${orderNumber}.`;
+    return `https://wa.me/${clean}?text=${encodeURIComponent(text)}`;
   }
 }

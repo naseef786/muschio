@@ -680,6 +680,14 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       );
     }
 
+    // 18. Admin Notification Providers Status
+    if (path === "admin/notifications/status") {
+      return success({
+        email: EmailService.getStatus(),
+        whatsapp: WhatsAppService.getStatus(),
+      });
+    }
+
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
@@ -1925,6 +1933,40 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
 
       return success({ success: true, results });
+    }
+
+    // 20. Admin Notification Diagnostics Test Send
+    if (path === "admin/notifications/test") {
+      const { channel, recipient } = body || {};
+      if (!channel || !recipient) {
+        return error("INVALID_INPUT", "channel (email or whatsapp) and recipient are required", 400);
+      }
+
+      if (channel === "email") {
+        const testRes = await EmailService.sendEmail({
+          to: recipient,
+          subject: "🧪 Muschio Haute Parfumerie — Email Delivery Test",
+          html: `
+            <div style="font-family: sans-serif; padding: 25px; border: 1px solid #000; max-width: 500px;">
+              <h2 style="margin-top: 0;">⚜️ Muschio Email Delivery Test</h2>
+              <p>Congratulations! Your transactional email service is active and communicating with Muschio production.</p>
+              <p style="font-size: 12px; color: #666;">Timestamp: ${new Date().toISOString()}</p>
+            </div>
+          `,
+        });
+        return success({ success: testRes.success, details: testRes });
+      }
+
+      if (channel === "whatsapp") {
+        const testRes = await WhatsAppService.sendWhatsAppMessage({
+          to: recipient,
+          body: `⚜️ *MUSCHIO HAUTE PARFUMERIE · DUBAI*\n\nThis is a verified test notification confirming your WhatsApp Business gateway is connected.\n\nTime: ${new Date().toLocaleTimeString()}`,
+          previewUrl: false,
+        });
+        return success({ success: testRes.success, details: testRes });
+      }
+
+      return error("INVALID_CHANNEL", "Supported channels: email, whatsapp", 400);
     }
 
 

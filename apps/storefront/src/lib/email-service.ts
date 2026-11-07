@@ -1,7 +1,14 @@
 /**
  * Muschio Haute Parfumerie — Transactional Email Service
- * Supports Resend API (via native fetch) with graceful development fallback.
+ * 
+ * Supports:
+ * 1. Resend API (via native fetch) — RESEND_API_KEY
+ * 2. SendGrid API (via native fetch) — SENDGRID_API_KEY
+ * 3. Custom SMTP (via nodemailer) — SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
+ * 4. Graceful simulation mode with informative logging when no provider is configured.
  */
+
+import nodemailer from "nodemailer";
 
 interface SendEmailParams {
   to: string | string[];
@@ -11,58 +18,170 @@ interface SendEmailParams {
 }
 
 export class EmailService {
-  private static getApiKey(): string | undefined {
+  private static getResendKey(): string | undefined {
     return process.env.RESEND_API_KEY;
   }
 
-  private static getAdminEmail(): string {
+  private static getSendGridKey(): string | undefined {
+    return process.env.SENDGRID_API_KEY;
+  }
+
+  private static getSmtpConfig() {
+    const host = process.env.SMTP_HOST;
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+    if (host && user && pass) {
+      return {
+        host,
+        port: Number(process.env.SMTP_PORT || 587),
+        secure: process.env.SMTP_SECURE === "true" || process.env.SMTP_PORT === "465",
+        auth: { user, pass },
+      };
+    }
+    return null;
+  }
+
+  public static getAdminEmail(): string {
     return process.env.ADMIN_NOTIFICATION_EMAIL || "concierge@muschio.luxury";
   }
 
-  private static getFromEmail(): string {
-    return process.env.EMAIL_FROM || "Muschio Haute Parfumerie <orders@muschio.luxury>";
+  public static getFromEmail(): string {
+    return (
+      process.env.EMAIL_FROM ||
+      process.env.SMTP_FROM ||
+      "Muschio Haute Parfumerie <orders@muschio.luxury>"
+    );
   }
 
-  static async sendEmail({ to, subject, html, from }: SendEmailParams) {
-    const apiKey = this.getApiKey();
-    const fromAddress = from || this.getFromEmail();
+  public static getStatus() {
+    if (this.getResendKey()) {
+      return { provider: "resend", configured: true };
+    }
+    if (this.getSendGridKey()) {
+      return { provider: "sendgrid", configured: true };
+    }
+    if (this.getSmtpConfig()) {
+      return { provider: "smtp", configured: true };
+    }
+    return {
+      provider: "none",
+      configured: false,
+      missing: [
+        "RESEND_API_KEY (Recommended: free at resend.com)",
+        "or SENDGRID_API_KEY",
+        "or SMTP_HOST, SMTP_USER, SMTP_PASS",
+      ],
+    };
+  }
 
-    if (!apiKey) {
-      console.log(`\n---------------------------------------------------------`);
-      console.log(`[Muschio Email Service (SIMULATION MODE)]`);
-      console.log(`To: ${Array.isArray(to) ? to.join(", ") : to}`);
-      console.log(`Subject: ${subject}`);
-      console.log(`Notice: Configure RESEND_API_KEY in .env to deliver real emails.`);
-      console.log(`---------------------------------------------------------\n`);
-      return { success: true, simulated: true, id: `sim-${Date.now()}` };
+  static async sendEmail({ to, subject, html, from }: SendEmailParams): Promise<{
+    success: boolean;
+    simulated: boolean;
+    provider?: string;
+    id?: string;
+    error?: any;
+    message?: string;
+  }> {
+    const fromAddress = from || this.getFromEmail();
+    const toAddresses = Array.isArray(to) ? to : [to];
+
+    // 1. Resend API (Preferred & Zero-Setup)
+    const resendKey = this.getResendKey();
+    if (resendKey) {
+      try {
+        const res = await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${resendKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            from: fromAddress,
+            to: toAddresses,
+            subject,
+            html,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          console.error("[EmailService:Resend] API Error:", data);
+          return { success: false, simulated: false, provider: "resend", error: data };
+        }
+
+        return { success: true, simulated: false, provider: "resend", id: data.id };
+      } catch (err: any) {
+        console.error("[EmailService:Resend] Delivery Exception:", err);
+        return { success: false, simulated: false, provider: "resend", error: err.message };
+      }
     }
 
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+    // 2. SendGrid API
+    const sendGridKey = this.getSendGridKey();
+    if (sendGridKey) {
+      try {
+        const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${sendGridKey}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            personalizations: [{ to: toAddresses.map((email) => ({ email })) }],
+            from: { email: fromAddress.replace(/^.*<([^>]+)>.*$/, "$1").trim(), name: "Muschio Haute Parfumerie" },
+            subject,
+            content: [{ type: "text/html", value: html }],
+          }),
+        });
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("[EmailService:SendGrid] API Error:", errText);
+          return { success: false, simulated: false, provider: "sendgrid", error: errText };
+        }
+
+        return { success: true, simulated: false, provider: "sendgrid", id: `sg-${Date.now()}` };
+      } catch (err: any) {
+        console.error("[EmailService:SendGrid] Delivery Exception:", err);
+        return { success: false, simulated: false, provider: "sendgrid", error: err.message };
+      }
+    }
+
+    // 3. Custom SMTP (Gmail, Google Workspace, Zoho, Microsoft 365, AWS SES, cPanel)
+    const smtpConfig = this.getSmtpConfig();
+    if (smtpConfig) {
+      try {
+        const transporter = nodemailer.createTransport(smtpConfig);
+        const info = await transporter.sendMail({
           from: fromAddress,
-          to: Array.isArray(to) ? to : [to],
+          to: toAddresses.join(", "),
           subject,
           html,
-        }),
-      });
+        });
 
-      const data = await res.json();
-      if (!res.ok) {
-        console.error("[EmailService] Resend API Error:", data);
-        return { success: false, error: data };
+        return { success: true, simulated: false, provider: "smtp", id: info.messageId };
+      } catch (err: any) {
+        console.error("[EmailService:SMTP] Delivery Exception:", err);
+        return { success: false, simulated: false, provider: "smtp", error: err.message };
       }
-
-      return { success: true, simulated: false, id: data.id };
-    } catch (err: any) {
-      console.error("[EmailService] Failed to send email:", err);
-      return { success: false, error: err.message };
     }
+
+    // 4. Graceful Development / Missing Provider Simulation
+    console.log(`\n---------------------------------------------------------`);
+    console.log(`[Muschio Email Service (SIMULATION MODE)]`);
+    console.log(`To: ${toAddresses.join(", ")}`);
+    console.log(`Subject: ${subject}`);
+    console.log(`Notice: No email provider configured.`);
+    console.log(`Configure RESEND_API_KEY in Vercel/environment to deliver live emails.`);
+    console.log(`---------------------------------------------------------\n`);
+
+    return {
+      success: true,
+      simulated: true,
+      provider: "none",
+      message: "Simulation mode: Set RESEND_API_KEY, SENDGRID_API_KEY, or SMTP credentials in Vercel to send live emails.",
+      id: `sim-${Date.now()}`,
+    };
   }
 
   /**
@@ -70,7 +189,7 @@ export class EmailService {
    */
   static async sendOrderConfirmation(order: any) {
     const recipient = order.guestEmail || order.customer?.email || order.shippingAddress?.email;
-    if (!recipient) return;
+    if (!recipient) return { success: false, error: "No recipient email" };
 
     const customerName = order.shippingAddress?.fullName || order.customer?.name || "Esteemed Client";
     const totalAmount = order.totalAmount ? Number(order.totalAmount).toLocaleString() : "0";
@@ -99,7 +218,7 @@ export class EmailService {
         </div>
 
         <div style="border-top: 1px solid #262626; border-bottom: 1px solid #262626; padding: 20px 0; margin-bottom: 25px; text-align: center;">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #888888; font-family: sans-serif;">Order Confirmation</div>
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #888888; font-family: sans-serif;">Official Client Order Confirmation</div>
           <div style="font-size: 20px; margin-top: 5px; font-family: monospace; color: #ffffff;">${order.orderNumber}</div>
         </div>
 
@@ -121,12 +240,18 @@ export class EmailService {
         </table>
 
         <div style="text-align: right; margin-top: 20px; font-family: sans-serif;">
-          <div style="font-size: 12px; color: #888888;">Total (Inc. VAT & Delivery):</div>
+          <div style="font-size: 12px; color: #888888;">Total (Inc. 5% VAT & Complimentary GCC Delivery):</div>
           <div style="font-size: 22px; font-weight: bold; color: #ffffff; font-family: monospace;">${totalAmount} ${currency}</div>
         </div>
 
+        <div style="margin-top: 30px; text-align: center;">
+          <a href="https://www.muschio.ae/en/track?ref=${encodeURIComponent(order.orderNumber)}" style="display: inline-block; background-color: #ffffff; color: #000000; text-decoration: none; padding: 12px 24px; font-family: sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;">
+            Track Order Status Live →
+          </a>
+        </div>
+
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #262626; font-size: 11px; font-family: sans-serif; color: #737373; text-align: center;">
-          Direct VIP Concierge: concierge@muschio.luxury • WhatsApp: +971 4 238 9000<br />
+          Direct VIP Concierge: concierge@muschio.luxury • WhatsApp: +971 4 800 6872<br />
           Muschio Haute Parfumerie, Level 2, Downtown Boulevard, Dubai, UAE
         </div>
       </div>
@@ -160,13 +285,14 @@ export class EmailService {
         <ul style="font-size: 13px; line-height: 1.8;">
           <li><strong>Client:</strong> ${customerName}</li>
           <li><strong>Email:</strong> ${order.guestEmail || order.customer?.email || "N/A"}</li>
+          <li><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</li>
           <li><strong>Destination:</strong> ${city}, ${country}</li>
           <li><strong>Total Amount:</strong> <span style="font-family: monospace; font-size: 15px;">${totalAmount} ${currency}</span></li>
           <li><strong>Status:</strong> ${order.status}</li>
           <li><strong>Items:</strong> ${order.items?.length || 1} flacons</li>
         </ul>
         <div style="margin-top: 20px;">
-          <a href="https://muschio.luxury/admin" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 4px;">
+          <a href="https://www.muschio.ae/admin" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 4px;">
             Open Admin Dashboard
           </a>
         </div>
@@ -204,7 +330,6 @@ export class EmailService {
       </div>
     `;
 
-    // 1. Notify Customer
     if (recipient) {
       await this.sendEmail({
         to: recipient,
@@ -213,7 +338,6 @@ export class EmailService {
       });
     }
 
-    // 2. Alert Admin Team
     await this.sendEmail({
       to: this.getAdminEmail(),
       subject: `⚠️ [ORDER CANCELLED] ${orderNumber} — Immediate Halt Required`,
@@ -256,7 +380,7 @@ export class EmailService {
           ${enquiry.message}
         </div>
         <div style="margin-top: 20px;">
-          <a href="https://muschio.luxury/admin" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 4px;">
+          <a href="https://www.muschio.ae/admin" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 4px;">
             Respond in Admin Console
           </a>
         </div>
