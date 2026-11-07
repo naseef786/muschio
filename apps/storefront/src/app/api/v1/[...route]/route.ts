@@ -326,7 +326,21 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           ],
         },
         include: {
-          items: true,
+          items: {
+            include: {
+              variant: {
+                include: {
+                  product: {
+                    select: {
+                      slug: true,
+                      images: true,
+                      brand: { select: { name: true } },
+                    },
+                  },
+                },
+              },
+            },
+          },
           payments: { orderBy: { createdAt: "desc" } },
           shippingAddress: true,
           fulfillments: { include: { shipments: true } },
@@ -446,6 +460,18 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
 
       return success({
         ...base,
+        items: order.items.map((item: any) => ({
+          id: item.id,
+          productNameEn: item.productNameEn,
+          productNameAr: item.productNameAr,
+          brandName: item.brandName || item.variant?.product?.brand?.name || "Haute Parfumerie",
+          sizeLabel: item.sizeLabel || "Standard Flacon",
+          quantity: item.quantity,
+          unitPrice: Number(item.unitPrice || (item.totalPrice ? Number(item.totalPrice) / (item.quantity || 1) : 0)),
+          totalPrice: Number(item.totalPrice),
+          image: item.variant?.product?.images?.[0] || "/product-placeholder.svg",
+          slug: item.variant?.product?.slug || null,
+        })),
         shippingAddress: order.shippingAddress,
         customerName: order.shippingAddress?.fullName || order.customer?.firstName || "Client",
         customerEmail: order.guestEmail || order.customer?.email || null,

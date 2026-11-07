@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay } from "@muschio/ui";
 import { Link } from "../../../../navigation";
@@ -24,6 +25,10 @@ import {
   X,
   AlertCircle,
   ExternalLink,
+  Printer,
+  MapPin,
+  Calendar,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function OrderStatusPage({
@@ -32,7 +37,7 @@ export default function OrderStatusPage({
   params: { locale: "en" | "ar"; orderNumber: string };
 }) {
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
   const [order, setOrder] = useState<StorefrontOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentError, setPaymentError] = useState("");
@@ -155,6 +160,7 @@ export default function OrderStatusPage({
     try {
       cart.clearCart();
       localStorage.removeItem("muschio_pending_order");
+      localStorage.setItem("muschio_last_order", order.orderNumber);
     } catch {}
   }, [isPaid, order, cart]);
 
@@ -181,31 +187,31 @@ export default function OrderStatusPage({
       num: 1,
       titleEn: "Order Placed",
       titleAr: "تم استلام الطلب",
-      descEn: "Order confirmed",
-      descAr: "تم تأكيد طلبك",
+      descEn: "Order confirmed & recorded",
+      descAr: "تم تأكيد طلبك وتسجيله",
       icon: Clock,
     },
     {
       num: 2,
       titleEn: "Preparing",
       titleAr: "جاري التجهيز",
-      descEn: "Checking & packaging",
+      descEn: "Inspection & packaging",
       descAr: "فحص وتغليف المنتجات",
       icon: PackageCheck,
     },
     {
       num: 3,
-      titleEn: "Shipped",
+      titleEn: "Dispatched",
       titleAr: "تم الشحن",
-      descEn: "On the way with courier",
-      descAr: "في الطريق إليك",
+      descEn: "En route with Climate Courier",
+      descAr: "في الطريق إليك مع الشاحن المبرد",
       icon: Truck,
     },
     {
       num: 4,
       titleEn: "Delivered",
       titleAr: "تم التوصيل",
-      descEn: "Delivered to your door",
+      descEn: "Handed over to doorstep",
       descAr: "تم تسليم الطلب بنجاح",
       icon: Sparkles,
     },
@@ -219,62 +225,96 @@ export default function OrderStatusPage({
         : `Hello Muschio Concierge, I would like to inquire regarding my order #${order?.orderNumber || orderNumber}`,
     );
 
+  const vatAmount = order?.totalAmount
+    ? (Number(order.totalAmount) - Number(order.totalAmount) / 1.05).toFixed(2)
+    : "0.00";
+
   return (
-    <div className="max-w-[1000px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-10 sm:space-y-12">
-      {/* Header Banner */}
-      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-10 text-start space-y-4 rounded-sm">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-luxury-border pb-4">
+    <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 space-y-8 font-sans">
+      {/* 1. Minimalist Luxury Breadcrumbs (Level Shoes Pattern) */}
+      <nav aria-label="Breadcrumb" className="text-xs text-neutral-400 font-sans">
+        <ol className="flex items-center gap-2 flex-wrap">
+          <li>
+            <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+              {c("Home", "الرئيسية")}
+            </Link>
+          </li>
+          <li className="text-neutral-300 dark:text-neutral-700">/</li>
+          <li>
+            <Link href="/track" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+              {c("Track", "تتبع الطلبات")}
+            </Link>
+          </li>
+          <li className="text-neutral-300 dark:text-neutral-700">/</li>
+          <li className="text-neutral-900 dark:text-white font-medium">
+            {c("Order Confirmation", "تأكيد الطلب")}
+          </li>
+          {order?.orderNumber && (
+            <>
+              <li className="text-neutral-300 dark:text-neutral-700">/</li>
+              <li className="font-mono text-neutral-500 truncate max-w-[200px]">
+                {order.orderNumber}
+              </li>
+            </>
+          )}
+        </ol>
+      </nav>
+
+      {/* 2. Editorial Header Banner */}
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-5">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 dark:border-neutral-800 pb-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="eyebrow text-accent">
-              {c("HAUTE PARFUMERIE · CLIENT RECEIPT", "دار العطور الراقية · إيصال العميل المعتمد")}
+            <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+              {c("HAUTE PARFUMERIE · OFFICIAL CLIENT RECEIPT", "دار العطور الراقية · إيصال العميل المعتمد")}
             </span>
-            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-sm bg-emerald-500/10 text-emerald-600 border border-emerald-500/25 text-[10px] font-mono">
+            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-none bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[10px] font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
               {c("LIVE SYNC ACTIVE", "تحديث مباشر نشط")}
             </span>
           </div>
+
           {order && (
-            <div className="flex items-center gap-2 bg-luxury-surface2 px-3 py-1.5 border border-luxury-border">
-              <span className="text-[11px] font-sans font-medium text-luxury-muted">
+            <div className="flex items-center gap-2 bg-[#FAFAFA] dark:bg-neutral-900 px-3 py-1.5 border border-neutral-200 dark:border-neutral-800">
+              <span className="text-[11px] font-sans font-medium text-neutral-400">
                 {c("Ref:", "الرقم المرجعي:")}
               </span>
-              <span className="font-mono text-xs text-luxury-text font-semibold">
+              <span className="font-mono text-xs text-neutral-900 dark:text-white font-semibold">
                 {order.orderNumber}
               </span>
               <button
                 type="button"
                 onClick={copyOrderNumber}
                 aria-label="Copy order reference"
-                className="text-luxury-muted hover:text-accent transition-colors p-0.5"
+                className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors p-0.5"
                 title={c("Copy reference", "نسخ الرقم المرجعي")}
               >
-                {copied ? <Check size={13} className="text-emerald-600" /> : <Copy size={13} />}
+                {copied ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
               </button>
             </div>
           )}
         </div>
 
-        <div className="flex items-start gap-4 pt-2">
+        <div className="flex items-start gap-4 pt-1">
           {loading ? (
-            <div className="w-10 h-10 rounded-full border border-luxury-border flex items-center justify-center flex-shrink-0 animate-spin">
-              <RefreshCw size={20} className="text-accent" />
+            <div className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shrink-0 animate-spin">
+              <RefreshCw size={18} className="text-neutral-500" />
             </div>
           ) : isPaid ? (
-            <div className="w-10 h-10 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 size={22} />
+            <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+              <CheckCircle2 size={20} />
             </div>
           ) : cancelled ? (
-            <div className="w-10 h-10 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center flex-shrink-0 text-red-600">
-              <Clock size={22} />
+            <div className="w-10 h-10 rounded-full bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 flex items-center justify-center shrink-0 text-rose-600">
+              <Clock size={20} />
             </div>
           ) : (
-            <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center flex-shrink-0 text-amber-600">
-              <Clock size={22} />
+            <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 flex items-center justify-center shrink-0 text-amber-600">
+              <Clock size={20} />
             </div>
           )}
 
           <div className="space-y-1">
-            <h1 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
+            <h1 className="font-serif text-2xl sm:text-3xl text-neutral-900 dark:text-white font-normal">
               {loading
                 ? c("Checking your order…", "جاري مراجعة طلبك…")
                 : !order
@@ -282,24 +322,24 @@ export default function OrderStatusPage({
                   : cancelled
                     ? c("This order was cancelled.", "تم إلغاء هذا الطلب.")
                     : status === "DELIVERED"
-                      ? c("Order Delivered!", "تم تسليم طلبك بنجاح!")
+                      ? c("Order Delivered Successfully!", "تم تسليم طلبك بنجاح!")
                       : status === "SHIPPED"
-                        ? c("Your Order Has Shipped!", "طلبك تم شحنه وهو في الطريق إليك!")
+                        ? c("Your Order Has Been Dispatched!", "طلبك تم شحنه وهو في الطريق إليك!")
                         : status === "FULFILLING"
-                          ? c("We Are Preparing Your Order", "جاري تجهيز وتغليف طلبك")
+                          ? c("We Are Preparing Your Fragrances", "جاري تجهيز وتغليف طلبك")
                           : isPaid
                             ? c("Thank you! Your order is confirmed.", "شكراً لك! تم تأكيد طلبك بنجاح.")
                             : c("Order Placed Successfully", "تم استلام طلبك بنجاح")}
             </h1>
-            <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
               {isPaid
                 ? c(
-                    "We have received your payment and are getting your perfumes ready for delivery.",
-                    "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز عطورك للتوصيل.",
+                    "We have received your payment and our master perfumers are packaging your flacons for temperature-regulated delivery.",
+                    "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز وفحص عطورك للتوصيل المبرد.",
                   )
                 : c(
-                    "We have received your order details and will keep you updated on the progress.",
-                    "تم استلام تفاصيل طلبك وسنوافيك بالتحديثات أولاً بأول.",
+                    "We have received your order details and will notify you at every milestone of dispatch.",
+                    "تم تسجيل طلبك بنجاح وسنوافيك بالتحديثات المباشرة عند كل مرحلة.",
                   )}
             </p>
           </div>
@@ -308,7 +348,7 @@ export default function OrderStatusPage({
 
       {/* Success notification banner */}
       {paymentSuccess && (
-        <div className="p-4 border border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 text-xs rounded-sm flex items-center gap-2">
+        <div className="p-4 border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 text-xs rounded-sm flex items-center gap-2.5 shadow-sm">
           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
           <span>{paymentSuccess}</span>
         </div>
@@ -316,31 +356,33 @@ export default function OrderStatusPage({
 
       {/* Real-Time Dispatch Notice (Email & WhatsApp Active) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div className="p-4 bg-luxury-surface border border-luxury-border flex items-center gap-3 rounded-sm">
-          <div className="w-8 h-8 rounded-full bg-black/5 dark:bg-white/10 flex items-center justify-center text-luxury-text shrink-0">
-            <Mail size={16} />
+        <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center gap-3.5 rounded-sm">
+          <div className="w-8 h-8 rounded-full bg-neutral-100 dark:bg-neutral-900 flex items-center justify-center text-neutral-800 dark:text-neutral-200 shrink-0">
+            <Mail size={15} />
           </div>
           <div className="min-w-0">
-            <div className="text-xs font-semibold text-luxury-text">
+            <div className="text-xs font-semibold text-neutral-900 dark:text-white">
               {c("Email Confirmation Dispatched", "تم إرسال إشعار التأكيد عبر البريد")}
             </div>
-            <div className="text-[11px] text-luxury-muted truncate">
-              {c("Receipt and flacon breakdown sent to your inbox", "تم إرسال الفاتورة وتفاصيل العطور إلى بريدك")}
+            <div className="text-[11px] text-neutral-400 truncate">
+              {order?.customerEmail
+                ? `${c("Sent to", "أرسل إلى")} ${order.customerEmail}`
+                : c("Receipt and flacon breakdown sent to your inbox", "تم إرسال الفاتورة وتفاصيل العطور إلى بريدك")}
             </div>
           </div>
         </div>
 
-        <div className="p-4 bg-luxury-surface border border-luxury-border flex items-center justify-between gap-3 rounded-sm">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 flex items-center justify-between gap-3.5 rounded-sm">
+          <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-8 h-8 rounded-full bg-[#128C7E]/10 border border-[#128C7E]/30 flex items-center justify-center text-[#128C7E] shrink-0">
-              <MessageSquare size={16} />
+              <MessageSquare size={15} />
             </div>
             <div className="min-w-0">
-              <div className="text-xs font-semibold text-luxury-text">
+              <div className="text-xs font-semibold text-neutral-900 dark:text-white">
                 {c("WhatsApp Tracking Updates", "تحديثات الشحن عبر واتساب")}
               </div>
-              <div className="text-[11px] text-luxury-muted truncate">
-                {c("Direct alerts sent to registered mobile", "تحديثات المسار تصل إلى رقم هاتفك")}
+              <div className="text-[11px] text-neutral-400 truncate">
+                {c("Direct alerts sent to your mobile", "تحديثات المسار تصل إلى رقم هاتفك")}
               </div>
             </div>
           </div>
@@ -348,7 +390,7 @@ export default function OrderStatusPage({
             href={whatsappInquiryUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="px-2.5 py-1 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-[11px] font-medium rounded-sm flex items-center gap-1 shrink-0 transition-colors"
+            className="px-3 py-1.5 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-[11px] font-medium rounded-sm flex items-center gap-1 shrink-0 transition-colors"
           >
             <span>{c("Open Chat", "محادثة")}</span>
             <ArrowRight size={11} className="rtl:rotate-180" />
@@ -356,127 +398,242 @@ export default function OrderStatusPage({
         </div>
       </div>
 
-      {/* 4-Step GCC Fulfillment Timeline */}
-      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm">
-        <div className="flex items-center justify-between mb-6">
-          <span className="eyebrow text-accent">
-            {c("ORDER PROGRESS", "مراحل تنفيذ الطلب")}
+      {/* 3. Level Shoes Style Connected Progress Stepper */}
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm">
+        <div className="flex items-center justify-between mb-5">
+          <span className="text-xs uppercase font-sans tracking-[0.16em] font-medium text-neutral-400">
+            {c("FULFILLMENT PROGRESS", "مراحل تنفيذ وتسليم الطلب")}
           </span>
           <Link
             href={`/track?ref=${encodeURIComponent(order?.orderNumber || orderNumber)}`}
-            className="text-xs font-sans text-accent hover:underline flex items-center gap-1 font-medium"
+            className="text-xs font-sans text-neutral-900 dark:text-white hover:underline underline-offset-4 flex items-center gap-1.5 font-medium"
           >
-            <span>{c("Track Order Live", "تتبع الطلب مباشرة")}</span>
+            <span>{c("Open Live Tracker", "فتح شاشة التتبع المباشر")}</span>
             <ExternalLink size={12} />
           </Link>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 relative">
-          {timelineSteps.map((step) => {
-            const isCompleted = currentStep >= step.num;
-            const isCurrent = currentStep === step.num;
-            const Icon = step.icon;
-            return (
-              <div
-                key={step.num}
-                className={`p-4 border transition-all ${
-                  isCurrent
-                    ? "border-accent bg-luxury-surface2 shadow-sm"
-                    : isCompleted
-                      ? "border-emerald-500/30 bg-emerald-500/[0.03]"
-                      : "border-luxury-border opacity-50"
-                }`}
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-mono font-medium ${
+        <div className="relative pt-2 pb-2">
+          {/* Connecting Line (desktop) */}
+          <div className="hidden sm:block absolute top-6 inset-x-8 h-[2px] bg-neutral-200 dark:bg-neutral-800 z-0">
+            <div
+              className="h-full bg-neutral-950 dark:bg-white transition-all duration-700 ease-out"
+              style={{
+                width: `${((Math.max(1, currentStep) - 1) / (timelineSteps.length - 1)) * 100}%`,
+              }}
+            />
+          </div>
+
+          {/* Stepper Nodes */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-2 relative z-10">
+            {timelineSteps.map((step) => {
+              const isCompleted = currentStep >= step.num;
+              const isCurrent = currentStep === step.num;
+
+              return (
+                <div
+                  key={step.num}
+                  className={`flex flex-col sm:items-center text-start sm:text-center p-3 sm:p-2 rounded-sm sm:rounded-none border sm:border-0 ${
+                    isCurrent
+                      ? "border-neutral-950 dark:border-white bg-neutral-50 dark:bg-neutral-900/50"
+                      : isCompleted
+                        ? "border-neutral-200 dark:border-neutral-800 bg-transparent"
+                        : "border-neutral-100 dark:border-neutral-900 opacity-40 bg-transparent"
+                  }`}
+                >
+                  <div
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-semibold mb-2.5 transition-all ${
                       isCompleted
-                        ? "bg-emerald-500 text-white"
-                        : "bg-luxury-surface border border-luxury-border text-luxury-muted"
+                        ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
+                        : isCurrent
+                          ? "bg-white text-neutral-950 border-2 border-neutral-950 dark:bg-neutral-900 dark:text-white dark:border-white ring-2 ring-neutral-300 dark:ring-neutral-700"
+                          : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700"
                     }`}
                   >
                     {isCompleted ? "✓" : step.num}
-                  </span>
-                  <Icon
-                    size={16}
-                    className={isCompleted ? "text-emerald-500" : "text-luxury-muted"}
-                  />
+                  </div>
+
+                  <h3 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider font-sans">
+                    {c(step.titleEn, step.titleAr)}
+                  </h3>
+                  <p className="text-[11px] text-neutral-400 mt-0.5 leading-snug">
+                    {c(step.descEn, step.descAr)}
+                  </p>
                 </div>
-                <h2 className="text-xs font-sans font-semibold text-luxury-text uppercase tracking-wider">
-                  {c(step.titleEn, step.titleAr)}
-                </h2>
-                <p className="text-[11px] text-luxury-muted mt-1 leading-snug">
-                  {c(step.descEn, step.descAr)}
-                </p>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       </div>
 
-      {/* Order Items Breakdown & Financial Summary */}
+      {/* 4. Order Items Breakdown & Financial Summary */}
       {order && (
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Items List */}
-          <div className="lg:col-span-7 border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-6">
-            <div className="flex items-center justify-between border-b border-luxury-border pb-4">
-              <span className="eyebrow">
-                {c("ACQUIRED CREATIONS", "القطع المقتناة")}
-              </span>
-              <span className="text-xs text-luxury-muted">
-                {order.items.length}{" "}
-                {c(
-                  order.items.length === 1 ? "Item" : "Items",
-                  order.items.length === 1 ? "عطر" : "عطور",
-                )}
-              </span>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8">
+          {/* Left Column (7 cols): Items List + Dispatch Logistics */}
+          <div className="lg:col-span-7 space-y-6">
+            <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-6">
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500 font-sans">
+                  {c("ACQUIRED CREATIONS", "القطع المقتناة في هذا الطلب")}
+                </span>
+                <span className="text-xs text-neutral-400 font-mono">
+                  {order.items.length}{" "}
+                  {c(
+                    order.items.length === 1 ? "Flacon" : "Flacons",
+                    order.items.length === 1 ? "عطر" : "عطور",
+                  )}
+                </span>
+              </div>
 
-            <div className="divide-y divide-luxury-border">
-              {order.items.map((item) => (
-                <div key={item.id} className="py-4 flex items-center gap-4">
-                  <div className="relative w-16 h-20 bg-luxury-surface2 border border-luxury-border flex-shrink-0 overflow-hidden flex items-center justify-center">
-                    <Sparkles size={18} className="text-accent/40" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-[10px] font-sans font-medium uppercase tracking-wider text-luxury-muted block">
-                      {c("Muschio Selection", "مختارات مسكيو")}
-                    </span>
-                    <h2 className="font-serif text-base sm:text-lg text-luxury-text truncate">
-                      {c(item.productNameEn, item.productNameAr)}
-                    </h2>
-                    <div className="flex items-center gap-3 text-xs text-luxury-muted mt-1">
-                      <span>{item.sizeLabel || "Standard Flacon"}</span>
-                      <span>×</span>
-                      <span className="font-mono text-luxury-text">{item.quantity}</span>
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                {order.items.map((item) => {
+                  const itemImage = item.image || "/product-placeholder.svg";
+                  const itemSlug = item.slug;
+
+                  return (
+                    <div key={item.id} className="py-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        {/* 4:5 Flacon Image Canvas (Level Shoes Style) */}
+                        <div className="relative w-16 h-20 bg-[#F8F8F8] dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shrink-0 overflow-hidden rounded-sm flex items-center justify-center">
+                          <Image
+                            src={itemImage}
+                            alt={item.productNameEn || "Fragrance Flacon"}
+                            fill
+                            sizes="80px"
+                            className="object-cover object-center"
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          {item.brandName && (
+                            <span className="text-[10px] uppercase font-sans tracking-widest text-neutral-400 block truncate">
+                              {item.brandName}
+                            </span>
+                          )}
+                          <h2 className="font-serif text-base text-neutral-900 dark:text-white truncate">
+                            {itemSlug ? (
+                              <Link
+                                href={`/product/${itemSlug}`}
+                                className="hover:underline underline-offset-4"
+                              >
+                                {c(item.productNameEn, item.productNameAr)}
+                              </Link>
+                            ) : (
+                              c(item.productNameEn, item.productNameAr)
+                            )}
+                          </h2>
+                          <div className="flex items-center gap-2 text-xs text-neutral-400 mt-1">
+                            <span>{item.sizeLabel || "Standard Flacon"}</span>
+                            <span>•</span>
+                            <span className="font-mono text-neutral-600 dark:text-neutral-300">
+                              Qty: {item.quantity}
+                            </span>
+                            {item.unitPrice ? (
+                              <>
+                                <span>•</span>
+                                <span className="font-mono text-neutral-500">
+                                  AED {Number(item.unitPrice).toLocaleString()} {c("each", "للقطعة")}
+                                </span>
+                              </>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-end font-mono text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white shrink-0">
+                        <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="text-end flex-shrink-0">
-                    <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
-                  </div>
-                </div>
-              ))}
+                  );
+                })}
+              </div>
+
+              {/* Guarantees Footer */}
+              <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center gap-2 text-xs text-neutral-500">
+                <ShieldCheck size={16} className="text-emerald-500 shrink-0" />
+                <span>
+                  {c(
+                    "Includes Free return up to 7 days & official Certificate of Authenticity.",
+                    "يتضمن إرجاع مجاني حتى 7 أيام وشهادة أصالة رسمية معتمدة من دار العطور.",
+                  )}
+                </span>
+              </div>
             </div>
 
-            <div className="pt-4 border-t border-luxury-border flex items-center gap-2 text-xs text-luxury-muted">
-              <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
-              <span>
-                {c(
-                  "Includes Free return up to 7 days & official Certificate of Authenticity.",
-                  "يتضمن إرجاع مجاني حتى 7 أيام وشهادة أصالة رسمية معتمدة.",
+            {/* Courier Dispatch, Schedule & Address (3 Cards) */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Carrier */}
+              <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-1 rounded-sm shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Truck size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Climate Courier", "شركة الشحن")}
+                  </span>
+                </div>
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1">
+                  {order.carrier || "Muschio GCC Climate Courier"}
+                </div>
+                {order.trackingNumber && (
+                  <div className="flex items-center gap-1.5 pt-1 font-mono text-xs text-neutral-900 dark:text-white">
+                    <span>{order.trackingNumber}</span>
+                  </div>
                 )}
-              </span>
+                <div className="text-[10px] text-neutral-400 pt-0.5">
+                  {c("Temperature-regulated sealed transit", "مسار مبرد ومحمي بختم المصنع")}
+                </div>
+              </div>
+
+              {/* Handover Window */}
+              <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-1 rounded-sm shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Calendar size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Estimated Handover", "الموعد المتوقع")}
+                  </span>
+                </div>
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1">
+                  {order.estimatedDelivery
+                    ? new Date(order.estimatedDelivery).toLocaleDateString(isAr ? "ar-AE" : "en-GB", {
+                        weekday: "short",
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                      })
+                    : c("Next 24–48 Hours", "خلال ٢٤ إلى ٤٨ ساعة")}
+                </div>
+                <div className="text-[10px] text-neutral-400 pt-0.5">
+                  {c("White-Glove GCC Delivery", "توصيل فاخر للباب")}
+                </div>
+              </div>
+
+              {/* Destination */}
+              <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-1 rounded-sm shadow-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <MapPin size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Destination", "عنوان التوصيل")}
+                  </span>
+                </div>
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1 truncate">
+                  {order.shippingAddress
+                    ? `${order.shippingAddress.city || "Dubai"}, ${order.shippingAddress.country || "United Arab Emirates"}`
+                    : c("United Arab Emirates / GCC", "الإمارات العربية المتحدة / الخليج")}
+                </div>
+                <div className="text-[10px] text-neutral-400 truncate pt-0.5">
+                  {order.customerName || "Muschio Client"}
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Financial Breakdown & Concierge Actions */}
+          {/* Right Column (5 cols): Receipt Summary & VIP Concierge */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-4">
-              <span className="eyebrow block border-b border-luxury-border pb-3">
+            <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-4">
+              <span className="text-xs uppercase tracking-[0.16em] font-semibold text-neutral-500 font-sans block border-b border-neutral-100 dark:border-neutral-800 pb-3">
                 {c("RECEIPT SUMMARY", "ملخص الإيصال")}
               </span>
 
-              <div className="space-y-3 text-xs text-luxury-muted">
+              <div className="space-y-3 text-xs text-neutral-500">
                 <div className="flex justify-between">
                   <span>{c("Subtotal", "المجموع الفرعي")}</span>
                   <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
@@ -495,32 +652,32 @@ export default function OrderStatusPage({
                 </div>
               </div>
 
-              <div className="border-t border-luxury-border pt-4 flex justify-between items-baseline">
+              <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 flex justify-between items-baseline">
                 <div>
-                  <span className="text-xs uppercase tracking-wider font-sans font-medium text-luxury-text block">
+                  <span className="text-xs uppercase tracking-wider font-sans font-medium text-neutral-900 dark:text-white block">
                     {isPaid ? c("Total Settled", "المجموع المدفوع") : c("Total Due", "المجموع المطلوب")}
                   </span>
-                  <span className="text-[10px] text-luxury-muted block">
+                  <span className="text-[10px] text-neutral-400 block">
                     {c("VAT & Custom Duties Included", "شامل ضريبة القيمة المضافة والرسوم")}
                   </span>
-                  <span className="text-[9px] font-mono text-luxury-muted block mt-0.5">
+                  <span className="text-[9px] font-mono text-neutral-400 block mt-0.5">
                     {c(
-                      `Includes 5% UAE VAT (AED ${(order.totalAmount - order.totalAmount / 1.05).toFixed(2)}) · TRN: 100492817200003`,
-                      `شامل 5% ضريبة القيمة المضافة (${(order.totalAmount - order.totalAmount / 1.05).toFixed(2)} د.إ) · الرقم الضريبي: 100492817200003`
+                      `Includes 5% UAE VAT (AED ${vatAmount}) · TRN: 100492817200003`,
+                      `شامل 5% ضريبة القيمة المضافة (${vatAmount} د.إ) · الرقم الضريبي: 100492817200003`,
                     )}
                   </span>
                 </div>
                 <PriceDisplay price={order.totalAmount} locale={locale} />
               </div>
 
-              {/* Status details */}
-              <div className="mt-4 pt-4 border-t border-luxury-border flex items-center justify-between text-xs">
-                <span className="text-luxury-muted">{c("Payment Status", "حالة الدفع")}:</span>
+              {/* Status badge */}
+              <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+                <span className="text-neutral-400">{c("Payment Status", "حالة الدفع")}:</span>
                 <span
-                  className={`px-2 py-0.5 rounded-sm font-medium text-[11px] uppercase tracking-wider ${
+                  className={`px-2.5 py-1 text-[11px] font-sans uppercase tracking-wider font-semibold rounded-none border ${
                     isPaid
-                      ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
-                      : "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
+                      : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
                   }`}
                 >
                   {isPaid
@@ -528,16 +685,30 @@ export default function OrderStatusPage({
                     : c("Pay on Delivery / Pending", "الدفع عند الاستلام / بانتظار التأكيد")}
                 </span>
               </div>
+
+              {/* Pay Now Button if Unpaid */}
+              {order && !isPaid && !cancelled && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowCardModal(true)}
+                    className="w-full py-3 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm shadow-sm"
+                  >
+                    <CreditCard size={14} />
+                    <span>{c("Pay Now via Card (Instant)", "الدفع الآن بالبطاقة (فوري)")}</span>
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* VIP Concierge Support Card */}
-            <div className="border border-luxury-border bg-luxury-surface2 p-6 rounded-sm space-y-3">
-              <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-accent block">
+            <div className="bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 p-6 rounded-sm space-y-3 shadow-sm">
+              <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.18em] text-neutral-400 block">
                 {c("VIP OLFACTORY CONCIERGE", "المساعد العطري الخاص")}
               </span>
-              <p className="text-xs text-luxury-muted leading-relaxed">
+              <p className="text-xs text-neutral-500 leading-relaxed">
                 {c(
-                  "Need custom gift wrapping, private courier scheduling, or batch certification? Our team is available directly.",
+                  "Need custom gift wrapping, private courier delivery scheduling, or batch certification? Our team is available directly.",
                   "هل ترغب بتغليف خاص للإهداء أو جدولة موعد التسليم؟ فريقنا في خدمتك على مدار الساعة.",
                 )}
               </p>
@@ -546,59 +717,65 @@ export default function OrderStatusPage({
                   href={whatsappInquiryUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-center justify-center gap-2 py-2 px-3 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-xs font-medium rounded-sm transition-colors"
+                  className="flex items-center justify-center gap-2 py-2.5 px-3 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-xs font-medium rounded-sm transition-colors"
                 >
+                  <MessageSquare size={14} />
                   <span>{c("WhatsApp Concierge Support", "محادثة المستشار عبر واتساب")}</span>
                   <ArrowRight size={13} className="rtl:rotate-180" />
                 </a>
               </div>
             </div>
+
+            {/* Print Receipt Action */}
+            <button
+              type="button"
+              onClick={() => {
+                if (typeof window !== "undefined") window.print();
+              }}
+              className="w-full py-2.5 px-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-900 dark:hover:border-white text-xs text-neutral-700 dark:text-neutral-300 font-sans uppercase tracking-wider flex items-center justify-center gap-2 rounded-sm transition-colors"
+            >
+              <Printer size={13} />
+              <span>{c("Print Official Receipt", "طباعة الإيصال الرسمي")}</span>
+            </button>
           </div>
         </div>
       )}
 
       {/* Error notification if any */}
       {paymentError && (
-        <div className="p-4 border border-red-500/30 bg-red-500/10 text-red-700 text-xs rounded-sm flex items-center gap-2">
+        <div className="p-4 border border-rose-300 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300 text-xs rounded-sm flex items-center gap-2.5">
           <AlertCircle size={15} className="shrink-0" />
           <span>{paymentError}</span>
         </div>
       )}
 
       {/* Bottom Action CTAs */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-luxury-border">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-neutral-200 dark:border-neutral-800">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={() => void refresh(false)}
             disabled={loading}
-            className="editorial-button-secondary inline-flex items-center gap-2 text-xs"
+            className="py-2.5 px-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 hover:border-neutral-900 dark:hover:border-white text-xs text-neutral-800 dark:text-neutral-200 uppercase tracking-wider font-medium inline-flex items-center gap-2 rounded-sm transition-colors"
           >
             <RefreshCw size={13} className={loading ? "animate-spin" : ""} />
             <span>{c("Refresh Order Status", "تحديث حالة الطلب")}</span>
           </button>
 
-          {order && !isPaid && !cancelled && (
-            <button
-              type="button"
-              onClick={() => setShowCardModal(true)}
-              className="editorial-button inline-flex items-center gap-2 text-xs"
-            >
-              <CreditCard size={13} />
-              <span>{c("Pay Now via Card (Instant)", "الدفع الآن بالبطاقة (فوري)")}</span>
-            </button>
-          )}
-
           <Link
             href={`/track?ref=${encodeURIComponent(order?.orderNumber || orderNumber)}`}
-            className="editorial-button-secondary inline-flex items-center gap-2 text-xs"
+            className="py-2.5 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-wider font-medium inline-flex items-center gap-2 rounded-sm transition-colors"
           >
             <Truck size={13} />
             <span>{c("Live Tracking Page", "صفحة التتبع المباشر")}</span>
           </Link>
         </div>
 
-        <Link href="/shop" className="editorial-text-link text-xs inline-flex items-center gap-1">
+        <Link
+          href="/shop"
+          className="text-xs uppercase tracking-wider font-semibold text-neutral-900 dark:text-white hover:underline underline-offset-4 inline-flex items-center gap-1.5"
+        >
+          <ShoppingBag size={14} />
           <span>{c("Explore More Fragrances", "استكشاف المزيد من العطور")}</span>
           <span>↗</span>
         </Link>
@@ -607,26 +784,29 @@ export default function OrderStatusPage({
       {/* Interactive Luxury Card Payment Modal */}
       {showCardModal && order && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-luxury-surface border border-luxury-border w-full max-w-md p-6 sm:p-8 rounded-sm space-y-6 shadow-2xl relative">
+          <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-md p-6 sm:p-8 rounded-sm space-y-6 shadow-2xl relative">
             <button
               type="button"
               onClick={() => setShowCardModal(false)}
-              className="absolute top-4 right-4 rtl:right-auto rtl:left-4 text-luxury-muted hover:text-luxury-text p-1"
+              className="absolute top-4 end-4 text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1"
             >
               <X size={18} />
             </button>
 
             <div className="space-y-1">
-              <span className="eyebrow text-accent text-[10px]">
+              <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
                 {c("SECURE 256-BIT ENCRYPTED ACQUISITION", "إتمام الدفع المشفر والآمن")}
               </span>
-              <h3 className="font-serif text-xl sm:text-2xl text-luxury-text">
+              <h3 className="font-serif text-xl sm:text-2xl text-neutral-900 dark:text-white">
                 {c("Card Payment Authorization", "تفويض الدفع بالبطاقة")}
               </h3>
-              <p className="text-xs text-luxury-muted">
+              <p className="text-xs text-neutral-500">
                 {c("Order Ref: ", "رقم الطلب: ")}
-                <span className="font-mono text-luxury-text font-semibold">{order.orderNumber}</span> ·{" "}
-                <span className="text-accent font-semibold">
+                <span className="font-mono text-neutral-900 dark:text-white font-semibold">
+                  {order.orderNumber}
+                </span>{" "}
+                ·{" "}
+                <span className="font-semibold text-neutral-900 dark:text-white">
                   <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
                 </span>
               </p>
@@ -634,7 +814,7 @@ export default function OrderStatusPage({
 
             <form onSubmit={handleCardCharge} className="space-y-4">
               <div>
-                <label className="block text-xs font-medium text-luxury-text mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
                   {c("Cardholder Name", "الاسم على البطاقة")}
                 </label>
                 <input
@@ -643,12 +823,12 @@ export default function OrderStatusPage({
                   value={cardHolder}
                   onChange={(e) => setCardHolder(e.target.value)}
                   placeholder="Sultan Al-Nuaimi"
-                  className="glass-input w-full p-2.5 text-xs font-sans"
+                  className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                 />
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-luxury-text mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
                   {c("Card Number", "رقم البطاقة")}
                 </label>
                 <div className="relative">
@@ -659,15 +839,15 @@ export default function OrderStatusPage({
                     value={cardNumber}
                     onChange={(e) => setCardNumber(e.target.value)}
                     placeholder="4242 •••• •••• 4242"
-                    className="glass-input w-full p-2.5 text-xs font-mono tracking-wider pl-10"
+                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 ps-10 text-xs font-mono tracking-wider text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                   />
-                  <CreditCard size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-luxury-muted" />
+                  <CreditCard size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-luxury-text mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
                     {c("Expiry (MM/YY)", "تاريخ الانتهاء")}
                   </label>
                   <input
@@ -677,11 +857,11 @@ export default function OrderStatusPage({
                     value={cardExp}
                     onChange={(e) => setCardExp(e.target.value)}
                     placeholder="12/28"
-                    className="glass-input w-full p-2.5 text-xs font-mono text-center"
+                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs font-mono text-center text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-luxury-text mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
                     {c("CVC / CVV", "رمز الأمان")}
                   </label>
                   <input
@@ -691,7 +871,7 @@ export default function OrderStatusPage({
                     value={cardCvc}
                     onChange={(e) => setCardCvc(e.target.value)}
                     placeholder="•••"
-                    className="glass-input w-full p-2.5 text-xs font-mono text-center"
+                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs font-mono text-center text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                   />
                 </div>
               </div>
@@ -701,7 +881,7 @@ export default function OrderStatusPage({
                 <button
                   type="button"
                   onClick={fillTestCard}
-                  className="w-full text-xs py-2 px-3 border border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-500/20 rounded-sm font-mono flex items-center justify-center gap-1.5 transition-colors"
+                  className="w-full text-xs py-2 px-3 border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 rounded-sm font-mono flex items-center justify-center gap-1.5 transition-colors"
                 >
                   <Sparkles size={13} />
                   <span>{c("1-Click Auto-Fill Test Visa Card", "تعبئة سريعة ببطاقة فيزا تجريبية")}</span>
@@ -709,7 +889,7 @@ export default function OrderStatusPage({
               </div>
 
               {paymentError && (
-                <p className="text-xs text-red-600 bg-red-500/10 p-2 rounded-sm border border-red-500/20">
+                <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 p-2 rounded-sm border border-rose-200 dark:border-rose-900">
                   {paymentError}
                 </p>
               )}
@@ -718,7 +898,7 @@ export default function OrderStatusPage({
                 <button
                   type="submit"
                   disabled={processingCard}
-                  className="editorial-button w-full text-xs py-3 flex items-center justify-center gap-2"
+                  className="w-full py-3 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm shadow-sm disabled:opacity-50"
                 >
                   {processingCard ? (
                     <>
@@ -736,8 +916,8 @@ export default function OrderStatusPage({
                   )}
                 </button>
 
-                <p className="text-[10px] text-center text-luxury-muted flex items-center justify-center gap-1">
-                  <ShieldCheck size={12} className="text-emerald-600" />
+                <p className="text-[10px] text-center text-neutral-400 flex items-center justify-center gap-1">
+                  <ShieldCheck size={12} className="text-emerald-500" />
                   <span>{c("PCI-DSS Level 1 Encrypted Payment Clearance", "دفع آمن ومعتمد بمعايير PCI-DSS")}</span>
                 </p>
               </div>

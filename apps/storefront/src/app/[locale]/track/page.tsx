@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { muschioApi } from "../../../lib/api";
 import { PriceDisplay } from "@muschio/ui";
+import { Link } from "../../../navigation";
 import {
   Search,
   Package,
@@ -13,7 +15,6 @@ import {
   Copy,
   Check,
   RefreshCw,
-  ArrowRight,
   ShieldCheck,
   MapPin,
   Calendar,
@@ -21,6 +22,7 @@ import {
   AlertCircle,
   HelpCircle,
   Activity,
+  Printer,
 } from "lucide-react";
 
 export default function OrderTrackingPage({
@@ -44,6 +46,26 @@ export default function OrderTrackingPage({
   const [secondsAgo, setSecondsAgo] = useState(0);
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
+  const [recentOrderRef, setRecentOrderRef] = useState<string | null>(null);
+
+  // Check localStorage for recent order reference
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("muschio_last_order") || localStorage.getItem("muschio_pending_order");
+      if (stored) {
+        if (stored.startsWith("MSC-") || stored.startsWith("ORD-")) {
+          setRecentOrderRef(stored);
+        } else {
+          const parsed = JSON.parse(stored);
+          if (parsed?.orderNumber) {
+            setRecentOrderRef(parsed.orderNumber);
+          }
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const performLookup = useCallback(
     async (ref: string, contact?: string, isSilent = false) => {
@@ -68,14 +90,17 @@ export default function OrderTrackingPage({
               setStatusToast(
                 c(
                   `Real-Time Update: Order status updated to "${result.status}"!`,
-                  `تحديث مباشر: تم تحديث حالة الشحنة إلى "${result.status}"!`,
+                  `تحديث فوري: تم تحديث حالة الشحنة إلى "${result.status}"!`,
                 ),
               );
-              setTimeout(() => setStatusToast(null), 7000);
+              setTimeout(() => setStatusToast(null), 6000);
             }
             return result;
           });
           setSecondsAgo(0);
+          try {
+            localStorage.setItem("muschio_last_order", result.orderNumber);
+          } catch {}
         } else if (!isSilent) {
           setOrderData(null);
           setSearchError(
@@ -90,8 +115,8 @@ export default function OrderTrackingPage({
           setOrderData(null);
           setSearchError(
             c(
-              "Could not look up order status at this moment. Please verify your reference or reach out to our VIP Concierge.",
-              "تعذر الاستعلام عن حالة الطلب حالياً. يرجى التحقق من الرقم أو التواصل مع خدمة كونسيرج مسكيو.",
+              "Could not look up order status at this moment. Please verify your reference or contact our VIP Concierge.",
+              "تعذر الاستعلام عن حالة الطلب حالياً. يرجى التحقق من الرقم أو التواصل مع كونسيرج مسكيو.",
             ),
           );
         }
@@ -110,7 +135,7 @@ export default function OrderTrackingPage({
     }
   }, [initialRef, performLookup]);
 
-  // Real-Time Background Synchronization every 3.5 seconds
+  // Real-Time Background Synchronization every 4 seconds
   useEffect(() => {
     if (!orderData?.orderNumber) return;
     const currentRef = orderData.orderNumber;
@@ -120,7 +145,7 @@ export default function OrderTrackingPage({
       if (typeof document !== "undefined" && document.visibilityState === "visible" && !isTerminal) {
         void performLookup(currentRef, undefined, true);
       }
-    }, 3500);
+    }, 4000);
 
     const secondsTimer = setInterval(() => {
       setSecondsAgo((s) => s + 1);
@@ -165,32 +190,32 @@ export default function OrderTrackingPage({
       num: 1,
       titleEn: "Order Placed",
       titleAr: "تم استلام الطلب",
-      descEn: "Order confirmed and received",
-      descAr: "تم تأكيد طلبك بنجاح",
+      descEn: "Order confirmed & recorded",
+      descAr: "تم تأكيد طلبك وتسجيله بنجاح",
       icon: Clock,
     },
     {
       num: 2,
       titleEn: "Preparing",
       titleAr: "جاري التجهيز",
-      descEn: "Checking & packaging your items",
-      descAr: "فحص وتغليف المنتجات بعناية",
+      descEn: "Inspecting seals & packaging",
+      descAr: "فحص الأختام والتغليف الفاخر",
       icon: Package,
     },
     {
       num: 3,
-      titleEn: "Shipped",
+      titleEn: "Dispatched",
       titleAr: "تم الشحن",
-      descEn: "On the way with courier",
-      descAr: "الشحنة في الطريق إليك",
+      descEn: "En route with Climate Courier",
+      descAr: "الشحنة في مسار النقل المبرد",
       icon: Truck,
     },
     {
       num: 4,
       titleEn: "Delivered",
       titleAr: "تم التوصيل",
-      descEn: "Delivered to your address",
-      descAr: "تم تسليم الطلب بنجاح",
+      descEn: "Handed over to doorstep",
+      descAr: "تم التسليم بنجاح إلى باب منزلك",
       icon: Sparkles,
     },
   ];
@@ -200,34 +225,57 @@ export default function OrderTrackingPage({
     encodeURIComponent(
       isAr
         ? `مرحباً، أود الاستفسار عن حالة طلبي رقم: ${orderData?.orderNumber || orderQuery}`
-        : `Hello, I would like to check the status of my order #${orderData?.orderNumber || orderQuery}`,
+        : `Hello Muschio Concierge, I would like to inquire about my order #${orderData?.orderNumber || orderQuery}`,
     );
 
   return (
-    <div className="max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-16 space-y-10 sm:space-y-12">
-      {/* 1. Header Banner */}
-      <div className="border-b border-luxury-border pb-6 space-y-3">
-        <span className="eyebrow text-accent">
-          {c("ORDER TRACKING", "تتبع الطلب")}
+    <div className="max-w-[1240px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 space-y-10 font-sans">
+      {/* 1. Minimalist Luxury Breadcrumbs (Level Shoes Pattern) */}
+      <nav aria-label="Breadcrumb" className="text-xs text-neutral-400 font-sans">
+        <ol className="flex items-center gap-2 flex-wrap">
+          <li>
+            <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
+              {c("Home", "الرئيسية")}
+            </Link>
+          </li>
+          <li className="text-neutral-300 dark:text-neutral-700">/</li>
+          <li className="text-neutral-900 dark:text-white font-medium">
+            {c("Order Tracking", "تتبع الطلب")}
+          </li>
+          {orderData?.orderNumber && (
+            <>
+              <li className="text-neutral-300 dark:text-neutral-700">/</li>
+              <li className="font-mono text-neutral-500 truncate max-w-[200px]">
+                {orderData.orderNumber}
+              </li>
+            </>
+          )}
+        </ol>
+      </nav>
+
+      {/* 2. Editorial Header */}
+      <div className="border-b border-neutral-200 dark:border-neutral-800 pb-6 space-y-2">
+        <span className="text-xs uppercase tracking-[0.2em] font-medium text-neutral-400">
+          {c("WHITE-GLOVE CONCIERGE TRACKER", "نظام تتبع الشحنات الفاخر")}
         </span>
-        <h1 className="font-serif text-3xl sm:text-5xl text-luxury-text font-normal leading-tight">
-          {c("Track Your Order", "تتبع مسار طلبك")}
+        <h1 className="font-serif text-3xl sm:text-4xl text-neutral-900 dark:text-white font-normal">
+          {c("Track Your Order", "تتبع مسار شحنتك")}
         </h1>
-        <p className="text-xs sm:text-sm text-luxury-muted max-w-2xl leading-relaxed">
+        <p className="text-xs sm:text-sm text-neutral-500 max-w-2xl leading-relaxed">
           {c(
-            "See live updates on your order from preparation to delivery at your doorstep.",
-            "تابع مسار طلبك خطوة بخطوة من التجهيز وحتى التوصيل إلى باب منزلك.",
+            "Enter your official order reference number to monitor real-time temperature-regulated transit and dispatch updates across the GCC.",
+            "أدخل الرقم المرجعي لمتابعة التحديثات المباشرة ومسار التوصيل المبرد لشحنتك في كافة دول مجلس التعاون الخليجي.",
           )}
         </p>
       </div>
 
-      {/* 2. Tracking Input Search Box */}
-      <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm shadow-sm">
+      {/* 3. Luxury Order Lookup Search Form */}
+      <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-5">
         <form onSubmit={handleSearchSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
             <div className="md:col-span-7">
-              <label className="block text-xs font-medium text-luxury-text mb-1.5 uppercase tracking-wider font-sans">
-                {c("Order Number", "رقم الطلب")}
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">
+                {c("Order Reference Number", "الرقم المرجعي للطلب")} <span className="text-rose-500">*</span>
               </label>
               <div className="relative">
                 <input
@@ -235,34 +283,34 @@ export default function OrderTrackingPage({
                   required
                   value={orderQuery}
                   onChange={(e) => setOrderQuery(e.target.value)}
-                  placeholder="MSC-2026-XXXXX"
-                  className="glass-input w-full p-3.5 text-xs font-mono uppercase tracking-wider pl-10"
+                  placeholder="e.g. MSC-2026-XXXXX"
+                  className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3.5 ps-10 text-xs font-mono uppercase tracking-wider text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                 />
-                <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-luxury-muted" />
+                <Search size={16} className="absolute start-3.5 top-1/2 -translate-y-1/2 text-neutral-400" />
               </div>
             </div>
 
             <div className="md:col-span-5">
-              <label className="block text-xs font-medium text-luxury-text mb-1.5 uppercase tracking-wider font-sans">
-                {c("Email or Phone (Optional)", "البريد أو الهاتف (اختياري)")}
+              <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100 mb-1.5">
+                {c("Email or Phone (Optional)", "البريد الإلكتروني أو الهاتف (اختياري)")}
               </label>
               <input
                 type="text"
                 value={emailOrPhone}
                 onChange={(e) => setEmailOrPhone(e.target.value)}
-                placeholder={c("example@email.com or +971...", "بريدك الإلكتروني أو رقم هاتفك")}
-                className="glass-input w-full p-3.5 text-xs font-sans"
+                placeholder={c("client@example.com or +971...", "name@example.com أو +971...")}
+                className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-3.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
               />
             </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4 pt-2">
-            <div className="text-[11px] text-luxury-muted flex items-center gap-1.5">
-              <HelpCircle size={13} className="text-accent shrink-0" />
+            <div className="text-[11px] text-neutral-400 flex items-center gap-1.5">
+              <HelpCircle size={14} className="text-neutral-500 shrink-0" />
               <span>
                 {c(
-                  "Found in your confirmation email or WhatsApp message.",
-                  "ستجد رقم الطلب في رسالة التأكيد عبر البريد أو واتساب.",
+                  "Found on your digital receipt, SMS, or WhatsApp order confirmation.",
+                  "مذكور في رسالة تأكيد الطلب، البريد الإلكتروني أو رسائل واتساب.",
                 )}
               </span>
             </div>
@@ -270,11 +318,11 @@ export default function OrderTrackingPage({
             <button
               type="submit"
               disabled={loading || !orderQuery.trim()}
-              className="editorial-button text-xs py-3 px-8 flex items-center justify-center gap-2 min-w-[160px]"
+              className="py-3 px-8 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm disabled:opacity-50 disabled:cursor-not-allowed shadow-sm min-w-[170px]"
             >
               {loading ? (
                 <>
-                  <RefreshCw size={13} className="animate-spin" />
+                  <RefreshCw size={14} className="animate-spin" />
                   <span>{c("Searching…", "جاري البحث…")}</span>
                 </>
               ) : (
@@ -287,23 +335,40 @@ export default function OrderTrackingPage({
           </div>
         </form>
 
+        {/* Quick Recent Order Chip */}
+        {recentOrderRef && recentOrderRef !== orderData?.orderNumber && (
+          <div className="pt-3 border-t border-neutral-100 dark:border-neutral-800 flex items-center gap-2 text-xs">
+            <span className="text-neutral-400">{c("Recent acquisition:", "آخر طلب لك:")}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setOrderQuery(recentOrderRef);
+                void performLookup(recentOrderRef);
+              }}
+              className="font-mono text-xs font-medium text-neutral-900 dark:text-white underline underline-offset-4 hover:opacity-80"
+            >
+              {recentOrderRef}
+            </button>
+          </div>
+        )}
+
         {searchError && (
-          <div className="mt-4 p-4 border border-red-500/30 bg-red-500/10 text-red-700 dark:text-red-300 text-xs rounded-sm flex items-center gap-2">
-            <AlertCircle size={15} className="shrink-0" />
+          <div className="p-4 bg-rose-50 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 text-xs rounded-sm flex items-center gap-2.5">
+            <AlertCircle size={16} className="shrink-0" />
             <span>{searchError}</span>
           </div>
         )}
       </div>
 
-      {/* 3. Live Tracking Results Screen */}
+      {/* 4. Live Tracking Results View */}
       {orderData && (
-        <div className="space-y-6 animate-fadeIn">
-          {/* Real-time Status Change Toast */}
+        <div className="space-y-8 animate-fadeIn">
+          {/* Status Change Toast */}
           {statusToast && (
-            <div className="p-4 border border-emerald-500/40 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200 text-xs rounded-sm flex items-center justify-between gap-3 animate-pulse shadow-sm">
+            <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 text-emerald-800 dark:text-emerald-200 text-xs rounded-sm flex items-center justify-between gap-3 shadow-sm">
               <div className="flex items-center gap-2.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
-                <span className="font-medium text-xs">{statusToast}</span>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping shrink-0" />
+                <span className="font-medium">{statusToast}</span>
               </div>
               <button
                 type="button"
@@ -315,154 +380,180 @@ export default function OrderTrackingPage({
             </div>
           )}
 
-          {/* Live Radar Sync Ribbon */}
-          <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-luxury-surface border border-luxury-border rounded-sm text-xs shadow-sm">
-            <div className="flex items-center gap-2.5">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
-              </span>
-              <span className="font-mono text-[11px] font-semibold text-luxury-text uppercase tracking-wider">
-                {c("LIVE UPDATES ACTIVE", "تحديث مباشر لحالة الطلب")}
-              </span>
-              <span className="text-luxury-muted text-[11px]">
-                · {c(`Updated ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
-              </span>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => void performLookup(orderData.orderNumber, undefined, false)}
-              disabled={isSyncing || loading}
-              className="text-[11px] font-medium text-accent hover:text-luxury-text flex items-center gap-1.5 transition-colors disabled:opacity-50"
-            >
-              <RefreshCw size={12} className={isSyncing ? "animate-spin text-accent" : ""} />
-              <span>{isSyncing ? c("Updating…", "جاري التحديث…") : c("Refresh", "تحديث")}</span>
-            </button>
-          </div>
-
-          {/* Top Status & Summary Bar */}
-          <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-6">
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-luxury-border pb-4">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-sm sm:text-base font-semibold text-luxury-text">
-                  {orderData.orderNumber}
+          {/* Order Header Summary Banner */}
+          <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 dark:border-neutral-800 pb-5">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400 block">
+                  {c("ORDER REFERENCE", "الرقم المرجعي")}
+                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-mono text-base sm:text-lg font-semibold text-neutral-900 dark:text-white">
+                    {orderData.orderNumber}
+                  </span>
+                  <span className="text-[10px] font-mono text-neutral-400 hidden sm:inline">
+                  {c(`Updated ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
                 </span>
                 <button
-                  type="button"
-                  onClick={() => copyText(orderData.orderNumber, "ref")}
-                  className="text-luxury-muted hover:text-accent p-1 transition-colors"
-                  title={c("Copy reference", "نسخ الرقم المرجعي")}
-                >
-                  {copiedRef ? <Check size={14} className="text-emerald-600" /> : <Copy size={14} />}
-                </button>
+                    type="button"
+                    onClick={() => copyText(orderData.orderNumber, "ref")}
+                    className="p-1 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                    title={c("Copy reference", "نسخ الرقم المرجعي")}
+                  >
+                    {copiedRef ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
+                  </button>
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
+                {/* Status Badge */}
                 <span
-                  className={`px-3 py-1 text-xs font-mono font-medium rounded-sm border ${
+                  className={`px-3 py-1.5 text-xs font-sans uppercase tracking-[0.12em] font-semibold rounded-none border ${
                     status === "DELIVERED"
-                      ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30"
+                      ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                       : status === "SHIPPED"
-                        ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                        ? "bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-800"
                         : ["FULFILLING", "PAID"].includes(status)
-                          ? "bg-amber-500/10 text-amber-600 border-amber-500/30"
-                          : "bg-neutral-500/10 text-neutral-600 border-neutral-500/30"
+                          ? "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
+                          : "bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700"
                   }`}
                 >
                   {status === "DELIVERED"
                     ? c("DELIVERED", "تم التوصيل بنجاح")
                     : status === "SHIPPED"
-                      ? c("SHIPPED · ON THE WAY", "تم الشحن · في الطريق إليك")
+                      ? c("DISPATCHED · IN TRANSIT", "تم الشحن · في الطريق إليك")
                       : status === "FULFILLING"
-                        ? c("PREPARING YOUR ORDER", "جاري تجهيز وتغليف الطلب")
+                        ? c("PREPARING ORDER", "جاري تجهيز وتغليف الطلب")
                         : status === "PAID"
-                          ? c("PAID · PREPARING SOON", "تم استلام الدفعة بنجاح")
+                          ? c("ORDER CONFIRMED", "تم تأكيد الطلب بنجاح")
                           : c("ORDER PLACED", "تم استلام الطلب")}
                 </span>
+
+                <span className="text-[10px] font-mono text-neutral-400 hidden sm:inline">
+                  {c(`Updated ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void performLookup(orderData.orderNumber, undefined, false)}
+                  disabled={isSyncing || loading}
+                  className="p-2 text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-800 rounded-sm transition-colors"
+                  title={c("Refresh live status", "تحديث مباشر")}
+                >
+                  <RefreshCw size={14} className={isSyncing ? "animate-spin text-neutral-900 dark:text-white" : ""} />
+                </button>
               </div>
             </div>
 
-            {/* Order Progression */}
-            <div className="space-y-4 pt-2">
-              <span className="eyebrow block text-accent text-[11px]">
-                {c("ORDER PROGRESS", "مراحل تنفيذ الطلب")}
-              </span>
+            {/* Level Shoes Style Connected Progress Stepper */}
+            <div className="py-4">
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-xs uppercase font-sans tracking-[0.14em] font-medium text-neutral-400">
+                  {c("FULFILLMENT MILESTONES", "مراحل الشحن والتنفيذ")}
+                </span>
+                <span className="text-[11px] font-mono text-neutral-400">
+                  {c(`Step ${currentStep} of 4`, `المرحلة ${currentStep} من ٤`)}
+                </span>
+              </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                {timelineSteps.map((step) => {
-                  const isCompleted = currentStep >= step.num;
-                  const isCurrent = currentStep === step.num;
-                  const Icon = step.icon;
-                  return (
-                    <div
-                      key={step.num}
-                      className={`p-4 border transition-all rounded-sm ${
-                        isCurrent
-                          ? "border-accent bg-luxury-surface2 shadow-sm"
-                          : isCompleted
-                            ? "border-emerald-500/40 bg-emerald-500/[0.04]"
-                            : "border-luxury-border opacity-50 bg-luxury-surface"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between mb-2">
-                        <span
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-mono font-medium ${
+              {/* Connected Stepper Horizontal Bar */}
+              <div className="relative">
+                {/* Connecting Line */}
+                <div className="hidden sm:block absolute top-4 inset-x-8 h-[2px] bg-neutral-200 dark:bg-neutral-800 z-0">
+                  <div
+                    className="h-full bg-neutral-950 dark:bg-white transition-all duration-700 ease-out"
+                    style={{
+                      width: `${((currentStep - 1) / (timelineSteps.length - 1)) * 100}%`,
+                    }}
+                  />
+                </div>
+
+                {/* Milestones Grid */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-2 relative z-10">
+                  {timelineSteps.map((step) => {
+                    const isCompleted = currentStep >= step.num;
+                    const isCurrent = currentStep === step.num;
+
+                    return (
+                      <div
+                        key={step.num}
+                        className={`flex flex-col sm:items-center text-start sm:text-center p-3 sm:p-2 rounded-sm sm:rounded-none border sm:border-0 ${
+                          isCurrent
+                            ? "border-neutral-950 dark:border-white bg-neutral-50 dark:bg-neutral-900/50"
+                            : isCompleted
+                              ? "border-neutral-200 dark:border-neutral-800 bg-transparent"
+                              : "border-neutral-100 dark:border-neutral-900 opacity-40 bg-transparent"
+                        }`}
+                      >
+                        {/* Circle Node */}
+                        <div
+                          className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-semibold mb-2.5 transition-all ${
                             isCompleted
-                              ? "bg-emerald-500 text-white"
-                              : "bg-luxury-surface border border-luxury-border text-luxury-muted"
+                              ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
+                              : isCurrent
+                                ? "bg-white text-neutral-950 border-2 border-neutral-950 dark:bg-neutral-900 dark:text-white dark:border-white ring-2 ring-neutral-300 dark:ring-neutral-700"
+                                : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700"
                           }`}
                         >
                           {isCompleted ? "✓" : step.num}
-                        </span>
-                        <Icon
-                          size={16}
-                          className={isCompleted ? "text-emerald-500" : "text-luxury-muted"}
-                        />
+                        </div>
+
+                        {/* Title & Desc */}
+                        <h4 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider font-sans">
+                          {c(step.titleEn, step.titleAr)}
+                        </h4>
+                        <p className="text-[11px] text-neutral-400 mt-0.5 leading-snug">
+                          {c(step.descEn, step.descAr)}
+                        </p>
                       </div>
-                      <h3 className="text-xs font-sans font-semibold text-luxury-text uppercase tracking-wider">
-                        {c(step.titleEn, step.titleAr)}
-                      </h3>
-                      <p className="text-[11px] text-luxury-muted mt-1 leading-snug">
-                        {c(step.descEn, step.descAr)}
-                      </p>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Courier Dispatch & Recipient Details */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-luxury-border">
-              <div className="p-4 bg-luxury-surface2 border border-luxury-border rounded-sm space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-luxury-muted">
-                  <Truck size={14} className="text-accent" />
-                  <span>{c("Courier Carrier", "شركة الشحن المعتمدة")}</span>
+            {/* Courier Dispatch, Schedule & Address (3 Cards) */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-neutral-100 dark:border-neutral-800">
+              {/* Carrier */}
+              <div className="p-4 bg-[#FAFAFA] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 space-y-1 rounded-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Truck size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Climate Courier", "شركة الشحن المعتمدة")}
+                  </span>
                 </div>
-                <div className="font-semibold text-xs text-luxury-text font-sans">
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1">
                   {orderData.carrier || "Muschio GCC Climate Courier"}
                 </div>
                 {orderData.trackingNumber && (
-                  <div className="flex items-center gap-2 pt-1 font-mono text-xs text-accent">
+                  <div className="flex items-center gap-2 pt-1 font-mono text-xs text-neutral-900 dark:text-white">
                     <span>{orderData.trackingNumber}</span>
-                    <button
+                    <span className="text-[10px] font-mono text-neutral-400 hidden sm:inline">
+                  {c(`Updated ${secondsAgo}s ago`, `تم التحديث منذ ${secondsAgo} ثانية`)}
+                </span>
+                <button
                       type="button"
                       onClick={() => copyText(orderData.trackingNumber, "tracking")}
-                      className="hover:opacity-75"
+                      className="text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-0.5"
                       title={c("Copy tracking code", "نسخ رقم الشحنة")}
                     >
-                      {copiedTracking ? <Check size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                      {copiedTracking ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
                     </button>
                   </div>
                 )}
+                <div className="text-[10px] text-neutral-400 pt-0.5">
+                  {c("Temperature-monitored sealed transit", "مسار مبرد ومحمي بختم المصنع")}
+                </div>
               </div>
 
-              <div className="p-4 bg-luxury-surface2 border border-luxury-border rounded-sm space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-luxury-muted">
-                  <Calendar size={14} className="text-accent" />
-                  <span>{c("Estimated Handover", "الموعد المتوقع للتسليم")}</span>
+              {/* Handover Window */}
+              <div className="p-4 bg-[#FAFAFA] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 space-y-1 rounded-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <Calendar size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Estimated Handover", "الموعد المتوقع للتسليم")}
+                  </span>
                 </div>
-                <div className="font-semibold text-xs text-luxury-text font-sans">
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1">
                   {orderData.estimatedDelivery
                     ? new Date(orderData.estimatedDelivery).toLocaleDateString(isAr ? "ar-AE" : "en-GB", {
                         weekday: "short",
@@ -472,100 +563,146 @@ export default function OrderTrackingPage({
                       })
                     : c("Next 24–48 Hours", "خلال ٢٤ إلى ٤٨ ساعة")}
                 </div>
-                <div className="text-[11px] text-luxury-muted">
-                  {c("Temperature-monitored direct route", "مسار مبرد ومراقب حرارياً")}
+                <div className="text-[10px] text-neutral-400 pt-0.5">
+                  {c("Express UAE dispatch / GCC Priority", "شحن سريع داخل الإمارات ودول الخليج")}
                 </div>
               </div>
 
-              <div className="p-4 bg-luxury-surface2 border border-luxury-border rounded-sm space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-luxury-muted">
-                  <MapPin size={14} className="text-accent" />
-                  <span>{c("Delivery Destination", "عنوان وجهة التسليم")}</span>
+              {/* Destination */}
+              <div className="p-4 bg-[#FAFAFA] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 space-y-1 rounded-sm">
+                <div className="flex items-center gap-2 text-xs text-neutral-400">
+                  <MapPin size={14} className="text-neutral-900 dark:text-white" />
+                  <span className="uppercase tracking-wider text-[10px] font-semibold">
+                    {c("Delivery Address", "عنوان وجهة التسليم")}
+                  </span>
                 </div>
-                <div className="font-semibold text-xs text-luxury-text font-sans truncate">
+                <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1 truncate">
                   {orderData.shippingAddress
                     ? `${orderData.shippingAddress.city || "Dubai"}, ${orderData.shippingAddress.country || "United Arab Emirates"}`
                     : c("United Arab Emirates / GCC", "الإمارات العربية المتحدة / الخليج")}
                 </div>
-                <div className="text-[11px] text-luxury-muted truncate">
+                <div className="text-[10px] text-neutral-400 truncate pt-0.5">
                   {orderData.customerName || "Muschio Client"}
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Acquired Creations Breakdown */}
+          {/* 5. Acquired Creations Breakdown (Level Shoes Style Flacon Cards with Real Images) */}
           {Array.isArray(orderData.items) && orderData.items.length > 0 && (
-            <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-4">
-              <span className="eyebrow block border-b border-luxury-border pb-3">
-                {c("ITEMS IN THIS ORDER", "منتجات الطلب")}
-              </span>
-
-              <div className="divide-y divide-luxury-border">
-                {orderData.items.map((item: any) => (
-                  <div key={item.id} className="py-3 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-12 bg-luxury-surface2 border border-luxury-border flex items-center justify-center shrink-0">
-                        <Sparkles size={14} className="text-accent/50" />
-                      </div>
-                      <div>
-                        <div className="font-serif text-sm text-luxury-text">
-                          {c(item.productNameEn, item.productNameAr)}
-                        </div>
-                        <div className="text-[11px] text-luxury-muted">
-                          {item.sizeLabel || "Standard Flacon"} × {item.quantity}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="text-end font-mono text-xs text-luxury-text font-medium">
-                      <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
-                    </div>
-                  </div>
-                ))}
+            <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+                <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500 font-sans">
+                  {c("ACQUIRED CREATIONS", "القطع المقتناة في هذا الطلب")}
+                </span>
+                <span className="text-xs text-neutral-400 font-mono">
+                  {orderData.items.length}{" "}
+                  {c(
+                    orderData.items.length === 1 ? "Flacon" : "Flacons",
+                    orderData.items.length === 1 ? "عطر" : "عطور",
+                  )}
+                </span>
               </div>
 
-              <div className="pt-3 border-t border-luxury-border flex flex-wrap items-center justify-between text-xs text-luxury-muted">
-                <div className="flex items-center gap-1.5">
-                  <ShieldCheck size={14} className="text-emerald-600" />
-                  <span>{c("100% Genuine & Authentic Products Guaranteed", "منتجات أصلية ومضمونة ١٠٠٪")}</span>
+              <div className="divide-y divide-neutral-100 dark:divide-neutral-800">
+                {orderData.items.map((item: any) => {
+                  const itemImage = item.image || "/product-placeholder.svg";
+                  const itemSlug = item.slug;
+
+                  return (
+                    <div key={item.id} className="py-4 flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-4 min-w-0">
+                        {/* 4:5 Flacon Image Canvas */}
+                        <div className="relative w-16 h-20 bg-[#F8F8F8] dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shrink-0 overflow-hidden rounded-sm flex items-center justify-center">
+                          <Image
+                            src={itemImage}
+                            alt={item.productNameEn || "Fragrance"}
+                            fill
+                            sizes="80px"
+                            className="object-cover object-center"
+                          />
+                        </div>
+
+                        <div className="min-w-0">
+                          {item.brandName && (
+                            <span className="text-[10px] uppercase font-sans tracking-widest text-neutral-400 block truncate">
+                              {item.brandName}
+                            </span>
+                          )}
+                          <h3 className="font-serif text-base text-neutral-900 dark:text-white truncate">
+                            {itemSlug ? (
+                              <Link
+                                href={`/product/${itemSlug}`}
+                                className="hover:underline underline-offset-4"
+                              >
+                                {c(item.productNameEn, item.productNameAr)}
+                              </Link>
+                            ) : (
+                              c(item.productNameEn, item.productNameAr)
+                            )}
+                          </h3>
+                          <div className="flex items-center gap-2 text-xs text-neutral-400 mt-1">
+                            <span>{item.sizeLabel || "Standard Flacon"}</span>
+                            <span>•</span>
+                            <span className="font-mono text-neutral-600 dark:text-neutral-300">
+                              Qty: {item.quantity}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="text-end font-mono text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white shrink-0">
+                        <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Guarantees & Total Row */}
+              <div className="pt-4 border-t border-neutral-100 dark:border-neutral-800 flex flex-wrap items-center justify-between gap-4 text-xs">
+                <div className="flex items-center gap-2 text-neutral-500">
+                  <ShieldCheck size={16} className="text-neutral-900 dark:text-white shrink-0" />
+                  <span>
+                    {c(
+                      "100% Authentic Maison Allocation · Free return up to 7 days",
+                      "أصلي ١٠٠٪ مباشرة من دور العطور · إرجاع مجاني حتى 7 أيام",
+                    )}
+                  </span>
                 </div>
-                <div className="font-semibold text-luxury-text font-sans">
-                  {c("Total Amount", "المجموع الكلي")}:{" "}
-                  <PriceDisplay price={orderData.totalAmount} locale={locale} />
+
+                <div className="flex items-baseline gap-2 font-sans">
+                  <span className="text-xs uppercase text-neutral-400 tracking-wider">
+                    {c("Total Settled:", "المجموع الكلي:")}
+                  </span>
+                  <PriceDisplay price={orderData.totalAmount} locale={locale} size="lg" />
                 </div>
               </div>
             </div>
           )}
 
-          {/* 4. Real-time Order Updates Feed */}
+          {/* 6. Chronological Order Updates Feed */}
           {Array.isArray(orderData.events) && orderData.events.length > 0 && (
-            <div className="border border-luxury-border bg-luxury-surface p-6 sm:p-8 rounded-sm space-y-5">
-              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-luxury-border pb-3">
+            <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm space-y-5">
+              <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
                 <div className="flex items-center gap-2">
-                  <Activity size={15} className="text-accent" />
-                  <span className="eyebrow text-luxury-text text-xs">
-                    {c("ORDER UPDATES & HISTORY", "سجل تحديثات الطلب")}
+                  <Activity size={16} className="text-neutral-900 dark:text-white" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-900 dark:text-white">
+                    {c("DISPATCH LOG & TIMELINE", "سجل التحديثات المباشرة")}
                   </span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[10px] font-mono text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-sm">
-                    {c("LIVE UPDATES", "تحديث مباشر")}
-                  </span>
-                </div>
+                <span className="text-[11px] font-mono text-neutral-400">
+                  {orderData.events.length} {c("Milestones", "تحديثات")}
+                </span>
               </div>
 
-              <div className="space-y-4 pt-1">
+              <div className="space-y-3 pt-1">
                 {orderData.events.map((evt: any, idx: number) => {
                   const isLatest = idx === 0;
                   const dateObj = new Date(evt.timestamp);
                   const formattedTime = dateObj.toLocaleTimeString(
                     locale === "ar" ? "ar-AE" : "en-AE",
-                    { hour: "2-digit", minute: "2-digit", second: "2-digit" },
+                    { hour: "2-digit", minute: "2-digit" },
                   );
                   const formattedDate = dateObj.toLocaleDateString(
                     locale === "ar" ? "ar-AE" : "en-AE",
@@ -575,34 +712,34 @@ export default function OrderTrackingPage({
                   return (
                     <div
                       key={evt.id || idx}
-                      className={`relative flex items-start gap-4 p-3.5 border transition-all rounded-sm ${
+                      className={`flex items-start gap-3.5 p-3.5 border transition-all rounded-sm ${
                         isLatest
-                          ? "border-accent/60 bg-luxury-surface2/80 shadow-sm"
-                          : "border-luxury-border bg-luxury-surface2/30 opacity-85"
+                          ? "border-neutral-900 dark:border-white bg-[#FAFAFA] dark:bg-neutral-900/60"
+                          : "border-neutral-100 dark:border-neutral-800/80 bg-transparent opacity-75"
                       }`}
                     >
                       <div className="mt-0.5 shrink-0">
                         <div
-                          className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-mono font-bold ${
+                          className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${
                             isLatest
-                              ? "bg-accent text-luxury-bg shadow-sm"
-                              : "bg-emerald-500/20 text-emerald-600 border border-emerald-500/30"
+                              ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950"
+                              : "bg-neutral-200 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
                           }`}
                         >
                           ✓
                         </div>
                       </div>
 
-                      <div className="flex-1 space-y-1 text-start">
+                      <div className="flex-1 space-y-0.5 text-start min-w-0">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                          <h4 className="text-xs font-semibold text-luxury-text font-sans">
+                          <h4 className="text-xs font-semibold text-neutral-900 dark:text-white">
                             {c(evt.titleEn, evt.titleAr)}
                           </h4>
-                          <span className="text-[10px] font-mono text-luxury-muted">
+                          <span className="text-[10px] font-mono text-neutral-400">
                             {formattedTime} · {formattedDate}
                           </span>
                         </div>
-                        <p className="text-[11px] text-luxury-muted leading-relaxed">
+                        <p className="text-[11px] text-neutral-500 leading-relaxed">
                           {c(evt.descriptionEn, evt.descriptionAr)}
                         </p>
                       </div>
@@ -613,30 +750,40 @@ export default function OrderTrackingPage({
             </div>
           )}
 
-          {/* Customer Support CTA */}
-          <div className="border border-luxury-border bg-luxury-surface2 p-6 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+          {/* 7. Action Footer & Concierge Assistance (Level Shoes Minimalist Standard) */}
+          <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="space-y-1 text-start">
-              <span className="text-[10px] font-sans font-semibold uppercase tracking-[0.16em] text-accent block">
-                {c("NEED HELP WITH YOUR ORDER?", "هل تحتاج مساعدة في طلبك؟")}
+              <span className="text-[11px] uppercase font-semibold tracking-wider text-neutral-900 dark:text-white block">
+                {c("VIP OLFACTORY CONCIERGE", "المساعد العطري الخاص")}
               </span>
-              <p className="text-xs text-luxury-muted">
+              <p className="text-xs text-neutral-500">
                 {c(
-                  "Contact our customer support team anytime on WhatsApp for fast help with delivery.",
-                  "تواصل معنا مباشرة عبر واتساب للمساعدة السريعة في أي وقت.",
+                  "Our Dubai concierge is on standby for special delivery instructions or gift customization.",
+                  "فريق كونسيرج دبي في خدمتكم لتنسيق أي تعليمات خاصة بالتسليم أو التغليف الفاخر.",
                 )}
               </p>
             </div>
 
-            <a
-              href={whatsappInquiryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-5 py-2.5 bg-[#128C7E] hover:bg-[#0c6b60] text-white text-xs font-medium rounded-sm flex items-center gap-2 shrink-0 transition-colors"
-            >
-              <MessageSquare size={14} />
-              <span>{c("Chat on WhatsApp", "محادثة عبر واتساب")}</span>
-              <ArrowRight size={12} className="rtl:rotate-180" />
-            </a>
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="py-2.5 px-4 border border-neutral-200 dark:border-neutral-700 text-neutral-700 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white text-xs font-medium rounded-sm flex items-center gap-2 transition-colors"
+              >
+                <Printer size={13} />
+                <span>{c("Print Receipt", "طباعة الإيصال")}</span>
+              </button>
+
+              <a
+                href={whatsappInquiryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs font-medium rounded-sm flex items-center gap-2 transition-colors shadow-sm"
+              >
+                <MessageSquare size={13} />
+                <span>{c("WhatsApp Concierge", "محادثة المستشار")}</span>
+              </a>
+            </div>
           </div>
         </div>
       )}
