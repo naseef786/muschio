@@ -462,8 +462,8 @@ export default function OrderStatusPage({
               <ShieldCheck size={16} className="text-emerald-500 flex-shrink-0" />
               <span>
                 {c(
-                  "Includes complimentary 2ml test vial & official Certificate of Authenticity.",
-                  "مرفق عينة ٢ مل مجانية للتجربة مع شهادة الأصالة الرسمية المعتمدة.",
+                  "Includes Free return up to 7 days & official Certificate of Authenticity.",
+                  "يتضمن إرجاع مجاني حتى 7 أيام وشهادة أصالة رسمية معتمدة.",
                 )}
               </span>
             </div>

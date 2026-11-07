@@ -685,7 +685,7 @@ export function ProductExperience({
               </Link>
             </div>
 
-            {/* Service Badges (Authentic, GCC Delivery, Sealed Guarantee) */}
+            {/* Service Badges (Authentic, GCC Delivery, Free 7-Day Returns) */}
             <div className="grid grid-cols-3 gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center font-sans">
               <div className="flex flex-col items-center gap-1.5 p-2">
                 <ShieldCheck size={18} className="text-neutral-900 dark:text-neutral-100" />
@@ -708,126 +708,17 @@ export function ProductExperience({
               <div className="flex flex-col items-center gap-1.5 p-2">
                 <RotateCcw size={18} className="text-neutral-900 dark:text-neutral-100" />
                 <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
-                  {c("Free 7-Day Returns", "إرجاع مجاني ٧ أيام")}
+                  {c("Free Return Up to 7 Days", "إرجاع مجاني حتى 7 أيام")}
                 </span>
                 <span className="text-[10px] text-neutral-400">
-                  {c("Complimentary Pickup", "استلام مجاني")}
+                  {c("Complimentary Doorstep Pickup", "استلام مجاني من الباب")}
                 </span>
               </div>
             </div>
 
-            {/* Olfactory Architecture Section (Visual Accord Block) */}
-            {topNotes.length + heartNotes.length + baseNotes.length > 0 && (
-              <div className="pt-6 border-t border-neutral-100 dark:border-neutral-800 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-sans font-medium uppercase tracking-[0.16em] text-neutral-500">
-                    {c("Olfactory Architecture", "الهندسة العطرية")}
-                  </span>
-                  <span className="text-[11px] text-neutral-400 font-sans tracking-wide">
-                    {c("Pyramid of Accords", "هرم النغمات")}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                  {/* Column 1: Top Notes */}
-                  {topNotes.length > 0 && (
-                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                            {c("Top Notes", "الافتتاحية")}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                            {c("0–30 min", "٠–٣٠ د")}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 mt-1">
-                          {c("Initial sparkle & impressions", "نغمات البداية والافتتاحية")}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                        {topNotes.map((n) => (
-                          <Link
-                            key={n.id}
-                            href={`/notes/${n.slug}`}
-                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                          >
-                            {n.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Column 2: Heart Notes */}
-                  {heartNotes.length > 0 && (
-                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                            {c("Heart Notes", "قلب العطر")}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                            {c("2–4 hrs", "٢–٤ س")}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 mt-1">
-                          {c("Core character & radiance", "جوهر العطر ونفحاته المركزية")}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                        {heartNotes.map((n) => (
-                          <Link
-                            key={n.id}
-                            href={`/notes/${n.slug}`}
-                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                          >
-                            {n.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Column 3: Base Notes */}
-                  {baseNotes.length > 0 && (
-                    <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
-                      <div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
-                            {c("Base Notes", "القاعدة العطرية")}
-                          </span>
-                          <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
-                            {c("6+ hrs", "٦+ س")}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-neutral-500 mt-1">
-                          {c("Enduring foundation & trail", "عمق العطر والنفحات المستمرة")}
-                        </p>
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
-                        {baseNotes.map((n) => (
-                          <Link
-                            key={n.id}
-                            href={`/notes/${n.slug}`}
-                            className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
-                          >
-                            {n.name}
-                          </Link>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
-            {/* Level Shoes Style Clean Accordions */}
-            <div className="border-b border-neutral-100 dark:border-neutral-800">
-              {/* Accordion 1: Description */}
+            {/* Level Shoes Style Clean Accordions (Description, Notes, Maison, Rituals, Shipping) */}
+            <div className="border-b border-neutral-100 dark:border-neutral-800 pt-2">
+              {/* Accordion 1: Description (Moved strictly inside dropdown) */}
               <div className="pdp-accordion-item">
                 <button
                   type="button"
@@ -849,6 +740,121 @@ export function ProductExperience({
                   </div>
                 )}
               </div>
+
+              {/* Accordion 2: Olfactory Notes & Architecture */}
+              {topNotes.length + heartNotes.length + baseNotes.length > 0 && (
+                <div className="pdp-accordion-item">
+                  <button
+                    type="button"
+                    onClick={() => toggleAccordion("olfactory")}
+                    className="pdp-accordion-header"
+                    aria-expanded={openAccordion === "olfactory"}
+                  >
+                    <span>{c("Olfactory Notes & Architecture", "الهندسة العطرية والنغمات")}</span>
+                    <ChevronDown
+                      size={16}
+                      className={`transition-transform duration-200 ${
+                        openAccordion === "olfactory" ? "rotate-180" : ""
+                      }`}
+                    />
+                  </button>
+                  {openAccordion === "olfactory" && (
+                    <div className="pdp-accordion-content space-y-3 font-sans">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* Top Notes */}
+                        {topNotes.length > 0 && (
+                          <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                                  {c("Top Notes", "الافتتاحية")}
+                                </span>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                                  {c("0–30 min", "٠–٣٠ د")}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-neutral-500 mt-1">
+                                {c("Initial sparkle & impressions", "نغمات البداية والافتتاحية")}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                              {topNotes.map((n) => (
+                                <Link
+                                  key={n.id}
+                                  href={`/notes/${n.slug}`}
+                                  className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                                >
+                                  {n.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Heart Notes */}
+                        {heartNotes.length > 0 && (
+                          <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                                  {c("Heart Notes", "قلب العطر")}
+                                </span>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                                  {c("2–4 hrs", "٢–٤ س")}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-neutral-500 mt-1">
+                                {c("Core character & radiance", "جوهر العطر ونفحاته المركزية")}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                              {heartNotes.map((n) => (
+                                <Link
+                                  key={n.id}
+                                  href={`/notes/${n.slug}`}
+                                  className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                                >
+                                  {n.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Base Notes */}
+                        {baseNotes.length > 0 && (
+                          <div className="bg-[#F9F9FB] dark:bg-neutral-900/40 p-4 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex flex-col justify-between space-y-3">
+                            <div>
+                              <div className="flex items-center justify-between">
+                                <span className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-100">
+                                  {c("Base Notes", "القاعدة العطرية")}
+                                </span>
+                                <span className="text-[10px] text-neutral-400 uppercase tracking-wider font-mono">
+                                  {c("6+ hrs", "٦+ س")}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-neutral-500 mt-1">
+                                {c("Enduring foundation & trail", "عمق العطر والنفحات المستمرة")}
+                              </p>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60">
+                              {baseNotes.map((n) => (
+                                <Link
+                                  key={n.id}
+                                  href={`/notes/${n.slug}`}
+                                  className="px-2.5 py-1 text-xs bg-white dark:bg-neutral-800 border border-neutral-200/60 dark:border-neutral-700/60 text-neutral-800 dark:text-neutral-200 hover:border-neutral-900 dark:hover:border-white transition-colors rounded-none shadow-[0_1px_2px_rgba(0,0,0,0.02)]"
+                                >
+                                  {n.name}
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Accordion 2: Maison Heritage & Perfumer */}
               <div className="pdp-accordion-item">
@@ -1084,7 +1090,7 @@ export function ProductExperience({
 
           {/* Mobile Quick Add to Bag (triggers mini-cart drawer) */}
           {(() => {
-            const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 25;
+            const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 0;
             const isOutOfStock = currentStock <= 0;
             return (
               <button

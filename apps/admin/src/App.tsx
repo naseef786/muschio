@@ -909,7 +909,7 @@ export function App() {
           perfumesCount: 2,
         })));
       }
-      if (colRes?.data && Array.isArray(colRes.data) && colRes.data.length > 0) {
+      if (colRes?.data && Array.isArray(colRes.data)) {
         setCollections(colRes.data.map((c: any) => ({
           id: c.id,
           nameEn: c.nameEn,
@@ -930,7 +930,7 @@ export function App() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [authSession?.token]);
 
   // 3. ORDERS
   const [orders, setOrders] = usePersistentState<any[]>("orders", [
@@ -1993,101 +1993,63 @@ export function App() {
         },
         body: JSON.stringify(collectionData),
       });
-      if (res.ok) {
-        const json = await res.json();
-        const saved = json.data;
-        if (saved) {
-          const orderedProducts = (collectionData.productIds || []).map((pId) => {
-            const prod = products.find((p) => p.id === pId);
-            return {
-              id: pId,
-              slug: prod?.slug || pId,
-              nameEn: prod?.name || pId,
-              nameAr: prod?.nameAr,
-              brand: prod?.brand || "",
-              price: prod?.price || 0,
-              image: prod?.imageUrl || "/product-placeholder.svg",
-              concentration: prod?.concentration,
-            };
-          });
 
-          const fullItem: CollectionItem = {
-            id: saved.id,
-            nameEn: saved.nameEn,
-            nameAr: saved.nameAr,
-            slug: saved.slug,
-            descriptionEn: saved.descriptionEn || "",
-            descriptionAr: saved.descriptionAr || "",
-            heroImageUrl: saved.heroImageUrl || "",
-            isFeatured: Boolean(saved.isFeatured),
-            productIds: collectionData.productIds || [],
-            productCount: (collectionData.productIds || []).length,
-            products: orderedProducts,
-            createdAt: saved.createdAt,
-            updatedAt: saved.updatedAt,
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || `Failed to save collection (status ${res.status})`);
+      }
+
+      const json = await res.json();
+      const saved = json.data;
+      if (saved) {
+        const orderedProducts = (collectionData.productIds || []).map((pId) => {
+          const prod = products.find((p) => p.id === pId || p.slug === pId);
+          return {
+            id: pId,
+            slug: prod?.slug || pId,
+            nameEn: prod?.name || pId,
+            nameAr: prod?.nameAr,
+            brand: prod?.brand || "",
+            price: prod?.price || 0,
+            image: prod?.imageUrl || prod?.images?.[0] || "/product-placeholder.svg",
+            concentration: prod?.concentration,
           };
+        });
 
-          setCollections((prev) => {
-            const idx = prev.findIndex((c) => c.id === saved.id);
-            if (idx >= 0) {
-              const next = [...prev];
-              next[idx] = fullItem;
-              return next;
-            }
-            return [fullItem, ...prev];
-          });
-          setShowCollectionModal(false);
-          setCollectionToEdit(null);
-          addAuditLog("COLLECTION_SAVED", `Collection "${saved.nameEn}" [${saved.isFeatured ? "Featured" : "Standard"}]`);
-          return;
-        }
+        const fullItem: CollectionItem = {
+          id: saved.id,
+          nameEn: saved.nameEn,
+          nameAr: saved.nameAr,
+          slug: saved.slug,
+          descriptionEn: saved.descriptionEn || "",
+          descriptionAr: saved.descriptionAr || "",
+          heroImageUrl: saved.heroImageUrl || "",
+          isFeatured: Boolean(saved.isFeatured),
+          productIds: collectionData.productIds || [],
+          productCount: (collectionData.productIds || []).length,
+          products: orderedProducts,
+          createdAt: saved.createdAt,
+          updatedAt: saved.updatedAt,
+        };
+
+        setCollections((prev) => {
+          const idx = prev.findIndex((c) => c.id === saved.id || (collectionData.id && (c.id === collectionData.id || c.slug === collectionData.slug)));
+          if (idx >= 0) {
+            const next = [...prev];
+            next[idx] = fullItem;
+            return next;
+          }
+          return [fullItem, ...prev];
+        });
+        setShowCollectionModal(false);
+        setCollectionToEdit(null);
+        addAuditLog("COLLECTION_SAVED", `Collection "${saved.nameEn}" [${saved.isFeatured ? "Featured" : "Standard"}]`);
+        return;
       }
-    } catch (err) {
-      console.warn("DB collection save failed:", err);
+    } catch (err: any) {
+      console.error("DB collection save failed:", err);
+      throw err;
     }
-
-    // Fallback local update
-    const newId = collectionData.id || `col-${Date.now()}`;
-    const orderedProducts = (collectionData.productIds || []).map((pId) => {
-      const prod = products.find((p) => p.id === pId);
-      return {
-        id: pId,
-        slug: prod?.slug || pId,
-        nameEn: prod?.name || pId,
-        nameAr: prod?.nameAr,
-        brand: prod?.brand || "",
-        price: prod?.price || 0,
-        image: prod?.imageUrl || "/product-placeholder.svg",
-        concentration: prod?.concentration,
-      };
-    });
-
-    const fullItem: CollectionItem = {
-      id: newId,
-      nameEn: collectionData.nameEn || "Curated Collection",
-      nameAr: collectionData.nameAr || collectionData.nameEn || "مجموعة عطرية",
-      slug: collectionData.slug || slugify(collectionData.nameEn || "collection"),
-      descriptionEn: collectionData.descriptionEn || "",
-      descriptionAr: collectionData.descriptionAr || "",
-      heroImageUrl: collectionData.heroImageUrl || "",
-      isFeatured: Boolean(collectionData.isFeatured),
-      productIds: collectionData.productIds || [],
-      productCount: (collectionData.productIds || []).length,
-      products: orderedProducts,
-    };
-
-    setCollections((prev) => {
-      const idx = prev.findIndex((c) => c.id === newId);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = fullItem;
-        return next;
-      }
-      return [fullItem, ...prev];
-    });
-    setShowCollectionModal(false);
-    setCollectionToEdit(null);
-    addAuditLog("COLLECTION_SAVED", `Collection "${fullItem.nameEn}"`);
   };
 
   const handleDeleteCollection = async (id: string, name: string) => {
@@ -2102,7 +2064,7 @@ export function App() {
     } catch (err) {
       console.warn("DB collection delete failed:", err);
     }
-    setCollections((prev) => prev.filter((c) => c.id !== id));
+    setCollections((prev) => prev.filter((c) => c.id !== id && c.slug !== id));
     addAuditLog("COLLECTION_DELETED", `Collection ${id} (${name})`);
   };
 
@@ -4094,9 +4056,20 @@ export function App() {
                     const colProductIds = col.productIds || col.products?.map((p) => p.id) || [];
                     const resolvedProducts = colProductIds
                       .map((pId) => {
-                        const direct = col.products?.find((p) => p.id === pId);
-                        if (direct) return direct;
-                        const fromCatalog = products.find((p) => p.id === pId);
+                        const direct = col.products?.find((p) => p.id === pId || p.slug === pId);
+                        if (direct) {
+                          return {
+                            id: direct.id,
+                            slug: direct.slug,
+                            nameEn: direct.nameEn || pId,
+                            nameAr: direct.nameAr,
+                            brand: direct.brand || "",
+                            price: direct.price || 0,
+                            image: direct.image || "/product-placeholder.svg",
+                            concentration: direct.concentration,
+                          };
+                        }
+                        const fromCatalog = products.find((p) => p.id === pId || p.slug === pId);
                         if (fromCatalog) {
                           return {
                             id: fromCatalog.id,
@@ -4105,7 +4078,7 @@ export function App() {
                             nameAr: fromCatalog.nameAr,
                             brand: fromCatalog.brand,
                             price: fromCatalog.price,
-                            image: fromCatalog.imageUrl,
+                            image: fromCatalog.imageUrl || fromCatalog.images?.[0] || "/product-placeholder.svg",
                             concentration: fromCatalog.concentration,
                           };
                         }

@@ -44,8 +44,8 @@ export default function DeliveryPage({
         </h1>
         <p className="text-xs sm:text-sm text-luxury-muted font-sans leading-relaxed">
           {c(
-            "Every flacon dispatched from Muschio is treated as a cultural artifact. Shipped in custom climate-regulated packaging to protect delicate natural perfume oils, accompanied by official 2ml discovery vials and white-glove express tracking.",
-            "تُعامل كل زجاجة عطر في موسكيو كتحفة فنية أصيلة. تُشحن في عبوات مبردة تحمي الزيوت العطرية النقية من حرارة الطقس، مرفقة بعينة تجريبية رسمية سعة ٢ مل مع تتبع فوري مباشر.",
+            "Every flacon dispatched from Muschio is treated as a cultural artifact. Shipped in custom climate-regulated packaging to protect delicate natural perfume oils, accompanied by free return up to 7 days and white-glove express tracking.",
+            "تُعامل كل زجاجة عطر في موسكيو كتحفة فنية أصيلة. تُشحن في عبوات مبردة تحمي الزيوت العطرية النقية من حرارة الطقس، مرفقة بضمان إرجاع مجاني حتى 7 أيام مع تتبع فوري مباشر.",
           )}
         </p>
       </div>
@@ -128,12 +128,12 @@ export default function DeliveryPage({
                 </div>
                 <div className="space-y-1">
                   <h4 className="font-serif text-base text-luxury-text font-normal">
-                    {c("2ml Testing Vial Included", "عينة تجريبية ٢ مل مع كل زجاجة")}
+                    {c("Free Return Up to 7 Days", "إرجاع مجاني حتى 7 أيام")}
                   </h4>
                   <p className="text-xs text-luxury-muted leading-relaxed">
                     {c(
-                      "Every full bottle arrives with a matching 2ml sample vial. Test the scent on your skin first; returns are welcomed on unopened, sealed boxes.",
-                      "تصل كل زجاجة كاملة مع عينة ٢ مل مطابقة لتجربتها أولاً على بشرتك؛ نرحب بالإرجاع طالما ظل الصندوق الخارجي مغلفاً.",
+                      "Every full bottle arrives with our complimentary 7-day return guarantee. Returns and exchanges are seamlessly arranged on unopened, sealed flacons.",
+                      "تصل كل زجاجة كاملة مع ضمان إرجاع مجاني لمدة 7 أيام. نوفر خدمة استلام وإرجاع مجانية وميسرة للزجاجات المغلفة وغير المفتوحة.",
                     )}
                   </p>
                 </div>

@@ -1031,8 +1031,8 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 </div>
                 <p className="text-[11px] text-luxury-muted leading-relaxed">
                   {c(
-                    "Complimentary 2ml discovery vial & Certificate of Authenticity included.",
-                    "مرفق عينة ٢ مل مجانية للتجربة مع شهادة الأصالة الرسمية المعتمدة.",
+                    "Free return up to 7 days & Certificate of Authenticity included.",
+                    "إرجاع مجاني حتى 7 أيام مع شهادة الأصالة الرسمية المعتمدة.",
                   )}
                 </p>
                 <div className="space-y-2 pt-1">
