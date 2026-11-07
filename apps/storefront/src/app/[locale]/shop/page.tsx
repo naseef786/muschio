@@ -4,14 +4,14 @@ import React, { useEffect, useState, useMemo } from "react";
 import { muschioApi } from "../../../lib/api";
 import { StorefrontProduct } from "@muschio/types";
 import { ProductCard } from "../../../components/product-card";
-import { SlidersHorizontal, ArrowUpDown, X, Check, Loader2 } from "lucide-react";
+import { SlidersHorizontal, ArrowUpDown, X, Check, Loader2, Sparkles } from "lucide-react";
 
 export default function ShopCatalogPage({
   params: { locale },
   searchParams,
 }: {
   params: { locale: "en" | "ar" };
-  searchParams: { search?: string; brandType?: string; family?: string; brand?: string; page?: string };
+  searchParams: { search?: string; brandType?: string; family?: string; brand?: string; page?: string; deal?: string };
 }) {
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
@@ -30,6 +30,9 @@ export default function ShopCatalogPage({
   );
   const [selectedFamily, setSelectedFamily] = useState<string>(
     searchParams.family ?? "",
+  );
+  const [dealOnly, setDealOnly] = useState<boolean>(
+    searchParams.deal === "true" || searchParams.deal === "1",
   );
   const [search, setSearch] = useState(searchParams.search ?? "");
   const [sort, setSort] = useState("curated");
@@ -89,6 +92,7 @@ export default function ShopCatalogPage({
   const filtered = useMemo(() => {
     return catalog
       .filter((p) => {
+        if (dealOnly && (!p.compareAtPrice || p.compareAtPrice <= p.price)) return false;
         if (selectedBrandType && p.brandType !== selectedBrandType) return false;
         if (selectedBrand && p.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
         if (selectedFamily && p.family !== selectedFamily) return false;
@@ -110,12 +114,12 @@ export default function ShopCatalogPage({
         if (sort === "name") return a.nameEn.localeCompare(b.nameEn);
         return 0; // curated order
       });
-  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, search, sort]);
+  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, search, sort, dealOnly]);
 
   // Reset page to 1 whenever any filter or sort option changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBrandType, selectedBrand, selectedFamily, search, sort]);
+  }, [selectedBrandType, selectedBrand, selectedFamily, search, sort, dealOnly]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
 
@@ -130,11 +134,12 @@ export default function ShopCatalogPage({
     setSelectedBrand(null);
     setSelectedFamily("");
     setSearch("");
+    setDealOnly(false);
     setCurrentPage(1);
   };
 
   const hasActiveFilters = Boolean(
-    selectedBrandType || selectedBrand || selectedFamily || search.trim(),
+    selectedBrandType || selectedBrand || selectedFamily || search.trim() || dealOnly,
   );
 
   const activeFilterCount = [
@@ -308,6 +313,18 @@ export default function ShopCatalogPage({
               </button>
             </span>
           )}
+          {dealOnly && (
+            <span className="filter-chip bg-accent/10 border-accent/30 text-accent font-medium">
+              {c("Privé Deals & Offers", "عروض وصفقات حصرية")}
+              <button
+                type="button"
+                onClick={() => setDealOnly(false)}
+                aria-label="Remove deal filter"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
           {search.trim() && (
             <span className="filter-chip">
               &ldquo;{search}&rdquo;
@@ -332,6 +349,33 @@ export default function ShopCatalogPage({
 
       {/* 5. Product Grid (2 Columns Mobile, 3 Tablet, 4 Desktop) */}
       <div className="pt-6">
+        {dealOnly && (
+          <div className="mb-6 p-4 border border-accent/40 bg-luxury-surface rounded-sm flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="p-1.5 bg-accent/10 text-accent rounded">
+                <Sparkles size={16} />
+              </span>
+              <div>
+                <h3 className="font-serif text-sm font-medium text-luxury-text">
+                  {c("Private Client Reserve · Curated Deals & Reductions", "مختارات كبار الشخصيات · صفقات وتخفيضات حصرية")}
+                </h3>
+                <p className="text-[11px] text-luxury-muted">
+                  {c(
+                    "Exclusive reductions on select extraits de parfum and pure flacons. Includes white-glove GCC dispatch.",
+                    "تخفيضات حصرية على خلاصات العطور الفاخرة المختارة مع توصيل مبرد مجاني لكافة دول الخليج."
+                  )}
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setDealOnly(false)}
+              className="text-xs text-luxury-muted hover:text-luxury-text underline font-sans shrink-0"
+            >
+              {c("View All", "عرض الكل")}
+            </button>
+          </div>
+        )}
         {loading ? (
           <div className="py-28 flex flex-col items-center justify-center text-xs text-luxury-muted space-y-3">
             <Loader2 size={24} className="animate-spin text-accent" />

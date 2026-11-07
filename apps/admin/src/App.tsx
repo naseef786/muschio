@@ -231,11 +231,23 @@ const SECTION_LABELS: Record<string, string> = {
   FEATURED_PRODUCTS: "Signature Selection Grid",
   HOUSES_GRID: "Prestige Houses",
   NOTES_GRID: "Scent Notes Explorer",
+  CUSTOM_BANNER: "Promotional Offer & Deal Banner",
   DISCOVERY_SETS: "Discovery Sets Feature",
   JOURNAL_FEATURE: "Muschio Journal",
   TRUST_INDICATORS: "Service Guarantees",
-  CUSTOM_BANNER: "Custom Campaign Banner",
 };
+
+const DEFAULT_HOMEPAGE_SECTIONS: HomepageSectionItem[] = [
+  { id: "sec-1", sectionType: "HERO_BANNER", titleEn: "Campaign Hero", titleAr: "الواجهة الرئيسية", sortOrder: 0, isVisible: true },
+  { id: "sec-2", sectionType: "DISCOVERY_STRIP", titleEn: "Quick Category Jump", titleAr: "الاستكشاف السريع", sortOrder: 1, isVisible: true },
+  { id: "sec-3", sectionType: "FEATURED_PRODUCTS", titleEn: "Curated Masterpieces", titleAr: "المختارات المميزة", sortOrder: 2, isVisible: true },
+  { id: "sec-4", sectionType: "HOUSES_GRID", titleEn: "Shop by Fragrance House", titleAr: "تسوق حسب الدار", sortOrder: 3, isVisible: true },
+  { id: "sec-5", sectionType: "NOTES_GRID", titleEn: "Explore by Key Notes", titleAr: "المكتبة العطرية", sortOrder: 4, isVisible: true },
+  { id: "sec-6", sectionType: "CUSTOM_BANNER", titleEn: "Promotional Offer & Deal Banner", titleAr: "عروض وحملات خاصة", sortOrder: 5, isVisible: true },
+  { id: "sec-7", sectionType: "DISCOVERY_SETS", titleEn: "Bespoke Discovery Sets", titleAr: "مجموعات العينات", sortOrder: 6, isVisible: true },
+  { id: "sec-8", sectionType: "JOURNAL_FEATURE", titleEn: "The Muschio Journal", titleAr: "مجلة موسكيو", sortOrder: 7, isVisible: true },
+  { id: "sec-9", sectionType: "TRUST_INDICATORS", titleEn: "Service Guarantees & Trust Bar", titleAr: "ضمانات الخدمة والفخامة", sortOrder: 8, isVisible: true },
+];
 
 function isMockItem(item: any): boolean {
   if (!item || typeof item !== "object") return false;
@@ -373,6 +385,34 @@ export function App() {
   useEffect(() => {
     setAdminProductPage(1);
   }, [productSearch]);
+
+  const catalogDeals = useMemo(() => {
+    return products.flatMap((p) => {
+      const dealVariants = (p.variants || []).filter((v: any) => {
+        const reg = Number(v.compareAtPrice || v.regularPrice || v.basePrice || 0);
+        const sell = Number(v.price || 0);
+        return reg > sell && sell > 0;
+      });
+      return dealVariants.map((v: any) => {
+        const reg = Number(v.compareAtPrice || v.regularPrice || v.basePrice || 0);
+        const sell = Number(v.price || 0);
+        const savings = reg - sell;
+        const pct = Math.round((savings / reg) * 100);
+        return {
+          productId: p.id,
+          name: p.name,
+          nameAr: p.nameAr,
+          brand: p.brand,
+          image: p.images?.[0] || "/product-placeholder.svg",
+          volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : "100ml"),
+          regularPrice: reg,
+          dealPrice: sell,
+          savings,
+          discountPct: pct,
+        };
+      });
+    });
+  }, [products]);
   const [productForm, setProductForm] = useState({
     sku: "",
     name: "",
@@ -771,9 +811,11 @@ export function App() {
       try {
         const token = authSession?.token;
         const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
-        const [ordersRes, enquiriesRes] = await Promise.all([
+        const [ordersRes, enquiriesRes, bannersRes, sectionsRes] = await Promise.all([
           fetch("/api/v1/admin/orders", { headers: authHeaders }).catch(() => null),
           fetch("/api/v1/admin/enquiries", { headers: authHeaders }).catch(() => null),
+          fetch("/api/v1/admin/banners", { headers: authHeaders }).catch(() => null),
+          fetch("/api/v1/admin/sections", { headers: authHeaders }).catch(() => null),
         ]);
 
         if (ordersRes && ordersRes.ok) {
@@ -805,6 +847,20 @@ export function App() {
           const json = await enquiriesRes.json();
           if (json.success && Array.isArray(json.data) && active) {
             setEnquiries(json.data.filter((e: any) => !isMockItem(e)));
+          }
+        }
+
+        if (bannersRes && bannersRes.ok) {
+          const json = await bannersRes.json();
+          if (json.success && Array.isArray(json.data) && active) {
+            setBanners(json.data);
+          }
+        }
+
+        if (sectionsRes && sectionsRes.ok) {
+          const json = await sectionsRes.json();
+          if (json.success && Array.isArray(json.data) && active) {
+            setSections(json.data);
           }
         }
       } catch (err) {
@@ -915,7 +971,7 @@ export function App() {
   const [banners, setBanners] = usePersistentState<BannerItem[]>("banners", []);
 
   // 7. HOMEPAGE SECTIONS
-  const [sections, setSections] = usePersistentState<HomepageSectionItem[]>("sections", []);
+  const [sections, setSections] = usePersistentState<HomepageSectionItem[]>("sections", DEFAULT_HOMEPAGE_SECTIONS);
 
   // 8. SOCIAL & STOREFRONT SETTINGS
   const [storeSettings, setStoreSettings] = usePersistentState<StoreSettings>("settings", {
@@ -947,6 +1003,7 @@ export function App() {
   };
 
   // Banner form state
+  const [bannerSlotFilter, setBannerSlotFilter] = useState<string>("ALL");
   const [showBannerForm, setShowBannerForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<BannerItem | null>(null);
   const [bannerForm, setBannerForm] = useState({
@@ -1009,39 +1066,122 @@ export function App() {
     setShowBannerForm(true);
   };
 
-  const handleSaveBanner = () => {
+  const handleSaveBanner = async () => {
     if (!bannerForm.titleEn || !bannerForm.titleAr || !bannerForm.imageUrl) return;
-    if (editingBanner) {
-      setBanners((prev) =>
-        prev.map((b) => (b.id === editingBanner.id ? { ...b, ...bannerForm } : b))
-      );
-      addAuditLog("BANNER_UPDATED", `${bannerForm.slot} ${editingBanner.id}`);
-    } else {
-      const newBanner: BannerItem = {
-        id: `bnr-${Date.now()}`,
-        ...bannerForm,
-        sortOrder: banners.filter((b) => b.slot === bannerForm.slot).length,
-        isActive: true,
+    try {
+      const token = authSession?.token;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
-      setBanners((prev) => [...prev, newBanner]);
-      addAuditLog("BANNER_CREATED", `${bannerForm.slot} ${newBanner.id}`);
+
+      if (editingBanner) {
+        const res = await fetch(`/api/v1/admin/banners/${editingBanner.id}`, {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(bannerForm),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setBanners((prev) =>
+            prev.map((b) => (b.id === editingBanner.id ? json.data : b))
+          );
+        } else {
+          setBanners((prev) =>
+            prev.map((b) => (b.id === editingBanner.id ? { ...b, ...bannerForm } : b))
+          );
+        }
+        addAuditLog("BANNER_UPDATED", `${bannerForm.slot} ${editingBanner.id}`);
+        addToast("order", "Banner Updated", "Promotional offer banner saved to live database.");
+      } else {
+        const res = await fetch("/api/v1/admin/banners", {
+          method: "POST",
+          headers: authHeaders,
+          body: JSON.stringify(bannerForm),
+        });
+        const json = await res.json();
+        if (json.success && json.data) {
+          setBanners((prev) => [...prev, json.data]);
+        } else {
+          const newBanner: BannerItem = {
+            id: `bnr-${Date.now()}`,
+            ...bannerForm,
+            sortOrder: banners.filter((b) => b.slot === bannerForm.slot).length,
+            isActive: true,
+          };
+          setBanners((prev) => [...prev, newBanner]);
+        }
+        addAuditLog("BANNER_CREATED", `${bannerForm.slot} banner published`);
+        addToast("order", "Banner Published", "New promotional banner published to storefront.");
+      }
+    } catch (e) {
+      console.error("Error saving banner:", e);
     }
     resetBannerForm();
   };
 
-  const toggleBannerActive = (id: string) => {
+  const toggleBannerActive = async (id: string) => {
     setBanners((prev) =>
       prev.map((b) => (b.id === id ? { ...b, isActive: !b.isActive } : b))
     );
+    try {
+      const token = authSession?.token;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      await fetch(`/api/v1/admin/banners/${id}/toggle`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      addToast("order", "Banner Updated", "Banner status updated in live database.");
+    } catch (e) {
+      console.error("Error toggling banner:", e);
+    }
     addAuditLog("BANNER_TOGGLE", `Banner ${id}`);
   };
 
-  const deleteBanner = (id: string) => {
+  const deleteBanner = async (id: string) => {
     setBanners((prev) => prev.filter((b) => b.id !== id));
+    try {
+      const token = authSession?.token;
+      const authHeaders: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      await fetch(`/api/v1/admin/banners/${id}`, {
+        method: "DELETE",
+        headers: authHeaders,
+      });
+      addToast("cancel", "Banner Removed", "Banner removed from database.");
+    } catch (e) {
+      console.error("Error deleting banner:", e);
+    }
     addAuditLog("BANNER_DELETED", `Banner ${id}`);
   };
 
-  // Section ordering with non-undefined array items
+  // Section ordering with non-undefined array items and API persistence
+  const saveSectionsOrder = async (updatedList: HomepageSectionItem[]) => {
+    try {
+      const token = authSession?.token;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      const ordering = updatedList.map((s, idx) => ({
+        sectionType: s.sectionType,
+        sortOrder: idx,
+      }));
+      await fetch("/api/v1/admin/sections/reorder", {
+        method: "POST",
+        headers: authHeaders,
+        body: JSON.stringify({ ordering }),
+      });
+      addToast("order", "Storefront Reordered", "Homepage section order saved to live database.");
+    } catch (e) {
+      console.error("Failed to persist section reordering:", e);
+    }
+  };
+
   const moveSectionUp = (idx: number) => {
     if (idx === 0) return;
     setSections((prev) => {
@@ -1052,7 +1192,9 @@ export function App() {
         next[idx - 1] = current;
         next[idx] = previous;
       }
-      return next.map((s, i) => ({ ...s, sortOrder: i }));
+      const updated = next.map((s, i) => ({ ...s, sortOrder: i }));
+      saveSectionsOrder(updated);
+      return updated;
     });
     addAuditLog("HOMEPAGE_SECTION_REORDER", `Section index ${idx} moved up`);
   };
@@ -1067,16 +1209,38 @@ export function App() {
         next[idx] = nextItem;
         next[idx + 1] = current;
       }
-      return next.map((s, i) => ({ ...s, sortOrder: i }));
+      const updated = next.map((s, i) => ({ ...s, sortOrder: i }));
+      saveSectionsOrder(updated);
+      return updated;
     });
     addAuditLog("HOMEPAGE_SECTION_REORDER", `Section index ${idx} moved down`);
   };
 
-  const toggleSectionVisible = (id: string) => {
+  const toggleSectionVisible = async (idOrType: string) => {
+    const targetSection = sections.find((s) => s.id === idOrType || s.sectionType === idOrType);
+    if (!targetSection) return;
+    const newVisible = !targetSection.isVisible;
+    const sectionType = targetSection.sectionType;
+
     setSections((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, isVisible: !s.isVisible } : s))
+      prev.map((s) => (s.id === targetSection.id || s.sectionType === sectionType ? { ...s, isVisible: newVisible } : s))
     );
-    addAuditLog("HOMEPAGE_SECTION_VISIBILITY", `Section ${id}`);
+
+    try {
+      const token = authSession?.token;
+      const authHeaders: Record<string, string> = {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      await fetch(`/api/v1/admin/sections/${sectionType}/toggle`, {
+        method: "POST",
+        headers: authHeaders,
+      });
+      addToast("order", "Section Visibility Changed", `${SECTION_LABELS[sectionType] || sectionType} is now ${newVisible ? "visible" : "hidden"}`);
+    } catch (e) {
+      console.error("Failed to toggle section visibility:", e);
+    }
+    addAuditLog("HOMEPAGE_SECTION_VISIBILITY", `Section ${sectionType} set to ${newVisible ? "visible" : "hidden"}`);
   };
 
   // Product Actions
@@ -5129,14 +5293,46 @@ export function App() {
               </button>
             </div>
 
+            {/* Filter Pills */}
+            <div className="flex flex-wrap items-center gap-2">
+              {[
+                { id: "ALL", label: `All Banners (${banners.length})` },
+                { id: "HERO_SLIDER", label: `Hero Sliders (${banners.filter((b) => b.slot === "HERO_SLIDER").length})` },
+                { id: "DEALS", label: `Offer & Deal Banners (${banners.filter((b) => b.slot === "CAMPAIGN_MID" || b.slot === "PROMO_STRIP").length})` },
+                { id: "ANNOUNCEMENT_BAR", label: `Announcement Bars (${banners.filter((b) => b.slot === "ANNOUNCEMENT_BAR").length})` },
+              ].map((pill) => (
+                <button
+                  key={pill.id}
+                  onClick={() => setBannerSlotFilter(pill.id)}
+                  className={`px-3 py-1.5 text-xs rounded transition-colors ${
+                    bannerSlotFilter === pill.id
+                      ? "bg-black text-white dark:bg-white dark:text-black font-medium"
+                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                  }`}
+                >
+                  {pill.label}
+                </button>
+              ))}
+            </div>
+
             {/* Banners List */}
             <div className="grid grid-cols-1 gap-4">
-              {banners.length === 0 ? (
+              {banners.filter((b) => {
+                if (bannerSlotFilter === "ALL") return true;
+                if (bannerSlotFilter === "DEALS") return b.slot === "CAMPAIGN_MID" || b.slot === "PROMO_STRIP";
+                return b.slot === bannerSlotFilter;
+              }).length === 0 ? (
                 <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500 font-sans">
-                  No promotional banners configured yet. Click "Add New Banner" above to publish hero campaigns or announcements.
+                  No promotional banners found in this view. Click "Add New Banner" above to publish hero campaigns, special offers, or announcements.
                 </div>
               ) : (
-                banners.map((b) => (
+                banners
+                  .filter((b) => {
+                    if (bannerSlotFilter === "ALL") return true;
+                    if (bannerSlotFilter === "DEALS") return b.slot === "CAMPAIGN_MID" || b.slot === "PROMO_STRIP";
+                    return b.slot === bannerSlotFilter;
+                  })
+                  .map((b) => (
                 <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
                   <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
                   <div className="flex-1 space-y-1">
@@ -5144,10 +5340,22 @@ export function App() {
                       <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                         {SLOT_LABELS[b.slot] || b.slot}
                       </span>
+                      {b.eyebrowEn && (
+                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">
+                          {b.eyebrowEn}
+                        </span>
+                      )}
                       <span className="font-serif text-sm text-neutral-900 dark:text-white font-medium">{b.titleEn}</span>
                     </div>
                     <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
-                    <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
+                      {b.overlayLabelEn && (
+                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded border border-neutral-200 dark:border-neutral-700">
+                          {b.overlayLabelEn}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <button
@@ -5201,41 +5409,115 @@ export function App() {
                       <select
                         value={bannerForm.slot}
                         onChange={(e) => setBannerForm({ ...bannerForm, slot: e.target.value as BannerSlot })}
-                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white font-medium"
                       >
-                        <option value="HERO_SLIDER">Hero Slider (Top Masthead)</option>
-                        <option value="CAMPAIGN_MID">Campaign Mid-Page</option>
-                        <option value="PROMO_STRIP">Promo Strip</option>
-                        <option value="ANNOUNCEMENT_BAR">Announcement Bar</option>
+                        <option value="HERO_SLIDER">Hero Slider (Top Masthead Campaign)</option>
+                        <option value="CAMPAIGN_MID">Campaign Mid-Page (Special Offer & Deal Banner)</option>
+                        <option value="PROMO_STRIP">Promo Strip (Promotional Offer Strip)</option>
+                        <option value="ANNOUNCEMENT_BAR">Announcement Bar (Top Site Header)</option>
                       </select>
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Offer Tag / Eyebrow (EN)</label>
+                        <input
+                          type="text"
+                          placeholder="LIMITED PROMOTIONAL OFFER · EXCLUSIVE DEALS"
+                          value={bannerForm.eyebrowEn}
+                          onChange={(e) => setBannerForm({ ...bannerForm, eyebrowEn: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Offer Tag / Eyebrow (AR)</label>
+                        <input
+                          type="text"
+                          dir="rtl"
+                          placeholder="عرض ترويجي حصري · صفقات خاصة"
+                          value={bannerForm.eyebrowAr}
+                          onChange={(e) => setBannerForm({ ...bannerForm, eyebrowAr: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                    </div>
+
                     <div>
-                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline (English)</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline / Deal Title (English)</label>
                       <input
                         type="text"
-                        placeholder="The Art of | Noble Sillage."
+                        placeholder="Private Client Reserve | Up to 20% Off"
                         value={bannerForm.titleEn}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleEn: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white font-medium"
                       />
                     </div>
                     <div>
-                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline (Arabic)</label>
+                      <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Headline / Deal Title (Arabic)</label>
                       <input
                         type="text"
                         dir="rtl"
-                        placeholder="فن | الحضور المهيب."
+                        placeholder="مختارات كبار الشخصيات | خصم حتى ٢٠٪"
                         value={bannerForm.titleAr}
                         onChange={(e) => setBannerForm({ ...bannerForm, titleAr: e.target.value })}
-                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white font-medium"
                       />
                     </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Subtitle / Deal Terms (EN)</label>
+                        <textarea
+                          rows={2}
+                          placeholder="Acquire rare artisanal extraits and pure parfums with complimentary delivery..."
+                          value={bannerForm.subtitleEn}
+                          onChange={(e) => setBannerForm({ ...bannerForm, subtitleEn: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Subtitle / Deal Terms (AR)</label>
+                        <textarea
+                          rows={2}
+                          dir="rtl"
+                          placeholder="اقتنِ أنقى خلاصات العطور النيش النادرة مع توصيل مبرد مجاني..."
+                          value={bannerForm.subtitleAr}
+                          onChange={(e) => setBannerForm({ ...bannerForm, subtitleAr: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Promo Code / Deal Badge (EN)</label>
+                        <input
+                          type="text"
+                          placeholder="VIP DEAL CODE: MUSCHIO20"
+                          value={bannerForm.overlayLabelEn}
+                          onChange={(e) => setBannerForm({ ...bannerForm, overlayLabelEn: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Promo Code / Deal Badge (AR)</label>
+                        <input
+                          type="text"
+                          dir="rtl"
+                          placeholder="رمز العرض: MUSCHIO20"
+                          value={bannerForm.overlayLabelAr}
+                          onChange={(e) => setBannerForm({ ...bannerForm, overlayLabelAr: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                    </div>
+
                     <MediaUploadField
                       label="Desktop Campaign Banner Artwork (1920x800)"
                       value={bannerForm.imageUrl}
                       onChange={(url) => setBannerForm({ ...bannerForm, imageUrl: url })}
                       folder="muschio/banners/desktop"
-                      hint="Upload wide luxury campaign creative or hero visual"
+                      hint="Upload wide luxury campaign creative or promotional offer visual"
                     />
 
                     <MediaUploadField
@@ -5245,13 +5527,26 @@ export function App() {
                       folder="muschio/banners/mobile"
                       hint="Mobile-optimized portrait crop for smartphones"
                     />
-                    <div className="grid grid-cols-2 gap-3">
+
+                    <div className="grid grid-cols-3 gap-3">
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">CTA Button Text (EN)</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">CTA Button (EN)</label>
                         <input
                           type="text"
+                          placeholder="Explore Privé Deals"
                           value={bannerForm.ctaTextEn}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaTextEn: e.target.value })}
+                          className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">CTA Button (AR)</label>
+                        <input
+                          type="text"
+                          dir="rtl"
+                          placeholder="استكشف العروض الحصرية"
+                          value={bannerForm.ctaTextAr}
+                          onChange={(e) => setBannerForm({ ...bannerForm, ctaTextAr: e.target.value })}
                           className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded focus:outline-none focus:border-black dark:focus:border-white"
                         />
                       </div>
@@ -5259,7 +5554,7 @@ export function App() {
                         <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Target URL</label>
                         <input
                           type="text"
-                          placeholder="/shop"
+                          placeholder="/shop?deal=true"
                           value={bannerForm.ctaUrl}
                           onChange={(e) => setBannerForm({ ...bannerForm, ctaUrl: e.target.value })}
                           className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono focus:outline-none focus:border-black dark:focus:border-white"
@@ -5314,6 +5609,58 @@ export function App() {
                   </div>
                 ))}
               </div>
+            </div>
+
+            {/* Active Catalog Deals & Special Offers Showcase */}
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-5 rounded space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-neutral-200 dark:border-neutral-800">
+                <div>
+                  <h3 className="font-serif text-base text-neutral-900 dark:text-white font-medium flex items-center gap-2">
+                    <Sparkles size={16} className="text-amber-500" />
+                    <span>Catalog Deals & Active Reductions ({catalogDeals.length})</span>
+                  </h3>
+                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                    Flacons with promotional pricing (Compare-At Price &gt; Selling Price). These appear automatically under deals and special promotions.
+                  </p>
+                </div>
+                <a
+                  href="/shop?deal=true"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white flex items-center gap-1 transition-colors"
+                >
+                  <span>Preview Deals on Storefront</span>
+                  <ExternalLink size={12} />
+                </a>
+              </div>
+
+              {catalogDeals.length === 0 ? (
+                <div className="p-6 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded text-xs text-neutral-500 font-sans">
+                  No products currently discounted. In the Products tab, edit any product variant and set "Base / Regular Price" higher than "Selling Price" to create an active deal discount.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {catalogDeals.map((deal, idx) => (
+                    <div
+                      key={`${deal.productId}-${deal.volume}-${idx}`}
+                      className="p-3 bg-neutral-50 dark:bg-neutral-900/50 border border-neutral-200 dark:border-neutral-800 rounded flex gap-3 items-center"
+                    >
+                      <img src={deal.image} alt="" className="w-12 h-14 object-cover rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black" />
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] font-sans text-neutral-500 block truncate">{deal.brand} · {deal.volume}</span>
+                        <h4 className="text-xs font-serif font-medium text-neutral-900 dark:text-white truncate">{deal.name}</h4>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">{deal.dealPrice} AED</span>
+                          <span className="text-[10px] text-neutral-400 line-through font-mono">{deal.regularPrice} AED</span>
+                          <span className="px-1.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[9px] font-bold rounded">
+                            -{deal.discountPct}% OFF
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

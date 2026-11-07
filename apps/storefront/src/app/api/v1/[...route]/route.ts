@@ -709,6 +709,18 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       });
     }
 
+    // 19. Admin Banners List (All slots, active & inactive)
+    if (path === "admin/banners") {
+      const banners = await BannerService.getAllBanners();
+      return success(banners);
+    }
+
+    // 20. Admin Homepage Sections List (All sections, ordered by sortOrder)
+    if (path === "admin/sections") {
+      const sections = await BannerService.getAllSections();
+      return success(sections);
+    }
+
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
@@ -1990,6 +2002,37 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return error("INVALID_CHANNEL", "Supported channels: email, whatsapp", 400);
     }
 
+    // 21. Admin Banners Create / Update
+    if (path === "admin/banners") {
+      const banner = await BannerService.createBanner(body);
+      return success(banner, 201);
+    }
+    if (route[0] === "admin" && route[1] === "banners" && route[2]) {
+      const bannerId = route[2];
+      if (route[3] === "toggle") {
+        const toggled = await BannerService.toggleBanner(bannerId);
+        return success(toggled);
+      }
+      const updated = await BannerService.updateBanner(bannerId, body);
+      return success(updated);
+    }
+
+    // 22. Admin Homepage Sections Reorder & Upsert
+    if (path === "admin/sections/reorder") {
+      const ordering = body?.ordering || body?.sections || (Array.isArray(body) ? body : []);
+      const reordered = await BannerService.reorderSections(ordering);
+      return success(reordered);
+    }
+    if (route[0] === "admin" && route[1] === "sections" && route[2]) {
+      const sectionType = route[2] as any;
+      if (route[3] === "toggle") {
+        const toggled = await BannerService.toggleSection(sectionType);
+        return success(toggled);
+      }
+      const upserted = await BannerService.upsertSection({ sectionType, ...body });
+      return success(upserted);
+    }
+
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
@@ -2036,6 +2079,32 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
       if (!customerId) return error("UNAUTHORIZED", "Client session required", 401);
       const address = await CustomerService.updateAddress(customerId, addressId, body);
       return success(address);
+    }
+
+    // 4. Admin Toggle / Update Banner
+    if (route[0] === "admin" && route[1] === "banners" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const bannerId = route[2];
+      if (route[3] === "toggle") {
+        const toggled = await BannerService.toggleBanner(bannerId);
+        return success(toggled);
+      }
+      const updated = await BannerService.updateBanner(bannerId, body);
+      return success(updated);
+    }
+
+    // 5. Admin Toggle / Update Section
+    if (route[0] === "admin" && route[1] === "sections" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const sectionType = route[2] as any;
+      if (route[3] === "toggle") {
+        const toggled = await BannerService.toggleSection(sectionType);
+        return success(toggled);
+      }
+      const upserted = await BannerService.upsertSection({ sectionType, ...body });
+      return success(upserted);
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
@@ -2122,6 +2191,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
         });
       }
       return success({ success: true, deleted: collectionIdOrSlug });
+    }
+
+    // 6. Admin Delete Banner
+    if (route[0] === "admin" && route[1] === "banners" && route[2]) {
+      const bannerId = route[2];
+      await BannerService.deleteBanner(bannerId);
+      return success({ success: true, deleted: bannerId });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);
