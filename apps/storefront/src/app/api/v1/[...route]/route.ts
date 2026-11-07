@@ -15,6 +15,7 @@ import {
   prisma,
   CloudinaryService,
   AdminService,
+  SearchService,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
@@ -141,18 +142,26 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success(result);
     }
 
-    // 4. Products
+    // 4. Products (Supports page, limit, and paginate query flags)
     if (path === "products") {
       const search = url.searchParams.get("search") || undefined;
       const brandSlug = url.searchParams.get("brandSlug") || undefined;
+      const page = Number(url.searchParams.get("page") || "1");
       const limit = Number(url.searchParams.get("limit") || "100");
+      const paginate = url.searchParams.get("paginate") === "true";
       const result = await CatalogService.getProducts({
         search,
         brandSlug,
-        page: 1,
+        page,
         limit,
         sort: "featured",
       });
+      if (paginate) {
+        return success({
+          items: result.items.map(storefrontProduct),
+          pagination: result.pagination,
+        });
+      }
       return success(result.items.map(storefrontProduct));
     }
     if (route[0] === "products" && route[1]) {
@@ -160,6 +169,18 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       const result = await CatalogService.getProductBySlug(slug);
       if (!result) return error("PRODUCT_NOT_FOUND", "Product not found", 404);
       return success({ product: storefrontProduct(result.product) });
+    }
+
+    // 4a. Public Search (Real-time Full-Text Search across Products, Brands, Accords & Notes)
+    if (path === "search") {
+      const q = url.searchParams.get("q") || url.searchParams.get("query") || "";
+      const limit = Number(url.searchParams.get("limit") || "10");
+      const family = url.searchParams.get("family") || undefined;
+      const results = await SearchService.searchCatalog(q, {
+        limit,
+        family,
+      });
+      return success(results);
     }
 
     // 4b. Collections (Public)

@@ -11,10 +11,16 @@ export default function ShopCatalogPage({
   searchParams,
 }: {
   params: { locale: "en" | "ar" };
-  searchParams: { search?: string; brandType?: string; family?: string; brand?: string };
+  searchParams: { search?: string; brandType?: string; family?: string; brand?: string; page?: string };
 }) {
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
+
+  const ITEMS_PER_PAGE = 12;
+  const [currentPage, setCurrentPage] = useState<number>(() => {
+    const p = Number(searchParams.page);
+    return Number.isFinite(p) && p > 0 ? p : 1;
+  });
 
   const [selectedBrandType, setSelectedBrandType] = useState<string | null>(
     searchParams.brandType ?? null,
@@ -106,11 +112,25 @@ export default function ShopCatalogPage({
       });
   }, [catalog, selectedBrandType, selectedBrand, selectedFamily, search, sort]);
 
+  // Reset page to 1 whenever any filter or sort option changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedBrandType, selectedBrand, selectedFamily, search, sort]);
+
+  const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
+
+  const paginated = useMemo(() => {
+    const safePage = Math.min(Math.max(1, currentPage), totalPages);
+    const start = (safePage - 1) * ITEMS_PER_PAGE;
+    return filtered.slice(start, start + ITEMS_PER_PAGE);
+  }, [filtered, currentPage, totalPages]);
+
   const clearAllFilters = () => {
     setSelectedBrandType(null);
     setSelectedBrand(null);
     setSelectedFamily("");
     setSearch("");
+    setCurrentPage(1);
   };
 
   const hasActiveFilters = Boolean(
@@ -143,8 +163,22 @@ export default function ShopCatalogPage({
           </p>
         </div>
         <div className="text-xs text-neutral-400 font-sans">
-          <span className="font-medium text-neutral-900 dark:text-neutral-100">{filtered.length}</span>{" "}
-          {c(filtered.length === 1 ? "Product" : "Products", "منتج")}
+          {filtered.length > 0 ? (
+            <>
+              {c("Showing", "عرض")}{" "}
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">
+                {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, filtered.length)}
+              </span>{" "}
+              {c("of", "من")}{" "}
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">{filtered.length}</span>{" "}
+              {c(filtered.length === 1 ? "Product" : "Products", "منتج")}
+            </>
+          ) : (
+            <>
+              <span className="font-medium text-neutral-900 dark:text-neutral-100">0</span>{" "}
+              {c("Products", "منتج")}
+            </>
+          )}
         </div>
       </div>
 
@@ -323,26 +357,77 @@ export default function ShopCatalogPage({
             </button>
           </div>
         ) : (
-          <div className="product-grid">
-            {filtered.map((product) => (
-              <ProductCard
-                key={product.slug}
-                slug={product.slug}
-                nameEn={product.nameEn}
-                nameAr={product.nameAr}
-                brand={product.brand}
-                brandType={product.brandType}
-                concentration={product.concentration}
-                price={product.price}
-                compareAtPrice={product.compareAtPrice}
-                variants={product.variants}
-                image={product.image}
-                secondaryImage={product.secondaryImage}
-                badge={product.badge}
-                locale={locale}
-              />
-            ))}
-          </div>
+          <>
+            <div className="product-grid">
+              {paginated.map((product) => (
+                <ProductCard
+                  key={product.slug}
+                  slug={product.slug}
+                  nameEn={product.nameEn}
+                  nameAr={product.nameAr}
+                  brand={product.brand}
+                  brandType={product.brandType}
+                  concentration={product.concentration}
+                  price={product.price}
+                  compareAtPrice={product.compareAtPrice}
+                  variants={product.variants}
+                  image={product.image}
+                  secondaryImage={product.secondaryImage}
+                  badge={product.badge}
+                  locale={locale}
+                />
+              ))}
+            </div>
+
+            {/* Level Shoes Luxury Pagination Controls */}
+            {totalPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-neutral-100 dark:border-neutral-800 pt-8 mt-12">
+                <button
+                  type="button"
+                  disabled={currentPage <= 1}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 border border-neutral-200 dark:border-neutral-800 text-xs font-medium text-neutral-800 dark:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed hover:border-neutral-900 dark:hover:border-white transition-colors"
+                >
+                  {c("← Previous", "← السابق")}
+                </button>
+
+                <div className="flex items-center gap-1.5 flex-wrap justify-center">
+                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                    <button
+                      key={pageNum}
+                      type="button"
+                      onClick={() => {
+                        setCurrentPage(pageNum);
+                        window.scrollTo({ top: 0, behavior: "smooth" });
+                      }}
+                      className={`w-9 h-9 flex items-center justify-center text-xs transition-colors rounded-sm ${
+                        currentPage === pageNum
+                          ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-semibold"
+                          : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-800"
+                      }`}
+                    >
+                      {pageNum}
+                    </button>
+                  ))}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => {
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 border border-neutral-200 dark:border-neutral-800 text-xs font-medium text-neutral-800 dark:text-neutral-200 disabled:opacity-30 disabled:cursor-not-allowed hover:border-neutral-900 dark:hover:border-white transition-colors"
+                >
+                  {c("Next →", "التالي →")}
+                </button>
+              </div>
+            )}
+          </>
         )}
       </div>
 

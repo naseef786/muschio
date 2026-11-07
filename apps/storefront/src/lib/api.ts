@@ -216,9 +216,14 @@ export const muschioApi = {
       const result = await apiRequest<unknown>(
         `/products${query ? `?${query}` : ""}`,
       );
-      if (Array.isArray(result) && result.length > 0) {
+      const rawList = Array.isArray(result)
+        ? result
+        : Array.isArray((result as any)?.items)
+          ? (result as any).items
+          : [];
+      if (rawList.length > 0) {
         const validated: StorefrontProduct[] = [];
-        for (const item of result) {
+        for (const item of rawList) {
           const parsed = StorefrontProductSchema.safeParse(item);
           if (parsed.success) {
             validated.push(parsed.data);
@@ -239,6 +244,37 @@ export const muschioApi = {
       console.error("Error in getProducts:", e);
     }
     return [];
+  },
+
+  // Live Catalog Search across flacons, houses, notes and olfactory accords
+  async searchCatalog(
+    query: string,
+    options?: { limit?: number; family?: string },
+  ): Promise<Array<{
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    brandName: string;
+    concentration: string;
+    price: number;
+    image: string;
+    scentFamily?: string;
+    topAccords: string[];
+    prominentNotes: string[];
+  }>> {
+    try {
+      const q = (query || "").trim();
+      if (!q) return [];
+      const params = new URLSearchParams({ q });
+      if (options?.limit) params.set("limit", String(options.limit));
+      if (options?.family) params.set("family", options.family);
+      const res = await apiRequest<any>(`/search?${params.toString()}`);
+      return Array.isArray(res) ? res : [];
+    } catch (e) {
+      console.error("Error in searchCatalog:", e);
+      return [];
+    }
   },
 
   async getProductBySlug(slug: string): Promise<StorefrontProduct | null> {

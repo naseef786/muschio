@@ -348,6 +348,8 @@ export function App() {
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [adminProductPage, setAdminProductPage] = useState(1);
+  const ADMIN_PRODUCTS_PER_PAGE = 15;
 
   const filteredProducts = useMemo(() => {
     if (!productSearch.trim()) return products;
@@ -359,6 +361,18 @@ export function App() {
       (p.nameAr && p.nameAr.includes(q))
     );
   }, [products, productSearch]);
+
+  const totalAdminProductPages = Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PER_PAGE) || 1;
+
+  const paginatedAdminProducts = useMemo(() => {
+    const safePage = Math.min(Math.max(1, adminProductPage), totalAdminProductPages);
+    const start = (safePage - 1) * ADMIN_PRODUCTS_PER_PAGE;
+    return filteredProducts.slice(start, start + ADMIN_PRODUCTS_PER_PAGE);
+  }, [filteredProducts, adminProductPage, totalAdminProductPages]);
+
+  useEffect(() => {
+    setAdminProductPage(1);
+  }, [productSearch]);
   const [productForm, setProductForm] = useState({
     sku: "",
     name: "",
@@ -2440,7 +2454,7 @@ export function App() {
                   No products matching your search criteria.
                 </div>
               ) : (
-                filteredProducts.map((p) => (
+                paginatedAdminProducts.map((p) => (
                   <div
                     key={p.id}
                     className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
@@ -2554,7 +2568,7 @@ export function App() {
                       </td>
                     </tr>
                   ) : (
-                    filteredProducts.map((p) => (
+                    paginatedAdminProducts.map((p) => (
                     <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -2702,6 +2716,36 @@ export function App() {
                 </tbody>
               </table>
             </div>
+
+            {/* Admin Product Pagination Bar */}
+            {totalAdminProductPages > 1 && (
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 px-4 py-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg text-xs font-sans shadow-sm">
+                <div className="text-neutral-500">
+                  Showing {(adminProductPage - 1) * ADMIN_PRODUCTS_PER_PAGE + 1}–{Math.min(adminProductPage * ADMIN_PRODUCTS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} items
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={adminProductPage <= 1}
+                    onClick={() => setAdminProductPage((p) => Math.max(1, p - 1))}
+                    className="px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                  >
+                    Previous
+                  </button>
+                  <span className="px-2 text-neutral-600 dark:text-neutral-400 font-medium">
+                    Page {adminProductPage} of {totalAdminProductPages}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={adminProductPage >= totalAdminProductPages}
+                    onClick={() => setAdminProductPage((p) => Math.min(totalAdminProductPages, p + 1))}
+                    className="px-3 py-1.5 rounded border border-neutral-200 dark:border-neutral-800 disabled:opacity-30 disabled:cursor-not-allowed hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
 
             {showProductModal && (
               <div

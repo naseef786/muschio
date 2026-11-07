@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useMemo } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { Link, usePathname, useRouter } from "../navigation";
 import {
@@ -20,6 +20,8 @@ import {
   User,
   ArrowLeftRight,
   Truck,
+  Loader2,
+  Clock,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
@@ -88,6 +90,102 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
   const [menu, setMenu] = useState(false);
   const [search, setSearch] = useState(false);
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [recentSearches, setRecentSearches] = useState<string[]>([]);
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    slug: string;
+    nameEn: string;
+    nameAr: string;
+    brandName: string;
+    concentration: string;
+    price: number;
+    image: string;
+    scentFamily?: string;
+    topAccords: string[];
+    prominentNotes: string[];
+  }>>([]);
+
+  const RECENT_SEARCHES_KEY = "muschio_recent_searches";
+
+  // Load recent searches from localStorage on mount and when modal opens
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(RECENT_SEARCHES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          setRecentSearches(parsed.slice(0, 6));
+        }
+      }
+    } catch {
+      // ignore storage errors
+    }
+  }, [search]);
+
+  const saveRecentSearch = (term: string) => {
+    const clean = term.trim();
+    if (!clean) return;
+    setRecentSearches((prev) => {
+      const updated = [clean, ...prev.filter((item) => item.toLowerCase() !== clean.toLowerCase())].slice(0, 6);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const removeRecentSearch = (term: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setRecentSearches((prev) => {
+      const updated = prev.filter((item) => item !== term);
+      try {
+        localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
+  const clearRecentSearches = () => {
+    setRecentSearches([]);
+    try {
+      localStorage.removeItem(RECENT_SEARCHES_KEY);
+    } catch {}
+  };
+
+  // 300ms Debounce on query to prevent UI and network churn
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  // Live Server-Side Full-Text Search with cancellation / throttling
+  useEffect(() => {
+    const clean = debouncedQuery.trim();
+    if (!clean) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+    let active = true;
+    setIsSearching(true);
+    muschioApi.searchCatalog(clean, { limit: 12 }).then((results) => {
+      if (!active) return;
+      setSearchResults(results);
+      setIsSearching(false);
+    }).catch(() => {
+      if (!active) return;
+      setIsSearching(false);
+    });
+    return () => {
+      active = false;
+    };
+  }, [debouncedQuery]);
+
   const cart = useCart();
   const wishlist = useWishlist();
   const compare = useCompare();
@@ -118,7 +216,6 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cart]);
 
-  const [liveCatalog, setLiveCatalog] = useState<Array<{ nameEn: string; nameAr: string; brand: string; href: string }>>([]);
   const [navBrands, setNavBrands] = useState<Array<{ name: string; slug: string; origin?: string }>>([]);
   const [navNotes, setNavNotes] = useState<Array<{ nameEn: string; nameAr: string; slug: string; categoryEn?: string; categoryAr?: string }>>([]);
 
@@ -154,32 +251,6 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (!search) return;
-    muschioApi.getProducts({ limit: 50 }).then((prods) => {
-      if (prods && prods.length > 0) {
-        setLiveCatalog(
-          prods.map((p) => ({
-            nameEn: p.nameEn,
-            nameAr: p.nameAr,
-            brand: p.brand.name,
-            href: `/product/${p.slug}`,
-          })),
-        );
-      }
-    });
-  }, [search]);
-
-  const searchResults = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q) return [];
-    return liveCatalog.filter((item) =>
-      [item.nameEn, item.nameAr, item.brand].some((field) =>
-        field.toLowerCase().includes(q),
-      ),
-    );
-  }, [query, liveCatalog]);
 
   return (
     <>
@@ -774,7 +845,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
         </>
       )}
 
-      {/* 5. Live Search Modal Overlay */}
+      {/* 5. Live Search Modal Overlay with 300ms Debounce, Recent Searches & Rich Catalog Previews */}
       <SearchDialog
         open={search}
         close={() => setSearch(false)}
@@ -784,8 +855,10 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (query.trim()) {
-                router.push(`/shop?search=${encodeURIComponent(query.trim())}`);
+              const clean = query.trim();
+              if (clean) {
+                saveRecentSearch(clean);
+                router.push(`/shop?search=${encodeURIComponent(clean)}`);
                 setSearch(false);
               }
             }}
@@ -802,76 +875,179 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                   "Search fragrances, houses, or raw notes…",
                   "ابحث عن العطور، الدور، أو النوتات الخام…",
                 )}
-                className="w-full p-3.5 pe-10 border border-luxury-border bg-luxury-surface text-sm text-luxury-text focus:outline-none focus:border-luxury-text"
+                className="w-full p-3.5 pe-12 border border-luxury-border bg-luxury-surface text-sm text-luxury-text focus:outline-none focus:border-luxury-text transition-colors"
               />
-              <button
-                type="submit"
-                aria-label="Submit search"
-                className="absolute inset-y-0 end-0 right-0 rtl:right-auto rtl:left-0 px-3 flex items-center justify-center text-luxury-muted hover:text-luxury-text"
-              >
-                <Search size={18} />
-              </button>
+              <div className="absolute inset-y-0 end-0 right-0 rtl:right-auto rtl:left-0 px-3.5 flex items-center justify-center gap-1.5 text-luxury-muted">
+                {isSearching ? (
+                  <Loader2 size={16} className="animate-spin text-neutral-900 dark:text-neutral-100" />
+                ) : (
+                  <button
+                    type="submit"
+                    aria-label="Submit search"
+                    className="p-1 hover:text-luxury-text transition-colors"
+                  >
+                    <Search size={18} />
+                  </button>
+                )}
+              </div>
             </div>
           </form>
 
-          {/* Quick Popular Searches */}
+          {/* When query is empty: Show Recent Searches & Popular Searches */}
           {!query.trim() && (
-            <div>
-              <span className="eyebrow mb-2.5">
-                {c("POPULAR SEARCHES", "عمليات البحث الشائعة")}
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {POPULAR_SEARCHES.map((item) => (
-                  <button
-                    key={item.href}
-                    type="button"
-                    onClick={() => {
-                      router.push(item.href);
-                      setSearch(false);
-                    }}
-                    className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text transition-colors"
-                  >
-                    {c(item.nameEn, item.nameAr)}
-                  </button>
-                ))}
+            <div className="space-y-5">
+              {recentSearches.length > 0 && (
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="eyebrow flex items-center gap-1.5">
+                      <Clock size={12} className="text-luxury-muted" />
+                      {c("RECENT SEARCHES", "عمليات البحث الأخيرة")}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={clearRecentSearches}
+                      className="text-[11px] text-luxury-muted hover:text-luxury-text underline transition-colors"
+                    >
+                      {c("Clear All", "مسح الكل")}
+                    </button>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {recentSearches.map((term) => (
+                      <span
+                        key={term}
+                        onClick={() => {
+                          saveRecentSearch(term);
+                          router.push(`/shop?search=${encodeURIComponent(term)}`);
+                          setSearch(false);
+                        }}
+                        className="group inline-flex items-center gap-2 px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text cursor-pointer transition-colors"
+                      >
+                        <span>{term}</span>
+                        <button
+                          type="button"
+                          onClick={(e) => removeRecentSearch(term, e)}
+                          aria-label={`Remove ${term}`}
+                          className="text-luxury-muted hover:text-rose-500 p-0.5 transition-colors"
+                        >
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <span className="eyebrow mb-2.5 block">
+                  {c("POPULAR SEARCHES", "عمليات البحث الشائعة")}
+                </span>
+                <div className="flex flex-wrap gap-2">
+                  {POPULAR_SEARCHES.map((item) => (
+                    <button
+                      key={item.href}
+                      type="button"
+                      onClick={() => {
+                        const term = ar ? item.nameAr : item.nameEn;
+                        saveRecentSearch(term);
+                        router.push(item.href);
+                        setSearch(false);
+                      }}
+                      className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text transition-colors"
+                    >
+                      {c(item.nameEn, item.nameAr)}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
-          {/* Live Search Results List */}
+          {/* When query is present: Show Live Server-Side Search Results */}
           {query.trim() && (
-            <div className="space-y-3 max-h-64 overflow-y-auto">
-              <span className="eyebrow">
-                {c(
-                  `${searchResults.length} Results Found`,
-                  `تم العثور على ${searchResults.length} نتيجة`,
+            <div className="space-y-3 max-h-80 overflow-y-auto pe-1">
+              <div className="flex items-center justify-between">
+                <span className="eyebrow">
+                  {isSearching
+                    ? c("Searching olfactory vault…", "جاري البحث في المجموعة…")
+                    : c(
+                        `${searchResults.length} Results Found`,
+                        `تم العثور على ${searchResults.length} نتيجة`,
+                      )}
+                </span>
+                {searchResults.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      saveRecentSearch(query.trim());
+                      router.push(`/shop?search=${encodeURIComponent(query.trim())}`);
+                      setSearch(false);
+                    }}
+                    className="text-[11px] text-luxury-muted hover:text-luxury-text underline transition-colors"
+                  >
+                    {c("View all in catalog →", "عرض الكل في المتجر ←")}
+                  </button>
                 )}
-              </span>
-              {searchResults.length === 0 ? (
-                <div className="py-6 text-center text-xs text-luxury-muted">
-                  {c(
-                    "No matching fragrances, brands, or notes found.",
-                    "لم يتم العثور على نتائج مطابقة.",
-                  )}
+              </div>
+
+              {!isSearching && searchResults.length === 0 ? (
+                <div className="py-8 text-center text-xs text-luxury-muted space-y-1">
+                  <p className="font-medium text-luxury-text">
+                    {c(
+                      `No results found for "${query}"`,
+                      `لم يتم العثور على نتائج لـ "${query}"`,
+                    )}
+                  </p>
+                  <p className="text-[11px]">
+                    {c(
+                      "Try searching by brand, olfactory note (e.g. Taif Rose, Oud), or fragrance family.",
+                      "جرّب البحث باسم الدار، النوتة العطرية (مثل الورد الطائفي، العود)، أو العائلة العطرية.",
+                    )}
+                  </p>
                 </div>
               ) : (
                 <div className="divide-y divide-luxury-border">
                   {searchResults.map((res) => (
                     <Link
-                      key={res.href}
-                      href={res.href}
-                      onClick={() => setSearch(false)}
-                      className="py-2.5 flex items-center justify-between text-xs hover:text-accent group"
+                      key={res.slug}
+                      href={`/product/${res.slug}`}
+                      onClick={() => {
+                        saveRecentSearch(query.trim() || res.nameEn);
+                        setSearch(false);
+                      }}
+                      className="py-3 flex items-center gap-3.5 group hover:bg-neutral-50/50 dark:hover:bg-neutral-900/40 px-2 rounded-sm transition-colors"
                     >
-                      <div>
-                        <span className="block font-medium text-luxury-text group-hover:underline">
+                      <div className="w-12 h-14 bg-neutral-100 dark:bg-neutral-900 rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center border border-neutral-200 dark:border-neutral-800">
+                        {res.image ? (
+                          <img
+                            src={res.image}
+                            alt={res.nameEn}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          />
+                        ) : (
+                          <span className="text-[9px] uppercase tracking-widest text-neutral-400">Flacon</span>
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <span className="text-[10px] uppercase tracking-[0.15em] text-luxury-muted block truncate">
+                          {res.brandName}
+                        </span>
+                        <span className="block text-xs font-medium text-luxury-text group-hover:underline truncate">
                           {c(res.nameEn, res.nameAr)}
                         </span>
-                        <span className="text-[11px] text-luxury-muted">
-                          {res.brand}
-                        </span>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          {res.concentration && (
+                            <span className="text-[10px] text-neutral-500">
+                              {res.concentration.replaceAll("_", " ")}
+                            </span>
+                          )}
+                          {res.price > 0 && (
+                            <span className="text-xs font-semibold text-neutral-900 dark:text-neutral-100">
+                              {res.price.toLocaleString()} AED
+                            </span>
+                          )}
+                        </div>
                       </div>
-                      <ArrowRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                      <ArrowRight size={14} className="text-luxury-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all" />
                     </Link>
                   ))}
                 </div>

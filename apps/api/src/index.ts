@@ -133,3 +133,4 @@ export { PaymentService } from "./services/payment.service";
 export { storefrontOrder } from "./services/storefront-order";
 export { CloudinaryService } from "./services/cloudinary.service";
 export { AdminService } from "./services/admin.service";
+export { SearchService } from "./services/search.service";
