@@ -175,16 +175,6 @@ export default function CheckoutPage({
     }
   };
 
-  const handleQuickDemoLogin = async () => {
-    setLoginLoading(true);
-    try {
-      await login("sultan@muschio.client", "vip");
-      setCheckoutMode("LOGIN");
-    } finally {
-      setLoginLoading(false);
-    }
-  };
-
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if (loading || !items.length || availability !== "ready") return;
@@ -450,15 +440,6 @@ export default function CheckoutPage({
                     className="editorial-button text-xs py-2.5 px-5"
                   >
                     {loginLoading ? c("Verifying…", "جارٍ التحقق…") : c("Sign In & Continue", "تسجيل الدخول والمتابعة")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleQuickDemoLogin}
-                    disabled={loginLoading}
-                    className="editorial-button-secondary text-xs py-2.5 px-4 inline-flex items-center gap-1.5"
-                  >
-                    <Crown size={12} className="text-accent" />
-                    <span>{c("Test as Sultan Al-Nuaimi (VIP)", "تجربة كـ سلطان النعيمي (VIP)")}</span>
                   </button>
                 </div>
               </form>

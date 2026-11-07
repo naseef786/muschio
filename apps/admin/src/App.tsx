@@ -237,12 +237,64 @@ const SECTION_LABELS: Record<string, string> = {
   CUSTOM_BANNER: "Custom Campaign Banner",
 };
 
+function isMockItem(item: any): boolean {
+  if (!item || typeof item !== "object") return false;
+  const id = String(item.id || "");
+  if ([
+    "p1", "p2", "p3", "p4",
+    "b1", "b2", "b3", "b4", "b5", "b6",
+    "n1", "n2", "n3", "n4", "n5",
+    "col-signature", "col-oriental", "col-1", "col-2", "col-3",
+    "ord-1", "ord-2", "ord-3",
+    "enq-demo-1", "enq-demo-2",
+    "ret-1", "ret-2",
+    "rev-1", "rev-2",
+    "bnr-1", "bnr-2",
+    "sec-1", "sec-2", "sec-3", "sec-4", "sec-5", "sec-6", "sec-7", "sec-8",
+  ].includes(id)) {
+    return true;
+  }
+  const num = String(item.number || item.orderNumber || "");
+  if (["MSC-2026-981245", "MSC-2026-981244", "MSC-2026-981240", "RET-2026-001", "RET-2026-002", "ENQ-DEMO-01", "ENQ-DEMO-02"].includes(num)) {
+    return true;
+  }
+  if (typeof item.customer === "string" && (
+    item.customer.includes("Sultan Al-Nuaimi") ||
+    item.customer.includes("Fatima Al-Zahra") ||
+    item.customer.includes("Rashid Mansoor") ||
+    item.customer.includes("Ahmad Al-Ghamdi") ||
+    item.customer.includes("Leila H.") ||
+    item.customer.includes("Ahmad Al Maktoum") ||
+    item.customer.includes("Nasser Al-Qasimi")
+  )) {
+    return true;
+  }
+  if (typeof item.name === "string" && (
+    item.name.includes("Sheikha Maryam") ||
+    item.name.includes("Tariq Bin Laden")
+  )) {
+    return true;
+  }
+  return false;
+}
+
 function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch<React.SetStateAction<T>>] {
   const [state, setState] = useState<T>(() => {
     if (typeof window === "undefined") return initialValue;
     try {
       const item = localStorage.getItem(`muschio_admin_${key}`);
-      return item ? JSON.parse(item) : initialValue;
+      if (item) {
+        const parsed = JSON.parse(item);
+        if (Array.isArray(parsed)) {
+          const sanitized = parsed.filter((it) => !isMockItem(it));
+          try {
+            localStorage.setItem(`muschio_admin_${key}`, JSON.stringify(sanitized));
+          } catch {}
+          return sanitized as unknown as T;
+        }
+        return parsed;
+      }
+      return initialValue;
     } catch {
       return initialValue;
     }
@@ -290,171 +342,7 @@ export function App() {
   };
 
   // 1. PRODUCTS (PRO SEO ENHANCED)
-  const [products, setProducts] = usePersistentState<ProductItem[]>("products", [
-    {
-      id: "p1",
-      sku: "AMO-INT53-100",
-      name: "Interlude 53 Man Extrait de Parfum",
-      nameAr: "إنترلود 53 إكستريت دي بارفان",
-      slug: "amouage-interlude-53-man-extrait",
-      brand: "Amouage",
-      brandSlug: "amouage",
-      scentFamily: "Woody Amber",
-      perfumer: "Pierre Negrin",
-      perfumerBio: "Master French perfumer renowned for sculpting deep, architectural incense and resinous extraits for royalty.",
-      concentration: "EXTRAIT_DE_PARFUM",
-      gender: "MEN",
-      volumeMl: 100,
-      price: "1,850 AED",
-      costPrice: "950 AED",
-      stock: 28,
-      testerStock: 5,
-      reserved: 2,
-      warehouse: "DXB-MAIN",
-      topNotes: ["Oregano", "Pimento Berry", "Bergamot"],
-      heartNotes: ["Amber", "Frankincense", "Cistus", "Opoponax"],
-      baseNotes: ["Leather", "Agarwood Smoke", "Patchouli", "Sandalwood"],
-      taglineEn: "The Monumental Expression of Spicy Smoky Amber",
-      taglineAr: "التعبير المهيب عن العنبر الدخاني الحار",
-      descriptionEn: "Formulated at a monumental 53% concentration and aged for six months in Oman.",
-      descriptionAr: "بتركيز أسطوري يبلغ 53% ومعتق لمدة ستة أشهر في عُمان.",
-      metaTitle: "Interlude 53 Man Extrait by Amouage | Authentic Luxury Fragrance UAE",
-      metaDescription: "Shop authentic Interlude 53 Man Extrait by Amouage (53% Extrait) at Muschio. Opening with oregano and pimento.",
-      imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
-      images: [
-        "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
-        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-      ],
-      imageAlt: "Amouage Interlude 53 Man Extrait luxury flacon",
-      status: "PUBLISHED",
-      variants: [
-        { id: "p1-v100", sku: "AMO-INT53-100", volume: "100ml", volumeMl: 100, regularPrice: 1850, price: 1850, discountPrice: null, salePrice: null, stockQuantity: 28, isDefault: true },
-        { id: "p1-v50", sku: "AMO-INT53-50", volume: "50ml", volumeMl: 50, regularPrice: 1290, price: 1190, discountPrice: 1190, salePrice: 1190, stockQuantity: 15, isDefault: false },
-        { id: "p1-v30", sku: "AMO-INT53-30", volume: "30ml", volumeMl: 30, regularPrice: 790, price: 790, discountPrice: null, salePrice: null, stockQuantity: 10, isDefault: false },
-      ],
-    },
-    {
-      id: "p2",
-      sku: "MFK-BR540E-70",
-      name: "Baccarat Rouge 540 Extrait",
-      nameAr: "باكارات روج 540 إكستريت",
-      slug: "mfk-baccarat-rouge-540-extrait",
-      brand: "Maison Francis Kurkdjian",
-      brandSlug: "maison-francis-kurkdjian",
-      scentFamily: "Amber Floral",
-      perfumer: "Francis Kurkdjian",
-      perfumerBio: "Legendary Master Perfumer and Dior Perfume Creation Director, famed for crystalline olfactory radiance.",
-      concentration: "EXTRAIT_DE_PARFUM",
-      gender: "UNISEX",
-      volumeMl: 70,
-      price: "1,650 AED",
-      costPrice: "820 AED",
-      stock: 34,
-      testerStock: 4,
-      reserved: 1,
-      warehouse: "DXB-MAIN",
-      topNotes: ["Bitter Almond", "Saffron"],
-      heartNotes: ["Egyptian Jasmine Grandiflorum", "Cedarwood"],
-      baseNotes: ["Ambergris", "Woody Musk"],
-      taglineEn: "Luminous Amber Crystal and Floral Radiance",
-      taglineAr: "إشراقة الكريستال العنبري والزهور الساحرة",
-      descriptionEn: "Augments the strength and radiance of the perfume's amber woody floral aura.",
-      descriptionAr: "يعزز هذا الإصدار الاستثنائي قوة وإشراقة النفحات الخشبية العنبرية والزهرية.",
-      metaTitle: "Baccarat Rouge 540 Extrait by MFK | Authentic UAE",
-      metaDescription: "Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed.",
-      imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-      images: [
-        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-      ],
-      imageAlt: "Baccarat Rouge 540 Extrait flacon",
-      status: "PUBLISHED",
-      variants: [
-        { id: "p2-v70", sku: "MFK-BR540E-70", volume: "70ml", volumeMl: 70, regularPrice: 1850, price: 1650, discountPrice: 1650, salePrice: 1650, stockQuantity: 34, isDefault: true },
-        { id: "p2-v200", sku: "MFK-BR540E-200", volume: "200ml", volumeMl: 200, regularPrice: 3500, price: 3200, discountPrice: 3200, salePrice: 3200, stockQuantity: 12, isDefault: false },
-        { id: "p2-v35", sku: "MFK-BR540E-35", volume: "35ml", volumeMl: 35, regularPrice: 990, price: 990, discountPrice: null, salePrice: null, stockQuantity: 20, isDefault: false },
-      ],
-    },
-    {
-      id: "p3",
-      sku: "ROJA-ELY-100",
-      name: "Elysium Pour Homme Parfum",
-      nameAr: "إليسيوم بور أوم بارفان",
-      slug: "roja-elysium-pour-homme-parfum",
-      brand: "Roja Parfums",
-      brandSlug: "roja-parfums",
-      scentFamily: "Fresh Aromatic Citrus",
-      perfumer: "Roja Dove",
-      perfumerBio: "The premier British Master Perfumer and fragrance historian, famed for formulating without compromise on rare natural absolutes.",
-      concentration: "PARFUM",
-      gender: "MEN",
-      volumeMl: 100,
-      price: "1,950 AED",
-      costPrice: "980 AED",
-      stock: 25,
-      testerStock: 2,
-      reserved: 0,
-      warehouse: "RUH-HUB",
-      topNotes: ["Grapefruit", "Lemon", "Bergamot", "Lime"],
-      heartNotes: ["Lily of the Valley", "Rose de Mai", "Jasmin de Grasse", "Apple"],
-      baseNotes: ["Galbanum", "Pink Pepper", "Cypriol", "Vetiver", "Cedarwood", "Ambergris"],
-      taglineEn: "Heroic Elysian Freshness and Royal Musk",
-      taglineAr: "الانتعاش الأسطوري والمسك الملكي",
-      descriptionEn: "An ultra-fresh citrus blend enriched by an opulent base of ambergris and cedar.",
-      descriptionAr: "مزيج منعش وفائق الفخامة من الحمضيات النادرة مع قاعدة ثرية من العنبر وخشب الأرز.",
-      metaTitle: "Elysium Pour Homme Parfum by Roja Parfums | UAE GCC",
-      metaDescription: "Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio with fast GCC delivery.",
-      imageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
-      images: [
-        "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85",
-      ],
-      imageAlt: "Roja Parfums Elysium luxury flacon",
-      status: "PUBLISHED",
-      variants: [
-        { id: "p3-v100", sku: "ROJA-ELY-100", volume: "100ml", volumeMl: 100, regularPrice: 2200, price: 1950, discountPrice: 1950, salePrice: 1950, stockQuantity: 25, isDefault: true },
-        { id: "p3-v50", sku: "ROJA-ELY-50", volume: "50ml", volumeMl: 50, regularPrice: 1250, price: 1250, discountPrice: null, salePrice: null, stockQuantity: 14, isDefault: false },
-      ],
-    },
-    {
-      id: "p4",
-      sku: "XER-ALEX2-100",
-      name: "Alexandria II Eau de Parfum",
-      nameAr: "ألكسندريا 2 أو دي بارفان",
-      slug: "xerjoff-alexandria-ii-eau-de-parfum",
-      brand: "Xerjoff",
-      brandSlug: "xerjoff",
-      scentFamily: "Woody Amber Oud",
-      perfumer: "Chris Maurice",
-      perfumerBio: "Renowned Spanish nose celebrated for bridging classical Mediterranean perfumery with opulent Middle Eastern accords.",
-      concentration: "EAU_DE_PARFUM",
-      gender: "UNISEX",
-      volumeMl: 100,
-      price: "2,200 AED",
-      costPrice: "1,100 AED",
-      stock: 19,
-      testerStock: 3,
-      reserved: 0,
-      warehouse: "DXB-MAIN",
-      topNotes: ["Apple", "Cinnamon", "Rosewood", "Lavender"],
-      heartNotes: ["Cedarwood", "Lily of the Valley", "Bulgarian Rose"],
-      baseNotes: ["Amber", "Sandalwood", "Musk", "Vanilla", "Laotian Oud"],
-      taglineEn: "Aristocratic Laotian Oud and Cinnamon Majesty",
-      taglineAr: "فخامة العود اللاوسي والقرفة الملكية",
-      descriptionEn: "Alexandria II by Xerjoff is an olfactory legend wrapped in rare Laotian agarwood.",
-      descriptionAr: "ألكسندريا 2 من زيرجوف أسطورة عطرية يمتزج فيها العود اللاوسي النادر مع نفحات الورد والقرفة.",
-      metaTitle: "Alexandria II by Xerjoff | Authentic Luxury Fragrance UAE",
-      metaDescription: "Shop authentic Alexandria II by Xerjoff at Muschio. Rare Laotian Oud and Bulgarian Rose.",
-      imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-      images: [
-        "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85",
-      ],
-      imageAlt: "Xerjoff Alexandria II luxury flacon",
-      status: "PUBLISHED",
-      variants: [
-        { id: "p4-v100", sku: "XER-ALEX2-100", volume: "100ml", volumeMl: 100, price: 2200, discountPrice: null, stockQuantity: 19, isDefault: true },
-        { id: "p4-v50", sku: "XER-ALEX2-50", volume: "50ml", volumeMl: 50, price: 1420, discountPrice: null, stockQuantity: 11, isDefault: false },
-      ],
-    },
-  ]);
+  const [products, setProducts] = usePersistentState<ProductItem[]>("products", []);
 
   const [productSearch, setProductSearch] = useState("");
   const [showProductModal, setShowProductModal] = useState(false);
@@ -510,141 +398,13 @@ export function App() {
   });
 
   // 1.5. COLLECTIONS & PREFERENCE CURATIONS
-  const [collections, setCollections] = usePersistentState<CollectionItem[]>("admin_collections", [
-    {
-      id: "col-signature",
-      nameEn: "Royal Oudh & Extraits",
-      nameAr: "العود الملكي وخلاصات العطور",
-      slug: "royal-oudh-extraits",
-      descriptionEn: "Masterpieces of Arabian haute parfumerie formulated with aged Omani frankincense and wild agarwood.",
-      descriptionAr: "روائع العطور النيشية الفاخرة الممزوجة باللبان الحوجري والعود المعتق.",
-      heroImageUrl: "https://images.unsplash.com/photo-1615397349754-cfa2066a298e?auto=format&fit=crop&w=1200&q=80",
-      isFeatured: true,
-      productCount: 4,
-      productIds: ["p1", "p2", "p3", "p4"],
-    },
-    {
-      id: "col-oriental",
-      nameEn: "Sovereign Rose & Florals",
-      nameAr: "الورد السلطاني والأزهار النادرة",
-      slug: "sovereign-rose-florals",
-      descriptionEn: "Rare Taif Rose and aristocratic Florentine Iris blended into sublime high-concentration extraits.",
-      descriptionAr: "ورد الطائف النادر وسوسن فلورنسا الفاخر في توليفات عطرية ملكية لا تُنسى.",
-      heroImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1200&q=80",
-      isFeatured: true,
-      productCount: 3,
-      productIds: ["p2", "p3", "p1"],
-    },
-  ]);
+  const [collections, setCollections] = usePersistentState<CollectionItem[]>("admin_collections", []);
   const [collectionSearch, setCollectionSearch] = useState("");
   const [showCollectionModal, setShowCollectionModal] = useState(false);
   const [collectionToEdit, setCollectionToEdit] = useState<CollectionItem | null>(null);
 
   // 2. BRANDS & PRESTIGE MAISONS (PRO SEO)
-  const [brands, setBrands] = usePersistentState<BrandItem[]>("brands", [
-    {
-      id: "b1",
-      name: "Amouage",
-      slug: "amouage",
-      type: "NICHE",
-      countryEn: "Sultanate of Oman",
-      countryAr: "سلطنة عُمان",
-      year: 1983,
-      storyEn:
-        "Established in 1983 in the Sultanate of Oman at the request of the Royal Family, Amouage is revered as 'The Gift of Kings'. The house defines royal Arabian haute parfumerie by fusing precious Omani Silver Frankincense, wild rock rose, and aged Cambodian agarwood at monumental concentrations.",
-      storyAr:
-        "تأسست عام 1983 في سلطنة عُمان بطلب ملكي سامٍ، وتُعرف دار أمواج بلقب 'هدية الملوك'. تعيد الدار صياغة الفخامة العطرية الملكية بدمج اللبان الحوجري الفضي النادر والورد الجبلي وخشب العود المعتق بتراكيز أسطورية.",
-      metaTitle: "Amouage Fragrances & Extraits | Authentic Royal Omani Perfumery",
-      metaDescription:
-        "Discover authentic royal flacons from Amouage (Sultanate of Oman). Hand-curated extraits, Silver Frankincense, and aged attars at Muschio.",
-      perfumesCount: 4,
-    },
-    {
-      id: "b2",
-      name: "Maison Francis Kurkdjian",
-      slug: "maison-francis-kurkdjian",
-      type: "NICHE",
-      countryEn: "Paris, France",
-      countryAr: "باريس، فرنسا",
-      year: 2009,
-      storyEn:
-        "Co-founded in 2009 by master perfumer Francis Kurkdjian, the Maison envisions a contemporary luxury fragrance wardrobe celebrating French elegance, crystalline amber accords, and monumental sillage.",
-      storyAr:
-        "تأسست عام 2009 على يد العطار البارع فرانسيس كوركدجيان، وتجسد الدار مفهوم الخزانة العطرية الفرنسية المعاصرة الجامعة بين الأناقة والانتشار المهيب.",
-      metaTitle: "Maison Francis Kurkdjian | Authentic French Haute Parfumerie UAE",
-      metaDescription:
-        "Shop authentic Baccarat Rouge 540 and Grand Soir extraits by Maison Francis Kurkdjian at Muschio. 100% verified genuine with GCC express shipping.",
-      perfumesCount: 3,
-    },
-    {
-      id: "b3",
-      name: "Roja Parfums",
-      slug: "roja-parfums",
-      type: "NICHE",
-      countryEn: "United Kingdom",
-      countryAr: "المملكة المتحدة",
-      year: 2011,
-      storyEn:
-        "Crafted by the world's most respected perfumer, Roja Dove, Roja Parfums uses only the rarest raw materials on earth to sculpt fragrances of uncompromising opulence.",
-      storyAr:
-        "ابتكرها العطار العالمي روجا دوف باستخدام أندر المواد الأولية على وجه الأرض لصياغة عطور فائقة الفخامة.",
-      metaTitle: "Roja Parfums | Haute Luxe & Elysium Extrait Parfums UAE",
-      metaDescription:
-        "Explore Roja Parfums by Roja Dove at Muschio. Uncompromising luxury flacons with complimentary white-glove GCC delivery.",
-      perfumesCount: 2,
-    },
-    {
-      id: "b4",
-      name: "Xerjoff",
-      slug: "xerjoff",
-      type: "NICHE",
-      countryEn: "Turin, Italy",
-      countryAr: "تورينو، إيطاليا",
-      year: 2003,
-      storyEn:
-        "Founded in Turin, Xerjoff merges ancient Italian artistry with the most decadent oriental essences, hand-carved quartz bottles, and certified meteorites.",
-      storyAr:
-        "تأسست في تورينو بإيطاليا، وتمزج زيرجوف بين الحرفية الإيطالية العريقة وأرقى الخلاصات الشرقية والعود الطبيعي النادر.",
-      metaTitle: "Xerjoff Perfumes | Alexandria II & Shooting Stars UAE",
-      metaDescription:
-        "Discover Xerjoff Italian haute parfumerie at Muschio. Featuring Alexandria II and Oud Stars collections with white-glove GCC shipping.",
-      perfumesCount: 2,
-    },
-    {
-      id: "b5",
-      name: "Tom Ford",
-      slug: "tom-ford",
-      type: "DESIGNER",
-      countryEn: "USA",
-      countryAr: "الولايات المتحدة",
-      year: 2006,
-      storyEn:
-        "Tom Ford Private Blend represents the artisan perfumer's private laboratory, crafting provocative and timeless scent architectures.",
-      storyAr:
-        "يمثل خط توم فورد برايفت بليند المختبر الإبداعي لصياغة أجرأ وأرقى العطور العالمية الأيقونية.",
-      metaTitle: "Tom Ford Private Blend | Authentic Fragrances UAE",
-      metaDescription:
-        "Explore Tom Ford Private Blend fragrances at Muschio with authentic verified provenance and GCC shipping.",
-      perfumesCount: 1,
-    },
-    {
-      id: "b6",
-      name: "Clive Christian",
-      slug: "clive-christian",
-      type: "NICHE",
-      countryEn: "United Kingdom",
-      countryAr: "المملكة المتحدة",
-      year: 1872,
-      storyEn:
-        "The heir to the Crown Perfumery established in 1872, Clive Christian crafts the world's most concentrated royal perfumes with Queen Victoria's royal crown crest.",
-      storyAr:
-        "وريث دار كراون العريقة لعام 1872، تقدم كلايف كريستيان أرقى العطور بتراكيز فائقة وشعار التاج الملكي المعتمد من الملكة فيكتوريا.",
-      metaTitle: "Clive Christian Perfumes | The World's Finest Perfumery UAE",
-      metaDescription:
-        "Shop Clive Christian pure perfume extraits at Muschio. Guaranteed royal provenance with luxury GCC shipping.",
-      perfumesCount: 1,
-    },
-  ]);
+  const [brands, setBrands] = usePersistentState<BrandItem[]>("brands", []);
 
   const [brandSearch, setBrandSearch] = useState("");
   const [showBrandModal, setShowBrandModal] = useState(false);
@@ -662,108 +422,7 @@ export function App() {
   }, [brands, brandSearch]);
 
   // 3. SCENT NOTES (PRO SEO)
-  const [notes, setNotes] = usePersistentState<NoteItem[]>("notes", [
-    {
-      id: "n1",
-      nameEn: "Royal Taif Rose",
-      nameAr: "ورد الطائف الملكي",
-      slug: "taif-rose",
-      family: "Floral",
-      originEn: "Taif Mountains, Saudi Arabia",
-      originAr: "جبال الطائف، السعودية",
-      descriptionEn:
-        "Harvested at dawn in the high-altitude mountains of Saudi Arabia, celebrated for its honeyed, intensely deep, and regal floral aroma.",
-      descriptionAr:
-        "يُحصد عند بزوغ الفجر في أعالي جبال الطائف بالمملكة العربية السعودية، ويشتهر بنفحاته العسلية الغنية وأريجه الزهري الملكي الفواح.",
-      metaTitle: "Royal Taif Rose Essence | Luxury Scent Notes Guide",
-      metaDescription:
-        "Explore luxury perfumes composed with Royal Taif Rose harvested from the mountains of Saudi Arabia at Muschio.",
-      heroImageUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=600&q=80",
-      thumbnailUrl: "https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=150&q=80",
-      status: "PUBLISHED",
-      perfumesCount: 4,
-    },
-    {
-      id: "n2",
-      nameEn: "Silver Frankincense",
-      nameAr: "اللبان الحوجري الفضي",
-      slug: "silver-frankincense",
-      family: "Resin",
-      originEn: "Dhofar, Sultanate of Oman",
-      originAr: "ظفار، سلطنة عُمان",
-      descriptionEn:
-        "The world's highest grade of Boswellia sacra harvested from the arid cliffs of Dhofar, exuding a luminous balsamic, citrus-peel, and sacred resinous warmth.",
-      descriptionAr:
-        "أندر وأجود أنواع اللبان الحوجري العُماني المنحدر من جبال ظفار، بنفحات بلسمية حمضية مقدسة.",
-      metaTitle: "Omani Silver Frankincense Essence | Muschio Scent Notes",
-      metaDescription:
-        "Discover luxury perfumes featuring sacred Omani Silver Frankincense from Dhofar. 100% genuine niche extraits at Muschio.",
-      heroImageUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=600&q=80",
-      thumbnailUrl: "https://images.unsplash.com/photo-1608571423902-eed4a5ad8108?auto=format&fit=crop&w=150&q=80",
-      status: "PUBLISHED",
-      perfumesCount: 3,
-    },
-    {
-      id: "n3",
-      nameEn: "Cambodian Agarwood (Oud)",
-      nameAr: "دهن عود كمبودي",
-      slug: "cambodian-oud",
-      family: "Woody",
-      originEn: "Koh Kong, Cambodia",
-      originAr: "كوه كونغ، كمبوديا",
-      descriptionEn:
-        "Rare wild-harvested agarwood oil aged for decades, delivering deep animalic leather, sweet dried fruits, and royal smoky resonance.",
-      descriptionAr:
-        "دهن عود كمبودي بري معتق، يتميز بنفحاته العميقة من الجلود والفاكهة المجففة والعمق الخشبي الدخاني.",
-      metaTitle: "Cambodian Oud (Agarwood) | Pure Niche Fragrance Guide",
-      metaDescription:
-        "Explore fine perfumes featuring aged Cambodian Oud at Muschio. Pure artisanal distillation and royal provenance guaranteed.",
-      heroImageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=600&q=80",
-      thumbnailUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=150&q=80",
-      status: "PUBLISHED",
-      perfumesCount: 5,
-    },
-    {
-      id: "n4",
-      nameEn: "Florentine Iris",
-      nameAr: "سوسن فلورنسا",
-      slug: "florentine-iris",
-      family: "Powdery",
-      originEn: "Tuscany, Italy",
-      originAr: "توسكانا، إيطاليا",
-      descriptionEn:
-        "Extracted from Iris pallida rhizomes aged for three years in Tuscany, Iris butter is one of perfumery's most precious materials, radiating noble powdery violet sophistication.",
-      descriptionAr:
-        "يُستخلص من جذامير السوسن الإيطالي المعتقة لثلاث سنوات في توسكانا، ويعد من أغلى المواد العطرية بنفحات بودرية أرستقراطية.",
-      metaTitle: "Florentine Iris Butter Note | Haute Parfumerie Encyclopedia",
-      metaDescription:
-        "Discover aristocratic perfumes formulated with precious Florentine Iris butter from Tuscany at Muschio.",
-      heroImageUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=600&q=80",
-      thumbnailUrl: "https://images.unsplash.com/photo-1526047932273-341f2a7631f9?auto=format&fit=crop&w=150&q=80",
-      status: "PUBLISHED",
-      perfumesCount: 3,
-    },
-    {
-      id: "n5",
-      nameEn: "Golden Ambergris",
-      nameAr: "العنبر الأشهب",
-      slug: "golden-ambergris",
-      family: "Amber",
-      originEn: "Arabian Sea Coastlines",
-      originAr: "سواحل بحر العرب",
-      descriptionEn:
-        "Naturally cured by sun and saltwater for decades, ocean-drifted ambergris provides unmatched crystalline radiance, oceanic warmth, and legendary sillage fixative power.",
-      descriptionAr:
-        "عنبر أشهب طبيعي معتق بأشعة الشمس وأمواج المحيط، يمنح العطور انتشاراً وثباتاً أسطورياً وإشراقة ساحلية ساحرة.",
-      metaTitle: "Golden Ambergris Essence | Royal Arabian Scent Notes",
-      metaDescription:
-        "Explore extraits crafted with ocean-cured golden ambergris at Muschio. Legendary fixative power and crystalline warmth.",
-      heroImageUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=600&q=80",
-      thumbnailUrl: "https://images.unsplash.com/photo-1509281373149-e957c6296406?auto=format&fit=crop&w=150&q=80",
-      status: "PUBLISHED",
-      perfumesCount: 4,
-    },
-  ]);
+  const [notes, setNotes] = usePersistentState<NoteItem[]>("notes", []);
 
   const [noteSearch, setNoteSearch] = useState("");
   const [showNoteModal, setShowNoteModal] = useState(false);
@@ -781,6 +440,16 @@ export function App() {
     );
   }, [notes, noteSearch]);
 
+  // Live Dashboard Metrics
+  const [dashboardMetrics, setDashboardMetrics] = useState<{
+    totalProducts?: number;
+    totalOrders?: number;
+    totalRevenue?: number;
+    lowStockCount?: number;
+    lowStockItems?: any[];
+    recentOrders?: any[];
+  } | null>(null);
+
   // Sync live products, brands, notes, and collections from Neon PostgreSQL database
   useEffect(() => {
     let active = true;
@@ -792,10 +461,14 @@ export function App() {
       fetch("/api/v1/brands").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/notes").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/admin/collections", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([prodRes, brandRes, noteRes, colRes]) => {
+      fetch("/api/v1/admin/dashboard", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([prodRes, brandRes, noteRes, colRes, dashRes]) => {
       if (!active) return;
-      if (prodRes?.data && Array.isArray(prodRes.data) && prodRes.data.length > 0) {
-        const dbProducts: ProductItem[] = prodRes.data.map((p: any) => {
+      if (dashRes?.success && dashRes.data) {
+        setDashboardMetrics(dashRes.data);
+      }
+      if (prodRes?.data && Array.isArray(prodRes.data)) {
+        const dbProducts: ProductItem[] = prodRes.data.filter((p: any) => !isMockItem(p)).map((p: any) => {
           const variantsList: ProductVariantItem[] = Array.isArray(p.variants) && p.variants.length > 0
             ? p.variants.map((v: any, idx: number) => {
                 const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
@@ -876,8 +549,8 @@ export function App() {
         });
         setProducts(dbProducts);
       }
-      if (brandRes?.data && Array.isArray(brandRes.data) && brandRes.data.length > 0) {
-        setBrands(brandRes.data.map((b: any) => ({
+      if (brandRes?.data && Array.isArray(brandRes.data)) {
+        setBrands(brandRes.data.filter((b: any) => !isMockItem(b)).map((b: any) => ({
           id: b.id,
           name: b.name,
           slug: b.slug,
@@ -893,8 +566,8 @@ export function App() {
           perfumesCount: b._count?.products || 1,
         })));
       }
-      if (noteRes?.data && Array.isArray(noteRes.data) && noteRes.data.length > 0) {
-        setNotes(noteRes.data.map((n: any) => ({
+      if (noteRes?.data && Array.isArray(noteRes.data)) {
+        setNotes(noteRes.data.filter((n: any) => !isMockItem(n)).map((n: any) => ({
           id: n.id,
           nameEn: n.nameEn,
           nameAr: n.nameAr,
@@ -910,7 +583,7 @@ export function App() {
         })));
       }
       if (colRes?.data && Array.isArray(colRes.data)) {
-        setCollections(colRes.data.map((c: any) => ({
+        setCollections(colRes.data.filter((c: any) => !isMockItem(c)).map((c: any) => ({
           id: c.id,
           nameEn: c.nameEn,
           nameAr: c.nameAr,
@@ -933,38 +606,7 @@ export function App() {
   }, [authSession?.token]);
 
   // 3. ORDERS
-  const [orders, setOrders] = usePersistentState<any[]>("orders", [
-    {
-      id: "ord-1",
-      number: "MSC-2026-981245",
-      customer: "H.E. Sultan Al-Nuaimi",
-      amount: "1,850 AED",
-      method: "TABBY (4x)",
-      status: "PAID",
-      market: "AE",
-      date: "Today, 14:32",
-    },
-    {
-      id: "ord-2",
-      number: "MSC-2026-981244",
-      customer: "Fatima Al-Zahra",
-      amount: "3,500 AED",
-      method: "APPLE_PAY",
-      status: "FULFILLING",
-      market: "AE",
-      date: "Today, 12:15",
-    },
-    {
-      id: "ord-3",
-      number: "MSC-2026-981240",
-      customer: "Rashid Mansoor",
-      amount: "2,200 SAR",
-      method: "TAMARA (4x)",
-      status: "SHIPPED",
-      market: "SA",
-      date: "Yesterday",
-    },
-  ]);
+  const [orders, setOrders] = usePersistentState<any[]>("orders", []);
 
   const [orderSearch, setOrderSearch] = useState("");
   const [orderMarketFilter, setOrderMarketFilter] = useState("ALL");
@@ -1028,32 +670,7 @@ export function App() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [setIsSidebarCollapsed]);
   const [toasts, setToasts] = useState<LiveToast[]>([]);
-  const [enquiries, setEnquiries] = useState<EnquiryItem[]>([
-    {
-      id: "enq-demo-1",
-      enquiryId: "ENQ-DEMO-01",
-      name: "Sheikha Maryam Al-Maktoum",
-      email: "maryam.m@dubai.priv",
-      phone: "+971501234567",
-      subject: "Private Sillage Consultation",
-      message: "Seeking a private VIP olfactory presentation of Amouage Guidance 46 and bespoke Attars for a royal wedding celebration.",
-      fragranceInterest: "Amouage Guidance 46 / Bespoke Attars",
-      status: "NEW",
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-    },
-    {
-      id: "enq-demo-2",
-      enquiryId: "ENQ-DEMO-02",
-      name: "Tariq Bin Laden",
-      email: "tariq.bl@holding.sa",
-      phone: "+966555123456",
-      subject: "Baccarat Rouge Extrait 500ml Flacon Availability",
-      message: "Do you offer private warehouse courier delivery to Riyadh Diplomatic Quarter for 2 flacons this week?",
-      fragranceInterest: "Maison Francis Kurkdjian Baccarat Rouge 540",
-      status: "IN_PROGRESS",
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-    },
-  ]);
+  const [enquiries, setEnquiries] = useState<EnquiryItem[]>([]);
   const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<string>("ALL");
   const [enquirySearch, setEnquirySearch] = useState<string>("");
   const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
@@ -1147,9 +764,9 @@ export function App() {
 
         if (ordersRes && ordersRes.ok) {
           const json = await ordersRes.json();
-          if (json.success && Array.isArray(json.data) && json.data.length > 0 && active) {
+          if (json.success && Array.isArray(json.data) && active) {
             setOrders(
-              json.data.map((o: any) => ({
+              json.data.filter((o: any) => !isMockItem(o)).map((o: any) => ({
                 ...o,
                 id: o.id,
                 number: o.orderNumber,
@@ -1173,7 +790,7 @@ export function App() {
         if (enquiriesRes && enquiriesRes.ok) {
           const json = await enquiriesRes.json();
           if (json.success && Array.isArray(json.data) && active) {
-            setEnquiries(json.data);
+            setEnquiries(json.data.filter((e: any) => !isMockItem(e)));
           }
         }
       } catch (err) {
@@ -1244,8 +861,9 @@ export function App() {
 
         if (Array.isArray(newOrders) && newOrders.length > 0) {
           setOrders((prev) => {
-            const map = new Map(prev.map((o) => [o.id, o]));
-            newOrders.forEach((o: any) => {
+            const cleanPrev = prev.filter((o) => !isMockItem(o));
+            const map = new Map(cleanPrev.map((o) => [o.id, o]));
+            newOrders.filter((o: any) => !isMockItem(o)).forEach((o: any) => {
               map.set(o.id, {
                 id: o.id,
                 number: o.orderNumber,
@@ -1274,118 +892,16 @@ export function App() {
   }, [isLiveActive, isAudioEnabled]);
 
   // 4. RETURNS
-  const [returns, setReturns] = usePersistentState("returns", [
-    {
-      id: "ret-1",
-      number: "RET-2026-001",
-      customer: "Ahmad Al-Ghamdi",
-      item: "AMO-INT53-100 (Interlude 53)",
-      reason: "Ordered Extrait by mistake, wanted EDP",
-      condition: "PRISTINE_SEALED",
-      disposition: "RESTOCK_SELLABLE",
-      status: "INSPECTING",
-    },
-    {
-      id: "ret-2",
-      number: "RET-2026-002",
-      customer: "Leila H.",
-      item: "MFK-BR540E-70 (Baccarat Rouge 540)",
-      reason: "Sprayed once on wrist",
-      condition: "OPENED_SPRAYED",
-      disposition: "ALLOCATE_TESTER",
-      status: "INSPECTING",
-    },
-  ]);
+  const [returns, setReturns] = usePersistentState<any[]>("returns", []);
 
   // 5. REVIEWS
-  const [reviews, setReviews] = usePersistentState("reviews", [
-    {
-      id: "rev-1",
-      product: "Interlude 53 Man Extrait",
-      customer: "Ahmad Al Maktoum",
-      rating: 5,
-      longevity: 5,
-      sillage: 5,
-      title: "The True Definition of Omani Royalty",
-      verified: true,
-      status: "APPROVED",
-    },
-    {
-      id: "rev-2",
-      product: "Baccarat Rouge 540 Extrait",
-      customer: "Nasser Al-Qasimi",
-      rating: 5,
-      longevity: 5,
-      sillage: 4,
-      title: "Addictive and crystalline sillage",
-      verified: true,
-      status: "PENDING",
-    },
-  ]);
+  const [reviews, setReviews] = usePersistentState<any[]>("reviews", []);
 
   // 6. BANNERS
-  const [banners, setBanners] = usePersistentState<BannerItem[]>("banners", [
-    {
-      id: "bnr-1",
-      slot: "HERO_SLIDER",
-      eyebrowEn: "HAUTE PARFUMERIE · ARABIAN GULF",
-      eyebrowAr: "دار العطور الراقية · الخليج العربي",
-      titleEn: "The Art of | Noble Sillage.",
-      titleAr: "فن | الحضور المهيب.",
-      subtitleEn: "Curating the world's most formidable extraits de parfum, aged attars, and raw olfactory essences for the connoisseurs of the Gulf.",
-      subtitleAr: "ننتقي أرقى خلاصات العطور العالمية المعتقة والزيوت النادرة لعشاق العطور الراقية في الخليج العربي.",
-      ctaTextEn: "Shop the Collection",
-      ctaTextAr: "تسوق المجموعة",
-      ctaUrl: "/shop",
-      secondaryCtaTextEn: "AI Sommelier",
-      secondaryCtaTextAr: "مستشار العطور",
-      secondaryCtaUrl: "/discover/ai",
-      imageUrl: "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1400&q=85",
-      mobileImageUrl: "",
-      overlayLabelEn: "MUSCHIO SELECTION / 2026",
-      overlayLabelAr: "مختارات موسكيو / ٢٠٢٦",
-      sortOrder: 0,
-      isActive: true,
-      startsAt: "2026-01-01T00:00",
-      endsAt: "2026-12-31T23:59",
-    },
-    {
-      id: "bnr-2",
-      slot: "HERO_SLIDER",
-      eyebrowEn: "ROYAL HARVEST 2026",
-      eyebrowAr: "المحصول الملكي ٢٠٢٦",
-      titleEn: "Omani Frankincense | & Taif Rose.",
-      titleAr: "لبان حوجري | وورد الطائف.",
-      subtitleEn: "A limited allocation of high-altitude harvested essences direct from Dhofar and the mountains of Taif.",
-      subtitleAr: "محصول محدود ونادر من خلاصات جبال الطائف وأشجار اللبان الحوجري بظفار.",
-      ctaTextEn: "Explore Scent Notes",
-      ctaTextAr: "استكشف النوتات",
-      ctaUrl: "/notes",
-      secondaryCtaTextEn: "View Houses",
-      secondaryCtaTextAr: "عرض الدور",
-      secondaryCtaUrl: "/brands",
-      imageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1400&q=85",
-      mobileImageUrl: "",
-      overlayLabelEn: "HARVEST ARCHIVE / LIMITED",
-      overlayLabelAr: "أرشيف المحصول / حصري",
-      sortOrder: 1,
-      isActive: true,
-      startsAt: "2026-02-18T00:00",
-      endsAt: "2026-03-20T23:59",
-    },
-  ]);
+  const [banners, setBanners] = usePersistentState<BannerItem[]>("banners", []);
 
   // 7. HOMEPAGE SECTIONS
-  const [sections, setSections] = usePersistentState<HomepageSectionItem[]>("sections", [
-    { id: "sec-1", sectionType: "HERO_BANNER", titleEn: "Campaign Hero", titleAr: "البانر الرئيسي", sortOrder: 0, isVisible: true },
-    { id: "sec-2", sectionType: "DISCOVERY_STRIP", titleEn: "Quick Discovery Strip", titleAr: "شريط الاكتشاف السريع", sortOrder: 1, isVisible: true },
-    { id: "sec-3", sectionType: "FEATURED_PRODUCTS", titleEn: "Signature Selection", titleAr: "المختارات المميزة", sortOrder: 2, isVisible: true },
-    { id: "sec-4", sectionType: "HOUSES_GRID", titleEn: "Prestige Houses", titleAr: "دور العطور", sortOrder: 3, isVisible: true },
-    { id: "sec-5", sectionType: "NOTES_GRID", titleEn: "Scent Notes", titleAr: "نوتات العطر", sortOrder: 4, isVisible: true },
-    { id: "sec-6", sectionType: "DISCOVERY_SETS", titleEn: "Discovery Sets", titleAr: "مجموعات العينات", sortOrder: 5, isVisible: true },
-    { id: "sec-7", sectionType: "JOURNAL_FEATURE", titleEn: "Muschio Journal", titleAr: "مجلة موسكيو", sortOrder: 6, isVisible: true },
-    { id: "sec-8", sectionType: "TRUST_INDICATORS", titleEn: "Service Guarantees", titleAr: "ضمانات الخدمة", sortOrder: 7, isVisible: true },
-  ]);
+  const [sections, setSections] = usePersistentState<HomepageSectionItem[]>("sections", []);
 
   // 8. SOCIAL & STOREFRONT SETTINGS
   const [storeSettings, setStoreSettings] = usePersistentState<StoreSettings>("settings", {
@@ -1409,13 +925,7 @@ export function App() {
   const [settingsFeedback, setSettingsFeedback] = useState("");
 
   // 9. AUDIT LOGS
-  const [auditLogs, setAuditLogs] = usePersistentState<AuditLogItem[]>("audit", [
-    { action: "SETTINGS_UPDATED", res: "SOCIAL_LINKS Instagram & WhatsApp", user: "superadmin@muschio.luxury", time: "16:40:12" },
-    { action: "INVENTORY_RESERVATION_CREATED", res: "ORDER #MSC-2026-981245", user: "system (checkout)", time: "14:32:01" },
-    { action: "WEBHOOK_PAYMENT_CAPTURED", res: "TABBY #tabby_sess_9812", user: "webhook-service", time: "14:32:45" },
-    { action: "ORDER_STATUS_TRANSITION_PAID", res: "ORDER #MSC-2026-981245", user: "system", time: "14:32:46" },
-    { action: "BANNER_CREATED", res: "HERO_SLIDER bnr-1", user: "superadmin@muschio.luxury", time: "10:15:32" },
-  ]);
+  const [auditLogs, setAuditLogs] = usePersistentState<AuditLogItem[]>("audit", []);
 
   const addAuditLog = (action: string, res: string) => {
     const time = new Date().toLocaleTimeString();
@@ -2371,10 +1881,18 @@ export function App() {
   };
 
   // Dynamic Dashboard Metrics
-  const totalStockUnits = useMemo(() => products.reduce((acc, p) => acc + p.stock, 0), [products]);
-  const totalTesterUnits = useMemo(() => products.reduce((acc, p) => acc + p.testerStock, 0), [products]);
+  const totalStockUnits = useMemo(() => products.reduce((acc, p) => acc + (p.stock || 0), 0), [products]);
+  const totalTesterUnits = useMemo(() => products.reduce((acc, p) => acc + (p.testerStock || 0), 0), [products]);
   const activeOrdersCount = useMemo(() => orders.filter((o) => o.status !== "CANCELLED").length, [orders]);
   const pendingReviewsCount = useMemo(() => reviews.filter((r) => r.status === "PENDING").length, [reviews]);
+  const totalRevenueFromOrders = useMemo(() => {
+    return orders
+      .filter((o) => o.status === "PAID" || o.status === "FULFILLING" || o.status === "SHIPPED" || o.status === "DELIVERED")
+      .reduce((sum, o) => {
+        const amt = typeof o.amount === "string" ? parseFloat(o.amount.replace(/[^0-9.]/g, "")) : Number(o.totalAmount || 0);
+        return sum + (isNaN(amt) ? 0 : amt);
+      }, 0);
+  }, [orders]);
 
   if (!authSession) {
     return <AdminLoginGate onLoginSuccess={(session) => setAuthSession(session)} />;
@@ -2816,28 +2334,34 @@ export function App() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Net Revenue (MTD)</span>
-                <div className="font-serif text-3xl text-neutral-900 dark:text-white font-light">384,250 AED</div>
-                <div className="text-emerald-400 text-xs flex items-center gap-1">
+                <div className="font-serif text-3xl text-neutral-900 dark:text-white font-light">
+                  {Number(dashboardMetrics?.totalRevenue ?? totalRevenueFromOrders).toLocaleString()} AED
+                </div>
+                <div className="text-emerald-500 text-xs flex items-center gap-1 font-mono">
                   <TrendingUp size={12} />
-                  <span>+28.4% vs last month</span>
+                  <span>Verified captured sales</span>
                 </div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Orders</span>
-                <div className="font-serif text-3xl text-amber-400 font-light">{activeOrdersCount} Orders</div>
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Active Orders</span>
+                <div className="font-serif text-3xl text-amber-500 dark:text-amber-400 font-light">
+                  {dashboardMetrics?.totalOrders ?? activeOrdersCount} Orders
+                </div>
                 <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">In processing & dispatch</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Stock</span>
-                <div className="font-serif text-3xl text-emerald-400 font-light">{totalStockUnits} Units</div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">+{totalTesterUnits} Testers</div>
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Catalog Inventory</span>
+                <div className="font-serif text-3xl text-emerald-500 dark:text-emerald-400 font-light">
+                  {dashboardMetrics?.totalProducts ?? products.length} Flacons
+                </div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">{totalStockUnits} Sealed + {totalTesterUnits} Testers in vault</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Returns</span>
-                <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Units</div>
+                <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Cases</div>
                 <div className="text-neutral-500 dark:text-neutral-400 text-xs">Awaiting inspection</div>
               </div>
             </div>
@@ -3023,7 +2547,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {filteredProducts.map((p) => (
+                  {filteredProducts.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center text-neutral-500 font-sans">
+                        No products found in the catalog. Click "Add Product" or "Bulk Excel Upload" to add items.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredProducts.map((p) => (
                     <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -3166,7 +2697,8 @@ export function App() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -4390,7 +3922,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {filteredBrands.map((b) => (
+                  {filteredBrands.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-neutral-500 font-sans">
+                        No brands found in the catalog. Click "Add Brand" above to register a prestige house.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredBrands.map((b) => (
                     <tr key={b.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -4473,7 +4012,8 @@ export function App() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -4789,7 +4329,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {filteredNotes.map((n) => (
+                  {filteredNotes.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-12 text-center text-neutral-500 font-sans">
+                        No olfactory notes found. Click "Add Note" above to define scent pyramid ingredients.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredNotes.map((n) => (
                     <tr key={n.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-3">
@@ -4865,7 +4412,8 @@ export function App() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -4902,15 +4450,8 @@ export function App() {
             <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 p-6 space-y-3 rounded">
               <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Supplier Purchase Orders</h3>
               <p className="text-xs text-neutral-500 dark:text-neutral-400">Active purchase orders with official brand distributors in France, Oman, and Italy.</p>
-              <div className="divide-y divide-slate-800 text-xs font-mono pt-3">
-                <div className="py-2.5 flex items-center justify-between">
-                  <span className="text-neutral-900 dark:text-neutral-100">PO-2026-081 • Amouage Luxury LLC (Oman)</span>
-                  <span className="text-emerald-400">DELIVERED & VERIFIED</span>
-                </div>
-                <div className="py-2.5 flex items-center justify-between">
-                  <span className="text-neutral-900 dark:text-neutral-100">PO-2026-082 • Roja Parfums London (UK)</span>
-                  <span className="text-amber-400">IN TRANSIT (AIR FREIGHT)</span>
-                </div>
+              <div className="py-8 text-center border border-dashed border-neutral-200 dark:border-neutral-800 rounded text-xs text-neutral-500 font-sans">
+                No active supplier purchase orders pending. Inbound consignments from perfume houses will appear here.
               </div>
             </div>
           </div>
@@ -4999,7 +4540,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {returns.map((r) => (
+                  {returns.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-neutral-500 font-sans">
+                        No return requests in queue. 7-day guarantee returns submitted by customers will be logged here for physical inspection.
+                      </td>
+                    </tr>
+                  ) : (
+                    returns.map((r) => (
                     <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <span className="font-semibold text-neutral-900 dark:text-white block">{r.number}</span>
@@ -5025,7 +4573,8 @@ export function App() {
                         )}
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -5231,7 +4780,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {filteredOrders.map((o) => (
+                  {filteredOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-12 text-center text-neutral-500 font-sans">
+                        No orders currently placed in this view. Completed storefront acquisitions will stream here live.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredOrders.map((o) => (
                     <tr
                       key={o.id}
                       onClick={() => {
@@ -5322,7 +4878,8 @@ export function App() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -5421,7 +4978,14 @@ export function App() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {reviews.map((r) => (
+                  {reviews.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-neutral-500 font-sans">
+                        No customer reviews waiting for moderation. Verified client reviews submitted on the storefront will appear here.
+                      </td>
+                    </tr>
+                  ) : (
+                    reviews.map((r) => (
                     <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                       <td className="py-3.5 px-4">
                         <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
@@ -5470,7 +5034,8 @@ export function App() {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  ))
+                )}
                 </tbody>
               </table>
             </div>
@@ -5522,7 +5087,12 @@ export function App() {
 
             {/* Banners List */}
             <div className="grid grid-cols-1 gap-4">
-              {banners.map((b) => (
+              {banners.length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500 font-sans">
+                  No promotional banners configured yet. Click "Add New Banner" above to publish hero campaigns or announcements.
+                </div>
+              ) : (
+                banners.map((b) => (
                 <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
                   <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
                   <div className="flex-1 space-y-1">
@@ -5559,7 +5129,8 @@ export function App() {
                     </button>
                   </div>
                 </div>
-              ))}
+              ))
+              )}
             </div>
 
             {/* Add / Edit Banner Modal */}
@@ -5971,19 +5542,25 @@ export function App() {
               </span>
             </div>
             <div className="divide-y divide-neutral-200 dark:divide-neutral-800 text-xs font-mono">
-              {auditLogs.map((log, idx) => (
-                <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 text-neutral-700 dark:text-neutral-300">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-purple-600 dark:text-purple-400 font-bold">{log.action}</span>
-                    <span className="text-neutral-500 dark:text-neutral-400">[{log.res}]</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-neutral-500 text-[11px]">
-                    <span className="font-medium text-neutral-700 dark:text-neutral-300">{log.user}</span>
-                    <span>•</span>
-                    <span>{log.time}</span>
-                  </div>
+              {auditLogs.length === 0 ? (
+                <div className="py-8 text-center text-neutral-500 font-sans text-xs">
+                  No administrative actions recorded in current session. Operations like product edits, status updates, and order dispatches will appear here.
                 </div>
-              ))}
+              ) : (
+                auditLogs.map((log, idx) => (
+                  <div key={idx} className="py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-4 text-neutral-700 dark:text-neutral-300">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-purple-600 dark:text-purple-400 font-bold">{log.action}</span>
+                      <span className="text-neutral-500 dark:text-neutral-400">[{log.res}]</span>
+                    </div>
+                    <div className="flex items-center gap-3 text-neutral-500 text-[11px]">
+                      <span className="font-medium text-neutral-700 dark:text-neutral-300">{log.user}</span>
+                      <span>•</span>
+                      <span>{log.time}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         )}

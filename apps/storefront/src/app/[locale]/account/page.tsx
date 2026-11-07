@@ -124,15 +124,6 @@ export default function AccountPage({
     }
   };
 
-  const handleDemoVipLogin = async () => {
-    setAuthLoading(true);
-    try {
-      await login("sultan@muschio.client", "vip");
-    } finally {
-      setAuthLoading(false);
-    }
-  };
-
   const handleCreateAddress = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newAddressForm.fullName.trim() || !newAddressForm.addressLine1.trim()) return;
@@ -340,18 +331,6 @@ export default function AccountPage({
                 <span>{c("1-Click Checkout & Private Order History", "إتمام الطلب بضغطة واحدة وسجل خاص")}</span>
               </div>
             </div>
-
-            <div className="pt-2">
-              <button
-                type="button"
-                onClick={handleDemoVipLogin}
-                disabled={authLoading}
-                className="w-full editorial-button-secondary text-xs py-3 flex items-center justify-center gap-2"
-              >
-                <Crown size={14} className="text-accent" />
-                <span>{c("Instant Demo: Sultan Al-Nuaimi (Gold VIP)", "تجربة سريعة: سلطان النعيمي (Gold VIP)")}</span>
-              </button>
-            </div>
           </div>
 
           {/* Right Form: Login or Register */}
@@ -430,7 +409,7 @@ export default function AccountPage({
                     required
                     value={authName}
                     onChange={(e) => setAuthName(e.target.value)}
-                    placeholder="Sultan Al-Nuaimi"
+                    placeholder={c("e.g. Abdullah Al-Falasi", "مثال: عبد الله الفلاسي")}
                     className="glass-input w-full p-3 text-xs"
                   />
                 </div>
@@ -554,7 +533,7 @@ export default function AccountPage({
                 <input
                   type="text"
                   required
-                  placeholder="Sultan Al-Nuaimi"
+                  placeholder={c("e.g. Abdullah Al-Falasi", "مثال: عبد الله الفلاسي")}
                   value={newAddressForm.fullName}
                   onChange={(e) => setNewAddressForm({ ...newAddressForm, fullName: e.target.value })}
                   className="glass-input w-full p-2.5 text-xs"

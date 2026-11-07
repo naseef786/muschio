@@ -116,7 +116,7 @@ export default function OrderStatusPage({
         cardNumber,
         cardExp,
         cardCvc,
-        cardHolder: cardHolder || "Sultan Al-Nuaimi",
+        cardHolder: cardHolder || order.shippingAddress?.fullName || "Cardholder",
       });
 
       if (result && result.success && result.order) {
@@ -152,7 +152,7 @@ export default function OrderStatusPage({
     setCardNumber("4242 4242 4242 4242");
     setCardExp("12/28");
     setCardCvc("123");
-    setCardHolder("Sultan Al-Nuaimi");
+    setCardHolder(order?.shippingAddress?.fullName || "Private Client");
   };
 
   useEffect(() => {
@@ -822,7 +822,7 @@ export default function OrderStatusPage({
                   required
                   value={cardHolder}
                   onChange={(e) => setCardHolder(e.target.value)}
-                  placeholder="Sultan Al-Nuaimi"
+                  placeholder={c("e.g. Abdullah Al-Falasi", "مثال: عبد الله الفلاسي")}
                   className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
                 />
               </div>

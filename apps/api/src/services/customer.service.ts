@@ -96,22 +96,21 @@ export class CustomerService {
         ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)
         : "Client";
 
-      // Sultan demo VIP user or standard welcome tier
-      const isSultan = email.includes("sultan");
-      const initialPoints = isSultan ? 1450 : 100;
+      // New customer standard welcome tier
+      const initialPoints = 100;
 
       customer = await prisma.customer.create({
         data: {
           email,
           firstName,
           lastName,
-          phone: isSultan ? "+971 50 123 4567" : null,
-          isVip: isSultan,
+          phone: null,
+          isVip: false,
           loyaltyPoints: initialPoints,
           fragranceProfile: {
             create: {
-              preferredFamilies: isSultan ? ["Oriental", "Woody", "Amber"] : [],
-              favoriteNotes: isSultan ? ["Oud", "Taif Rose", "Amber"] : [],
+              preferredFamilies: [],
+              favoriteNotes: [],
               dislikedNotes: [],
               preferredSillage: "Strong & Enveloping",
               preferredLongevity: "Eternal (12+ hours)",
