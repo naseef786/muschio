@@ -19,6 +19,9 @@ import {
   CreditCard,
   Gift,
   Truck,
+  ChevronDown,
+  ChevronUp,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function CheckoutPage({
@@ -37,9 +40,11 @@ export default function CheckoutPage({
     saveAddress,
     login,
     signup,
-    logout,
     redeemedLoyaltyCredits,
   } = useAuth();
+
+  // Mobile Order Summary Accordion
+  const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
 
   // Mode: "GUEST" vs "LOGIN"
   const [checkoutMode, setCheckoutMode] = useState<"GUEST" | "LOGIN">(
@@ -70,14 +75,13 @@ export default function CheckoutPage({
     phone: "",
     email: "",
     addressLine1: "",
-    city: "",
-    stateOrEmirate: "",
+    city: "Dubai",
+    stateOrEmirate: "Dubai",
     country: "AE",
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [availability, setAvailability] = useState<"loading" | "ready" | "unavailable">("loading");
   const [delivery, setDelivery] = useState<{ id?: string; fee?: number }>({});
 
   const selectDelivery = useCallback(
@@ -116,7 +120,6 @@ export default function CheckoutPage({
 
   // Shipping calculation
   const isGoldSillage = user?.tier === "GOLD_SILLAGE" || user?.tier === "ROYAL_AMBASSADOR";
-  // Gold sillage members get complimentary express courier across GCC
   const shipping = isGoldSillage ? 0 : (delivery.fee ?? baseShipping);
 
   // Loyalty calculations
@@ -129,36 +132,24 @@ export default function CheckoutPage({
   const earnedCredits = Math.round(subtotal * loyaltyRate);
 
   const fields = [
-    ["fullName", c("Full name", "الاسم الكامل"), "text", "name"],
-    ["email", c("Email", "البريد الإلكتروني"), "email", "email"],
-    ["phone", c("Phone (with country code)", "رقم الهاتف مع رمز الدولة"), "tel", "tel"],
+    ["fullName", c("Full Name", "الاسم الكامل"), "text", "name"],
+    ["email", c("Email Address", "البريد الإلكتروني"), "email", "email"],
+    ["phone", c("Phone (e.g. +971 50 123 4567)", "رقم الهاتف مع رمز الدولة"), "tel", "tel"],
     [
       "addressLine1",
-      c("Street, villa / building and apartment", "الشارع ورقم الفيلا أو المبنى"),
+      c("Street, Villa / Building & Unit", "الشارع ورقم الفيلا أو المبنى والشقة"),
       "text",
       "street-address",
     ],
     ["city", c("City", "المدينة"), "text", "address-level2"],
     [
       "stateOrEmirate",
-      c("State / Emirate / Province", "الإمارة / المنطقة"),
+      c("Emirate / Province", "الإمارة / المنطقة"),
       "text",
       "address-level1",
     ],
   ] as const;
 
-  useEffect(() => {
-    let active = true;
-    muschioApi.getPaymentAvailability().then((result) => {
-      if (active)
-        setAvailability(
-          result?.methods.includes("CREDIT_CARD") ? "ready" : "unavailable",
-        );
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const handleInlineLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -177,12 +168,11 @@ export default function CheckoutPage({
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if (loading || !items.length || availability !== "ready") return;
+    if (loading || !items.length) return;
     setLoading(true);
     setError("");
 
     try {
-      // Save address if requested
       if (saveToProfile && isEnteringNewAddress && form.fullName && form.addressLine1) {
         saveAddress({
           fullName: form.fullName,
@@ -197,7 +187,6 @@ export default function CheckoutPage({
         });
       }
 
-      // If guest chose to create an account
       if (!isLoggedIn && createAccountOnCheckout && form.email) {
         await signup({
           name: form.fullName || "Private Client",
@@ -281,7 +270,6 @@ export default function CheckoutPage({
       const origin = window.location.origin;
       const confirmationUrl = `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`;
 
-      // Immediate confirmation for Cash on Delivery / VIP Concierge test orders:
       if (paymentMethod === "CASH_ON_DELIVERY") {
         clearCart();
         localStorage.removeItem("muschio_pending_order");
@@ -289,7 +277,6 @@ export default function CheckoutPage({
         return;
       }
 
-      // Credit Card Authorization & Settlement
       try {
         const paymentRes = await muschioApi.initiatePayment({
           orderId: order.id,
@@ -348,164 +335,128 @@ export default function CheckoutPage({
   }
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-12">
-      {/* Checkout Header */}
-      <div className="space-y-2 mb-8 border-b border-luxury-border pb-6">
-        <span className="eyebrow text-accent">
-          {c("HAUTE PARFUMERIE · SECURE ACQUISITION", "دار العطور الراقية · إتمام الطلب الآمن")}
-        </span>
-        <h1 className="font-serif text-3xl sm:text-5xl text-luxury-text font-normal leading-tight">
-          {c("Your Private Curation.", "مقتنياتك العطرية المختارة.")}
-        </h1>
+    <div className="w-full max-w-[1440px] mx-auto px-3 sm:px-6 lg:px-10 py-4 sm:py-10 pb-32">
+      {/* Checkout Minimal Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 sm:pb-6 mb-4 sm:mb-8 border-b border-luxury-border gap-2">
+        <div>
+          <span className="eyebrow text-accent block text-[10px] sm:text-xs tracking-[0.18em]">
+            {c("HAUTE PARFUMERIE · 100% AUTHENTIC & SECURE", "دار العطور الراقية · إتمام الطلب الآمن")}
+          </span>
+          <h1 className="font-serif text-2xl sm:text-4xl text-luxury-text font-normal mt-0.5">
+            {c("Checkout & Acquisition", "إتمام الشراء")}
+          </h1>
+        </div>
+        <div className="flex items-center gap-2 text-xs text-luxury-muted">
+          <Link href="/cart" className="hover:text-luxury-text underline">
+            {c("← Return to Bag", "← العودة إلى الحقيبة")}
+          </Link>
+        </div>
       </div>
 
-      {/* 1. Ownership & Loyalty Selector (Guest vs Privilege Client) */}
-      {!isLoggedIn ? (
-        <div className="mb-8 border border-luxury-border bg-luxury-surface rounded-sm overflow-hidden">
-          {/* Flow Mode Switcher Tabs */}
-          <div className="grid grid-cols-2 border-b border-luxury-border text-center text-xs font-sans uppercase tracking-wider font-medium">
-            <button
-              type="button"
-              onClick={() => setCheckoutMode("GUEST")}
-              className={`py-3.5 px-4 transition-colors ${
-                checkoutMode === "GUEST"
-                  ? "bg-luxury-text text-luxury-canvas"
-                  : "bg-luxury-surface2 text-luxury-muted hover:text-luxury-text"
-              }`}
-            >
-              {c("Guest Checkout", "متابعة كضيف")}
-            </button>
-            <button
-              type="button"
-              onClick={() => setCheckoutMode("LOGIN")}
-              className={`py-3.5 px-4 flex items-center justify-center gap-1.5 transition-colors ${
-                checkoutMode === "LOGIN"
-                  ? "bg-luxury-text text-luxury-canvas"
-                  : "bg-luxury-surface2 text-luxury-muted hover:text-luxury-text"
-              }`}
-            >
-              <Crown size={14} className="text-accent" />
-              <span>{c("Muschio Privilege Sign In", "تسجيل دخول العميل الخاص")}</span>
-            </button>
+      {/* MOBILE ACCORDION: Order Summary (Visible only on <lg screens) */}
+      <div className="lg:hidden mb-5 border border-luxury-border bg-luxury-surface rounded-sm overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setMobileSummaryOpen(!mobileSummaryOpen)}
+          className="w-full px-4 py-3.5 flex items-center justify-between bg-luxury-surface hover:bg-luxury-surface2 transition-colors text-xs"
+        >
+          <div className="flex items-center gap-2 text-luxury-text font-medium">
+            <ShoppingBag size={15} className="text-accent" />
+            <span>
+              {mobileSummaryOpen
+                ? c("Hide Order Summary", "إخفاء تفاصيل الطلب")
+                : c(`Show Order Summary (${items.length} items)`, `عرض تفاصيل الطلب (${items.length} عطور)`)}
+            </span>
+            {mobileSummaryOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </div>
+          <div className="font-mono font-semibold text-luxury-text text-sm">
+            AED {estimatedTotal.toLocaleString()}
+          </div>
+        </button>
 
-          {/* Login Form Panel if Login tab selected */}
-          {checkoutMode === "LOGIN" && (
-            <div className="p-6 sm:p-8 bg-luxury-surface space-y-4">
-              <div className="max-w-md space-y-2">
-                <span className="text-[11px] font-sans font-semibold uppercase tracking-[0.16em] text-accent block">
-                  {c("SIGN IN TO UNLOCK LOYALTY PRIVILEGES", "سجل دخولك لتفعيل مزايا العميل الخاص")}
-                </span>
-                <p className="text-xs text-luxury-muted leading-relaxed">
-                  {c(
-                    "Sign in to automatically apply your saved GCC addresses, earn 5% olfactory loyalty rewards on this purchase, and access your private client benefits.",
-                    "سجل الدخول لاستخدام عناوينك المحفوظة، وكسب ٥٪ رصيد ولاء عطري على هذا الطلب، والتمتع بمزايا العضوية الحصرية.",
-                  )}
-                </p>
+        {mobileSummaryOpen && (
+          <div className="p-4 border-t border-luxury-border bg-luxury-surface2 space-y-4">
+            {/* Items list */}
+            <div className="divide-y divide-luxury-border max-h-60 overflow-y-auto">
+              {items.map((item) => (
+                <div key={item.id} className="flex items-center gap-3 py-2.5">
+                  <div className="relative w-12 h-14 bg-white border border-luxury-border rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center">
+                    {item.image ? (
+                      <Image
+                        src={item.image}
+                        alt={item.title}
+                        fill
+                        className="object-contain p-1"
+                        sizes="48px"
+                      />
+                    ) : (
+                      <Sparkles size={14} className="text-accent/40" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <span className="text-[10px] font-sans uppercase tracking-wider text-accent truncate block">
+                      {item.brand}
+                    </span>
+                    <p className="font-serif text-xs text-luxury-text truncate">
+                      {ar ? item.titleAr : item.title}
+                    </p>
+                    <p className="text-[10px] text-luxury-muted font-mono">
+                      {item.volume || item.sizeLabel} × {item.quantity}
+                    </p>
+                  </div>
+                  <div className="font-mono text-xs font-semibold text-luxury-text text-end">
+                    AED {(item.price * item.quantity).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Calculations breakdown */}
+            <div className="pt-3 border-t border-luxury-border space-y-2 text-xs text-luxury-muted">
+              <div className="flex justify-between">
+                <span>{c("Subtotal", "المجموع الفرعي")}</span>
+                <span className="font-mono text-luxury-text">AED {subtotal.toLocaleString()}</span>
               </div>
-
-              <form onSubmit={handleInlineLogin} className="max-w-md space-y-3 pt-2">
-                <div>
-                  <label className="block text-xs font-medium text-luxury-text mb-1">
-                    {c("Email Address", "البريد الإلكتروني")}
-                  </label>
-                  <input
-                    type="email"
-                    required
-                    value={loginEmail}
-                    onChange={(e) => setLoginEmail(e.target.value)}
-                    placeholder="client@muschio.luxury"
-                    className="glass-input w-full p-2.5 text-xs"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-luxury-text mb-1">
-                    {c("Password", "كلمة المرور")}
-                  </label>
-                  <input
-                    type="password"
-                    value={loginPassword}
-                    onChange={(e) => setLoginPassword(e.target.value)}
-                    placeholder="••••••••"
-                    className="glass-input w-full p-2.5 text-xs"
-                  />
-                </div>
-
-                {loginError && <p className="text-xs text-red-600">{loginError}</p>}
-
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <button
-                    type="submit"
-                    disabled={loginLoading}
-                    className="editorial-button text-xs py-2.5 px-5"
-                  >
-                    {loginLoading ? c("Verifying…", "جارٍ التحقق…") : c("Sign In & Continue", "تسجيل الدخول والمتابعة")}
-                  </button>
-                </div>
-              </form>
-            </div>
-          )}
-        </div>
-      ) : (
-        /* Logged-In Private Client Identification Bar */
-        <div className="mb-8 border border-accent/40 bg-accent/[0.04] p-5 sm:p-6 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-10 h-10 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center text-accent flex-shrink-0">
-              <Crown size={18} />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="font-serif text-base text-luxury-text font-medium">
-                  {user?.name}
-                </span>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-accent text-white rounded-sm">
-                  {user?.tier === "GOLD_SILLAGE" ? c("Gold Sillage VIP", "عضوية السيلّاج الذهبي") : c("Privilege Member", "عضوية بريفيلج")}
+              <div className="flex justify-between">
+                <span>{c("White-Glove GCC Courier", "الشحن السريع المبرد")}</span>
+                <span className="font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                  {shipping === 0 ? c("Complimentary", "مجاني") : `AED ${shipping}`}
                 </span>
               </div>
-              <p className="text-xs text-luxury-muted mt-0.5">
-                {user?.email} · {c("Available Olfactory Balance:", "رصيد الولاء المتاح:")}{" "}
-                <strong className="text-luxury-text font-mono">AED {user?.loyaltyCreditsAed}</strong>
+              {activeLoyaltyDiscount > 0 && (
+                <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span>{c("Olfactory Loyalty Credit", "خصم رصيد الولاء")}</span>
+                  <span className="font-mono">-AED {activeLoyaltyDiscount}</span>
+                </div>
+              )}
+              <div className="flex justify-between pt-2 border-t border-luxury-border text-sm font-semibold text-luxury-text">
+                <span>{c("Total Due", "المجموع النهائي")}</span>
+                <span className="font-mono">AED {estimatedTotal.toLocaleString()}</span>
+              </div>
+              <p className="text-[10px] text-luxury-muted leading-tight font-mono">
+                {c(
+                  `Includes 5% UAE VAT (AED ${(estimatedTotal - estimatedTotal / 1.05).toFixed(2)})`,
+                  `شامل 5% ضريبة القيمة المضافة (${(estimatedTotal - estimatedTotal / 1.05).toFixed(2)} د.إ)`
+                )}
               </p>
             </div>
           </div>
+        )}
+      </div>
 
-          <div className="flex items-center gap-3">
-            {maxAvailableCredits > 0 && (
-              <label className="flex items-center gap-2 cursor-pointer text-xs bg-luxury-surface px-3 py-1.5 border border-luxury-border rounded-sm">
-                <input
-                  type="checkbox"
-                  checked={applyCredits}
-                  onChange={(e) => setApplyCredits(e.target.checked)}
-                  className="accent-accent"
-                />
-                <span>
-                  {c(`Apply AED ${maxAvailableCredits} Loyalty Credit`, `خصم ${maxAvailableCredits} د.إ من رصيد الولاء`)}
-                </span>
-              </label>
-            )}
-            <button
-              type="button"
-              onClick={logout}
-              className="text-xs text-luxury-muted hover:text-rose-500 underline transition-colors"
-            >
-              {c("Switch Account", "تبديل الحساب")}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <form
-        onSubmit={submit}
-        className="grid lg:grid-cols-12 gap-8 lg:gap-12 items-start"
-      >
-        {/* Left Form: Delivery, Address, Payment (7 cols) */}
-        <div className="lg:col-span-7 space-y-7">
-          {/* SECTION 1: Address Book & Delivery Details */}
+      {/* MAIN CHECKOUT FORM GRID */}
+      <form onSubmit={submit} className="grid lg:grid-cols-12 gap-6 lg:gap-10 items-start">
+        {/* LEFT COLUMN: Customer, Shipping, Delivery, Payment (7 cols) */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* STEP 1: Identification & Address Destination */}
           <section className="delivery-panel space-y-5">
             <div className="flex items-center justify-between pb-3 border-b border-luxury-border">
-              <h2 className="font-serif text-xl sm:text-2xl text-luxury-text font-normal">
-                {c("1. Delivery Destination", "١. وجهة التوصيل الفاخر")}
-              </h2>
+              <div className="flex items-center gap-2.5">
+                <MapPin size={18} className="text-luxury-text" />
+                <h2 className="font-serif text-lg sm:text-xl text-luxury-text font-normal m-0 p-0">
+                  {c("1. Delivery Destination", "١. وجهة التوصيل الفاخر")}
+                </h2>
+              </div>
               {savedAddresses.length > 0 && (
                 <button
                   type="button"
@@ -515,192 +466,268 @@ export default function CheckoutPage({
                   {isEnteringNewAddress ? (
                     <>
                       <MapPin size={13} />
-                      <span>{c("Pick from Saved Addresses", "اختر من العناوين المحفوظة")}</span>
+                      <span>{c("Use Saved Address", "العناوين المحفوظة")}</span>
                     </>
                   ) : (
                     <>
                       <Plus size={13} />
-                      <span>{c("Deliver to New Address", "إضافة عنوان جديد")}</span>
+                      <span>{c("Add New Address", "عنوان جديد")}</span>
                     </>
                   )}
                 </button>
               )}
             </div>
 
-            {/* Saved Address Cards Carousel / Selector */}
-            {savedAddresses.length > 0 && !isEnteringNewAddress && (
-              <div className="space-y-3">
-                <span className="eyebrow text-[10px]">
-                  {c("SAVED ADDRESSES (1-CLICK SELECTION)", "العناوين المحفوظة (اختيار فوري)")}
-                </span>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {savedAddresses.map((addr) => {
-                    const isSelected = selectedAddressId === addr.id;
-                    return (
-                      <button
-                        key={addr.id}
-                        type="button"
-                        onClick={() => {
-                          setSelectedAddressId(addr.id);
-                          setForm((prev) => ({
-                            ...prev,
-                            fullName: addr.fullName,
-                            phone: addr.phone,
-                            email: user?.email || addr.email || prev.email,
-                            addressLine1: addr.addressLine1,
-                            city: addr.city,
-                            stateOrEmirate: addr.stateOrEmirate,
-                            country: addr.country,
-                          }));
-                          selectDelivery();
-                        }}
-                        className={`text-start p-4 border transition-all rounded-sm flex flex-col justify-between ${
-                          isSelected
-                            ? "border-accent bg-luxury-surface2 shadow-sm"
-                            : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                        }`}
-                      >
-                        <div>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="font-sans font-semibold text-xs text-luxury-text">
-                              {addr.label || addr.fullName}
-                            </span>
-                            {isSelected && (
-                              <span className="w-5 h-5 rounded-full bg-accent text-white flex items-center justify-center text-[10px]">
-                                ✓
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-xs text-luxury-muted leading-relaxed">
-                            {addr.fullName} · {addr.phone}
-                          </p>
-                          <p className="text-xs text-luxury-text mt-1 leading-snug">
-                            {addr.addressLine1}, {addr.city}, {addr.country}
-                          </p>
-                        </div>
-
-                        {addr.isDefault && (
-                          <span className="text-[10px] uppercase font-mono text-accent mt-3 block">
-                            ★ {c("Default Address", "العنوان الافتراضي")}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+            {/* Guest vs Login Selector */}
+            {!isLoggedIn ? (
+              <div className="border border-luxury-border bg-luxury-surface rounded-sm overflow-hidden mb-4">
+                <div className="grid grid-cols-2 text-center text-xs font-sans font-medium">
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutMode("GUEST")}
+                    className={`py-3 px-3 transition-colors ${
+                      checkoutMode === "GUEST"
+                        ? "bg-luxury-text text-luxury-canvas font-semibold"
+                        : "bg-luxury-surface2 text-luxury-muted hover:text-luxury-text"
+                    }`}
+                  >
+                    {c("Guest Checkout", "متابعة كضيف")}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCheckoutMode("LOGIN")}
+                    className={`py-3 px-3 flex items-center justify-center gap-1.5 transition-colors ${
+                      checkoutMode === "LOGIN"
+                        ? "bg-luxury-text text-luxury-canvas font-semibold"
+                        : "bg-luxury-surface2 text-luxury-muted hover:text-luxury-text"
+                    }`}
+                  >
+                    <Crown size={13} className="text-accent" />
+                    <span>{c("Sign In (5% Rewards)", "تسجيل الدخول")}</span>
+                  </button>
                 </div>
+
+                {checkoutMode === "LOGIN" && (
+                  <div className="p-4 sm:p-5 bg-luxury-surface border-t border-luxury-border space-y-3">
+                    <p className="text-xs text-luxury-muted">
+                      {c(
+                        "Sign in to automatically apply your saved UAE addresses and earn 5% loyalty credit.",
+                        "سجل الدخول لاستخدام عناوينك المحفوظة في الإمارات وكسب 5% رصيد ولاء.",
+                      )}
+                    </p>
+                    <div className="space-y-3">
+                      <input
+                        type="email"
+                        value={loginEmail}
+                        onChange={(e) => setLoginEmail(e.target.value)}
+                        placeholder="client@muschio.ae"
+                        className="w-full h-11 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface focus:border-luxury-text focus:outline-none"
+                      />
+                      <input
+                        type="password"
+                        value={loginPassword}
+                        onChange={(e) => setLoginPassword(e.target.value)}
+                        placeholder="••••••••"
+                        className="w-full h-11 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface focus:border-luxury-text focus:outline-none"
+                      />
+                      {loginError && <p className="text-xs text-red-600">{loginError}</p>}
+                      <button
+                        type="button"
+                        onClick={handleInlineLogin}
+                        disabled={loginLoading}
+                        className="editorial-button text-xs py-2.5 px-4"
+                      >
+                        {loginLoading ? c("Verifying…", "جارٍ التحقق…") : c("Sign In & Continue", "تسجيل الدخول")}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* Logged In VIP Banner */
+              <div className="p-3.5 bg-accent/[0.04] border border-accent/30 rounded-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-accent/15 border border-accent/30 flex items-center justify-center text-accent shrink-0">
+                    <Crown size={15} />
+                  </div>
+                  <div>
+                    <span className="font-serif text-sm font-medium text-luxury-text block">
+                      {user?.name}
+                    </span>
+                    <span className="text-[11px] text-luxury-muted block">
+                      {user?.email} · {c("Rewards Balance:", "رصيد المكافآت:")} <strong>AED {user?.loyaltyCreditsAed}</strong>
+                    </span>
+                  </div>
+                </div>
+                {maxAvailableCredits > 0 && (
+                  <label className="flex items-center gap-2 cursor-pointer text-xs bg-luxury-surface px-2.5 py-1.5 border border-luxury-border rounded-sm">
+                    <input
+                      type="checkbox"
+                      checked={applyCredits}
+                      onChange={(e) => setApplyCredits(e.target.checked)}
+                      className="accent-black dark:accent-white"
+                    />
+                    <span>{c(`Redeem AED ${maxAvailableCredits}`, `خصم ${maxAvailableCredits} د.إ`)}</span>
+                  </label>
+                )}
               </div>
             )}
 
-            {/* Manual Address Input Form (shown if new address selected or no saved addresses) */}
-            {(isEnteringNewAddress || savedAddresses.length === 0) && (
-              <div className="grid sm:grid-cols-2 gap-4 pt-1">
-                {fields.map(([key, label, type, autocomplete]) => (
-                  <div
-                    key={key}
-                    className={key === "addressLine1" ? "sm:col-span-2" : ""}
-                  >
-                    <label htmlFor={key} className="block text-xs font-medium text-luxury-text mb-1">
-                      {label}
-                    </label>
-                    <input
-                      id={key}
-                      type={type}
-                      autoComplete={autocomplete}
-                      required
-                      minLength={
-                        key === "phone"
-                          ? 8
-                          : key === "fullName"
-                            ? 2
-                            : key === "addressLine1"
-                              ? 3
-                              : 1
-                      }
-                      value={form[key]}
-                      onChange={(event) =>
-                        setForm({ ...form, [key]: event.target.value })
-                      }
-                      className="glass-input w-full p-2.5 text-xs"
-                    />
-                  </div>
-                ))}
+            {/* Saved Address Cards */}
+            {savedAddresses.length > 0 && !isEnteringNewAddress && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {savedAddresses.map((addr) => {
+                  const isSelected = selectedAddressId === addr.id;
+                  return (
+                    <button
+                      key={addr.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedAddressId(addr.id);
+                        setForm((prev) => ({
+                          ...prev,
+                          fullName: addr.fullName,
+                          phone: addr.phone,
+                          email: user?.email || addr.email || prev.email,
+                          addressLine1: addr.addressLine1,
+                          city: addr.city,
+                          stateOrEmirate: addr.stateOrEmirate,
+                          country: addr.country,
+                        }));
+                      }}
+                      className={`text-start p-3.5 border transition-all rounded-sm flex flex-col justify-between ${
+                        isSelected
+                          ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                          : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-semibold text-xs text-luxury-text truncate">
+                            {addr.label || addr.fullName}
+                          </span>
+                          {isSelected && (
+                            <span className="w-4 h-4 rounded-full bg-luxury-text text-luxury-canvas flex items-center justify-center text-[9px]">
+                              ✓
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-[11px] text-luxury-muted truncate">
+                          {addr.fullName} · {addr.phone}
+                        </p>
+                        <p className="text-xs text-luxury-text mt-1 leading-snug line-clamp-2">
+                          {addr.addressLine1}, {addr.city}, {addr.country}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
 
-                <div className="sm:col-span-2">
-                  <label htmlFor="country" className="block text-xs font-medium text-luxury-text mb-1">
-                    {c("Destination Country", "دولة التوصيل")}
-                  </label>
-                  <select
-                    id="country"
-                    autoComplete="country"
-                    value={form.country}
-                    onChange={(event) => {
-                      setForm({ ...form, country: event.target.value });
-                      selectDelivery();
-                    }}
-                    className="glass-input w-full p-2.5 text-xs"
-                  >
-                    {[
-                      ["AE", c("United Arab Emirates (UAE)", "الإمارات العربية المتحدة")],
-                      ["SA", c("Kingdom of Saudi Arabia (KSA)", "المملكة العربية السعودية")],
-                      ["QA", c("State of Qatar", "دولة قطر")],
-                      ["KW", c("State of Kuwait", "دولة الكويت")],
-                      ["BH", c("Kingdom of Bahrain", "مملكة البحرين")],
-                      ["OM", c("Sultanate of Oman", "سلطنة عمان")],
-                    ].map(([value, name]) => (
-                      <option value={value} key={value}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
+            {/* Manual Form Inputs */}
+            {(isEnteringNewAddress || savedAddresses.length === 0) && (
+              <div className="space-y-4 pt-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {fields.map(([key, label, type, autocomplete]) => (
+                    <div
+                      key={key}
+                      className={key === "addressLine1" ? "sm:col-span-2" : ""}
+                    >
+                      <label htmlFor={key} className="block text-xs font-medium text-luxury-text mb-1">
+                        {label}
+                      </label>
+                      <input
+                        id={key}
+                        type={type}
+                        autoComplete={autocomplete}
+                        required
+                        minLength={key === "phone" ? 8 : 2}
+                        value={form[key]}
+                        onChange={(event) =>
+                          setForm({ ...form, [key]: event.target.value })
+                        }
+                        className="w-full h-11 sm:h-10 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none transition-colors"
+                      />
+                    </div>
+                  ))}
+
+                  {/* Destination Country (UAE Default) */}
+                  <div className="sm:col-span-2">
+                    <label htmlFor="country" className="block text-xs font-medium text-luxury-text mb-1">
+                      {c("Destination Country", "دولة التوصيل")}
+                    </label>
+                    <select
+                      id="country"
+                      autoComplete="country"
+                      value={form.country}
+                      onChange={(event) => {
+                        setForm({ ...form, country: event.target.value });
+                        selectDelivery();
+                      }}
+                      className="w-full h-11 sm:h-10 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none transition-colors"
+                    >
+                      {[
+                        ["AE", c("United Arab Emirates (UAE)", "الإمارات العربية المتحدة")],
+                        ["SA", c("Kingdom of Saudi Arabia (KSA)", "المملكة العربية السعودية")],
+                        ["QA", c("State of Qatar", "دولة قطر")],
+                        ["KW", c("State of Kuwait", "دولة الكويت")],
+                        ["BH", c("Kingdom of Bahrain", "مملكة البحرين")],
+                        ["OM", c("Sultanate of Oman", "سلطنة عمان")],
+                      ].map(([value, name]) => (
+                        <option value={value} key={value}>
+                          {name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                {/* Save Address Option Checkbox */}
-                <div className="sm:col-span-2 pt-2 border-t border-luxury-border space-y-3">
-                  <label className="flex items-center gap-2 cursor-pointer text-xs text-luxury-text">
+                {/* Save Address & Privilege Toggles */}
+                <div className="pt-2 border-t border-luxury-border space-y-2.5">
+                  <label className="flex items-center gap-2.5 cursor-pointer text-xs text-luxury-text">
                     <input
                       type="checkbox"
                       checked={saveToProfile}
                       onChange={(e) => setSaveToProfile(e.target.checked)}
-                      className="accent-accent"
+                      className="accent-black dark:accent-white"
                     />
                     <span>
                       {c(
-                        "Save this address to my Muschio Private Client profile for future acquisitions",
-                        "احفظ هذا العنوان في ملفي الخاص لتسهيل الطلبات المستقبلية",
+                        "Save this address to my Muschio Client Profile for future orders",
+                        "احفظ هذا العنوان في ملفي لتسهيل الطلبات المستقبلية",
                       )}
                     </span>
                   </label>
 
-                  {/* Account creation prompt for guest */}
                   {!isLoggedIn && (
-                    <label className="flex items-center gap-2 cursor-pointer text-xs text-accent">
+                    <label className="flex items-center gap-2.5 cursor-pointer text-xs text-accent">
                       <input
                         type="checkbox"
                         checked={createAccountOnCheckout}
                         onChange={(e) => setCreateAccountOnCheckout(e.target.checked)}
-                        className="accent-accent"
+                        className="accent-black dark:accent-white"
                       />
                       <span>
                         {c(
-                          `Activate Muschio Privilege membership & earn AED ${earnedCredits} in loyalty credits on this order`,
-                          `انضم لعضوية مسكيو واكسب ${earnedCredits} درهم كرصيد ولاء عطري مع هذا الطلب`,
+                          `Activate Muschio Privilege membership & earn AED ${earnedCredits} in loyalty rewards`,
+                          `انضم لعضوية مسكيو واكسب ${earnedCredits} د.إ كرصيد ولاء عطري مع هذا الطلب`,
                         )}
                       </span>
                     </label>
                   )}
 
                   {!isLoggedIn && createAccountOnCheckout && (
-                    <div className="p-3 bg-luxury-surface2 border border-luxury-border space-y-2 mt-2">
-                      <label className="block text-xs text-luxury-text font-medium">
-                        {c("Create a password for your Private Client Suite", "اختر كلمة مرور لجناحك العطري")}
+                    <div className="p-3 bg-luxury-surface2 border border-luxury-border rounded-sm mt-2">
+                      <label className="block text-xs text-luxury-text font-medium mb-1">
+                        {c("Choose a password for your account", "اختر كلمة مرور لحسابك")}
                       </label>
                       <input
                         type="password"
                         placeholder="••••••••"
                         value={newPassword}
                         onChange={(e) => setNewPassword(e.target.value)}
-                        className="glass-input w-full p-2 text-xs"
+                        className="w-full h-10 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
                       />
                     </div>
                   )}
@@ -709,7 +736,7 @@ export default function CheckoutPage({
             )}
           </section>
 
-          {/* Delivery Courier Selector */}
+          {/* STEP 2: Delivery Courier Selector */}
           <DeliveryPanel
             country={form.country}
             subtotal={subtotal}
@@ -717,53 +744,124 @@ export default function CheckoutPage({
             onSelect={selectDelivery}
           />
 
-          {/* SECTION 2: Payment Gateway & Security */}
-          <section className="delivery-panel space-y-3">
-            <h2 className="font-serif text-xl sm:text-2xl text-luxury-text font-normal">
-              {c("2. Secure Stripe Verification", "٢. التحقق والدفع الآمن")}
-            </h2>
-            <div className="flex items-center gap-2 text-xs text-luxury-muted">
-              <Lock size={14} className="text-emerald-600 flex-shrink-0" />
-              <span>
-                {c(
-                  "256-bit encrypted checkout via Stripe. Your card data is processed directly by the banking network.",
-                  "دفع مشفر بأعلى معايير الأمان عبر سترايب. تتم معالجة بيانات بطاقتك مباشرة عبر الشبكة المصرفية.",
-                )}
-              </span>
-            </div>
-            {isGoldSillage && (
-              <div className="p-3 bg-accent/10 border border-accent/30 text-xs text-accent rounded-sm flex items-center gap-2">
-                <Crown size={15} />
-                <span>
-                  {c(
-                    "Gold Sillage VIP Benefit: Complimentary priority temperature-controlled courier included.",
-                    "ميزة السيلّاج الذهبي: الشحن الجوي المبرد السريع مشمول مجاناً لطلبك.",
-                  )}
-                </span>
+          {/* STEP 3: Payment Gateway Selector */}
+          <section className="delivery-panel space-y-4">
+            <div className="flex items-center justify-between pb-3 border-b border-luxury-border">
+              <div className="flex items-center gap-2.5">
+                <CreditCard size={18} className="text-luxury-text" />
+                <h2 className="font-serif text-lg sm:text-xl text-luxury-text font-normal m-0 p-0">
+                  {c("3. Payment Method", "٣. طريقة الدفع الآمن")}
+                </h2>
               </div>
-            )}
+              <div className="flex items-center gap-1 text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400">
+                <Lock size={12} />
+                <span>{c("256-Bit SSL", "تشفير مصرفي آمن")}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              {/* Option A: Credit / Debit Card (Stripe) */}
+              <div
+                onClick={() => setPaymentMethod("CREDIT_CARD")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "CREDIT_CARD"
+                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="CREDIT_CARD"
+                    checked={paymentMethod === "CREDIT_CARD"}
+                    onChange={() => setPaymentMethod("CREDIT_CARD")}
+                    className="mt-1 accent-black dark:accent-white shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-luxury-text">
+                        {c("Credit / Debit Card (Stripe)", "البطاقة الائتمانية (سترايب)")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c(
+                        "Visa, Mastercard, American Express, Apple Pay, Google Pay",
+                        "فيزا، ماستركارد، أمريكان إكسبريس، أبل باي، جوجل باي",
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {paymentMethod === "CREDIT_CARD" && (
+                  <div className="mt-3 pt-3 border-t border-luxury-border text-xs text-luxury-muted flex items-start gap-2 bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded-sm">
+                    <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
+                    <p className="text-[11px] leading-relaxed">
+                      {c(
+                        "Your transaction is securely authorized via 3D-Secure bank verification. No card numbers are stored on our servers.",
+                        "تتم معالجة بيانات بطاقتك بأمان عبر نظام الحماية المصرفي ثلاثي الأبعاد دون حفظ الأرقام على خوادمنا.",
+                      )}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Option B: Cash on Delivery / VIP Concierge */}
+              <div
+                onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "CASH_ON_DELIVERY"
+                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="CASH_ON_DELIVERY"
+                    checked={paymentMethod === "CASH_ON_DELIVERY"}
+                    onChange={() => setPaymentMethod("CASH_ON_DELIVERY")}
+                    className="mt-1 accent-black dark:accent-white shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-semibold text-luxury-text">
+                        {c("VIP Handover / Cash on Delivery", "الدفع عند الاستلام / تسليم فاخر")}
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-medium">
+                        {c("Instant Confirmation", "تأكيد فوري")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c(
+                        "Pay upon white-glove courier delivery via card terminal or cash at your doorstep.",
+                        "ادفع عند استلام شحنتك عبر جهاز نقاط البيع أو نقداً عند باب منزلك.",
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         </div>
 
-        {/* Right Aside: Bag Summary, Loyalty Credit, Total (5 cols) */}
-        <aside className="lg:col-span-5 delivery-panel lg:sticky lg:top-36 space-y-5">
+        {/* RIGHT COLUMN: Order Summary & Primary Action Button (5 cols) */}
+        <aside className="lg:col-span-5 delivery-panel lg:sticky lg:top-28 space-y-5">
           <div className="flex items-center justify-between pb-3 border-b border-luxury-border">
-            <h2 className="font-serif text-xl text-luxury-text font-normal">
-              {c("Acquisition Summary", "ملخص المقتنيات")}
+            <h2 className="font-serif text-lg sm:text-xl text-luxury-text font-normal m-0 p-0">
+              {c("Order Summary", "ملخص الطلب")}
             </h2>
-            <span className="text-xs text-luxury-muted">
-              {items.length} {c("Items", "عطور")}
+            <span className="text-xs text-luxury-muted font-mono">
+              {items.length} {c("items", "عطور")}
             </span>
           </div>
 
-          {/* Items breakdown with thumbnails */}
+          {/* Desktop Items List */}
           <div className="divide-y divide-luxury-border max-h-72 overflow-y-auto">
             {items.map((item) => (
-              <div
-                key={item.id}
-                className="flex items-center justify-between gap-3 py-3"
-              >
-                <div className="relative w-12 h-16 bg-luxury-surface2 border border-luxury-border flex-shrink-0 overflow-hidden flex items-center justify-center">
+              <div key={item.id} className="flex items-center gap-3 py-3">
+                <div className="relative w-12 h-16 bg-white border border-luxury-border rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center">
                   {item.image ? (
                     <Image
                       src={item.image}
@@ -780,31 +878,33 @@ export default function CheckoutPage({
                   <span className="text-[10px] font-sans uppercase tracking-wider text-accent truncate block">
                     {item.brand}
                   </span>
-                  <p className="font-serif text-sm text-luxury-text truncate">
+                  <p className="font-serif text-xs text-luxury-text truncate">
                     {ar ? item.titleAr : item.title}
                   </p>
-                  <p className="text-[11px] text-luxury-muted">
+                  <p className="text-[11px] text-luxury-muted font-mono">
                     {item.volume || item.sizeLabel} × {item.quantity}
                   </p>
                 </div>
-                <PriceDisplay
-                  price={item.price * item.quantity}
-                  compareAtPrice={item.compareAtPrice ? item.compareAtPrice * item.quantity : null}
-                  locale={locale}
-                  size="sm"
-                />
+                <div className="text-end shrink-0">
+                  <PriceDisplay
+                    price={item.price * item.quantity}
+                    compareAtPrice={item.compareAtPrice ? item.compareAtPrice * item.quantity : null}
+                    locale={locale}
+                    size="sm"
+                  />
+                </div>
               </div>
             ))}
           </div>
 
           {/* Pricing calculations */}
           <div className="space-y-2.5 pt-3 border-t border-luxury-border text-xs text-luxury-muted">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span>{c("Subtotal", "المجموع الفرعي")}</span>
               <PriceDisplay price={subtotal} locale={locale} size="sm" />
             </div>
-            <div className="flex justify-between">
-              <span>{c("White-Glove GCC Delivery", "الشحن السريع المبرد")}</span>
+            <div className="flex justify-between items-center">
+              <span>{c("White-Glove GCC Courier", "الشحن السريع المبرد")}</span>
               {shipping === 0 ? (
                 <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                   {c("Complimentary", "مجاني")}
@@ -814,40 +914,41 @@ export default function CheckoutPage({
               )}
             </div>
 
-            {/* Loyalty discount if applied */}
             {activeLoyaltyDiscount > 0 && (
-              <div className="flex justify-between text-emerald-600 dark:text-emerald-400 font-medium">
+              <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-medium">
                 <span>{c("Olfactory Loyalty Credit", "خصم رصيد الولاء")}</span>
-                <span>-AED {activeLoyaltyDiscount}</span>
+                <span className="font-mono">-AED {activeLoyaltyDiscount}</span>
               </div>
             )}
           </div>
 
-          {/* Final Total */}
+          {/* Order Total Box */}
           <div className="flex justify-between items-baseline border-t border-luxury-border pt-4">
             <div>
               <span className="text-xs uppercase tracking-wider font-sans font-semibold text-luxury-text block">
                 {c("Order Total", "المجموع الكلي")}
               </span>
               <span className="text-[10px] text-luxury-muted block">
-                {c("VAT & GCC customs included", "شامل الضريبة والرسوم")}
+                {c("VAT & GCC duties included", "شامل الضريبة والرسوم الجمركية")}
               </span>
-              <span className="text-[9px] font-mono text-luxury-muted block">
+              <span className="text-[9px] font-mono text-luxury-muted block mt-0.5">
                 {c(
                   `Includes 5% UAE VAT (AED ${(estimatedTotal - estimatedTotal / 1.05).toFixed(2)})`,
                   `شامل 5% ضريبة القيمة المضافة (${(estimatedTotal - estimatedTotal / 1.05).toFixed(2)} د.إ)`
                 )}
               </span>
             </div>
-            <PriceDisplay price={estimatedTotal} locale={locale} />
+            <div className="text-end">
+              <PriceDisplay price={estimatedTotal} locale={locale} size="lg" />
+            </div>
           </div>
 
-          {/* Loyalty Earned Badge */}
+          {/* Loyalty Reward Credit Badge */}
           <div className="p-3 bg-luxury-surface2 border border-luxury-border rounded-sm flex items-center justify-between text-xs">
             <div className="flex items-center gap-2">
               <Gift size={14} className="text-accent" />
               <span className="text-luxury-text font-medium">
-                {c("Olfactory Rewards", "مكافأة الولاء لهذا الطلب")}
+                {c("Olfactory Loyalty Rewards", "مكافأة الولاء لهذا الطلب")}
               </span>
             </div>
             <span className="font-mono text-accent font-semibold">
@@ -855,137 +956,58 @@ export default function CheckoutPage({
             </span>
           </div>
 
-          {/* Payment Method Selector */}
-          <div className="space-y-3 pt-3 border-t border-luxury-border">
-            <span className="text-xs uppercase tracking-wider font-sans font-semibold text-luxury-text block">
-              {c("Select Payment Method", "اختر طريقة الدفع")}
-            </span>
-            <div className="grid grid-cols-1 gap-2.5">
-              <div
-                onClick={() => setPaymentMethod("CREDIT_CARD")}
-                className={`p-3.5 border rounded-sm flex flex-col gap-3 cursor-pointer transition-colors ${
-                  paymentMethod === "CREDIT_CARD"
-                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-text/40"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="CREDIT_CARD"
-                    checked={paymentMethod === "CREDIT_CARD"}
-                    onChange={() => setPaymentMethod("CREDIT_CARD")}
-                    className="mt-0.5 accent-black dark:accent-white"
-                  />
-                  <div className="space-y-0.5 min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <CreditCard size={14} className="text-luxury-text shrink-0" />
-                      <span className="text-xs font-semibold text-luxury-text">
-                        {c("Credit / Debit Card (Stripe)", "البطاقة الائتمانية (سترايب)")}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-luxury-muted">
-                      {c(
-                        "Visa, Mastercard, Amex, Apple Pay",
-                        "فيزا، ماستركارد، أمريكان إكسبريس، وأبل باي",
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {paymentMethod === "CREDIT_CARD" && (
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    className="pt-3 border-t border-luxury-border space-y-2.5 cursor-default text-xs"
-                  >
-                    <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-none flex items-start gap-2.5">
-                      <ShieldCheck size={18} className="text-emerald-600 dark:text-emerald-400 mt-0.5 flex-shrink-0" />
-                      <div className="space-y-1">
-                        <p className="font-medium text-neutral-900 dark:text-neutral-100">
-                          {c("Encrypted Bank Verification via Stripe", "تحقق مصرفي مشفر عبر سترايب")}
-                        </p>
-                        <p className="text-[11px] text-neutral-500 leading-relaxed">
-                          {c(
-                            "Supports Apple Pay, Google Pay, and GCC 3D-Secure cards (Visa, Mastercard, Amex). You will be securely connected to finalize bank authorization without exposing card data.",
-                            "يدعم أبل باي، جوجل باي، وبطاقات الدفع المعتمدة (فيزا، ماستركارد، أميكس) مع التحقق الأمني ثلاثي الأبعاد. يتم التوصيل الآمن لإتمام التفويض المصرفي.",
-                          )}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <label
-                onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
-                className={`p-3.5 border rounded-sm flex items-start gap-3 cursor-pointer transition-colors ${
-                  paymentMethod === "CASH_ON_DELIVERY"
-                    ? "border-luxury-text bg-luxury-surface2"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-text/40"
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="paymentMethod"
-                  value="CASH_ON_DELIVERY"
-                  checked={paymentMethod === "CASH_ON_DELIVERY"}
-                  onChange={() => setPaymentMethod("CASH_ON_DELIVERY")}
-                  className="mt-0.5 accent-black dark:accent-white"
-                />
-                <div className="space-y-0.5 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <Truck size={14} className="text-accent shrink-0" />
-                    <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5 flex-wrap">
-                      <span>{c("VIP Delivery / Pay on Handover", "الدفع عند الاستلام / طلب تجريبي")}</span>
-                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono font-medium">
-                        {c("Instant Test Order", "طلب اختباري فوري")}
-                      </span>
-                    </span>
-                  </div>
-                  <p className="text-[11px] text-luxury-muted">
-                    {c(
-                      "No card required. Directly logs the order, sends SMS/WhatsApp, and updates admin tracker.",
-                      "دون الحاجة لبطاقة. يؤكد الطلب فوراً ويرسل إشعارات الواتساب والبريد ويحدث لوحة التحكم.",
-                    )}
-                  </p>
-                </div>
-              </label>
-            </div>
-          </div>
-
           {error && (
-            <p
+            <div
               role="alert"
-              className="text-red-700 dark:text-red-300 text-xs p-2 bg-red-500/10 border border-red-500/20 rounded-sm"
+              className="text-red-700 dark:text-red-300 text-xs p-3 bg-red-500/10 border border-red-500/20 rounded-sm"
             >
               {error}
-            </p>
+            </div>
           )}
 
+          {/* Submit Action Button */}
           <button
             type="submit"
-            disabled={loading || availability !== "ready"}
-            className="editorial-button w-full disabled:opacity-50 text-xs py-4 flex items-center justify-center gap-2 shadow-md"
+            disabled={loading}
+            className="editorial-button w-full text-xs sm:text-sm py-4 flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-[0.99] disabled:opacity-50"
           >
-            {paymentMethod === "CASH_ON_DELIVERY" ? <Truck size={15} /> : <CreditCard size={15} />}
-            <span>
-              {loading
-                ? c("Securing order…", "جارٍ تأكيد الطلب…")
-                : paymentMethod === "CASH_ON_DELIVERY"
-                  ? c("Confirm VIP Order (Pay on Delivery)", "تأكيد الطلب الفاخر (الدفع عند الاستلام)")
-                  : c("Authorize & Pay with Card", "الدفع الفوري بالبطاقة")}
-            </span>
+            {loading ? (
+              <span>{c("Securing order…", "جارٍ تأكيد الطلب…")}</span>
+            ) : paymentMethod === "CASH_ON_DELIVERY" ? (
+              <>
+                <Truck size={16} />
+                <span>
+                  {c(
+                    `Confirm VIP Order (Pay on Delivery) · AED ${estimatedTotal.toLocaleString()}`,
+                    `تأكيد الطلب (الدفع عند الاستلام) · ${estimatedTotal.toLocaleString()} د.إ`
+                  )}
+                </span>
+              </>
+            ) : (
+              <>
+                <CreditCard size={16} />
+                <span>
+                  {c(
+                    `Authorize & Pay with Card · AED ${estimatedTotal.toLocaleString()}`,
+                    `الدفع الفوري بالبطاقة · ${estimatedTotal.toLocaleString()} د.إ`
+                  )}
+                </span>
+              </>
+            )}
           </button>
 
-          <div className="flex items-center justify-between pt-2 text-[11px] text-luxury-muted">
-            <Link href="/cart" className="hover:text-luxury-text underline">
-              {c("Edit Bag", "تعديل الحقيبة")}
-            </Link>
-            <span className="flex items-center gap-1">
-              <ShieldCheck size={12} className="text-emerald-600" />
-              <span>{c("100% Authentic", "أصلي ومضمون")}</span>
-            </span>
+          {/* Trust Guarantees */}
+          <div className="space-y-2 pt-2 text-[11px] text-luxury-muted">
+            <div className="flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheck size={13} className="text-emerald-600" />
+                <span>{c("100% Authentic Maison Flacons", "عطور أصلية ومضمونة 100%")}</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Lock size={13} className="text-accent" />
+                <span>{c("256-Bit SSL Encryption", "تشفير مصرفي آمن")}</span>
+              </span>
+            </div>
           </div>
         </aside>
       </form>
