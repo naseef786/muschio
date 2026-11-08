@@ -1,6 +1,10 @@
 import { MetadataRoute } from "next";
 
-const BASE_URL = process.env.NEXT_PUBLIC_STORE_URL || process.env.STOREFRONT_URL || "https://muschio.luxury";
+const BASE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  process.env.NEXT_PUBLIC_STORE_URL ||
+  process.env.STOREFRONT_URL ||
+  "https://www.muschio.ae";
 
 export default function robots(): MetadataRoute.Robots {
   return {

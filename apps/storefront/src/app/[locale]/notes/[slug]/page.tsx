@@ -1,9 +1,10 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { muschioApi } from "../../../../lib/api";
 import { NotesService } from "@muschio/api";
+import { resolveNoteSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
@@ -44,7 +45,13 @@ export default async function NoteDetailPage({
     }
   }
 
-  if (!noteData) notFound();
+  if (!noteData) {
+    const canonicalNoteSlug = resolveNoteSlug(cleanSlug);
+    if (canonicalNoteSlug && canonicalNoteSlug !== cleanSlug) {
+      permanentRedirect(`/${locale}/notes/${canonicalNoteSlug}`);
+    }
+    notFound();
+  }
 
   const note = (noteData as any).note || noteData;
   const relatedNotes = (noteData as any).relatedNotes || [];

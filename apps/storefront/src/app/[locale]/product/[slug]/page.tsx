@@ -1,6 +1,7 @@
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { CatalogService, storefrontProduct } from "@muschio/api";
 import { ProductExperience } from "../../../../components/product-experience";
+import { resolveProductSlug } from "../../../../lib/seo-redirects";
 
 export default async function ProductPage({
   params: { locale, slug },
@@ -8,9 +9,14 @@ export default async function ProductPage({
   params: { locale: "en" | "ar"; slug: string };
 }) {
   // Directly query the catalog in-process for instant, 100% live database data
-  const result = await CatalogService.getProductBySlug(slug);
+  let result = await CatalogService.getProductBySlug(slug);
 
   if (!result || !result.product) {
+    // Attempt alias resolution for legacy Google links
+    const canonicalSlug = resolveProductSlug(slug);
+    if (canonicalSlug && canonicalSlug !== slug) {
+      permanentRedirect(`/${locale}/product/${canonicalSlug}`);
+    }
     notFound();
   }
 

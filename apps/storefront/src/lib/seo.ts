@@ -3,6 +3,8 @@
  * Generates authoritative JSON-LD graphs and metadata tailored for Dubai, UAE, and GCC haute perfumery search intent.
  */
 
+const CANONICAL_DOMAIN = process.env.NEXT_PUBLIC_SITE_URL || "https://www.muschio.ae";
+
 export interface ProductJsonLdParams {
   name: string;
   description: string;
@@ -21,7 +23,7 @@ export interface ProductJsonLdParams {
 
 export function generateProductJsonLd(params: ProductJsonLdParams, locale = "en") {
   const currency = params.currency || "AED";
-  const url = `https://muschio.luxury/${locale}/product/${params.slug}`;
+  const url = `${CANONICAL_DOMAIN}/${locale}/product/${params.slug}`;
 
   return {
     "@context": "https://schema.org",
@@ -107,7 +109,7 @@ export function generateBreadcrumbJsonLd(
       "@type": "ListItem",
       position: index + 1,
       name: item.name,
-      item: `https://muschio.luxury${item.url}`,
+      item: `${CANONICAL_DOMAIN}${item.url.startsWith("/") ? item.url : "/" + item.url}`,
     })),
   };
 }
@@ -164,8 +166,8 @@ export function generateOrganizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "LuxuryStore",
     name: "Muschio Haute Parfumerie",
-    url: "https://muschio.luxury",
-    logo: "https://muschio.luxury/images/logo.png",
+    url: CANONICAL_DOMAIN,
+    logo: `${CANONICAL_DOMAIN}/images/logo.png`,
     image: "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=1600&q=85",
     description: "Dubai's premier destination for rare niche extraits de parfum, artisanal aged attars, and bespoke olfactory consultation in the Arabian Gulf.",
     sameAs: [

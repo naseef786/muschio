@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
 import { locales } from "./i18n";
+import { getLegacyRedirect } from "./lib/seo-redirects";
 
 const intlMiddleware = createIntlMiddleware({
   locales,
@@ -101,7 +102,21 @@ export default async function middleware(req: NextRequest) {
     return res;
   }
 
-  // 2. Localization & Routing for Storefront Pages
+  // 2. Google SEO Legacy 301 Permanent Redirect Engine
+  // Intercepts historical Google-indexed URLs (Shopify, unlocalized paths, legacy categories, slug aliases)
+  const cookieLocale = req.cookies.get("NEXT_LOCALE")?.value;
+  const redirectTarget = getLegacyRedirect(pathname, req.nextUrl.search, cookieLocale);
+  if (redirectTarget) {
+    const redirectUrl = new URL(redirectTarget, req.url);
+    const response = NextResponse.redirect(redirectUrl, 301);
+    response.headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("X-Frame-Options", "SAMEORIGIN");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    return response;
+  }
+
+  // 3. Localization & Routing for Storefront Pages
   const res = intlMiddleware(req);
   res.headers.set("X-Content-Type-Options", "nosniff");
   res.headers.set("X-Frame-Options", "SAMEORIGIN");

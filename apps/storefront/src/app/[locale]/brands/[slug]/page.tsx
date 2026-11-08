@@ -1,10 +1,11 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { Globe, ShieldCheck } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
 import { CatalogService } from "@muschio/api";
+import { resolveBrandSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +34,13 @@ export default async function BrandDetailPage({
     }
   }
 
-  if (!brand) notFound();
+  if (!brand) {
+    const canonicalBrandSlug = resolveBrandSlug(cleanSlug);
+    if (canonicalBrandSlug && canonicalBrandSlug !== cleanSlug) {
+      permanentRedirect(`/${locale}/brands/${canonicalBrandSlug}`);
+    }
+    notFound();
+  }
 
   const products = brand.products || [];
 
