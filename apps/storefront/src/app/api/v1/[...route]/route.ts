@@ -84,15 +84,28 @@ function getAuth(req: NextRequest) {
 
   if (token) {
     const decoded = decodeJwtPayload(token);
-    if (decoded?.customerId) customerId = String(decoded.customerId);
-    else if (decoded?.sub) customerId = String(decoded.sub);
+    const sub = decoded?.sub ? String(decoded.sub) : "";
+    const cid = decoded?.customerId ? String(decoded.customerId) : "";
+
+    if (cid && !cid.startsWith("guest-")) {
+      customerId = cid;
+    } else if (sub && !sub.startsWith("guest-")) {
+      customerId = sub;
+    }
+
+    if (sub && sub.startsWith("guest-")) {
+      guestSessionId = sub;
+    } else if (cid && cid.startsWith("guest-")) {
+      guestSessionId = cid;
+    }
   }
 
   const url = new URL(req.url);
   const qCustomerId = url.searchParams.get("customerId");
   const qGuestSessionId = url.searchParams.get("guestSessionId");
 
-  if (qCustomerId) customerId = qCustomerId;
+  if (qCustomerId && !qCustomerId.startsWith("guest-")) customerId = qCustomerId;
+  if (qCustomerId && qCustomerId.startsWith("guest-") && !guestSessionId) guestSessionId = qCustomerId;
   if (qGuestSessionId) guestSessionId = qGuestSessionId;
 
   return { customerId, guestSessionId, token };

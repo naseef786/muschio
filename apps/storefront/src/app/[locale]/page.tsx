@@ -4,7 +4,7 @@ import { Link } from "../../navigation";
 import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles, Tag } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
 import { muschioApi } from "../../lib/api";
-import { BannerService } from "@muschio/api";
+import { BannerService, CatalogService, NotesService, storefrontProduct, prisma } from "@muschio/api";
 
 export const dynamic = "force-dynamic";
 
@@ -56,26 +56,74 @@ export default async function HomePage({
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
 
-  // Fetch live CMS banners, sections & catalog data
-  const [
-    heroBanners,
-    midCampaignBanners,
-    promoStripBanners,
-    liveSections,
-    liveProducts,
-    liveBrands,
-    liveNotes,
-    liveCollections,
-  ] = await Promise.all([
-    muschioApi.getActiveBanners("HERO_SLIDER"),
-    muschioApi.getActiveBanners("CAMPAIGN_MID"),
-    muschioApi.getActiveBanners("PROMO_STRIP"),
-    muschioApi.getHomepageSections(),
-    muschioApi.getProducts({ limit: 16 }),
-    muschioApi.getBrands(),
-    muschioApi.getNotes({ limit: 6 }),
-    muschioApi.getCollections({ featured: true }),
-  ]);
+  // Fetch live CMS banners, sections & catalog data directly from services with API fallback
+  let heroBanners: any = null;
+  let midCampaignBanners: any = null;
+  let promoStripBanners: any = null;
+  let liveSections: any = null;
+  let liveProducts: any = null;
+  let liveBrands: any = null;
+  let liveNotes: any = null;
+  let liveCollections: any = null;
+
+  try {
+    [
+      heroBanners,
+      midCampaignBanners,
+      promoStripBanners,
+      liveSections,
+      liveProducts,
+      liveBrands,
+      liveNotes,
+      liveCollections,
+    ] = await Promise.all([
+      BannerService.getActiveBanners("HERO_SLIDER").catch(() => muschioApi.getActiveBanners("HERO_SLIDER")),
+      BannerService.getActiveBanners("CAMPAIGN_MID").catch(() => muschioApi.getActiveBanners("CAMPAIGN_MID")),
+      BannerService.getActiveBanners("PROMO_STRIP").catch(() => muschioApi.getActiveBanners("PROMO_STRIP")),
+      BannerService.getVisibleSections().catch(() => muschioApi.getHomepageSections()),
+      CatalogService.getProducts({ page: 1, limit: 16, sort: "featured" }).then((res: any) => (res?.items || res || []).map(storefrontProduct)).catch(() => muschioApi.getProducts({ limit: 16 })),
+      CatalogService.getBrands().catch(() => muschioApi.getBrands()),
+      NotesService.getNotes({ limit: 6 }).then((res: any) => res?.items || res || []).catch(() => muschioApi.getNotes({ limit: 6 })),
+      prisma.collection.findMany({
+        where: { isFeatured: true },
+        orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
+        include: {
+          products: {
+            orderBy: { displayOrder: "asc" },
+            include: {
+              product: {
+                include: {
+                  brand: true,
+                  variants: { orderBy: { price: "asc" } },
+                },
+              },
+            },
+          },
+        },
+      }).catch(() => muschioApi.getCollections({ featured: true })),
+    ]);
+  } catch (err) {
+    console.warn("In-process home fetch fell back to muschioApi:", err);
+    [
+      heroBanners,
+      midCampaignBanners,
+      promoStripBanners,
+      liveSections,
+      liveProducts,
+      liveBrands,
+      liveNotes,
+      liveCollections,
+    ] = await Promise.all([
+      muschioApi.getActiveBanners("HERO_SLIDER"),
+      muschioApi.getActiveBanners("CAMPAIGN_MID"),
+      muschioApi.getActiveBanners("PROMO_STRIP"),
+      muschioApi.getHomepageSections(),
+      muschioApi.getProducts({ limit: 16 }),
+      muschioApi.getBrands(),
+      muschioApi.getNotes({ limit: 6 }),
+      muschioApi.getCollections({ featured: true }),
+    ]);
+  }
 
   // Resolve active sections (respecting admin sortOrder and isVisible)
   let rawSections = liveSections && liveSections.length > 0 ? liveSections : null;
@@ -128,26 +176,26 @@ export default async function HomePage({
   const promoStrip = promoStripBanners?.[0] || null;
 
   // Format live products
-  const featuredProducts = (liveProducts || []).map((p) => {
-    const v = p.variants.find((variant) => !variant.isSampleVial) || p.variants[0];
+  const featuredProducts = (liveProducts || []).map((p: any) => {
+    const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
     return {
       slug: p.slug,
       nameEn: p.nameEn,
       nameAr: p.nameAr,
-      brand: p.brand.name,
-      concentration: p.concentration.replaceAll("_", " "),
-      price: v?.price || 0,
+      brand: p.brand?.name || p.brand || "",
+      concentration: (p.concentration || "").replaceAll("_", " "),
+      price: v?.price || p.price || 0,
       compareAtPrice: v?.compareAtPrice,
-      image: p.images[0] || "/product-placeholder.svg",
-      secondaryImage: p.images[1],
-      badge: p.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
-      variants: p.variants,
+      image: p.images?.[0] || p.image || "/product-placeholder.svg",
+      secondaryImage: p.images?.[1],
+      badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
+      variants: p.variants || [],
     };
   });
 
   // Filter deal products for promotional showcase
   const dealProducts = featuredProducts.filter(
-    (p) => p.compareAtPrice && p.compareAtPrice > p.price,
+    (p: any) => p.compareAtPrice && p.compareAtPrice > p.price,
   );
 
   const formattedCollections = (liveCollections || []).map((col: any) => ({
@@ -157,7 +205,8 @@ export default async function HomePage({
     slug: col.slug,
     descriptionEn: col.descriptionEn,
     descriptionAr: col.descriptionAr,
-    products: (col.products || []).map((p: any) => {
+    products: (col.products || []).map((item: any) => {
+      const p = item.product || item;
       const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
       return {
         slug: p.slug,
@@ -175,7 +224,7 @@ export default async function HomePage({
     }),
   }));
 
-  const prestigeHouses = (liveBrands || []).slice(0, 5).map((b) => ({
+  const prestigeHouses = (liveBrands || []).slice(0, 5).map((b: any) => ({
     name: b.name,
     origin: b.countryOfOrigin || "Haute Parfumerie",
     slug: b.slug,
@@ -309,7 +358,7 @@ export default async function HomePage({
       </div>
 
       <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
-        {prestigeHouses.map((house) => (
+        {prestigeHouses.map((house: any) => (
           <Link
             key={house.slug}
             href={`/brands/${house.slug}`}
@@ -350,7 +399,7 @@ export default async function HomePage({
       </div>
 
       <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 gap-4 pb-2">
-        {rawNotes.map((n) => (
+        {rawNotes.map((n: any) => (
           <Link
             key={n.slug}
             href={`/notes/${n.slug}`}
@@ -433,7 +482,7 @@ export default async function HomePage({
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {dealProducts.slice(0, 4).map((p) => {
+            {dealProducts.slice(0, 4).map((p: any) => {
               const savingsPct = p.compareAtPrice
                 ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100)
                 : 0;

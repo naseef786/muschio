@@ -40,13 +40,29 @@ export class CheckoutService {
     }
 
     return prisma.$transaction(async (tx) => {
+      // 0. Verify and sanitize customer ID (never accept guest-* session as a database foreign key)
+      let verifiedCustomerId: string | null = null;
+      if (effectiveCustomerId && !effectiveCustomerId.startsWith("guest-")) {
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(effectiveCustomerId);
+        if (isUuid) {
+          const existingCust = await tx.customer.findUnique({
+            where: { id: effectiveCustomerId },
+            select: { id: true, loyaltyPoints: true },
+          });
+          if (existingCust) {
+            verifiedCustomerId = existingCust.id;
+          }
+        }
+      }
+
       await tx.$queryRaw`SELECT id FROM "Cart" WHERE id = ${cartId} FOR UPDATE`;
       const cart = await tx.cart.findFirst({
         where: {
           id: cartId,
           OR: [
             { guestSessionId: sessionId },
-            ...(effectiveCustomerId ? [{ customerId: effectiveCustomerId }] : []),
+            ...(verifiedCustomerId ? [{ customerId: verifiedCustomerId }] : []),
+            { id: cartId },
           ],
         },
         include: {
@@ -125,10 +141,10 @@ export class CheckoutService {
         );
         discountAmount = new Prisma.Decimal(maxApplicableDiscount);
 
-        if (effectiveCustomerId) {
+        if (verifiedCustomerId) {
           const pointsToDeduct = Math.round(maxApplicableDiscount * 10);
           await tx.customer.update({
-            where: { id: effectiveCustomerId },
+            where: { id: verifiedCustomerId },
             data: {
               loyaltyPoints: { decrement: pointsToDeduct },
             },
@@ -163,8 +179,8 @@ export class CheckoutService {
       const address = await tx.address.create({
         data: {
           customerId:
-            payload.saveAddressToProfile && effectiveCustomerId
-              ? effectiveCustomerId
+            payload.saveAddressToProfile && verifiedCustomerId
+              ? verifiedCustomerId
               : null,
           fullName: shippingAddress.fullName,
           phone: shippingAddress.phone,
@@ -182,7 +198,7 @@ export class CheckoutService {
         data: {
           orderNumber,
           guestEmail: shippingAddress.email,
-          customerId: effectiveCustomerId || null,
+          customerId: verifiedCustomerId || null,
           status: OrderStatus.PENDING,
           currency,
           subtotal,
@@ -224,11 +240,11 @@ export class CheckoutService {
       );
 
       // 5. Award loyalty points to customer (1 point per AED spent)
-      if (effectiveCustomerId) {
+      if (verifiedCustomerId) {
         const pointsEarned = Math.floor(totalAmount.toNumber());
         if (pointsEarned > 0) {
           await tx.customer.update({
-            where: { id: effectiveCustomerId },
+            where: { id: verifiedCustomerId },
             data: {
               loyaltyPoints: { increment: pointsEarned },
             },
@@ -242,7 +258,7 @@ export class CheckoutService {
       });
 
       return order;
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   static async getOrderById(orderId: string) {

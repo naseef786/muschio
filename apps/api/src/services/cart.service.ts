@@ -14,28 +14,31 @@ const include = {
 
 export class CartService {
   static async getOrCreateCart(guestSessionId?: string, customerId?: string) {
-    if (!guestSessionId && !customerId) {
+    const validCustomerId = customerId && !customerId.startsWith("guest-") ? customerId : undefined;
+    const validGuestId = guestSessionId || (customerId && customerId.startsWith("guest-") ? customerId : undefined);
+
+    if (!validGuestId && !validCustomerId) {
       throw new ApiError(401, "SESSION_REQUIRED", "Session or customer ID required");
     }
 
     let cart = null;
 
-    if (customerId) {
+    if (validCustomerId) {
       cart = await prisma.cart.findFirst({
-        where: { customerId },
+        where: { customerId: validCustomerId },
         include,
       });
 
-      if (!cart && guestSessionId) {
+      if (!cart && validGuestId) {
         cart = await prisma.cart.findUnique({
-          where: { guestSessionId },
+          where: { guestSessionId: validGuestId },
           include,
         });
 
         if (cart) {
           cart = await prisma.cart.update({
             where: { id: cart.id },
-            data: { customerId },
+            data: { customerId: validCustomerId },
             include,
           });
         }
@@ -43,14 +46,14 @@ export class CartService {
 
       if (!cart) {
         cart = await prisma.cart.create({
-          data: { customerId, guestSessionId: guestSessionId || null },
+          data: { customerId: validCustomerId, guestSessionId: validGuestId || null },
           include,
         });
       }
-    } else if (guestSessionId) {
+    } else if (validGuestId) {
       cart = await prisma.cart.upsert({
-        where: { guestSessionId },
-        create: { guestSessionId },
+        where: { guestSessionId: validGuestId },
+        create: { guestSessionId: validGuestId },
         update: {},
         include,
       });
@@ -131,7 +134,7 @@ export class CartService {
       return this.calculateCartTotals(
         await tx.cart.findUniqueOrThrow({ where: { id: cart.id }, include }),
       );
-    });
+    }, { maxWait: 15000, timeout: 30000 });
   }
 
   static async updateItem(
