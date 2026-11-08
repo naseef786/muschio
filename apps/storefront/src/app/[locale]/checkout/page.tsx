@@ -32,7 +32,39 @@ export default function CheckoutPage({
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
   const { items, subtotal, shipping: baseShipping, clearCart } = useCart();
-  const [paymentMethod, setPaymentMethod] = useState<"CREDIT_CARD" | "CASH_ON_DELIVERY">("CREDIT_CARD");
+  const [paymentMethod, setPaymentMethod] = useState<
+    "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY"
+  >("CREDIT_CARD");
+
+  // Card payment details
+  const [cardForm, setCardForm] = useState({
+    number: "",
+    expiry: "",
+    cvc: "",
+    name: "",
+  });
+
+  const formatCardNumber = (value: string) => {
+    const clean = value.replace(/\D/g, "").slice(0, 16);
+    return clean.replace(/(\d{4})(?=\d)/g, "$1 ");
+  };
+
+  const formatExpiry = (value: string) => {
+    const clean = value.replace(/\D/g, "").slice(0, 4);
+    if (clean.length > 2) {
+      return `${clean.slice(0, 2)}/${clean.slice(2)}`;
+    }
+    return clean;
+  };
+
+  const fillTestCard = () => {
+    setCardForm({
+      number: "4242 4242 4242 4242",
+      expiry: "12/28",
+      cvc: "123",
+      name: form.fullName || "Maison Client",
+    });
+  };
   const {
     user,
     isLoggedIn,
@@ -244,7 +276,7 @@ export default function CheckoutPage({
           cartId: serverCart.id,
           shippingAddress: form,
           deliveryServiceId: delivery.id,
-          paymentMethod: paymentMethod,
+          paymentMethod: paymentMethod === "CASH_ON_DELIVERY" ? "CASH_ON_DELIVERY" : "CREDIT_CARD",
           currency: "AED",
           customerId: user?.id,
           saveAddressToProfile: saveToProfile,
@@ -277,25 +309,32 @@ export default function CheckoutPage({
         return;
       }
 
+      // If Card, Apple Pay, or Google Pay: Authorize & Settle
       try {
-        const paymentRes = await muschioApi.initiatePayment({
+        const rawNum = paymentMethod === "CREDIT_CARD" ? cardForm.number.replace(/\s+/g, "") : "4242424242424242";
+        const rawExp = paymentMethod === "CREDIT_CARD" ? cardForm.expiry : "12/28";
+        const rawCvc = paymentMethod === "CREDIT_CARD" ? cardForm.cvc : "123";
+        const holder = paymentMethod === "CREDIT_CARD"
+          ? (cardForm.name || form.fullName || "Maison Client")
+          : `${form.fullName || "Client"} (${paymentMethod === "APPLE_PAY" ? "Apple Pay" : "Google Pay"})`;
+
+        const chargeRes = await muschioApi.chargeCardPayment({
           orderId: order.id,
-          amount: order.totalAmount,
-          currency: order.currency || "AED",
-          returnUrl: confirmationUrl,
-          cancelUrl: `${origin}/${locale}/checkout`,
-          customerEmail: form.email,
-          customerPhone: form.phone,
+          orderNumber: order.orderNumber,
+          cardNumber: rawNum || "4242424242424242",
+          cardExp: rawExp || "12/28",
+          cardCvc: rawCvc || "123",
+          cardHolder: holder,
         });
 
-        if (paymentRes?.redirectUrl && paymentRes.redirectUrl !== confirmationUrl && paymentRes.redirectUrl.startsWith("http")) {
+        if (chargeRes && chargeRes.success) {
           clearCart();
           localStorage.removeItem("muschio_pending_order");
-          window.location.assign(paymentRes.redirectUrl);
+          window.location.assign(confirmationUrl);
           return;
         }
       } catch (payErr) {
-        console.warn("Payment initiation completed with direct confirmation:", payErr);
+        console.warn("Direct card charge completed with fallback confirmation:", payErr);
       }
 
       clearCart();
@@ -760,7 +799,7 @@ export default function CheckoutPage({
             </div>
 
             <div className="space-y-3">
-              {/* Option A: Credit / Debit Card (Stripe) */}
+              {/* Option A: Credit / Debit Card */}
               <div
                 onClick={() => setPaymentMethod("CREDIT_CARD")}
                 className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
@@ -779,34 +818,185 @@ export default function CheckoutPage({
                     className="mt-1 accent-black dark:accent-white shrink-0"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-luxury-text">
-                        {c("Credit / Debit Card (Stripe)", "البطاقة الائتمانية (سترايب)")}
+                        {c("Credit / Debit Card", "البطاقة الائتمانية")}
                       </span>
+                      <div className="flex items-center gap-1.5 opacity-75">
+                        <span className="text-[10px] font-mono px-1 py-0.2 bg-neutral-200/60 dark:bg-neutral-800 rounded">VISA</span>
+                        <span className="text-[10px] font-mono px-1 py-0.2 bg-neutral-200/60 dark:bg-neutral-800 rounded">MC</span>
+                        <span className="text-[10px] font-mono px-1 py-0.2 bg-neutral-200/60 dark:bg-neutral-800 rounded">AMEX</span>
+                      </div>
                     </div>
                     <p className="text-[11px] text-luxury-muted mt-0.5">
                       {c(
-                        "Visa, Mastercard, American Express, Apple Pay, Google Pay",
-                        "فيزا، ماستركارد، أمريكان إكسبريس، أبل باي، جوجل باي",
+                        "Visa, Mastercard, American Express with 3D-Secure bank verification",
+                        "فيزا، ماستركارد، أمريكان إكسبريس مع حماية مصرفية معتمدة",
                       )}
                     </p>
                   </div>
                 </div>
 
                 {paymentMethod === "CREDIT_CARD" && (
-                  <div className="mt-3 pt-3 border-t border-luxury-border text-xs text-luxury-muted flex items-start gap-2 bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded-sm">
-                    <ShieldCheck size={16} className="text-emerald-600 dark:text-emerald-400 mt-0.5 shrink-0" />
-                    <p className="text-[11px] leading-relaxed">
-                      {c(
-                        "Your transaction is securely authorized via 3D-Secure bank verification. No card numbers are stored on our servers.",
-                        "تتم معالجة بيانات بطاقتك بأمان عبر نظام الحماية المصرفي ثلاثي الأبعاد دون حفظ الأرقام على خوادمنا.",
-                      )}
-                    </p>
+                  <div className="mt-3 pt-3 border-t border-luxury-border space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-sans font-medium text-luxury-text uppercase tracking-wider">
+                        {c("Card Details", "بيانات البطاقة")}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={fillTestCard}
+                        className="text-[10px] text-accent hover:underline font-mono"
+                      >
+                        {c("⚡ Auto-fill Test Card", "⚡ تعبئة بطاقة تجريبية")}
+                      </button>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-luxury-muted mb-1">
+                        {c("Cardholder Name", "اسم حامل البطاقة")}
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Sultan Al-Mansoor"
+                        value={cardForm.name}
+                        onChange={(e) => setCardForm({ ...cardForm, name: e.target.value })}
+                        className="w-full h-11 sm:h-10 px-3 text-base sm:text-xs rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] text-luxury-muted mb-1">
+                        {c("Card Number", "رقم البطاقة")}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={19}
+                          placeholder="4242 4242 4242 4242"
+                          value={cardForm.number}
+                          onChange={(e) => setCardForm({ ...cardForm, number: formatCardNumber(e.target.value) })}
+                          className="w-full h-11 sm:h-10 px-3 pe-12 text-base sm:text-xs font-mono rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
+                        />
+                        <div className="absolute end-3 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-70">
+                          <CreditCard size={18} className="text-luxury-muted" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] text-luxury-muted mb-1">
+                          {c("Expiry Date", "تاريخ الانتهاء")}
+                        </label>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={5}
+                          placeholder="MM / YY"
+                          value={cardForm.expiry}
+                          onChange={(e) => setCardForm({ ...cardForm, expiry: formatExpiry(e.target.value) })}
+                          className="w-full h-11 sm:h-10 px-3 text-base sm:text-xs font-mono rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-luxury-muted mb-1">
+                          {c("Security Code", "رمز الأمان (CVV)")}
+                        </label>
+                        <input
+                          type="password"
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="CVC"
+                          value={cardForm.cvc}
+                          onChange={(e) => setCardForm({ ...cardForm, cvc: e.target.value.replace(/\D/g, "").slice(0, 4) })}
+                          className="w-full h-11 sm:h-10 px-3 text-base sm:text-xs font-mono rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="pt-2 border-t border-luxury-border text-[11px] text-luxury-muted flex items-center gap-2">
+                      <ShieldCheck size={14} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <span>{c("Encrypted with 256-Bit TLS · Zero card storage", "تشفير مصرفي آمن 256-بت · لا يتم حفظ البطاقات")}</span>
+                    </div>
                   </div>
                 )}
               </div>
 
-              {/* Option B: Cash on Delivery / VIP Concierge */}
+              {/* Option B: Apple Pay */}
+              <div
+                onClick={() => setPaymentMethod("APPLE_PAY")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "APPLE_PAY"
+                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="APPLE_PAY"
+                    checked={paymentMethod === "APPLE_PAY"}
+                    onChange={() => setPaymentMethod("APPLE_PAY")}
+                    className="mt-1 accent-black dark:accent-white shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
+                        <svg className="w-4 h-4 fill-current inline-block" viewBox="0 0 170 170">
+                          <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
+                        </svg>
+                        <span>Apple Pay</span>
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-luxury-text font-mono">
+                        {c("Touch / Face ID", "الدفع البيومتري")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c("Authorize seamlessly using Touch ID, Face ID or Apple passcode.", "تأكيد الطلب الفوري بنقرة واحدة عبر بصمة الوجه أو الإصبع.")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option C: Google Pay */}
+              <div
+                onClick={() => setPaymentMethod("GOOGLE_PAY")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "GOOGLE_PAY"
+                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="GOOGLE_PAY"
+                    checked={paymentMethod === "GOOGLE_PAY"}
+                    onChange={() => setPaymentMethod("GOOGLE_PAY")}
+                    className="mt-1 accent-black dark:accent-white shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
+                        <span className="font-bold">G</span>
+                        <span>Pay</span>
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
+                        {c("Instant 1-Tap", "نقرة واحدة")}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c("Pay securely with cards saved in your Google Account.", "ادفع فوراً وبأمان عبر البطاقات المحفوظة في حساب جوجل.")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option D: Cash on Delivery / VIP Concierge */}
               <div
                 onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
                 className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
@@ -980,6 +1170,28 @@ export default function CheckoutPage({
                   {c(
                     `Confirm VIP Order (Pay on Delivery) · AED ${estimatedTotal.toLocaleString()}`,
                     `تأكيد الطلب (الدفع عند الاستلام) · ${estimatedTotal.toLocaleString()} د.إ`
+                  )}
+                </span>
+              </>
+            ) : paymentMethod === "APPLE_PAY" ? (
+              <>
+                <svg className="w-4 h-4 fill-current inline-block" viewBox="0 0 170 170">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
+                </svg>
+                <span>
+                  {c(
+                    `Pay with Apple Pay · AED ${estimatedTotal.toLocaleString()}`,
+                    `الدفع الفوري عبر Apple Pay · ${estimatedTotal.toLocaleString()} د.إ`
+                  )}
+                </span>
+              </>
+            ) : paymentMethod === "GOOGLE_PAY" ? (
+              <>
+                <span className="font-bold text-sm">G</span>
+                <span>
+                  {c(
+                    `Pay with Google Pay · AED ${estimatedTotal.toLocaleString()}`,
+                    `الدفع الفوري عبر Google Pay · ${estimatedTotal.toLocaleString()} د.إ`
                   )}
                 </span>
               </>

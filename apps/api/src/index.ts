@@ -139,3 +139,4 @@ export { ReviewsService } from "./services/reviews.service";
 export { ReturnsService } from "./services/returns.service";
 export { AuditService } from "./services/audit.service";
 export { TagService } from "./services/tag.service";
+export { DeliveryService } from "./services/delivery.service";

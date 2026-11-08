@@ -113,7 +113,7 @@ export function DeliveryPanel({
                   className="mt-1 accent-black dark:accent-white shrink-0"
                 />
 
-                <div className="flex-1 min-w-0 pr-2">
+                <div className="flex-1 min-w-0 pe-2">
                   <div className="flex flex-wrap items-baseline gap-2">
                     <span className="text-xs font-semibold text-luxury-text">
                       {isAr ? service.nameAr : service.name}

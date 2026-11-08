@@ -9,6 +9,7 @@ import {
   JournalService,
   CartService,
   CheckoutService,
+  DeliveryService,
   PaymentService,
   storefrontProduct,
   storefrontOrder,
@@ -853,49 +854,19 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     if (path === "delivery/quote") {
       const country = body.country || "AE";
       const subtotal = Number(body.subtotal || 0);
+      const quote = DeliveryService.quote({ country, subtotal, currency: "AED" });
       const isFree = subtotal >= 500;
-      const baseFeeFils = isFree ? 0 : 3000;
-
-      const services = country === "AE"
-        ? [
-            {
-              id: "dxb-white-glove",
-              name: "Dubai White-Glove VIP Courier (Complimentary > 500 AED)",
-              nameAr: "توصيل فاخر بالقفاز الأبيض في دبي (مجاني للطلبات فوق 500 د.إ)",
-              feeFils: baseFeeFils,
-              minBusinessDays: 1,
-              maxBusinessDays: 1,
-            },
-            {
-              id: "uae-express",
-              name: "UAE Temperature-Controlled Express Delivery",
-              nameAr: "شحن سريع مبرد ومحمي لجميع أنحاء الإمارات",
-              feeFils: isFree ? 0 : 3500,
-              minBusinessDays: 1,
-              maxBusinessDays: 2,
-            },
-          ]
-        : [
-            {
-              id: "gcc-air-express",
-              name: "GCC Temperature-Controlled Air Express",
-              nameAr: "الشحن الجوي المبرد السريع لدول الخليج",
-              feeFils: isFree ? 0 : 5000,
-              minBusinessDays: 2,
-              maxBusinessDays: 4,
-            },
-          ];
 
       return success({
-        enabled: true,
+        enabled: quote.enabled,
         country,
-        currency: "AED",
-        shippingFee: isFree ? 0 : 30,
+        currency: quote.currency || "AED",
+        shippingFee: isFree ? 0 : 35,
         isFreeShipping: isFree,
         freeShippingThreshold: 500,
         estimatedDaysMin: country === "AE" ? 1 : 2,
         estimatedDaysMax: country === "AE" ? 2 : 4,
-        services,
+        services: quote.services,
       });
     }
 
