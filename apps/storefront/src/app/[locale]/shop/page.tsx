@@ -227,33 +227,30 @@ export default function ShopCatalogPage({
             <button
               type="button"
               onClick={() => setSelectedBrandType(null)}
-              className={`px-3 py-1.5 transition-colors ${
-                selectedBrandType === null
+              className={`px-3 py-1.5 transition-colors ${selectedBrandType === null
                   ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
                   : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
+                }`}
             >
               {c("All Maisons", "كل الدور")}
             </button>
             <button
               type="button"
               onClick={() => setSelectedBrandType("NICHE")}
-              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${
-                selectedBrandType === "NICHE"
+              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${selectedBrandType === "NICHE"
                   ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
                   : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
+                }`}
             >
               {c("Haute Niche", "نيش")}
             </button>
             <button
               type="button"
               onClick={() => setSelectedBrandType("DESIGNER")}
-              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${
-                selectedBrandType === "DESIGNER"
+              className={`px-3 py-1.5 border-s border-neutral-200 dark:border-neutral-800 transition-colors ${selectedBrandType === "DESIGNER"
                   ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-medium"
                   : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
-              }`}
+                }`}
             >
               {c("Designer Privé", "ديزاينر")}
             </button>
@@ -315,11 +312,10 @@ export default function ShopCatalogPage({
                 key={tagItem.id || tagItem.slug}
                 type="button"
                 onClick={() => setSelectedTag(isSelected ? null : tagItem.slug)}
-                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
-                  isSelected
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${isSelected
                     ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
                     : "bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800"
-                }`}
+                  }`}
               >
                 {tagItem.colorHex && (
                   <span
@@ -536,11 +532,10 @@ export default function ShopCatalogPage({
                         setCurrentPage(pageNum);
                         window.scrollTo({ top: 0, behavior: "smooth" });
                       }}
-                      className={`w-9 h-9 flex items-center justify-center text-xs transition-colors rounded-sm ${
-                        currentPage === pageNum
+                      className={`w-9 h-9 flex items-center justify-center text-xs transition-colors rounded-sm ${currentPage === pageNum
                           ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 font-semibold"
                           : "text-neutral-600 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white border border-neutral-200 dark:border-neutral-800"
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
@@ -603,11 +598,10 @@ export default function ShopCatalogPage({
                       key={String(option.value)}
                       type="button"
                       onClick={() => setSelectedBrandType(option.value)}
-                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                        selectedBrandType === option.value
+                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${selectedBrandType === option.value
                           ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                           : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
-                      }`}
+                        }`}
                     >
                       <span>{option.label}</span>
                       {selectedBrandType === option.value && <Check size={14} />}
@@ -625,11 +619,10 @@ export default function ShopCatalogPage({
                   <button
                     type="button"
                     onClick={() => setSelectedFamily("")}
-                    className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                      selectedFamily === ""
+                    className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${selectedFamily === ""
                         ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                         : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
-                    }`}
+                      }`}
                   >
                     <span>{c("All Scent Families", "جميع العائلات العطرية")}</span>
                     {selectedFamily === "" && <Check size={14} />}
@@ -639,11 +632,10 @@ export default function ShopCatalogPage({
                       key={fam.slug}
                       type="button"
                       onClick={() => setSelectedFamily(fam.slug)}
-                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                        selectedFamily === fam.slug
+                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${selectedFamily === fam.slug
                           ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                           : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
-                      }`}
+                        }`}
                     >
                       <span>{isAr ? fam.nameAr : fam.nameEn}</span>
                       {selectedFamily === fam.slug && <Check size={14} />}
@@ -662,11 +654,10 @@ export default function ShopCatalogPage({
                     <button
                       type="button"
                       onClick={() => setSelectedTag(null)}
-                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                        selectedTag === null
+                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${selectedTag === null
                           ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                           : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
-                      }`}
+                        }`}
                     >
                       <span>{c("All Tags & Curations", "جميع التصنيفات والمختارات")}</span>
                       {selectedTag === null && <Check size={14} />}
@@ -678,11 +669,10 @@ export default function ShopCatalogPage({
                           key={tg.id || tg.slug}
                           type="button"
                           onClick={() => setSelectedTag(isSelected ? null : tg.slug)}
-                          className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
-                            isSelected
+                          className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${isSelected
                               ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
                               : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
-                          }`}
+                            }`}
                         >
                           <span className="flex items-center gap-2">
                             {tg.colorHex && (
@@ -758,11 +748,10 @@ export default function ShopCatalogPage({
                     setSort(opt.value);
                     setMobileSortOpen(false);
                   }}
-                  className={`w-full flex items-center justify-between p-3 text-xs text-start ${
-                    sort === opt.value
+                  className={`w-full flex items-center justify-between p-3 text-xs text-start ${sort === opt.value
                       ? "font-medium text-luxury-text bg-luxury-surface border border-luxury-borderBold"
                       : "text-luxury-muted hover:text-luxury-text"
-                  }`}
+                    }`}
                 >
                   <span>{opt.label}</span>
                   {sort === opt.value && <Check size={14} />}
