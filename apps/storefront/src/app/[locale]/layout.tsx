@@ -90,7 +90,7 @@ export default async function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
-      <body className={`${figtree.className} ${figtree.variable} font-sans min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300`}>
+      <body className={`${figtree.className} ${figtree.variable} font-sans min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300 w-full max-w-full overflow-x-hidden`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AuthProvider>
@@ -100,7 +100,7 @@ export default async function RootLayout({
                     <CompareProvider>
                       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
                       <Header locale={locale as Locale} />
-                      <main id="main-content" className="flex-1">{children}</main>
+                      <main id="main-content" className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
                       <Footer locale={locale as Locale} />
                       <FloatingWhatsApp locale={locale as Locale} />
                       <CompareBar locale={locale as Locale} />

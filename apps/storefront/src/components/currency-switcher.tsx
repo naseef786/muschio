@@ -34,11 +34,11 @@ export function CurrencySwitcher({ locale = "en" }: { locale?: "en" | "ar" }) {
         aria-haspopup="listbox"
         aria-expanded={isOpen}
         aria-label={isAr ? "اختيار العملة" : "Select Currency"}
-        className="flex items-center gap-1.5 px-2 py-1 text-[11px] font-sans font-medium text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-colors uppercase tracking-wider rounded-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-800"
+        className="flex items-center gap-1 px-1.5 py-1 text-[10px] sm:text-[11px] font-sans font-medium text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white transition-colors uppercase tracking-wider rounded-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-transparent hover:border-neutral-200 dark:hover:border-neutral-800"
       >
-        <span className="text-xs leading-none">{active.flag}</span>
-        <span className="font-mono">{active.code}</span>
-        <ChevronDown size={11} className={`text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} />
+        <span className="text-[11px] sm:text-xs leading-none">{active.flag}</span>
+        <span className="font-mono text-[10px] sm:text-xs">{active.code}</span>
+        <ChevronDown size={10} className={`text-neutral-400 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {isOpen && (

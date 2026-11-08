@@ -283,9 +283,9 @@ export function ProductExperience({
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 pb-36 md:pb-16 bg-white dark:bg-neutral-950">
+    <div className="w-full max-w-[1440px] mx-auto px-3.5 sm:px-6 lg:px-10 py-4 sm:py-6 md:py-10 pb-36 md:pb-16 bg-white dark:bg-neutral-950 overflow-x-hidden">
       {/* 1. Breadcrumbs (Level Shoes Compact Pattern) */}
-      <nav aria-label="Breadcrumb" className="text-xs text-neutral-400 mb-6 md:mb-8 font-sans">
+      <nav aria-label="Breadcrumb" className="w-full text-xs text-neutral-400 mb-6 md:mb-8 font-sans overflow-hidden">
         <ol className="flex items-center gap-2 flex-wrap">
           <li>
             <Link href="/" className="hover:text-neutral-900 dark:hover:text-white transition-colors">
