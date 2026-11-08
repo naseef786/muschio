@@ -30,7 +30,6 @@ import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
-import { CurrencySwitcher } from "./currency-switcher";
 
 const POPULAR_SEARCHES = [
   { nameEn: "Creed Aventus", nameAr: "كريد أفينتوس", href: "/shop?search=Aventus" },
@@ -330,11 +329,8 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             MUSCHIO
           </Link>
 
-          {/* Right Actions (Theme Switcher + Currency + Language + Wishlist + Bag) */}
+          {/* Right Actions (Theme Switcher + Language + Wishlist + Bag) */}
           <div className="header-actions">
-            {/* Currency Switcher */}
-            <CurrencySwitcher locale={locale} />
-
             {/* Desktop Theme Switcher */}
             <ThemeToggle
               locale={locale}
@@ -853,11 +849,6 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 {/* Theme Switcher Toggle */}
                 <div className="border border-luxury-border bg-luxury-canvas px-3 py-1 flex items-center justify-center">
                   <ThemeToggle locale={locale} showLabel={true} />
-                </div>
-
-                {/* Currency Switcher */}
-                <div className="border border-luxury-border bg-luxury-canvas px-3 py-1 flex items-center justify-center">
-                  <CurrencySwitcher locale={locale} />
                 </div>
               </div>
 

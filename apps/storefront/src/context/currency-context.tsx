@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect } from "react";
 import { Currency } from "@muschio/types";
 
 export interface CurrencyOption {
@@ -91,40 +91,26 @@ interface CurrencyContextType {
 const CurrencyContext = createContext<CurrencyContextType | undefined>(undefined);
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<Currency>("AED");
+  // Focused strictly on UAE market (AED)
+  const currency: Currency = "AED";
 
   useEffect(() => {
     try {
-      const saved = localStorage.getItem("muschio_preferred_currency") as Currency;
-      if (saved && GCC_CURRENCIES[saved]) {
-        setCurrencyState(saved);
-      }
+      // Clear any legacy currency selection and enforce AED
+      localStorage.setItem("muschio_preferred_currency", "AED");
     } catch {
       // LocalStorage access
     }
   }, []);
 
-  const setCurrency = (code: Currency) => {
-    if (GCC_CURRENCIES[code]) {
-      setCurrencyState(code);
-      try {
-        localStorage.setItem("muschio_preferred_currency", code);
-        if (typeof window !== "undefined") {
-          window.dispatchEvent(new CustomEvent("muschio_currency_change", { detail: { currency: code } }));
-        }
-      } catch {}
-    }
+  const setCurrency = (_code: Currency) => {
+    // Single-currency mode (UAE / AED)
   };
 
-  const currencyInfo = GCC_CURRENCIES[currency] || GCC_CURRENCIES.AED;
+  const currencyInfo = GCC_CURRENCIES.AED;
 
   const convertPrice = (aedAmount: number): number => {
-    const converted = Number(aedAmount) * currencyInfo.rateFromAed;
-    // For dinars (KWD, BHD, OMR) 3 decimals or rounded; for standard GCC currencies 2 decimals
-    if (currency === "KWD" || currency === "BHD" || currency === "OMR") {
-      return Math.round(converted * 10) / 10;
-    }
-    return Math.round(converted);
+    return Math.round(Number(aedAmount));
   };
 
   const formatPrice = (aedAmount: number, locale: "en" | "ar" = "en"): string => {
@@ -146,7 +132,7 @@ export function CurrencyProvider({ children }: { children: React.ReactNode }) {
         currencyInfo,
         convertPrice,
         formatPrice,
-        allCurrencies: Object.values(GCC_CURRENCIES),
+        allCurrencies: [GCC_CURRENCIES.AED],
       }}
     >
       {children}
