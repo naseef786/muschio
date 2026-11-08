@@ -4,8 +4,9 @@ import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { Globe, ShieldCheck } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
+import { CatalogService } from "@muschio/api";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function BrandDetailPage({
   params: { locale, slug },
@@ -15,7 +16,23 @@ export default async function BrandDetailPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const brand = await muschioApi.getBrandBySlug(slug);
+  const cleanSlug = decodeURIComponent(slug).trim();
+
+  let brand: any = null;
+  try {
+    brand = await CatalogService.getBrandBySlug(cleanSlug);
+  } catch (err) {
+    console.warn("Direct CatalogService.getBrandBySlug error, falling back to API:", err);
+  }
+
+  if (!brand) {
+    try {
+      brand = await muschioApi.getBrandBySlug(cleanSlug);
+    } catch (err) {
+      console.warn("muschioApi.getBrandBySlug error:", err);
+    }
+  }
+
   if (!brand) notFound();
 
   const products = brand.products || [];
@@ -108,6 +125,7 @@ export default async function BrandDetailPage({
                 nameEn={perfume.nameEn}
                 nameAr={perfume.nameAr}
                 brand={brand.name}
+                brandType={brand.type}
                 concentration={perfume.concentration}
                 price={
                   perfume.variants?.find((v: any) => !v.isSampleVial)?.price ||
@@ -122,6 +140,7 @@ export default async function BrandDetailPage({
                 }
                 variants={perfume.variants}
                 image={perfume.images?.[0] || "/placeholder-flacon.png"}
+                secondaryImage={perfume.images?.[1]}
                 badge={brand.type === "NICHE" ? "Haute Niche" : undefined}
                 locale={locale}
               />

@@ -3,8 +3,9 @@ import { notFound } from "next/navigation";
 import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { muschioApi } from "../../../../lib/api";
+import { NotesService } from "@muschio/api";
 
-export const revalidate = 60;
+export const dynamic = "force-dynamic";
 
 export default async function NoteDetailPage({
   params: { locale, slug },
@@ -14,10 +15,34 @@ export default async function NoteDetailPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const [noteData, perfumesData] = await Promise.all([
-    muschioApi.getNoteBySlug(slug),
-    muschioApi.getPerfumesByNoteSlug(slug),
-  ]);
+  const cleanSlug = decodeURIComponent(slug).trim();
+
+  let noteData: any = null;
+  let perfumesData: any = null;
+
+  try {
+    const [directNote, directPerfumes] = await Promise.all([
+      NotesService.getNoteBySlug(cleanSlug),
+      NotesService.getPerfumesByNoteSlug(cleanSlug),
+    ]);
+    noteData = directNote;
+    perfumesData = directPerfumes;
+  } catch (err) {
+    console.warn("Direct NotesService query failed, falling back to API:", err);
+  }
+
+  if (!noteData) {
+    try {
+      const [apiNote, apiPerfumes] = await Promise.all([
+        muschioApi.getNoteBySlug(cleanSlug),
+        muschioApi.getPerfumesByNoteSlug(cleanSlug),
+      ]);
+      noteData = apiNote;
+      perfumesData = apiPerfumes;
+    } catch (err) {
+      console.warn("muschioApi note query failed:", err);
+    }
+  }
 
   if (!noteData) notFound();
 

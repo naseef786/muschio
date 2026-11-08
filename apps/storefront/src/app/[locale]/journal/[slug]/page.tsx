@@ -5,6 +5,9 @@ import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { ArrowLeft, Clock, User } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
+import { JournalService } from "@muschio/api";
+
+export const dynamic = "force-dynamic";
 
 export default async function JournalDetailPage({
   params: { locale, slug },
@@ -14,7 +17,23 @@ export default async function JournalDetailPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const post = await muschioApi.getBlogPostBySlug(slug);
+  const cleanSlug = decodeURIComponent(slug).trim();
+
+  let post: any = null;
+  try {
+    post = await JournalService.getPostBySlug(cleanSlug);
+  } catch (err) {
+    console.warn("Direct JournalService failed, trying API fallback:", err);
+  }
+
+  if (!post) {
+    try {
+      post = await muschioApi.getBlogPostBySlug(cleanSlug);
+    } catch (err) {
+      console.warn("muschioApi getBlogPostBySlug failed:", err);
+    }
+  }
+
   if (!post) {
     notFound();
   }

@@ -34,11 +34,14 @@ export function resolveApiBase(): string {
     const site = process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "");
     return `${site}/api/v1`;
   }
+
+  // Canonical public custom domain (unrestricted by Vercel deployment preview SSO protection)
+  if (process.env.VERCEL || process.env.NODE_ENV === "production") {
+    return "https://www.muschio.ae/api/v1";
+  }
+
   if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
     return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}/api/v1`;
-  }
-  if (process.env.VERCEL) {
-    return "https://muschio.vercel.app/api/v1";
   }
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}/api/v1`;
