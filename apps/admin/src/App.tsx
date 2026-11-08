@@ -43,6 +43,7 @@ import {
   Clock,
   AlertTriangle,
   Tag,
+  ArrowRight,
 } from "lucide-react";
 import {
   BrandItem,
@@ -1164,6 +1165,12 @@ export function App() {
     setShowBannerForm(false);
   };
 
+  const handleOpenAddBanner = () => {
+    resetBannerForm();
+    setActiveTab("banners");
+    setShowBannerForm(true);
+  };
+
   const handleOpenEditBanner = (b: BannerItem) => {
     setEditingBanner(b);
     setBannerForm({
@@ -1191,7 +1198,30 @@ export function App() {
   };
 
   const handleSaveBanner = async () => {
-    if (!bannerForm.titleEn || !bannerForm.titleAr || !bannerForm.imageUrl) return;
+    if (!bannerForm.titleEn?.trim()) {
+      addToast("order", "Title Required", "Please enter a banner headline / title (English).");
+      return;
+    }
+    if (!bannerForm.imageUrl?.trim()) {
+      addToast("order", "Image Required", "Please upload or provide a desktop banner image URL.");
+      return;
+    }
+
+    const payload = {
+      ...bannerForm,
+      titleEn: bannerForm.titleEn.trim(),
+      titleAr: bannerForm.titleAr?.trim() || bannerForm.titleEn.trim(),
+      subtitleEn: bannerForm.subtitleEn?.trim() || "",
+      subtitleAr: bannerForm.subtitleAr?.trim() || bannerForm.subtitleEn?.trim() || "",
+      eyebrowEn: bannerForm.eyebrowEn?.trim() || "",
+      eyebrowAr: bannerForm.eyebrowAr?.trim() || bannerForm.eyebrowEn?.trim() || "",
+      ctaTextEn: bannerForm.ctaTextEn?.trim() || "Explore Now",
+      ctaTextAr: bannerForm.ctaTextAr?.trim() || "استكشف الآن",
+      ctaUrl: bannerForm.ctaUrl?.trim() || "/shop",
+      imageUrl: bannerForm.imageUrl.trim(),
+      mobileImageUrl: bannerForm.mobileImageUrl?.trim() || bannerForm.imageUrl.trim(),
+    };
+
     try {
       const token = authSession?.token;
       const authHeaders: Record<string, string> = {
@@ -1203,7 +1233,7 @@ export function App() {
         const res = await fetch(`/api/v1/admin/banners/${editingBanner.id}`, {
           method: "POST",
           headers: authHeaders,
-          body: JSON.stringify(bannerForm),
+          body: JSON.stringify(payload),
         });
         const json = await res.json();
         if (json.success && json.data) {
@@ -1212,16 +1242,16 @@ export function App() {
           );
         } else {
           setBanners((prev) =>
-            prev.map((b) => (b.id === editingBanner.id ? { ...b, ...bannerForm } : b))
+            prev.map((b) => (b.id === editingBanner.id ? { ...b, ...payload } : b))
           );
         }
-        addAuditLog("BANNER_UPDATED", `${bannerForm.slot} ${editingBanner.id}`);
+        addAuditLog("BANNER_UPDATED", `${payload.slot} ${editingBanner.id}`);
         addToast("order", "Banner Updated", "Promotional offer banner saved to live database.");
       } else {
         const res = await fetch("/api/v1/admin/banners", {
           method: "POST",
           headers: authHeaders,
-          body: JSON.stringify(bannerForm),
+          body: JSON.stringify(payload),
         });
         const json = await res.json();
         if (json.success && json.data) {
@@ -1229,17 +1259,18 @@ export function App() {
         } else {
           const newBanner: BannerItem = {
             id: `bnr-${Date.now()}`,
-            ...bannerForm,
-            sortOrder: banners.filter((b) => b.slot === bannerForm.slot).length,
+            ...payload,
+            sortOrder: banners.filter((b) => b.slot === payload.slot).length,
             isActive: true,
           };
           setBanners((prev) => [...prev, newBanner]);
         }
-        addAuditLog("BANNER_CREATED", `${bannerForm.slot} banner published`);
+        addAuditLog("BANNER_CREATED", `${payload.slot} banner published`);
         addToast("order", "Banner Published", "New promotional banner published to storefront.");
       }
     } catch (e) {
       console.error("Error saving banner:", e);
+      addToast("order", "Save Error", "Failed to communicate with banner service.");
     }
     resetBannerForm();
   };
@@ -2390,6 +2421,16 @@ export function App() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Quick Add Banner Shortcut for Mobile Viewport */}
+          <button
+            type="button"
+            onClick={handleOpenAddBanner}
+            className="px-2.5 py-1 text-xs rounded bg-black text-white dark:bg-white dark:text-black flex items-center gap-1 font-medium shadow-sm transition-colors shrink-0"
+            title="Add New Campaign Banner"
+          >
+            <Plus size={13} />
+            <span>Banner</span>
+          </button>
           <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 capitalize hidden xs:inline">
             {TAB_TITLES[activeTab]}
           </span>
@@ -2421,17 +2462,17 @@ export function App() {
         />
       )}
 
-      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Collapsible Static on Desktop) */}
+      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Collapsible Sticky on Desktop) */}
       <aside
         className={`fixed inset-y-0 start-0 z-50 ${
           isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between ${
+        } w-72 max-w-[85vw] h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between overflow-y-auto ${
           isSidebarCollapsed ? "p-3" : "p-4"
-        } transform transition-all duration-300 ease-in-out md:static md:translate-x-0 md:shrink-0 ${
+        } transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="space-y-6">
+        <div className="space-y-6 flex-1 min-h-0 flex flex-col">
           <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between px-2"}`}>
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm shrink-0">
@@ -2550,7 +2591,7 @@ export function App() {
 
         {/* User Session Footer */}
         {isSidebarCollapsed ? (
-          <div className="p-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] rounded-xl flex flex-col items-center gap-2">
+          <div className="shrink-0 mt-auto p-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] rounded-xl flex flex-col items-center gap-2">
             <div
               className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default"
               title={`${authSession.user.name} (${authSession.user.role})`}
@@ -2570,7 +2611,7 @@ export function App() {
             </button>
           </div>
         ) : (
-          <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
+          <div className="shrink-0 mt-auto p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
@@ -2783,6 +2824,17 @@ export function App() {
               UAE: 5.0% • KSA: 15.0%
             </div>
 
+            {/* Quick Add Banner Button (Desktop Navigation Header) */}
+            <button
+              type="button"
+              onClick={handleOpenAddBanner}
+              className="px-3.5 py-1.5 bg-neutral-900 hover:bg-black dark:bg-neutral-100 dark:text-black dark:hover:bg-white text-white font-medium text-xs font-sans transition-all flex items-center gap-1.5 rounded-md shadow-sm shrink-0"
+              title="Add New Campaign Banner or Hero Slider"
+            >
+              <Plus size={14} />
+              <span>Add Banner</span>
+            </button>
+
             <a
               href="/"
               target="_blank"
@@ -2830,6 +2882,127 @@ export function App() {
                 <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Returns</span>
                 <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Cases</div>
                 <div className="text-neutral-500 dark:text-neutral-400 text-xs">Awaiting inspection</div>
+              </div>
+            </div>
+
+            {/* Executive Quick Actions & Storefront Management */}
+            <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded p-5 space-y-3 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-100 dark:border-neutral-900 pb-3">
+                <div>
+                  <h3 className="font-serif text-sm font-semibold text-neutral-900 dark:text-white tracking-wide">
+                    Executive Quick Actions & Campaign Launch
+                  </h3>
+                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                    Direct shortcuts to launch hero campaigns, publish new flacons, and manage inventory.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                    {banners.length} active banners · {products.length} products
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                {/* 1. Add Banner Shortcut */}
+                <button
+                  type="button"
+                  onClick={handleOpenAddBanner}
+                  className="p-3.5 bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800 rounded text-left transition-all group flex flex-col justify-between gap-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black flex items-center justify-center">
+                      <ImageIcon size={15} />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                      Campaigns
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-black dark:group-hover:text-white flex items-center gap-1">
+                      <span>+ Add New Banner</span>
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                      Hero slider, offer deal, or promo bar
+                    </p>
+                  </div>
+                </button>
+
+                {/* 2. Add Product Shortcut */}
+                <button
+                  type="button"
+                  onClick={handleOpenAddProduct}
+                  className="p-3.5 bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800 rounded text-left transition-all group flex flex-col justify-between gap-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black flex items-center justify-center">
+                      <Package size={15} />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                      Catalog
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-black dark:group-hover:text-white flex items-center gap-1">
+                      <span>+ Add New Product</span>
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                      Publish single fragrance flacon
+                    </p>
+                  </div>
+                </button>
+
+                {/* 3. Bulk Excel Upload */}
+                <button
+                  type="button"
+                  onClick={() => setShowCsvModal(true)}
+                  className="p-3.5 bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800 rounded text-left transition-all group flex flex-col justify-between gap-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-8 h-8 rounded bg-emerald-700 text-white flex items-center justify-center">
+                      <Upload size={15} />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                      Bulk Import
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-black dark:group-hover:text-white flex items-center gap-1">
+                      <span>Bulk Excel Upload</span>
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                      Import multiple products via XLSX / CSV
+                    </p>
+                  </div>
+                </button>
+
+                {/* 4. Manage Banners CMS */}
+                <button
+                  type="button"
+                  onClick={() => setActiveTab("banners")}
+                  className="p-3.5 bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800/80 border border-neutral-200 dark:border-neutral-800 rounded text-left transition-all group flex flex-col justify-between gap-3 shadow-sm"
+                >
+                  <div className="flex items-center justify-between w-full">
+                    <div className="w-8 h-8 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center">
+                      <Sparkles size={15} />
+                    </div>
+                    <span className="text-[10px] font-mono uppercase text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                      CMS
+                    </span>
+                  </div>
+                  <div>
+                    <div className="text-xs font-semibold text-neutral-900 dark:text-white group-hover:text-black dark:group-hover:text-white flex items-center gap-1">
+                      <span>Manage All Banners</span>
+                      <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                    </div>
+                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                      Reorder sections & edit active sliders
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
 
@@ -5803,20 +5976,18 @@ export function App() {
         {/* 10. BANNERS & HOMEPAGE CMS */}
         {activeTab === "banners" && (
           <div className="space-y-8">
-            <div className="flex items-center justify-between pb-4 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-neutral-200 dark:border-neutral-800">
               <div>
                 <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Promotional Banners & Sliders</h2>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Configure hero sliders, campaign banners, and announcements.</p>
               </div>
               <button
-                onClick={() => {
-                  resetBannerForm();
-                  setShowBannerForm(true);
-                }}
-                className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors"
+                type="button"
+                onClick={handleOpenAddBanner}
+                className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded flex items-center gap-1.5 transition-colors shadow-sm"
               >
-                <Plus size={14} />
-                <span>Add New Banner</span>
+                <Plus size={15} />
+                <span>+ Add New Banner</span>
               </button>
             </div>
 
@@ -5849,8 +6020,18 @@ export function App() {
                 if (bannerSlotFilter === "DEALS") return b.slot === "CAMPAIGN_MID" || b.slot === "PROMO_STRIP";
                 return b.slot === bannerSlotFilter;
               }).length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500 font-sans">
-                  No promotional banners found in this view. Click "Add New Banner" above to publish hero campaigns, special offers, or announcements.
+                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500 font-sans space-y-3">
+                  <p>No promotional banners found in this view. Click "Add New Banner" to publish hero campaigns, special offers, or announcements.</p>
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleOpenAddBanner}
+                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded inline-flex items-center gap-1.5 transition-colors shadow-sm"
+                    >
+                      <Plus size={14} />
+                      <span>+ Add New Banner</span>
+                    </button>
+                  </div>
                 </div>
               ) : (
                 banners
