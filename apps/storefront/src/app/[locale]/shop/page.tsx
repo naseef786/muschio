@@ -4,7 +4,8 @@ import React, { useEffect, useState, useMemo } from "react";
 import { muschioApi } from "../../../lib/api";
 import { StorefrontProduct } from "@muschio/types";
 import { ProductCard } from "../../../components/product-card";
-import { SlidersHorizontal, ArrowUpDown, X, Check, Loader2, Sparkles } from "lucide-react";
+import { ProductGridSkeleton } from "../../../components/skeletons";
+import { SlidersHorizontal, ArrowUpDown, X, Check, Sparkles } from "lucide-react";
 
 export default function ShopCatalogPage({
   params: { locale },
@@ -465,9 +466,8 @@ export default function ShopCatalogPage({
           </div>
         )}
         {loading ? (
-          <div className="py-28 flex flex-col items-center justify-center text-xs text-luxury-muted space-y-3">
-            <Loader2 size={24} className="animate-spin text-accent" />
-            <span>{c("Loading haute parfumerie collection…", "جاري تحميل مجموعة العطور الفاخرة…")}</span>
+          <div className="pt-2 pb-12">
+            <ProductGridSkeleton count={8} />
           </div>
         ) : filtered.length === 0 ? (
           <div className="py-20 text-center space-y-4">
