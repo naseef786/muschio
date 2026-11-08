@@ -84,6 +84,30 @@ export interface ProductItem {
     imageAlt?: string;
     status: "PUBLISHED" | "DRAFT" | "ARCHIVED";
     variants?: ProductVariantItem[];
+    tags?: Array<{
+        id: string;
+        nameEn: string;
+        nameAr: string;
+        slug: string;
+        colorHex?: string | null;
+        isFeatured?: boolean;
+    }>;
+    tagIds?: string[];
+}
+export interface TagItem {
+    id: string;
+    nameEn: string;
+    nameAr: string;
+    slug: string;
+    description?: string | null;
+    colorHex?: string | null;
+    isFeatured: boolean;
+    productCount?: number;
+    _count?: {
+        products: number;
+    };
+    createdAt?: string;
+    updatedAt?: string;
 }
 export interface CollectionItem {
     id: string;

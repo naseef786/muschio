@@ -72,5 +72,13 @@ export function storefrontProduct(product: any) {
       position: relation.position,
       slug: relation.note.slugEn,
     })),
+    tags: (product.tags || []).map((relation: any) => ({
+      id: relation.tag?.id || relation.id,
+      nameEn: relation.tag?.nameEn || relation.nameEn,
+      nameAr: relation.tag?.nameAr || relation.nameAr,
+      slug: relation.tag?.slug || relation.slug,
+      colorHex: relation.tag?.colorHex || relation.colorHex || "#171717",
+      isFeatured: Boolean(relation.tag?.isFeatured ?? relation.isFeatured),
+    })),
   };
 }

@@ -57,6 +57,18 @@ export const StorefrontProductSchema = z.object({
       slug: z.string(),
     }),
   ),
+  tags: z
+    .array(
+      z.object({
+        id: z.string(),
+        nameEn: z.string(),
+        nameAr: z.string(),
+        slug: z.string(),
+        colorHex: z.string().nullable().optional(),
+        isFeatured: z.boolean().default(false),
+      }),
+    )
+    .default([]),
 });
 export type StorefrontProduct = z.infer<typeof StorefrontProductSchema>;
 export const StorefrontOrderSchema = z.object({

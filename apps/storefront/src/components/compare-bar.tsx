@@ -27,11 +27,11 @@ export function CompareBar({ locale }: CompareBarProps) {
   return (
     <aside
       aria-label={isAr ? "شريط مقارنة العطور" : "Fragrance Comparison Bar"}
-      className="fixed bottom-0 inset-x-0 z-40 pointer-events-auto transition-transform duration-300"
+      className={`fixed bottom-0 inset-x-0 ${isDockOpen ? "z-50" : "z-30"} pointer-events-auto transition-transform duration-300`}
     >
       {/* Floating Pill Toggle (visible when dock is minimized) */}
       {!isDockOpen && (
-        <div className="max-w-7xl mx-auto px-4 pb-3 flex justify-end">
+        <div className="max-w-7xl mx-auto px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-3 flex justify-start sm:justify-end">
           <button
             onClick={() => setIsDockOpen(true)}
             className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-luxury-surface/95 backdrop-blur-md border border-accent/60 shadow-xl text-luxury-text hover:border-accent text-xs font-sans tracking-wider uppercase transition-all duration-200 group"

@@ -20,6 +20,7 @@ import {
   ReviewsService,
   ReturnsService,
   AuditService,
+  TagService,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
@@ -150,12 +151,14 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
     if (path === "products") {
       const search = url.searchParams.get("search") || undefined;
       const brandSlug = url.searchParams.get("brandSlug") || undefined;
+      const tag = url.searchParams.get("tag") || url.searchParams.get("tagSlug") || undefined;
       const page = Number(url.searchParams.get("page") || "1");
       const limit = Number(url.searchParams.get("limit") || "100");
       const paginate = url.searchParams.get("paginate") === "true";
       const result = await CatalogService.getProducts({
         search,
         brandSlug,
+        tag,
         page,
         limit,
         sort: "featured",
@@ -173,6 +176,21 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       const result = await CatalogService.getProductBySlug(slug);
       if (!result) return error("PRODUCT_NOT_FOUND", "Product not found", 404);
       return success({ product: storefrontProduct(result.product) });
+    }
+
+    // 4a. Tags (Public)
+    if (path === "tags") {
+      const search = url.searchParams.get("search") || undefined;
+      const featured = url.searchParams.get("featured");
+      const isFeatured = featured === "true" ? true : featured === "false" ? false : undefined;
+      const tags = await TagService.getTags({ search, isFeatured });
+      return success(tags);
+    }
+    if (route[0] === "tags" && route[1]) {
+      const slugOrId = route[1];
+      const tag = await TagService.getTagBySlug(slugOrId);
+      if (!tag) return error("TAG_NOT_FOUND", "Tag not found", 404);
+      return success(tag);
     }
 
     // 4a. Public Search (Real-time Full-Text Search across Products, Brands, Accords & Notes)
@@ -540,9 +558,23 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           perfumers: { include: { perfumer: true } },
           variants: { include: { inventory: true } },
           notes: { include: { note: true } },
+          tags: { include: { tag: true } },
         },
       });
       return success(products);
+    }
+
+    // 14a. Admin Tags List & Details
+    if (path === "admin/tags") {
+      const search = url.searchParams.get("search") || undefined;
+      const tags = await TagService.getTags({ search });
+      return success(tags);
+    }
+    if (route[0] === "admin" && route[1] === "tags" && route[2]) {
+      const slugOrId = route[2];
+      const tag = await TagService.getTagBySlug(slugOrId);
+      if (!tag) return error("TAG_NOT_FOUND", "Tag not found", 404);
+      return success(tag);
     }
 
     // 14b. Admin Collections List
@@ -1466,7 +1498,52 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         });
       }
 
-      return success(savedProduct, targetProduct ? 200 : 201);
+      if (body?.tagIds !== undefined || body?.tags !== undefined) {
+        const rawTags = body.tagIds !== undefined ? body.tagIds : body.tags;
+        const tagList = Array.isArray(rawTags) ? rawTags : rawTags ? [rawTags] : [];
+        await TagService.setProductTags(savedProduct.id, tagList);
+      }
+
+      const refreshedProduct = await prisma.product.findUnique({
+        where: { id: savedProduct.id },
+        include: {
+          brand: true,
+          scentFamily: true,
+          perfumers: { include: { perfumer: true } },
+          variants: { include: { inventory: true } },
+          tags: { include: { tag: true } },
+        },
+      });
+
+      return success(refreshedProduct || savedProduct, targetProduct ? 200 : 201);
+    }
+
+    // 12b. Admin Create or Update Tag
+    if (path === "admin/tags") {
+      const { nameEn, nameAr, slug, description, colorHex, isFeatured } = body || {};
+      if (!nameEn) return error("INVALID_INPUT", "Tag English name (nameEn) is required", 400);
+      const tag = await TagService.createTag({
+        nameEn,
+        nameAr: nameAr || nameEn,
+        slug,
+        description,
+        colorHex,
+        isFeatured: Boolean(isFeatured),
+      });
+      return success(tag, 201);
+    }
+    if (route[0] === "admin" && route[1] === "tags" && route[2]) {
+      const tagId = route[2];
+      const { nameEn, nameAr, slug, description, colorHex, isFeatured } = body || {};
+      const tag = await TagService.updateTag(tagId, {
+        nameEn,
+        nameAr,
+        slug,
+        description,
+        colorHex,
+        isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined,
+      });
+      return success(tag);
     }
 
     // 13. Admin Create Brand
@@ -2069,6 +2146,23 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(upserted);
     }
 
+    // 5b. Admin Update Tag (PATCH)
+    if (route[0] === "admin" && route[1] === "tags" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const tagId = route[2];
+      const { nameEn, nameAr, slug, description, colorHex, isFeatured } = body || {};
+      const updated = await TagService.updateTag(tagId, {
+        nameEn,
+        nameAr,
+        slug,
+        description,
+        colorHex,
+        isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined,
+      });
+      return success(updated);
+    }
+
     // Admin Review Status Moderation (PATCH)
     if (route[0] === "admin" && route[1] === "reviews" && route[2]) {
       const admin = await verifyAdminAuth(req);
@@ -2271,6 +2365,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
       }
       const upserted = await BannerService.upsertSection({ sectionType, ...body });
       return success(upserted);
+    }
+
+    // 5b. Admin Update Tag (PATCH)
+    if (route[0] === "admin" && route[1] === "tags" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const tagId = route[2];
+      const { nameEn, nameAr, slug, description, colorHex, isFeatured } = body || {};
+      const updated = await TagService.updateTag(tagId, {
+        nameEn,
+        nameAr,
+        slug,
+        description,
+        colorHex,
+        isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined,
+      });
+      return success(updated);
     }
 
     // Admin Review Status Moderation (PATCH)
@@ -2494,6 +2605,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
       const bannerId = route[2];
       await BannerService.deleteBanner(bannerId);
       return success({ success: true, deleted: bannerId });
+    }
+
+    // 7. Admin Delete Tag
+    if (route[0] === "admin" && route[1] === "tags" && route[2]) {
+      const tagId = route[2];
+      await TagService.deleteTag(tagId);
+      return success({ success: true, deleted: tagId });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);

@@ -29,7 +29,7 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
   return (
     <aside
       aria-label={titleText}
-      className="fixed bottom-6 end-6 z-50 pointer-events-auto select-none"
+      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 end-4 md:end-6 z-30 pointer-events-auto select-none"
     >
       <a
         href={whatsappUrl}

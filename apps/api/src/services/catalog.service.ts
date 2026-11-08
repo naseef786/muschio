@@ -67,6 +67,21 @@ export class CatalogService {
       };
     }
 
+    if ((filters as any).tag || (filters as any).tagSlug) {
+      const tagFilter = String((filters as any).tagSlug || (filters as any).tag).trim();
+      where.tags = {
+        some: {
+          tag: {
+            OR: [
+              { slug: tagFilter },
+              { nameEn: { equals: tagFilter, mode: "insensitive" } },
+              { nameAr: { equals: tagFilter, mode: "insensitive" } },
+            ],
+          },
+        },
+      };
+    }
+
     if (gender) {
       where.gender = gender as GenderCategory;
     }
@@ -113,6 +128,11 @@ export class CatalogService {
             notes: {
               include: {
                 note: true,
+              },
+            },
+            tags: {
+              include: {
+                tag: true,
               },
             },
           },
@@ -165,6 +185,11 @@ export class CatalogService {
             note: true,
           },
           orderBy: { prominence: "desc" },
+        },
+        tags: {
+          include: {
+            tag: true,
+          },
         },
       },
     });

@@ -43,6 +43,14 @@ export interface ProductCardProps {
   image: string;
   secondaryImage?: string;
   badge?: string | null;
+  tags?: Array<{
+    id: string;
+    nameEn: string;
+    nameAr?: string;
+    slug: string;
+    colorHex?: string | null;
+    isFeatured?: boolean;
+  }>;
   locale?: "en" | "ar";
   aspectRatio?: "3/4" | "square" | "4/5";
 }
@@ -60,6 +68,7 @@ export function ProductCard({
   image,
   secondaryImage,
   badge,
+  tags,
   locale = "en",
   aspectRatio = "3/4",
 }: ProductCardProps) {
@@ -321,13 +330,27 @@ export function ProductCard({
           )}
 
           {/* Line 4: Badge tag if any (NEW style) */}
-          {badge && (
-            <div className="mt-2">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            {badge && (
               <span className="inline-block text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-neutral-100 border border-neutral-200/60 dark:border-neutral-700/60 rounded-none">
                 {badge}
               </span>
-            </div>
-          )}
+            )}
+            {tags && tags.length > 0 && tags.slice(0, 2).map((t) => (
+              <span
+                key={t.slug || t.id}
+                className="inline-flex items-center gap-1 text-[9px] font-medium tracking-wide uppercase px-1.5 py-0.5 bg-neutral-50 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border border-neutral-200/60 dark:border-neutral-800"
+              >
+                {t.colorHex && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full inline-block"
+                    style={{ backgroundColor: t.colorHex }}
+                  />
+                )}
+                <span>{isAr && t.nameAr ? t.nameAr : t.nameEn}</span>
+              </span>
+            ))}
+          </div>
         </div>
       </div>
     </Link>

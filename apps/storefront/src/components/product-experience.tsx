@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
@@ -52,6 +52,14 @@ export interface ProductDetailProps {
       name: string;
       slug: string;
       position: "TOP" | "HEART" | "BASE";
+    }>;
+    tags?: Array<{
+      id: string;
+      nameEn: string;
+      nameAr?: string;
+      slug: string;
+      colorHex?: string | null;
+      isFeatured?: boolean;
     }>;
   };
   relatedProducts?: Array<any>;
@@ -158,33 +166,9 @@ export function ProductExperience({
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.slug);
   const [copiedLink, setCopiedLink] = useState(false);
-  const { addItem, setCartDrawerOpen } = useCart();
+  const { addItem, setCartDrawerOpen, itemCount } = useCart();
   const [isAdding, setIsAdding] = useState(false);
   const [addedSuccess, setAddedSuccess] = useState(false);
-
-  // Sticky Mobile Buy Bar visibility tracker
-  const mainCtaRef = useRef<HTMLDivElement>(null);
-  const [showStickyBar, setShowStickyBar] = useState(false);
-
-  useEffect(() => {
-    const el = mainCtaRef.current;
-    if (!el) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const entry = entries[0];
-        if (!entry) return;
-        // Show sticky bar when the main CTA scrolls out of view above the viewport
-        const rect = entry.boundingClientRect;
-        const isPastCta = !entry.isIntersecting && rect.top < 0;
-        setShowStickyBar(isPastCta);
-      },
-      { threshold: 0.1 }
-    );
-
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
 
   // Accordion open states (Level Shoes luxury standard: Description open by default)
   const [openAccordion, setOpenAccordion] = useState<string | null>("description");
@@ -299,7 +283,7 @@ export function ProductExperience({
   };
 
   return (
-    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 pb-28 sm:pb-12 bg-white dark:bg-neutral-950">
+    <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 pb-36 md:pb-16 bg-white dark:bg-neutral-950">
       {/* 1. Breadcrumbs (Level Shoes Compact Pattern) */}
       <nav aria-label="Breadcrumb" className="text-xs text-neutral-400 mb-6 md:mb-8 font-sans">
         <ol className="flex items-center gap-2 flex-wrap">
@@ -472,6 +456,27 @@ export function ProductExperience({
               <p className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-sans">
                 {product.concentration.replaceAll("_", " ")}
               </p>
+
+              {/* Product Tags & Olfactory Curations */}
+              {product.tags && product.tags.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-3">
+                  {product.tags.map((t) => (
+                    <Link
+                      key={t.slug || t.id}
+                      href={`/shop?tag=${t.slug}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 transition-colors"
+                    >
+                      {t.colorHex && (
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{ backgroundColor: t.colorHex }}
+                        />
+                      )}
+                      <span>{c(t.nameEn, t.nameAr || t.nameEn)}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Price Display & Dynamic Stock Badge */}
@@ -591,7 +596,7 @@ export function ProductExperience({
             )}
 
             {/* Primary Action Buttons (Level Shoes Add to Bag Standard) */}
-            <div ref={mainCtaRef} className="space-y-3 pt-2">
+            <div className="space-y-3 pt-2">
               {(() => {
                 const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 0;
                 const isOutOfStock = currentStock <= 0;
@@ -686,32 +691,32 @@ export function ProductExperience({
             </div>
 
             {/* Service Badges (Authentic, GCC Delivery, Free 7-Day Returns) */}
-            <div className="grid grid-cols-3 gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center font-sans">
-              <div className="flex flex-col items-center gap-1.5 p-2">
+            <div className="grid grid-cols-3 gap-1.5 sm:gap-3 pt-6 border-t border-neutral-100 dark:border-neutral-800 text-center font-sans">
+              <div className="flex flex-col items-center gap-1 sm:gap-1.5 p-1 sm:p-2">
                 <ShieldCheck size={18} className="text-neutral-900 dark:text-neutral-100" />
-                <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
+                <span className="text-[10px] sm:text-[11px] font-medium text-neutral-900 dark:text-neutral-100 leading-tight">
                   {c("100% Authentic", "أصلي ١٠٠٪")}
                 </span>
-                <span className="text-[10px] text-neutral-400">
+                <span className="text-[9px] sm:text-[10px] text-neutral-400 leading-tight">
                   {c("Direct from Houses", "مباشرة من الدور")}
                 </span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 p-2 border-x border-neutral-100 dark:border-neutral-800">
+              <div className="flex flex-col items-center gap-1 sm:gap-1.5 p-1 sm:p-2 border-x border-neutral-100 dark:border-neutral-800">
                 <Truck size={18} className="text-neutral-900 dark:text-neutral-100" />
-                <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
+                <span className="text-[10px] sm:text-[11px] font-medium text-neutral-900 dark:text-neutral-100 leading-tight">
                   {c("GCC Express", "توصيل سريع")}
                 </span>
-                <span className="text-[10px] text-neutral-400">
+                <span className="text-[9px] sm:text-[10px] text-neutral-400 leading-tight">
                   {c("Complimentary >500 AED", "مجاني فوق ٥٠٠ د.إ")}
                 </span>
               </div>
-              <div className="flex flex-col items-center gap-1.5 p-2">
+              <div className="flex flex-col items-center gap-1 sm:gap-1.5 p-1 sm:p-2">
                 <RotateCcw size={18} className="text-neutral-900 dark:text-neutral-100" />
-                <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">
-                  {c("Free Return Up to 7 Days", "إرجاع مجاني حتى 7 أيام")}
+                <span className="text-[10px] sm:text-[11px] font-medium text-neutral-900 dark:text-neutral-100 leading-tight">
+                  {c("Free 7-Day Return", "إرجاع ٧ أيام")}
                 </span>
-                <span className="text-[10px] text-neutral-400">
-                  {c("Complimentary Doorstep Pickup", "استلام مجاني من الباب")}
+                <span className="text-[9px] sm:text-[10px] text-neutral-400 leading-tight">
+                  {c("Doorstep Pickup", "استلام من الباب")}
                 </span>
               </div>
             </div>
@@ -1045,15 +1050,13 @@ export function ProductExperience({
         </div>
       )}
 
-      {/* 6. Sticky Mobile Buy Bar (Level Shoes Standard) */}
+      {/* 6. Sticky Mobile Buy & Cart Bar (Level Shoes Standard) */}
       <div
-        className={`md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-100 dark:border-neutral-800 p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.06)] flex items-center justify-between gap-3 transition-transform duration-300 ${
-          showStickyBar ? "translate-y-0" : "translate-y-full pointer-events-none"
-        }`}
+        className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white/95 dark:bg-neutral-900/95 backdrop-blur-md border-t border-neutral-200/80 dark:border-neutral-800 px-3.5 pt-2.5 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_25px_rgba(0,0,0,0.08)] flex items-center justify-between gap-3 select-none"
       >
-        <div className="min-w-0">
-          <div className="flex items-baseline gap-2 font-sans">
-            <span className="text-sm font-semibold text-neutral-950 dark:text-neutral-50">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-baseline gap-1.5 font-sans">
+            <span className="text-sm font-semibold text-neutral-950 dark:text-neutral-50 tracking-tight">
               {formatCurrency(selectedPricing.sellingPrice, "AED", locale)}
             </span>
             {selectedPricing.hasDiscount && selectedPricing.compareAtPrice && (
@@ -1079,16 +1082,32 @@ export function ProductExperience({
                 ? c("Remove from Wishlist", "إزالة من المفضلة")
                 : c("Add to Wishlist", "إضافة إلى المفضلة")
             }
-            className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all ${
+            className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
               isWishlisted
                 ? "bg-accent/10 border-accent/40 text-accent"
-                : "border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800"
+                : "border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 hover:border-neutral-900 dark:hover:border-white"
             }`}
           >
             <Heart size={14} className={isWishlisted ? "fill-accent" : ""} />
           </button>
 
-          {/* Mobile Quick Add to Bag (triggers mini-cart drawer) */}
+          {/* Mobile Go to Cart / Mini-Cart Trigger */}
+          <button
+            type="button"
+            onClick={() => setCartDrawerOpen(true)}
+            aria-label={c(`Go to Cart, ${itemCount} items`, `الذهاب إلى حقيبة التسوق، ${itemCount} منتجات`)}
+            title={c("Go to Cart", "الذهاب إلى حقيبة التسوق")}
+            className="relative w-9 h-9 rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all active:scale-95"
+          >
+            <ShoppingBag size={14} />
+            {itemCount > 0 && (
+              <span className="absolute -top-1 -end-1 min-w-[17px] h-[17px] px-1 bg-accent text-white font-sans text-[10px] font-bold rounded-full flex items-center justify-center shadow-sm">
+                {itemCount}
+              </span>
+            )}
+          </button>
+
+          {/* Mobile Quick Add to Bag */}
           {(() => {
             const currentStock = selectedVariant?.stock ?? selectedVariant?.availableQuantity ?? selectedVariant?.stockQuantity ?? 0;
             const isOutOfStock = currentStock <= 0;
@@ -1097,7 +1116,7 @@ export function ProductExperience({
                 type="button"
                 onClick={handleAddToCart}
                 disabled={isAdding || isOutOfStock}
-                className={`py-2.5 px-5 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm ${
+                className={`py-2.5 px-4 sm:px-5 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm active:scale-[0.98] ${
                   isOutOfStock
                     ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-200 dark:border-neutral-700"
                     : "bg-neutral-950 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"

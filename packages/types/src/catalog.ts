@@ -109,6 +109,20 @@ export const SeasonSchema = z.object({
 });
 export type Season = z.infer<typeof SeasonSchema>;
 
+export const TagSchema = z.object({
+  id: z.string(),
+  nameEn: z.string().min(1),
+  nameAr: z.string().min(1),
+  slug: z.string().min(1),
+  description: z.string().optional().nullable(),
+  colorHex: z.string().optional().nullable(),
+  isFeatured: z.boolean().default(false),
+  productCount: z.number().int().nonnegative().optional(),
+  createdAt: z.string().or(z.date()).optional(),
+  updatedAt: z.string().or(z.date()).optional(),
+});
+export type Tag = z.infer<typeof TagSchema>;
+
 export const ProductVariantSchema = z.object({
   id: z.string(),
   productId: z.string().optional(),
@@ -182,6 +196,7 @@ export const ProductSchema = z.object({
   variants: z.array(ProductVariantSchema).default([]),
   notes: z.array(ProductNoteRelationSchema).default([]),
   accords: z.array(ProductAccordRelationSchema).default([]),
+  tags: z.array(TagSchema).default([]),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()),
 });
@@ -200,6 +215,8 @@ export const ProductFilterSchema = z.object({
   noteSlug: z.string().optional(),
   accord: z.string().optional(),
   accordSlug: z.string().optional(),
+  tag: z.string().optional(),
+  tagSlug: z.string().optional(),
   minPrice: z.coerce.number().optional(),
   maxPrice: z.coerce.number().optional(),
   inStock: z.coerce.boolean().optional(),

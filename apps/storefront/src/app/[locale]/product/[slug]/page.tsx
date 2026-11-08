@@ -82,6 +82,7 @@ export default async function ProductPage({
       slug: n.slug,
       position: n.position,
     })),
+    tags: live.tags || [],
   };
 
   const rawRelated = (result.relatedProducts || []).map((rp: any) => storefrontProduct(rp));

@@ -11,7 +11,16 @@ export default function ShopCatalogPage({
   searchParams,
 }: {
   params: { locale: "en" | "ar" };
-  searchParams: { search?: string; brandType?: string; family?: string; brand?: string; page?: string; deal?: string };
+  searchParams: {
+    search?: string;
+    brandType?: string;
+    family?: string;
+    brand?: string;
+    tag?: string;
+    tagSlug?: string;
+    page?: string;
+    deal?: string;
+  };
 }) {
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
@@ -31,6 +40,9 @@ export default function ShopCatalogPage({
   const [selectedFamily, setSelectedFamily] = useState<string>(
     searchParams.family ?? "",
   );
+  const [selectedTag, setSelectedTag] = useState<string | null>(
+    searchParams.tag ?? searchParams.tagSlug ?? null,
+  );
   const [dealOnly, setDealOnly] = useState<boolean>(
     searchParams.deal === "true" || searchParams.deal === "1",
   );
@@ -38,6 +50,7 @@ export default function ShopCatalogPage({
   const [sort, setSort] = useState("curated");
   const [live, setLive] = useState<StorefrontProduct[] | null>(null);
   const [families, setFamilies] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Mobile Filter & Sort Drawer states
@@ -49,13 +62,17 @@ export default function ShopCatalogPage({
     Promise.all([
       muschioApi.getProducts({ limit: 100 }),
       muschioApi.getScentFamilies(),
-    ]).then(([products, fams]) => {
+      muschioApi.getTags(),
+    ]).then(([products, fams, tagsRes]) => {
       if (!active) return;
       if (products) {
         setLive(products);
       }
       if (fams) {
         setFamilies(fams);
+      }
+      if (tagsRes) {
+        setTags(tagsRes);
       }
       setLoading(false);
     });
@@ -84,6 +101,7 @@ export default function ShopCatalogPage({
         secondaryImage: product.images[1],
         badge: product.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
         notes: product.notes.map((note) => (isAr ? note.nameAr : note.nameEn)),
+        tags: product.tags || [],
         variants: product.variants,
       };
     });
@@ -96,6 +114,16 @@ export default function ShopCatalogPage({
         if (selectedBrandType && p.brandType !== selectedBrandType) return false;
         if (selectedBrand && p.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
         if (selectedFamily && p.family !== selectedFamily) return false;
+        if (selectedTag) {
+          const hasTag = (p.tags || []).some(
+            (t: any) =>
+              t.slug?.toLowerCase() === selectedTag.toLowerCase() ||
+              t.id === selectedTag ||
+              t.nameEn?.toLowerCase() === selectedTag.toLowerCase() ||
+              t.nameAr === selectedTag
+          );
+          if (!hasTag) return false;
+        }
         const query = search.trim().toLowerCase();
         if (
           query &&
@@ -114,12 +142,12 @@ export default function ShopCatalogPage({
         if (sort === "name") return a.nameEn.localeCompare(b.nameEn);
         return 0; // curated order
       });
-  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, search, sort, dealOnly]);
+  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, selectedTag, search, sort, dealOnly]);
 
   // Reset page to 1 whenever any filter or sort option changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBrandType, selectedBrand, selectedFamily, search, sort, dealOnly]);
+  }, [selectedBrandType, selectedBrand, selectedFamily, selectedTag, search, sort, dealOnly]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
 
@@ -133,19 +161,21 @@ export default function ShopCatalogPage({
     setSelectedBrandType(null);
     setSelectedBrand(null);
     setSelectedFamily("");
+    setSelectedTag(null);
     setSearch("");
     setDealOnly(false);
     setCurrentPage(1);
   };
 
   const hasActiveFilters = Boolean(
-    selectedBrandType || selectedBrand || selectedFamily || search.trim() || dealOnly,
+    selectedBrandType || selectedBrand || selectedFamily || selectedTag || search.trim() || dealOnly,
   );
 
   const activeFilterCount = [
     selectedBrandType ? 1 : 0,
     selectedBrand ? 1 : 0,
     selectedFamily ? 1 : 0,
+    selectedTag ? 1 : 0,
     search.trim() ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
 
@@ -241,6 +271,20 @@ export default function ShopCatalogPage({
               </option>
             ))}
           </select>
+
+          {/* Tag Filter Dropdown */}
+          <select
+            value={selectedTag || ""}
+            onChange={(e) => setSelectedTag(e.target.value || null)}
+            className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 text-xs rounded-sm focus:outline-none focus:border-neutral-900 dark:focus:border-white"
+          >
+            <option value="">{c("All Tags & Curations", "جميع التصنيفات والمختارات")}</option>
+            {tags.map((tg) => (
+              <option key={tg.id || tg.slug} value={tg.slug}>
+                {isAr ? tg.nameAr : tg.nameEn}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Right: Sort By */}
@@ -258,6 +302,36 @@ export default function ShopCatalogPage({
           </select>
         </div>
       </div>
+
+      {/* 2b. Featured Tags Trending Strip */}
+      {tags.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-xs no-scrollbar">
+          <span className="text-[11px] text-neutral-400 shrink-0 font-medium">{c("Trending Curations:", "المختارات الأكثر طلباً:")}</span>
+          {tags.filter((t) => t.isFeatured).slice(0, 8).map((tagItem) => {
+            const isSelected = selectedTag === tagItem.slug || selectedTag === tagItem.id;
+            return (
+              <button
+                key={tagItem.id || tagItem.slug}
+                type="button"
+                onClick={() => setSelectedTag(isSelected ? null : tagItem.slug)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${
+                  isSelected
+                    ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
+                    : "bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800"
+                }`}
+              >
+                {tagItem.colorHex && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: tagItem.colorHex }}
+                  />
+                )}
+                <span>{isAr ? tagItem.nameAr : tagItem.nameEn}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* 3. Mobile Filter and Sort Toolbar (Level Shoes Fixed Strip Pattern) */}
       <div className="flex md:hidden items-center justify-between gap-2 py-3 border-b border-neutral-100 dark:border-neutral-800">
@@ -308,6 +382,20 @@ export default function ShopCatalogPage({
                 type="button"
                 onClick={() => setSelectedFamily("")}
                 aria-label="Remove filter"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {selectedTag && (
+            <span className="filter-chip">
+              <span>
+                {tags.find((t) => t.slug === selectedTag || t.id === selectedTag)?.[isAr ? "nameAr" : "nameEn"] || selectedTag}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedTag(null)}
+                aria-label="Remove tag filter"
               >
                 <X size={12} />
               </button>
@@ -418,6 +506,7 @@ export default function ShopCatalogPage({
                   image={product.image}
                   secondaryImage={product.secondaryImage}
                   badge={product.badge}
+                  tags={product.tags}
                   locale={locale}
                 />
               ))}
@@ -562,6 +651,55 @@ export default function ShopCatalogPage({
                   ))}
                 </div>
               </div>
+
+              {/* Fragrance Tags & Curations */}
+              {tags.length > 0 && (
+                <div>
+                  <span className="text-xs font-medium uppercase tracking-wider text-luxury-text block mb-3">
+                    {c("Tags & Curations", "التصنيفات والمختارات")}
+                  </span>
+                  <div className="space-y-2 max-h-60 overflow-y-auto">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTag(null)}
+                      className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
+                        selectedTag === null
+                          ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
+                          : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
+                      }`}
+                    >
+                      <span>{c("All Tags & Curations", "جميع التصنيفات والمختارات")}</span>
+                      {selectedTag === null && <Check size={14} />}
+                    </button>
+                    {tags.map((tg) => {
+                      const isSelected = selectedTag === tg.slug || selectedTag === tg.id;
+                      return (
+                        <button
+                          key={tg.id || tg.slug}
+                          type="button"
+                          onClick={() => setSelectedTag(isSelected ? null : tg.slug)}
+                          className={`w-full flex items-center justify-between p-3 border text-xs text-start transition-colors ${
+                            isSelected
+                              ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
+                              : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
+                          }`}
+                        >
+                          <span className="flex items-center gap-2">
+                            {tg.colorHex && (
+                              <span
+                                className="w-2 h-2 rounded-full"
+                                style={{ backgroundColor: tg.colorHex }}
+                              />
+                            )}
+                            <span>{isAr ? tg.nameAr : tg.nameEn}</span>
+                          </span>
+                          {isSelected && <Check size={14} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="pt-4 border-t border-luxury-border flex gap-3">

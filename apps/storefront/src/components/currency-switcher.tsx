@@ -83,3 +83,4 @@ export function CurrencySwitcher({ locale = "en" }: { locale?: "en" | "ar" }) {
     </div>
   );
 }
+

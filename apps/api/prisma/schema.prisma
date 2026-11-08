@@ -358,6 +358,35 @@ model ProductSeason {
   @@id([productId, seasonId])
 }
 
+model Tag {
+  id          String       @id @default(uuid())
+  nameEn      String
+  nameAr      String
+  slug        String       @unique
+  description String?      @db.Text
+  colorHex    String?      @default("#171717")
+  isFeatured  Boolean      @default(false)
+  products    ProductTag[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  @@index([slug])
+  @@index([isFeatured])
+}
+
+model ProductTag {
+  id        String   @id @default(uuid())
+  productId String
+  tagId     String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag       Tag      @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([productId, tagId])
+  @@index([productId])
+  @@index([tagId])
+}
+
 model Note {
   id                 String        @id @default(uuid())
   nameEn             String
@@ -434,6 +463,7 @@ model Product {
   collections      ProductCollection[]
   occasions        ProductOccasion[]
   seasons          ProductSeason[]
+  tags             ProductTag[]
   primaryRelations ProductRelation[]   @relation("PrimaryProduct")
   relatedRelations ProductRelation[]   @relation("RelatedProduct")
   reviews          Review[]

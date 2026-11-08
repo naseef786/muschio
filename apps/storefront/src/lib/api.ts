@@ -192,10 +192,30 @@ function normalizeRawStorefrontProduct(raw: any): StorefrontProduct {
           slug: String(n.slug || n.slugEn || ""),
         }))
       : [],
+    tags: Array.isArray(raw.tags)
+      ? raw.tags.map((t: any) => ({
+          id: String(t.tag?.id || t.id || ""),
+          nameEn: String(t.tag?.nameEn || t.nameEn || ""),
+          nameAr: String(t.tag?.nameAr || t.nameAr || t.nameEn || ""),
+          slug: String(t.tag?.slug || t.slug || ""),
+          colorHex: t.tag?.colorHex || t.colorHex || "#171717",
+          isFeatured: Boolean(t.tag?.isFeatured ?? t.isFeatured),
+        }))
+      : [],
   };
 }
 
 export const muschioApi = {
+  // Tags
+  async getTags(params?: Record<string, any>): Promise<any[] | null> {
+    try {
+      const query = params ? new URLSearchParams(params).toString() : "";
+      return await apiRequest<any[]>(`/tags${query ? `?${query}` : ""}`);
+    } catch (e) {
+      console.error("Error in getTags:", e);
+      return [];
+    }
+  },
   async quoteDelivery(input: {
     country: string;
     subtotal: number;

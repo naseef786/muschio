@@ -42,6 +42,7 @@ import {
   Send,
   Clock,
   AlertTriangle,
+  Tag,
 } from "lucide-react";
 import {
   BrandItem,
@@ -49,6 +50,7 @@ import {
   ProductItem,
   ProductVariantItem,
   CollectionItem,
+  TagItem,
   slugify,
   generateProductMetaTitle,
   generateProductMetaDescription,
@@ -58,6 +60,8 @@ import { BulkCsvModal } from "./components/BulkCsvModal";
 import { BrandModal } from "./components/BrandModal";
 import { NoteModal } from "./components/NoteModal";
 import { CollectionModal } from "./components/CollectionModal";
+import { TagModal } from "./components/TagModal";
+import { SearchableTagSelect } from "./components/SearchableTagSelect";
 import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
@@ -67,6 +71,7 @@ type AdminTab =
   | "dashboard"
   | "products"
   | "collections"
+  | "tags"
   | "brands"
   | "notes"
   | "inventory"
@@ -84,6 +89,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
   dashboard: "Dashboard",
   products: "Products",
   collections: "Collections",
+  tags: "Tags & Curations",
   brands: "Brands",
   notes: "Notes",
   inventory: "Inventory",
@@ -102,6 +108,7 @@ const TAB_SUBTITLES: Record<AdminTab, string> = {
   dashboard: "Store operations, inventory, and order activity",
   products: "Manage catalog products, pricing, and stock",
   collections: "Curate fragrance collections and showcase them in storefront sliders according to your preference",
+  tags: "Curate fragrance tags, olfactory classifications, and storefront filter badges",
   brands: "Manage perfume brands and brand profiles",
   notes: "Manage scent notes and fragrance notes pyramid",
   inventory: "Warehouse locations and stock allocation",
@@ -357,22 +364,37 @@ export function App() {
   const [products, setProducts] = usePersistentState<ProductItem[]>("products", []);
 
   const [productSearch, setProductSearch] = useState("");
+  const [selectedTagFilter, setSelectedTagFilter] = useState<string>("ALL");
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
   const [adminProductPage, setAdminProductPage] = useState(1);
   const ADMIN_PRODUCTS_PER_PAGE = 15;
 
+  // 1b. TAGS STATE
+  const [tags, setTags] = usePersistentState<TagItem[]>("tags", []);
+  const [tagSearch, setTagSearch] = useState("");
+  const [showTagModal, setShowTagModal] = useState(false);
+  const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+
   const filteredProducts = useMemo(() => {
-    if (!productSearch.trim()) return products;
-    const q = productSearch.toLowerCase();
-    return products.filter((p) =>
-      p.name.toLowerCase().includes(q) ||
-      p.sku.toLowerCase().includes(q) ||
-      p.brand.toLowerCase().includes(q) ||
-      (p.nameAr && p.nameAr.includes(q))
-    );
-  }, [products, productSearch]);
+    return products.filter((p) => {
+      if (selectedTagFilter !== "ALL") {
+        const hasTag =
+          (p.tags || []).some((t) => t.id === selectedTagFilter || t.slug === selectedTagFilter) ||
+          (p.tagIds || []).includes(selectedTagFilter);
+        if (!hasTag) return false;
+      }
+      if (!productSearch.trim()) return true;
+      const q = productSearch.toLowerCase();
+      return (
+        p.name.toLowerCase().includes(q) ||
+        p.sku.toLowerCase().includes(q) ||
+        p.brand.toLowerCase().includes(q) ||
+        (p.nameAr && p.nameAr.includes(q))
+      );
+    });
+  }, [products, productSearch, selectedTagFilter]);
 
   const totalAdminProductPages = Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PER_PAGE) || 1;
 
@@ -437,6 +459,7 @@ export function App() {
     metaTitle: "",
     metaDescription: "",
     status: "PUBLISHED" as const,
+    tagIds: [] as string[],
     variants: [
       {
         id: "var-init-1",
@@ -516,7 +539,8 @@ export function App() {
       fetch("/api/v1/notes").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/admin/collections", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/admin/dashboard", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([prodRes, brandRes, noteRes, colRes, dashRes]) => {
+      fetch("/api/v1/admin/tags", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([prodRes, brandRes, noteRes, colRes, dashRes, tagRes]) => {
       if (!active) return;
       if (dashRes?.success && dashRes.data) {
         setDashboardMetrics(dashRes.data);
@@ -598,10 +622,24 @@ export function App() {
             images: Array.isArray(p.images) && p.images.length > 0 ? p.images : (p.imageUrl ? [p.imageUrl] : []),
             imageAlt: p.nameEn,
             status: p.isPublished ? "PUBLISHED" : "DRAFT",
+            tags: Array.isArray(p.tags) ? p.tags.map((pt: any) => pt.tag || pt) : [],
+            tagIds: Array.isArray(p.tags) ? p.tags.map((pt: any) => (pt.tag ? pt.tag.id : pt.id)) : [],
             variants: variantsList,
           };
         });
         setProducts(dbProducts);
+      }
+      if (tagRes?.data && Array.isArray(tagRes.data)) {
+        setTags(tagRes.data.filter((t: any) => !isMockItem(t)).map((t: any) => ({
+          id: t.id,
+          nameEn: t.nameEn,
+          nameAr: t.nameAr || t.nameEn,
+          slug: t.slug,
+          description: t.description || "",
+          colorHex: t.colorHex || "#D4AF37",
+          isFeatured: Boolean(t.isFeatured),
+          productCount: t._count?.products ?? t.productCount ?? 0,
+        })));
       }
       if (brandRes?.data && Array.isArray(brandRes.data)) {
         setBrands(brandRes.data.filter((b: any) => !isMockItem(b)).map((b: any) => ({
@@ -1356,6 +1394,7 @@ export function App() {
       metaTitle: "",
       metaDescription: "",
       status: "PUBLISHED",
+      tagIds: [] as string[],
       variants: [
         {
           id: `var-${Date.now()}-1`,
@@ -1509,6 +1548,7 @@ export function App() {
         p.metaDescription ||
         generateProductMetaDescription(pName || "Fragrance", pBrand, pConcentration, topNotesArr),
       status: (p.status as any) || "PUBLISHED",
+      tagIds: p.tags?.map((t: any) => t.id) || p.tagIds || [],
       variants: initialVariants,
     });
     setShowProductModal(true);
@@ -1652,6 +1692,8 @@ export function App() {
       images: productImages,
       imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
       status: productForm.status,
+      tags: tags.filter((t) => (productForm.tagIds || []).includes(t.id)),
+      tagIds: productForm.tagIds || [],
       variants: activeVariants,
     };
     // Persist directly to Neon PostgreSQL database via API
@@ -1724,6 +1766,7 @@ export function App() {
       metaTitle: "",
       metaDescription: "",
       status: "PUBLISHED",
+      tagIds: [] as string[],
       variants: [
         {
           id: `var-${Date.now()}-1`,
@@ -1753,6 +1796,117 @@ export function App() {
     }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
+  };
+
+  // Tag Actions (CRUD & Inline Searchable Selector)
+  const handleSaveTag = async (tagData: TagItem) => {
+    try {
+      const token = authSession?.token;
+      const isEditing = tags.some((t) => t.id === tagData.id);
+      const url = isEditing ? `/api/v1/admin/tags/${tagData.id}` : "/api/v1/admin/tags";
+      const method = isEditing ? "PUT" : "POST";
+
+      const res = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          nameEn: tagData.nameEn,
+          nameAr: tagData.nameAr,
+          slug: tagData.slug,
+          description: tagData.description,
+          colorHex: tagData.colorHex,
+          isFeatured: tagData.isFeatured,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const savedTag: TagItem = json.data || tagData;
+        setTags((prev) => {
+          const exists = prev.some((t) => t.id === savedTag.id);
+          if (exists) {
+            return prev.map((t) => (t.id === savedTag.id ? { ...t, ...savedTag } : t));
+          }
+          return [savedTag, ...prev];
+        });
+        addAuditLog(isEditing ? "TAG_UPDATED" : "TAG_CREATED", `${savedTag.nameEn} (${savedTag.slug})`);
+        addToast("settings", isEditing ? "Tag Updated" : "Tag Created", `Tag "${savedTag.nameEn}" successfully saved to database.`);
+      } else {
+        throw new Error("Failed to save tag");
+      }
+    } catch (err) {
+      console.warn("API tag save failed, updating local state:", err);
+      setTags((prev) => {
+        const exists = prev.some((t) => t.id === tagData.id);
+        if (exists) return prev.map((t) => (t.id === tagData.id ? tagData : t));
+        return [tagData, ...prev];
+      });
+      addToast("settings", "Tag Saved Locally", `Tag "${tagData.nameEn}" saved in administrative state.`);
+    }
+  };
+
+  const handleDeleteTag = async (tagId: string, tagName: string) => {
+    if (!confirm(`Are you sure you want to delete tag "${tagName}"? This will unlink it from all products.`)) {
+      return;
+    }
+    try {
+      const token = authSession?.token;
+      await fetch(`/api/v1/admin/tags/${tagId}`, {
+        method: "DELETE",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      setTags((prev) => prev.filter((t) => t.id !== tagId));
+      addAuditLog("TAG_DELETED", `Tag ${tagName} (${tagId}) deleted`);
+      addToast("settings", "Tag Deleted", `Tag "${tagName}" has been removed from database.`);
+    } catch (err) {
+      console.warn("Failed to delete tag:", err);
+      setTags((prev) => prev.filter((t) => t.id !== tagId));
+    }
+  };
+
+  const handleInlineCreateTag = async (nameEn: string): Promise<TagItem | null> => {
+    try {
+      const token = authSession?.token;
+      const res = await fetch("/api/v1/admin/tags", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          nameEn: nameEn.trim(),
+          nameAr: nameEn.trim(),
+          slug: slugify(nameEn),
+          colorHex: "#D4AF37",
+          isFeatured: true,
+        }),
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        const created: TagItem = json.data;
+        setTags((prev) => [created, ...prev]);
+        addAuditLog("TAG_CREATED", `Inline tag created: ${created.nameEn}`);
+        addToast("settings", "Tag Created", `Tag "${created.nameEn}" created and selected.`);
+        return created;
+      }
+    } catch (err) {
+      console.warn("Failed inline tag creation:", err);
+    }
+    const fallback: TagItem = {
+      id: `tag-${Date.now()}`,
+      nameEn: nameEn.trim(),
+      nameAr: nameEn.trim(),
+      slug: slugify(nameEn),
+      colorHex: "#D4AF37",
+      isFeatured: true,
+      productCount: 0,
+    };
+    setTags((prev) => [fallback, ...prev]);
+    return fallback;
   };
 
   // Collection Actions
@@ -2334,6 +2488,7 @@ export function App() {
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "products", label: "Products", icon: Package, count: products.length },
               { id: "collections", label: "Collections", icon: Sparkles, count: collections.length },
+              { id: "tags", label: "Tags", icon: Tag, count: tags.length },
               { id: "brands", label: "Brands", icon: Award, count: brands.length },
               { id: "notes", label: "Notes", icon: Layers, count: notes.length },
               { id: "inventory", label: "Inventory", icon: Warehouse },
@@ -2702,15 +2857,34 @@ export function App() {
         {activeTab === "products" && (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
-                <input
-                  type="text"
-                  placeholder="Search by SKU, product name, or brand..."
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
-                />
+              <div className="flex flex-wrap items-center gap-2.5 flex-1 max-w-xl">
+                <div className="relative flex-1 min-w-[220px]">
+                  <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
+                  <input
+                    type="text"
+                    placeholder="Search by SKU, product name, or brand..."
+                    value={productSearch}
+                    onChange={(e) => setProductSearch(e.target.value)}
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
+                  />
+                </div>
+
+                {/* Filter by Tag Dropdown */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Tag size={13} className="text-neutral-500" />
+                  <select
+                    value={selectedTagFilter}
+                    onChange={(e) => setSelectedTagFilter(e.target.value)}
+                    className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-2.5 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
+                  >
+                    <option value="ALL">All Tags ({tags.length})</option>
+                    {tags.map((t) => (
+                      <option key={t.id} value={t.id}>
+                        {t.nameEn}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -2782,6 +2956,27 @@ export function App() {
                         <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">
                           SKU: {p.sku}
                         </span>
+                        {p.tags && p.tags.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1 mt-1">
+                            {p.tags.slice(0, 3).map((tg) => (
+                              <span
+                                key={tg.id || tg.slug}
+                                className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+                              >
+                                {tg.colorHex && (
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full"
+                                    style={{ backgroundColor: tg.colorHex }}
+                                  />
+                                )}
+                                <span>{tg.nameEn}</span>
+                              </span>
+                            ))}
+                            {p.tags.length > 3 && (
+                              <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -2889,6 +3084,27 @@ export function App() {
                               </span>
                             )}
                             <span className="text-neutral-400 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                            {p.tags && p.tags.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {p.tags.slice(0, 3).map((tg) => (
+                                  <span
+                                    key={tg.id || tg.slug}
+                                    className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+                                  >
+                                    {tg.colorHex && (
+                                      <span
+                                        className="w-1.5 h-1.5 rounded-full"
+                                        style={{ backgroundColor: tg.colorHex }}
+                                      />
+                                    )}
+                                    <span>{tg.nameEn}</span>
+                                  </span>
+                                ))}
+                                {p.tags.length > 3 && (
+                                  <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </td>
@@ -3162,6 +3378,16 @@ export function App() {
                           <option value="PARFUM_OIL">Pure Attar / Perfume Oil</option>
                         </select>
                       </div>
+                    </div>
+
+                    {/* Searchable Tags & Curations Multi-Select */}
+                    <div className="p-3.5 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded">
+                      <SearchableTagSelect
+                        allTags={tags}
+                        selectedTagIds={productForm.tagIds || []}
+                        onChange={(newIds) => setProductForm({ ...productForm, tagIds: newIds })}
+                        onCreateTag={handleInlineCreateTag}
+                      />
                     </div>
 
                     {/* Master Perfumer(s) / Nose Details */}
@@ -4138,6 +4364,173 @@ export function App() {
                   })}
               </div>
             )}
+          </div>
+        )}
+
+        {/* 2.3. TAGS MANAGEMENT */}
+        {activeTab === "tags" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search tags by name, slug or description..."
+                  value={tagSearch}
+                  onChange={(e) => setTagSearch(e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-neutral-500">
+                  {tags.filter((t) => t.isFeatured).length} of {tags.length} featured on storefront
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setEditingTag(null);
+                    setShowTagModal(true);
+                  }}
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Plus size={14} />
+                  <span>Create Tag</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Tags Table */}
+            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+              <table className="w-full text-start text-xs font-sans min-w-[800px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                  <tr>
+                    <th className="py-3.5 px-4 text-start">Tag Name (EN / AR)</th>
+                    <th className="py-3.5 px-4 text-start">Color Badge</th>
+                    <th className="py-3.5 px-4 text-start">Slug & URL</th>
+                    <th className="py-3.5 px-4 text-start">Storefront Display</th>
+                    <th className="py-3.5 px-4 text-start">Associated Products</th>
+                    <th className="py-3.5 px-4 text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {tags.filter((t) => {
+                    if (!tagSearch.trim()) return true;
+                    const q = tagSearch.toLowerCase();
+                    return (
+                      t.nameEn.toLowerCase().includes(q) ||
+                      (t.nameAr && t.nameAr.toLowerCase().includes(q)) ||
+                      t.slug.toLowerCase().includes(q) ||
+                      (t.description && t.description.toLowerCase().includes(q))
+                    );
+                  }).length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-12 text-center text-neutral-500 font-sans">
+                        No tags found matching your search. Click "Create Tag" to add one.
+                      </td>
+                    </tr>
+                  ) : (
+                    tags
+                      .filter((t) => {
+                        if (!tagSearch.trim()) return true;
+                        const q = tagSearch.toLowerCase();
+                        return (
+                          t.nameEn.toLowerCase().includes(q) ||
+                          (t.nameAr && t.nameAr.toLowerCase().includes(q)) ||
+                          t.slug.toLowerCase().includes(q) ||
+                          (t.description && t.description.toLowerCase().includes(q))
+                        );
+                      })
+                      .map((t) => (
+                        <tr key={t.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-2.5">
+                              {t.colorHex && (
+                                <span
+                                  className="w-3 h-3 rounded-full shrink-0 shadow-xs"
+                                  style={{ backgroundColor: t.colorHex }}
+                                />
+                              )}
+                              <div>
+                                <span className="font-semibold text-neutral-900 dark:text-white block">{t.nameEn}</span>
+                                {t.nameAr && (
+                                  <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
+                                    {t.nameAr}
+                                  </span>
+                                )}
+                                {t.description && (
+                                  <span className="text-[11px] text-neutral-400 block max-w-xs truncate mt-0.5">
+                                    {t.description}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.colorHex || "#D4AF37" }} />
+                              <span className="text-neutral-700 dark:text-neutral-300">{t.colorHex || "#D4AF37"}</span>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                            <span className="text-neutral-500">/shop?tag=</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t.slug}</span>
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
+                                t.isFeatured
+                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
+                              }`}
+                            >
+                              {t.isFeatured ? "Featured Filter" : "Standard Tag"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                            <span className="text-neutral-800 dark:text-neutral-200 font-semibold">
+                              {t.productCount ?? (t._count?.products ?? products.filter((p) => (p.tags || []).some((pt) => pt.id === t.id || pt.slug === t.slug) || (p.tagIds || []).includes(t.id)).length)}
+                            </span>{" "}
+                            <span className="text-neutral-400">products</span>
+                          </td>
+                          <td className="py-3.5 px-4 text-end">
+                            <div className="flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setEditingTag(t);
+                                  setShowTagModal(true);
+                                }}
+                                className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                                title="Edit Tag"
+                              >
+                                <Edit3 size={14} />
+                              </button>
+                              <a
+                                href={`/en/shop?tag=${t.slug}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                                title="View on Storefront"
+                              >
+                                <ExternalLink size={14} />
+                              </a>
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteTag(t.id, t.nameEn)}
+                                className="p-1.5 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                                title="Delete Tag"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
@@ -6162,6 +6555,16 @@ export function App() {
         }}
         noteToEdit={noteToEdit}
         onSave={handleSaveNoteModal}
+      />
+
+      <TagModal
+        isOpen={showTagModal}
+        onClose={() => {
+          setShowTagModal(false);
+          setEditingTag(null);
+        }}
+        tagToEdit={editingTag}
+        onSave={handleSaveTag}
       />
 
       <OrderDetailModal
