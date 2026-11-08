@@ -71,8 +71,13 @@ export default function OrderStatusPage({
   );
 
   useEffect(() => {
+    if (orderNumber) {
+      try {
+        localStorage.setItem("muschio_last_order", orderNumber);
+      } catch {}
+    }
     void refresh(false);
-  }, [refresh]);
+  }, [orderNumber, refresh]);
 
   // Real-time automatic background synchronization every 3.5 seconds
   useEffect(() => {

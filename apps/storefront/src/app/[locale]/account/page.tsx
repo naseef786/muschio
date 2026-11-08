@@ -77,14 +77,36 @@ export default function AccountPage({
 
   const loadOrders = useCallback(async () => {
     setLoadingOrders(true);
+    let serverOrders: StorefrontOrder[] | null = null;
     try {
-      const res = await muschioApi.getMyOrders();
-      setOrders(res);
+      serverOrders = await muschioApi.getMyOrders();
     } catch {
-      setOrders([]);
-    } finally {
-      setLoadingOrders(false);
+      serverOrders = null;
     }
+
+    if (serverOrders && serverOrders.length > 0) {
+      setOrders(serverOrders);
+      setLoadingOrders(false);
+      return;
+    }
+
+    // Fallback: Check locally persisted recent orders (for guest acquisitions or instant view)
+    try {
+      const raw = localStorage.getItem("muschio_recent_orders");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setOrders(parsed as any);
+          setLoadingOrders(false);
+          return;
+        }
+      }
+    } catch {
+      // ignore
+    }
+
+    setOrders(serverOrders || []);
+    setLoadingOrders(false);
   }, []);
 
   useEffect(() => {

@@ -302,6 +302,38 @@ export default function CheckoutPage({
       const origin = window.location.origin;
       const confirmationUrl = `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`;
 
+      const persistOrderLocally = (orderNum: string, ord?: any) => {
+        try {
+          localStorage.setItem("muschio_last_order", orderNum);
+          const raw = localStorage.getItem("muschio_recent_orders");
+          const existing = raw ? JSON.parse(raw) : [];
+          const entry = {
+            id: ord?.id || `ord_${Date.now()}`,
+            orderNumber: orderNum,
+            createdAt: new Date().toISOString(),
+            totalAmount: ord?.totalAmount ? Number(ord.totalAmount) : estimatedTotal,
+            currency: "AED",
+            status: paymentMethod === "CASH_ON_DELIVERY" ? "PENDING" : "PAID",
+            items: items.map((i) => ({
+              id: i.id || i.variantId,
+              title: i.title,
+              titleAr: i.titleAr,
+              brand: i.brand,
+              volume: i.volume || i.sizeLabel,
+              price: i.price,
+              quantity: i.quantity,
+              image: i.image,
+            })),
+          };
+          const updated = [entry, ...existing.filter((x: any) => x.orderNumber !== orderNum)].slice(0, 10);
+          localStorage.setItem("muschio_recent_orders", JSON.stringify(updated));
+        } catch {
+          // ignore
+        }
+      };
+
+      persistOrderLocally(order.orderNumber, order);
+
       if (paymentMethod === "CASH_ON_DELIVERY") {
         clearCart();
         localStorage.removeItem("muschio_pending_order");
