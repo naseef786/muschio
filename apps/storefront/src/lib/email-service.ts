@@ -192,74 +192,283 @@ export class EmailService {
     if (!recipient) return { success: false, error: "No recipient email" };
 
     const customerName = order.shippingAddress?.fullName || order.customer?.name || "Esteemed Client";
-    const totalAmount = order.totalAmount ? Number(order.totalAmount).toLocaleString() : "0";
+    const totalAmount = order.totalAmount ? Number(order.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
+    const subtotal = order.subtotal ? Number(order.subtotal).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : totalAmount;
+    const vatAmount = order.taxAmount ? Number(order.taxAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : (Number(order.totalAmount || 0) * 0.05 / 1.05).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     const currency = order.currency || "AED";
+    const orderNumber = order.orderNumber || "MSC-ORDER";
+    const trackUrl = `https://www.muschio.ae/en/track?ref=${encodeURIComponent(orderNumber)}`;
+    const whatsappUrl = `https://wa.me/97148006872?text=${encodeURIComponent(`Hello Muschio Concierge, I have an enquiry regarding my order ${orderNumber}`)}`;
+
+    const addr = order.shippingAddress || {};
+    const street = [addr.addressLine1, addr.addressLine2].filter(Boolean).join(", ") || "Client Address";
+    const cityState = [addr.city, addr.emirateState].filter(Boolean).join(", ") || "Dubai";
+    const country = addr.countryCode === "AE" || !addr.countryCode ? "United Arab Emirates" : addr.countryCode;
+    const phone = addr.phone || "Not specified";
+    const paymentMethodLabel = order.payments?.[0]?.paymentMethod || order.paymentMethod || "Credit / Debit Card (Secure 3D-Auth)";
+
+    const orderDate = new Date(order.createdAt || Date.now()).toLocaleDateString("en-GB", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+      timeZone: "Asia/Dubai",
+    });
 
     const itemsHtml = (order.items || [])
       .map(
         (item: any) => `
         <tr style="border-bottom: 1px solid #262626;">
-          <td style="padding: 12px 0; font-family: sans-serif; font-size: 13px; color: #ffffff;">
-            <strong>${item.brandName || "Muschio"}</strong> — ${item.productNameEn || "Fragrance"}<br />
-            <span style="font-size: 11px; color: #888888;">Volume: ${item.sizeLabel || "100ml"} • Qty: ${item.quantity || 1}</span>
+          <td style="padding: 16px 0; vertical-align: top;">
+            <div style="font-family: 'Times New Roman', serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.18em; color: #C5A265; font-weight: 600;">
+              ${item.brandName || "Muschio"}
+            </div>
+            <div style="font-family: 'Times New Roman', serif; font-size: 15px; color: #FFFFFF; font-weight: 500; margin-top: 4px;">
+              ${item.productNameEn || "Rare Haute Fragrance"}
+            </div>
+            <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; color: #8E8A82; margin-top: 4px;">
+              Volume: ${item.sizeLabel || "100ml Extrait"} • Quantity: ${item.quantity || 1}
+            </div>
           </td>
-          <td style="padding: 12px 0; text-align: right; font-family: monospace; font-size: 13px; color: #ffffff;">
-            ${Number(item.totalPrice || item.unitPrice || 0).toLocaleString()} ${currency}
+          <td style="padding: 16px 0; text-align: right; vertical-align: top; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; font-weight: 600; color: #F5F2EB; white-space: nowrap;">
+            ${Number(item.totalPrice || item.unitPrice || 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} <span style="font-size: 11px; font-weight: normal; color: #C5A265;">${currency}</span>
           </td>
         </tr>`
       )
       .join("");
 
     const html = `
-      <div style="background-color: #000000; color: #ffffff; padding: 40px 20px; font-family: 'Times New Roman', Times, serif; max-width: 600px; margin: 0 auto; border: 1px solid #262626;">
-        <div style="text-align: center; margin-bottom: 30px;">
-          <div style="font-size: 24px; letter-spacing: 0.3em; font-weight: normal; margin-bottom: 4px;">MUSCHIO</div>
-          <div style="font-size: 10px; letter-spacing: 0.25em; text-transform: uppercase; color: #a3a3a3; font-family: sans-serif;">Haute Parfumerie • Dubai & GCC</div>
-        </div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Muschio Order Confirmation: ${orderNumber}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #070707; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #EDE8D0; -webkit-font-smoothing: antialiased;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #070707; padding: 30px 10px;">
+    <tr>
+      <td align="center">
+        <!-- Main Container -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width: 620px; background-color: #0E0E0E; border: 1px solid #222222; box-shadow: 0 10px 40px rgba(0,0,0,0.8);">
+          
+          <!-- Top Gold Accent Bar -->
+          <tr>
+            <td height="3" style="background: linear-gradient(90deg, #8A6D3B 0%, #C5A265 50%, #8A6D3B 100%);"></td>
+          </tr>
 
-        <div style="border-top: 1px solid #262626; border-bottom: 1px solid #262626; padding: 20px 0; margin-bottom: 25px; text-align: center;">
-          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; color: #888888; font-family: sans-serif;">Official Client Order Confirmation</div>
-          <div style="font-size: 20px; margin-top: 5px; font-family: monospace; color: #ffffff;">${order.orderNumber}</div>
-        </div>
+          <!-- Brand Masthead Header -->
+          <tr>
+            <td align="center" style="padding: 40px 30px 30px 30px; text-align: center;">
+              <!-- Ornamental Gold Monogram Crest -->
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto 16px auto;">
+                <tr>
+                  <td align="center" style="width: 44px; height: 44px; border: 1px solid #C5A265; text-align: center; vertical-align: middle;">
+                    <span style="font-family: 'Times New Roman', serif; font-size: 22px; font-weight: 400; color: #C5A265; letter-spacing: 0.05em; display: inline-block; line-height: 42px;">M</span>
+                  </td>
+                </tr>
+              </table>
 
-        <p style="font-family: sans-serif; font-size: 14px; line-height: 1.6; color: #cccccc;">
-          Dear ${customerName},<br /><br />
-          Thank you for ordering with Muschio. Your flacon is currently being prepared under artisanal temperature-controlled standards for white-glove courier dispatch.
-        </p>
+              <!-- Wordmark -->
+              <div style="font-family: 'Times New Roman', Georgia, serif; font-size: 28px; letter-spacing: 0.35em; color: #FFFFFF; font-weight: 300; text-transform: uppercase; margin-bottom: 6px;">
+                MUSCHIO
+              </div>
+              <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase; color: #C5A265; font-weight: 500;">
+                HAUTE PARFUMERIE • DUBAI & GCC
+              </div>
+              <div style="font-family: 'Times New Roman', serif; font-size: 13px; color: #8A857B; margin-top: 6px; font-style: italic;">
+                دار العطور النيش والزيوت الملكية النادرة
+              </div>
+            </td>
+          </tr>
 
-        <table style="width: 100%; border-collapse: collapse; margin: 25px 0;">
-          <thead>
-            <tr style="border-bottom: 1px solid #404040; text-align: left;">
-              <th style="padding-bottom: 8px; font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #888888;">Item</th>
-              <th style="padding-bottom: 8px; text-align: right; font-family: sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: #888888;">Price</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${itemsHtml}
-          </tbody>
+          <!-- Order Status Callout Card -->
+          <tr>
+            <td style="padding: 0 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #141414; border: 1px solid #282828; border-left: 3px solid #C5A265; padding: 20px;">
+                <tr>
+                  <td>
+                    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.22em; color: #C5A265; font-weight: 600;">
+                      Official Client Allocation • مؤكد
+                    </div>
+                    <div style="font-family: 'Times New Roman', Georgia, serif; font-size: 20px; color: #FFFFFF; margin: 4px 0 2px 0; font-weight: 400;">
+                      Order Confirmation: <span style="font-family: monospace; color: #F5F2EB;">${orderNumber}</span>
+                    </div>
+                    <div style="font-size: 11px; color: #7A756D;">
+                      Placed on ${orderDate} • GCC White-Glove Vault Dispatch
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Personal Greeting -->
+          <tr>
+            <td style="padding: 30px 30px 10px 30px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 14px; line-height: 1.7; color: #D6D0C2;">
+              Dear <strong>${customerName}</strong>,<br /><br />
+              Thank you for ordering with Muschio. Your flacon has been securely allocated from our authenticated inventory and is currently being prepared under temperature-controlled protocols to protect natural essences, aged attars, and volatile accords.
+            </td>
+          </tr>
+
+          <!-- Flacons Table -->
+          <tr>
+            <td style="padding: 10px 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse: collapse; margin-top: 10px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #333333;">
+                    <th align="left" style="padding-bottom: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #7A756D; font-weight: 600;">
+                      Curated Flacon
+                    </th>
+                    <th align="right" style="padding-bottom: 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 10px; text-transform: uppercase; letter-spacing: 0.2em; color: #7A756D; font-weight: 600;">
+                      Amount
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${itemsHtml}
+                </tbody>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Financial Breakdown -->
+          <tr>
+            <td style="padding: 10px 30px 20px 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top: 10px;">
+                <tr>
+                  <td align="right" style="padding: 4px 0; font-size: 12px; color: #8A857B;">
+                    Flacons Subtotal:
+                  </td>
+                  <td align="right" width="120" style="padding: 4px 0; font-size: 12px; color: #D6D0C2; font-family: monospace;">
+                    ${subtotal} ${currency}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="right" style="padding: 4px 0; font-size: 12px; color: #8A857B;">
+                    White-Glove GCC Courier:
+                  </td>
+                  <td align="right" width="120" style="padding: 4px 0; font-size: 12px; color: #10B981; font-weight: 500;">
+                    Complimentary
+                  </td>
+                </tr>
+                <tr>
+                  <td align="right" style="padding: 4px 0; font-size: 12px; color: #8A857B;">
+                    Included UAE 5% VAT:
+                  </td>
+                  <td align="right" width="120" style="padding: 4px 0; font-size: 12px; color: #8A857B; font-family: monospace;">
+                    ${vatAmount} ${currency}
+                  </td>
+                </tr>
+                <tr style="border-top: 1px solid #2B2B2B;">
+                  <td align="right" style="padding: 12px 0 4px 0; font-family: 'Times New Roman', serif; font-size: 14px; text-transform: uppercase; letter-spacing: 0.1em; color: #FFFFFF;">
+                    Total Order Value:
+                  </td>
+                  <td align="right" width="120" style="padding: 12px 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 20px; font-weight: 700; color: #C5A265;">
+                    ${totalAmount} <span style="font-size: 12px; font-weight: normal; color: #EDE8D0;">${currency}</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td align="right" colspan="2" style="font-size: 11px; color: #6D6962; padding-top: 2px;">
+                    Payment: <span style="color: #A39E93;">${paymentMethodLabel}</span>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Delivery Address & Logistics Card -->
+          <tr>
+            <td style="padding: 0 30px 20px 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #121212; border: 1px solid #242424; padding: 18px 20px;">
+                <tr>
+                  <td width="50%" valign="top" style="padding-right: 15px;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: #C5A265; font-weight: 600; margin-bottom: 6px;">
+                      📍 Shipping Destination
+                    </div>
+                    <div style="font-size: 13px; color: #FFFFFF; font-weight: 500;">${customerName}</div>
+                    <div style="font-size: 12px; color: #9A958C; line-height: 1.5; margin-top: 4px;">
+                      ${street}<br />
+                      ${cityState}, ${country}<br />
+                      Tel: ${phone}
+                    </div>
+                  </td>
+                  <td width="50%" valign="top" style="padding-left: 15px; border-left: 1px solid #242424;">
+                    <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.15em; color: #C5A265; font-weight: 600; margin-bottom: 6px;">
+                      🚚 Logistics Standard
+                    </div>
+                    <div style="font-size: 12px; color: #D6D0C2; line-height: 1.5;">
+                      <strong>Same-Day Dubai</strong> (orders before 2 PM)<br />
+                      <strong>Next-Day GCC</strong> temperature-regulated transit with pre-cleared customs.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Luxury Privilege Guarantee Badge -->
+          <tr>
+            <td style="padding: 0 30px 30px 30px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background: linear-gradient(180deg, #161512 0%, #11100E 100%); border: 1px solid #332B1D; padding: 16px 20px;">
+                <tr>
+                  <td>
+                    <div style="font-size: 11px; color: #C5A265; font-weight: 600; letter-spacing: 0.05em; margin-bottom: 4px;">
+                      ✨ The Muschio Client Privilege
+                    </div>
+                    <div style="font-size: 11px; color: #A8A194; line-height: 1.5;">
+                      Every full-size flacon includes an official 2ml matching discovery vial. Experience the scent on your skin first; the flacon remains returnable if the bespoke wax seal remains intact.
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Primary Call To Action Button -->
+          <tr>
+            <td align="center" style="padding: 10px 30px 35px 30px; text-align: center;">
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+                <tr>
+                  <td align="center" style="background-color: #C5A265; padding: 14px 32px; border-radius: 0;">
+                    <a href="${trackUrl}" target="_blank" style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; text-transform: uppercase; letter-spacing: 0.22em; font-weight: 700; color: #070707; text-decoration: none; display: inline-block;">
+                      Track Order Status Live →
+                    </a>
+                  </td>
+                </tr>
+              </table>
+              <div style="margin-top: 14px; font-size: 11px; color: #7A756D;">
+                Need concierge adjustments? <a href="${whatsappUrl}" target="_blank" style="color: #C5A265; text-decoration: underline;">Chat directly on WhatsApp</a>
+              </div>
+            </td>
+          </tr>
+
+          <!-- Footer & Authenticity Credentials -->
+          <tr>
+            <td style="background-color: #0A0A0A; border-top: 1px solid #1E1E1E; padding: 30px 30px; text-align: center;">
+              <div style="font-family: 'Times New Roman', serif; font-size: 13px; letter-spacing: 0.2em; text-transform: uppercase; color: #FFFFFF; margin-bottom: 6px;">
+                MUSCHIO HAUTE PARFUMERIE
+              </div>
+              <div style="font-size: 11px; color: #6D6962; line-height: 1.6;">
+                Level 2, Fashion Avenue Boulevard, Downtown Dubai, United Arab Emirates<br />
+                Direct VIP Concierge: <a href="mailto:concierge@muschio.ae" style="color: #C5A265; text-decoration: none;">concierge@muschio.ae</a> • WhatsApp: +971 4 800 6872
+              </div>
+              <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #181818; font-size: 10px; color: #4A4742; letter-spacing: 0.05em;">
+                © 2026 Muschio Luxury Fragrances LLC. All master allocations authenticated.
+              </div>
+            </td>
+          </tr>
+
         </table>
-
-        <div style="text-align: right; margin-top: 20px; font-family: sans-serif;">
-          <div style="font-size: 12px; color: #888888;">Total (Inc. 5% VAT & Complimentary GCC Delivery):</div>
-          <div style="font-size: 22px; font-weight: bold; color: #ffffff; font-family: monospace;">${totalAmount} ${currency}</div>
-        </div>
-
-        <div style="margin-top: 30px; text-align: center;">
-          <a href="https://www.muschio.ae/en/track?ref=${encodeURIComponent(order.orderNumber)}" style="display: inline-block; background-color: #ffffff; color: #000000; text-decoration: none; padding: 12px 24px; font-family: sans-serif; font-size: 12px; text-transform: uppercase; letter-spacing: 0.15em; font-weight: 600;">
-            Track Order Status Live →
-          </a>
-        </div>
-
-        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #262626; font-size: 11px; font-family: sans-serif; color: #737373; text-align: center;">
-          Direct VIP Concierge: concierge@muschio.ae • WhatsApp: +971 4 800 6872<br />
-          Muschio Haute Parfumerie, Level 2, Downtown Boulevard, Dubai, UAE
-        </div>
-      </div>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
     `;
 
     return this.sendEmail({
       to: recipient,
-      subject: `Your Muschio Order Confirmation: ${order.orderNumber}`,
+      subject: `Your Muschio Order Confirmation: ${orderNumber}`,
       html,
     });
   }
@@ -269,31 +478,53 @@ export class EmailService {
    */
   static async sendAdminOrderAlert(order: any) {
     const customerName = order.shippingAddress?.fullName || order.customer?.name || "Client";
-    const totalAmount = order.totalAmount ? Number(order.totalAmount).toLocaleString() : "0";
+    const totalAmount = order.totalAmount ? Number(order.totalAmount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "0.00";
     const currency = order.currency || "AED";
     const city = order.shippingAddress?.city || "Dubai";
+    const emirate = order.shippingAddress?.emirateState || "Dubai";
     const country = order.shippingAddress?.countryCode || "AE";
+    const orderNumber = order.orderNumber || "MSC-ORDER";
+    const phone = order.shippingAddress?.phone || "N/A";
+    const clientEmail = order.guestEmail || order.customer?.email || "N/A";
+
+    const itemsSummary = (order.items || [])
+      .map((it: any) => `• ${it.brandName || "Muschio"} — ${it.productNameEn || "Flacon"} (${it.sizeLabel || "100ml"}, Qty: ${it.quantity || 1}) — ${Number(it.totalPrice || 0).toLocaleString()} ${currency}`)
+      .join("<br />");
 
     const html = `
-      <div style="font-family: sans-serif; background-color: #ffffff; color: #000000; padding: 25px; border: 1px solid #e5e5e5; max-width: 550px;">
-        <h2 style="margin-top: 0; font-size: 18px; border-bottom: 2px solid #000000; padding-bottom: 8px;">
-          🛍️ NEW ORDER RECEIVED: ${order.orderNumber}
-        </h2>
-        <p style="font-size: 13px; color: #404040;">
-          A new luxury order has been completed on the storefront and requires preparation.
-        </p>
-        <ul style="font-size: 13px; line-height: 1.8;">
-          <li><strong>Client:</strong> ${customerName}</li>
-          <li><strong>Email:</strong> ${order.guestEmail || order.customer?.email || "N/A"}</li>
-          <li><strong>Phone:</strong> ${order.shippingAddress?.phone || "N/A"}</li>
-          <li><strong>Destination:</strong> ${city}, ${country}</li>
-          <li><strong>Total Amount:</strong> <span style="font-family: monospace; font-size: 15px;">${totalAmount} ${currency}</span></li>
-          <li><strong>Status:</strong> ${order.status}</li>
-          <li><strong>Items:</strong> ${order.items?.length || 1} flacons</li>
-        </ul>
-        <div style="margin-top: 20px;">
-          <a href="https://www.muschio.ae/admin" style="display: inline-block; background-color: #000000; color: #ffffff; text-decoration: none; padding: 10px 18px; font-size: 12px; font-weight: bold; border-radius: 4px;">
-            Open Admin Dashboard
+      <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #0E0E0E; color: #EDE8D0; padding: 30px; border: 1px solid #C5A265; max-width: 580px; margin: 0 auto;">
+        <div style="border-bottom: 1px solid #282828; padding-bottom: 15px; margin-bottom: 20px;">
+          <div style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.25em; color: #C5A265; font-weight: 600;">
+            MUSCHIO HAUTE PARFUMERIE • DISPATCH ALERT
+          </div>
+          <div style="font-family: 'Times New Roman', serif; font-size: 22px; color: #FFFFFF; margin-top: 4px;">
+            🛍️ New Client Order: ${orderNumber}
+          </div>
+        </div>
+
+        <div style="background-color: #141414; border: 1px solid #222; padding: 15px; margin-bottom: 20px;">
+          <table style="width: 100%; font-size: 13px; line-height: 1.8; color: #D6D0C2;">
+            <tr><td style="color: #8A857B; width: 120px;">Client:</td><td><strong>${customerName}</strong></td></tr>
+            <tr><td style="color: #8A857B;">Email:</td><td><a href="mailto:${clientEmail}" style="color: #C5A265;">${clientEmail}</a></td></tr>
+            <tr><td style="color: #8A857B;">Phone:</td><td><a href="tel:${phone}" style="color: #C5A265;">${phone}</a></td></tr>
+            <tr><td style="color: #8A857B;">Destination:</td><td>${city}, ${emirate} (${country})</td></tr>
+            <tr><td style="color: #8A857B;">Total Value:</td><td><strong style="color: #C5A265; font-size: 16px;">${totalAmount} ${currency}</strong></td></tr>
+            <tr><td style="color: #8A857B;">Status:</td><td><span style="color: #10B981; font-weight: 600;">${order.status || "CONFIRMED"}</span></td></tr>
+          </table>
+        </div>
+
+        <div style="margin-bottom: 25px;">
+          <div style="font-size: 11px; text-transform: uppercase; letter-spacing: 0.15em; color: #C5A265; font-weight: 600; margin-bottom: 8px;">
+            Allocated Flacons:
+          </div>
+          <div style="font-size: 12px; line-height: 1.6; color: #EDE8D0; background-color: #121212; padding: 12px; border: 1px solid #222;">
+            ${itemsSummary || "1 x Bespoke Flacon Allocation"}
+          </div>
+        </div>
+
+        <div style="text-align: center; padding-top: 10px;">
+          <a href="https://www.muschio.ae/admin" style="display: inline-block; background-color: #C5A265; color: #070707; text-decoration: none; padding: 12px 28px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.2em; font-weight: 700;">
+            Open Fulfillment Console →
           </a>
         </div>
       </div>
@@ -301,7 +532,7 @@ export class EmailService {
 
     return this.sendEmail({
       to: this.getAdminEmail(),
-      subject: `🚨 [NEW ORDER] ${order.orderNumber} — ${totalAmount} ${currency} (${customerName})`,
+      subject: `🛍️ [NEW ORDER] ${orderNumber} — ${totalAmount} ${currency} (${customerName})`,
       html,
     });
   }
