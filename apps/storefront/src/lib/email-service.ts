@@ -42,14 +42,14 @@ export class EmailService {
   }
 
   public static getAdminEmail(): string {
-    return process.env.ADMIN_NOTIFICATION_EMAIL || "concierge@muschio.luxury";
+    return process.env.ADMIN_NOTIFICATION_EMAIL || "concierge@muschio.ae";
   }
 
   public static getFromEmail(): string {
     return (
       process.env.EMAIL_FROM ||
       process.env.SMTP_FROM ||
-      "Muschio Haute Parfumerie <orders@muschio.luxury>"
+      "Muschio Haute Parfumerie <orders@muschio.ae>"
     );
   }
 
@@ -251,7 +251,7 @@ export class EmailService {
         </div>
 
         <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #262626; font-size: 11px; font-family: sans-serif; color: #737373; text-align: center;">
-          Direct VIP Concierge: concierge@muschio.luxury • WhatsApp: +971 4 800 6872<br />
+          Direct VIP Concierge: concierge@muschio.ae • WhatsApp: +971 4 800 6872<br />
           Muschio Haute Parfumerie, Level 2, Downtown Boulevard, Dubai, UAE
         </div>
       </div>
@@ -325,7 +325,7 @@ export class EmailService {
         </p>
         ${reason ? `<div style="background-color: #171717; border-left: 3px solid #737373; padding: 12px; font-size: 12px; color: #a3a3a3; margin: 20px 0;"><strong>Reason:</strong> ${reason}</div>` : ""}
         <p style="font-size: 12px; color: #737373;">
-          If this was done in error, please contact our VIP Concierge hotline immediately at concierge@muschio.luxury.
+          If this was done in error, please contact our VIP Concierge hotline immediately at concierge@muschio.ae.
         </p>
       </div>
     `;
