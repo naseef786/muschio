@@ -65,6 +65,7 @@ export default async function HomePage({
   let liveBrands: any = null;
   let liveNotes: any = null;
   let liveCollections: any = null;
+  let liveJournalPost: any = null;
 
   try {
     [
@@ -76,6 +77,7 @@ export default async function HomePage({
       liveBrands,
       liveNotes,
       liveCollections,
+      liveJournalPost,
     ] = await Promise.all([
       BannerService.getActiveBanners("HERO_SLIDER").catch(() => muschioApi.getActiveBanners("HERO_SLIDER")),
       BannerService.getActiveBanners("CAMPAIGN_MID").catch(() => muschioApi.getActiveBanners("CAMPAIGN_MID")),
@@ -101,6 +103,11 @@ export default async function HomePage({
           },
         },
       }).catch(() => muschioApi.getCollections({ featured: true })),
+      prisma.blogPost.findFirst({
+        where: { isPublished: true },
+        orderBy: { publishedAt: "desc" },
+        include: { category: true },
+      }).catch(() => muschioApi.getBlogPosts(1, 1).then((r: any) => (Array.isArray(r) ? r[0] : (r?.items ? r.items[0] : null)))),
     ]);
   } catch (err) {
     console.warn("In-process home fetch fell back to muschioApi:", err);
@@ -113,6 +120,7 @@ export default async function HomePage({
       liveBrands,
       liveNotes,
       liveCollections,
+      liveJournalPost,
     ] = await Promise.all([
       muschioApi.getActiveBanners("HERO_SLIDER"),
       muschioApi.getActiveBanners("CAMPAIGN_MID"),
@@ -122,6 +130,7 @@ export default async function HomePage({
       muschioApi.getBrands(),
       muschioApi.getNotes({ limit: 6 }),
       muschioApi.getCollections({ featured: true }),
+      muschioApi.getBlogPosts(1, 1).then((r: any) => (Array.isArray(r) ? r[0] : (r?.items ? r.items[0] : null))),
     ]);
   }
 
@@ -324,14 +333,14 @@ export default async function HomePage({
     </section>
   );
 
-  const renderFeaturedProducts = () => (
+  const renderFeaturedProducts = (sec?: any) => (
     <section key="FEATURED_PRODUCTS" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       <CollectionSlider
-        eyebrow={c("SIGNATURE SELECTION", "المختارات المميزة")}
-        title={c("Curated Masterpieces", "تحف عطرية مختارة")}
+        eyebrow={c((sec?.config as any)?.eyebrowEn || "SIGNATURE SELECTION", (sec?.config as any)?.eyebrowAr || "المختارات المميزة")}
+        title={c(sec?.titleEn || "Curated Masterpieces", sec?.titleAr || "تحف عطرية مختارة")}
         subtitle={c(
-          "Explore our rare extraits de parfum, aged attars, and private collections hand-curated for olfactory connoisseurs.",
-          "استكشف أنقى خلاصات العطور العالمية والأدهان المعتقة المنتقاة بعناية لصفوة عشاق العطور.",
+          sec?.subtitleEn || "Explore our rare extraits de parfum, aged attars, and private collections hand-curated for olfactory connoisseurs.",
+          sec?.subtitleAr || "استكشف أنقى خلاصات العطور العالمية والأدهان المعتقة المنتقاة بعناية لصفوة عشاق العطور.",
         )}
         viewAllHref="/shop"
         viewAllText={c("Shop All Flacons", "تسوق جميع العطور")}
@@ -343,15 +352,15 @@ export default async function HomePage({
     </section>
   );
 
-  const renderHousesGrid = () => (
+  const renderHousesGrid = (sec?: any) => (
     <section key="HOUSES_GRID" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
         <div>
           <span className="eyebrow mb-1">
-            {c("THE HOUSES", "دور العطور")}
+            {c((sec?.config as any)?.eyebrowEn || "THE HOUSES", (sec?.config as any)?.eyebrowAr || "دور العطور")}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
-            {c("Shop by Fragrance House", "تسوق حسب الدار")}
+            {c(sec?.titleEn || "Shop by Fragrance House", sec?.titleAr || "تسوق حسب الدار")}
           </h2>
         </div>
         <Link href="/brands" className="editorial-text-link">
@@ -384,15 +393,15 @@ export default async function HomePage({
     </section>
   );
 
-  const renderNotesGrid = () => (
+  const renderNotesGrid = (sec?: any) => (
     <section key="NOTES_GRID" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
         <div>
           <span className="eyebrow mb-1">
-            {c("THE OLFACTORY LIBRARY", "المكتبة العطرية")}
+            {c((sec?.config as any)?.eyebrowEn || "THE OLFACTORY LIBRARY", (sec?.config as any)?.eyebrowAr || "المكتبة العطرية")}
           </span>
           <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
-            {c("Explore by Key Notes", "استكشف حسب النوتات")}
+            {c(sec?.titleEn || "Explore by Key Notes", sec?.titleAr || "استكشف حسب النوتات")}
           </h2>
         </div>
         <Link href="/notes" className="editorial-text-link">
@@ -529,13 +538,13 @@ export default async function HomePage({
     </section>
   );
 
-  const renderDiscoverySets = () => (
+  const renderDiscoverySets = (sec?: any) => (
     <section key="DISCOVERY_SETS" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       <div className="grid grid-cols-1 md:grid-cols-12 border border-luxury-border bg-luxury-surface overflow-hidden rounded-sm">
         <div className="md:col-span-5 relative min-h-[340px] bg-luxury-surface2">
           <Image
-            src={photo("photo-1592945403244-b3fbafd7f539", 1000)}
-            alt="Muschio 5x2ml Discovery Set"
+            src={(sec?.config as any)?.imageUrl || photo("photo-1592945403244-b3fbafd7f539", 1000)}
+            alt={c(sec?.titleEn || "Muschio 5x2ml Discovery Set", sec?.titleAr || "مجموعة عينات موسكيو")}
             fill
             sizes="(max-width: 768px) 100vw, 40vw"
             className="object-cover"
@@ -543,15 +552,15 @@ export default async function HomePage({
         </div>
         <div className="md:col-span-7 p-8 sm:p-12 lg:p-16 flex flex-col justify-center items-start space-y-5">
           <span className="eyebrow text-accent">
-            {c("CURATED SAMPLING · 5 X 2ML", "مجموعة العينات المخصصة · ٥ × ٢ مل")}
+            {c((sec?.config as any)?.eyebrowEn || "CURATED SAMPLING · 5 X 2ML", (sec?.config as any)?.eyebrowAr || "مجموعة العينات المخصصة · ٥ × ٢ مل")}
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl text-luxury-text font-normal leading-tight">
-            {c("A Signature Scent Starts with Discovery.", "عطرك المميز يبدأ بتجربة حقيقية.")}
+            {c(sec?.titleEn || "A Signature Scent Starts with Discovery.", sec?.titleAr || "عطرك المميز يبدأ بتجربة حقيقية.")}
           </h2>
           <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed max-w-lg">
             {c(
-              "Build your personal box of 5 official maison discovery vials (2ml each). Experience each flacon across multiple days on your skin before acquiring a full bottle. Includes a redeemable voucher toward any full bottle.",
-              "صمّم صندوقك الخاص المكون من ٥ عينات رسمية (٢ مل لكل عينة). جرّب كل عطر على بشرتك لعدة أيام قبل اختيار زجاجتك الكاملة، مع قسيمة شرائية تُخصم بالكامل عند شراء أي زجاجة.",
+              sec?.subtitleEn || "Build your personal box of 5 official maison discovery vials (2ml each). Experience each flacon across multiple days on your skin before acquiring a full bottle. Includes a redeemable voucher toward any full bottle.",
+              sec?.subtitleAr || "صمّم صندوقك الخاص المكون من ٥ عينات رسمية (٢ مل لكل عينة). جرّب كل عطر على بشرتك لعدة أيام قبل اختيار زجاجتك الكاملة، مع قسيمة شرائية تُخصم بالكامل عند شراء أي زجاجة.",
             )}
           </p>
           <div className="pt-2">
@@ -565,60 +574,77 @@ export default async function HomePage({
     </section>
   );
 
-  const renderJournalFeature = () => (
-    <section key="JOURNAL_FEATURE" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-      <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
-        <div>
-          <span className="eyebrow mb-1">
-            {c("EDITORIAL & ESSAYS", "المقالات والطقوس العطرية")}
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
-            {c("The Muschio Journal", "مجلة موسكيو")}
-          </h2>
-        </div>
-        <Link href="/journal" className="editorial-text-link">
-          {c("Visit Journal", "تصفح المجلة")} ↗
-        </Link>
-      </div>
+  const renderJournalFeature = (sec?: any) => {
+    const post = liveJournalPost;
+    const postTitle = post
+      ? c(post.titleEn, post.titleAr)
+      : c(
+          "The Ancient Chemistry of Layering: When Cambodian Oud Meets Royal Taif Rose",
+          "فن مزج العطور التاريخي: لقاء العود الكمبودي بورد الطائف الملكي",
+        );
+    const postExcerpt = post
+      ? c(post.excerptEn || "", post.excerptAr || "")
+      : c(
+          "Explore the revered heritage of fragrance layering across the Arabian Gulf—from selecting the dense woody anchor to misting delicate crystalline florals.",
+          "اكتشف التقاليد الخليجية العريقة في مزج العطور وطبقاتها—من اختيار القاعدة الخشبية الدافئة إلى نثر النفحات الوردية الكريستالية.",
+        );
+    const postSlug = post?.slug || "art-of-layering-oud-and-taif-rose";
+    const postCategory = post?.category
+      ? c(post.category.nameEn, post.category.nameAr)
+      : c("RITUALS OF THE GULF", "طقوس الخليج");
+    const postImage = post?.coverImageUrl || photo("photo-1594035910387-fea47794261f", 800);
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border border-luxury-border bg-luxury-surface p-6 sm:p-10 lg:p-12 overflow-hidden rounded-sm">
-        <div className="md:col-span-7 space-y-4 flex flex-col justify-center">
-          <span className="eyebrow text-accent">{c("RITUALS OF THE GULF", "طقوس الخليج")}</span>
-          <h3 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal leading-snug">
-            {c(
-              "The Ancient Chemistry of Layering: When Cambodian Oud Meets Royal Taif Rose",
-              "فن مزج العطور التاريخي: لقاء العود الكمبودي بورد الطائف الملكي",
+    return (
+      <section key="JOURNAL_FEATURE" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
+        <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
+          <div>
+            <span className="eyebrow mb-1">
+              {c((sec?.config as any)?.eyebrowEn || "EDITORIAL & ESSAYS", (sec?.config as any)?.eyebrowAr || "المقالات والطقوس العطرية")}
+            </span>
+            <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
+              {c(sec?.titleEn || "The Muschio Journal", sec?.titleAr || "مجلة موسكيو")}
+            </h2>
+          </div>
+          <Link href="/journal" className="editorial-text-link">
+            {c("Visit Journal", "تصفح المجلة")} ↗
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 border border-luxury-border bg-luxury-surface p-6 sm:p-10 lg:p-12 overflow-hidden rounded-sm">
+          <div className="md:col-span-7 space-y-4 flex flex-col justify-center">
+            <span className="eyebrow text-accent">{postCategory}</span>
+            <h3 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal leading-snug">
+              {postTitle}
+            </h3>
+            {postExcerpt && (
+              <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
+                {postExcerpt}
+              </p>
             )}
-          </h3>
-          <p className="text-xs sm:text-sm text-luxury-muted leading-relaxed">
-            {c(
-              "Explore the revered heritage of fragrance layering across the Arabian Gulf—from selecting the dense woody anchor to misting delicate crystalline florals.",
-              "اكتشف التقاليد الخليجية العريقة في مزج العطور وطبقاتها—من اختيار القاعدة الخشبية الدافئة إلى نثر النفحات الوردية الكريستالية.",
-            )}
-          </p>
-          <div className="pt-2">
-            <Link
-              href="/journal/art-of-layering-oud-and-taif-rose"
-              className="editorial-text-link"
-            >
-              {c("Read the Essay", "اقرأ المقال الكامل")} ↗
-            </Link>
+            <div className="pt-2">
+              <Link
+                href={`/journal/${postSlug}`}
+                className="editorial-text-link"
+              >
+                {c("Read the Essay", "اقرأ المقال الكامل")} ↗
+              </Link>
+            </div>
+          </div>
+          <div className="md:col-span-5 relative min-h-[260px] bg-luxury-surface2 border border-luxury-border overflow-hidden rounded-sm">
+            <Image
+              src={postImage}
+              alt={postTitle}
+              fill
+              sizes="(max-width: 768px) 100vw, 40vw"
+              className="object-cover"
+            />
           </div>
         </div>
-        <div className="md:col-span-5 relative min-h-[260px] bg-luxury-surface2 border border-luxury-border overflow-hidden rounded-sm">
-          <Image
-            src={photo("photo-1594035910387-fea47794261f", 800)}
-            alt="Fragrance Layering Ritual"
-            fill
-            sizes="(max-width: 768px) 100vw, 40vw"
-            className="object-cover"
-          />
-        </div>
-      </div>
-    </section>
-  );
+      </section>
+    );
+  };
 
-  const renderTrustIndicators = () => (
+  const renderTrustIndicators = (_sec?: any) => (
     <section key="TRUST_INDICATORS" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 p-8 border border-luxury-border bg-luxury-surface text-center rounded-sm">
         <div className="flex flex-col items-center space-y-2 p-4">
@@ -699,19 +725,19 @@ export default async function HomePage({
           case "DISCOVERY_STRIP":
             return renderDiscoveryStrip();
           case "FEATURED_PRODUCTS":
-            return renderFeaturedProducts();
+            return renderFeaturedProducts(sec);
           case "HOUSES_GRID":
-            return renderHousesGrid();
+            return renderHousesGrid(sec);
           case "NOTES_GRID":
-            return renderNotesGrid();
+            return renderNotesGrid(sec);
           case "CUSTOM_BANNER":
             return renderCustomBanner();
           case "DISCOVERY_SETS":
-            return renderDiscoverySets();
+            return renderDiscoverySets(sec);
           case "JOURNAL_FEATURE":
-            return renderJournalFeature();
+            return renderJournalFeature(sec);
           case "TRUST_INDICATORS":
-            return renderTrustIndicators();
+            return renderTrustIndicators(sec);
           default:
             return null;
         }
