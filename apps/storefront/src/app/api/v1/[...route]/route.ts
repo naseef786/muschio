@@ -953,26 +953,24 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         },
       }).catch((err) => console.error("Failed to log ORDER_CREATED event:", err));
 
-      // Trigger transactional emails asynchronously
-      EmailService.sendOrderConfirmation(orderToLog).catch((err) =>
-        console.error("Failed to send order confirmation email:", err)
-      );
-      EmailService.sendAdminOrderAlert(orderToLog).catch((err) =>
-        console.error("Failed to send admin order alert email:", err)
-      );
-
-      // Trigger transactional WhatsApp messages asynchronously
-      WhatsAppService.sendOrderConfirmation(orderToLog).catch((err) =>
-        console.error("Failed to send WhatsApp order confirmation:", err)
-      );
-      WhatsAppService.sendAdminOrderAlert(orderToLog).catch((err) =>
-        console.error("Failed to send WhatsApp admin alert:", err)
-      );
+      // Dispatch transactional confirmations to customer and admin
+      // In serverless environments (Vercel), we MUST await or promise-settle before returning
+      // so the container doesn't terminate before the SMTP/API socket flushes.
+      try {
+        await Promise.allSettled([
+          EmailService.sendOrderConfirmation(orderToLog),
+          EmailService.sendAdminOrderAlert(orderToLog),
+          WhatsAppService.sendOrderConfirmation(orderToLog),
+          WhatsAppService.sendAdminOrderAlert(orderToLog),
+        ]);
+      } catch (notifyErr) {
+        console.error("Order notification dispatch error:", notifyErr);
+      }
 
       return success(storefrontOrder(orderToLog), 201);
     }
 
-    // 7b. Payment Session Initiation
+    // 7b. Payment Session Initiation (Stripe Hosted Checkout / Apple Pay / Google Pay)
     if (path === "payments/session") {
       const { orderId, amount, currency, method, returnUrl, cancelUrl, customerEmail, customerPhone } = body || {};
       if (!orderId) {
@@ -989,7 +987,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
 
       try {
-        const session = await PaymentService.initiatePayment({
+        const session = await (PaymentService as any).initiatePayment({
           orderId,
           amount: Number(amount),
           currency: currency || "AED",
@@ -1001,17 +999,55 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         });
         return success(session);
       } catch (err: any) {
-        console.warn("Stripe initiation in test/fallback mode:", err?.message || err);
-        // Seamless fallback to order confirmation for test orders
-        return success({
-          id: `test_${Date.now()}`,
-          redirectUrl: returnUrl,
-          status: "test_mode",
-        });
+        console.error("Stripe initiation error:", err?.message || err);
+        return error("PAYMENT_SESSION_FAILED", err?.message || "Failed to initiate payment session", err?.statusCode || 500);
       }
     }
 
-    // 7c. Stripe Webhook Handler (PCI-DSS & SCA Compliant Settlement)
+    // 7c. Payment Session Verification (Return from Stripe Hosted Checkout)
+    if (path === "payments/verify-session") {
+      const sessionId = body?.sessionId || req.nextUrl.searchParams.get("session_id");
+      if (!sessionId) {
+        return error("INVALID_INPUT", "sessionId is required", 400);
+      }
+
+      try {
+        const verifyRes = await (PaymentService as any).verifyPaymentSession(sessionId);
+        if (verifyRes.paid && verifyRes.order) {
+          const paidOrder = verifyRes.order;
+
+          // Dispatch confirmation email & admin alert if newly paid
+          if (verifyRes.isNewlyPaid) {
+            try {
+              await Promise.allSettled([
+                EmailService.sendOrderConfirmation(paidOrder),
+                EmailService.sendAdminOrderAlert(paidOrder),
+                WhatsAppService.sendOrderConfirmation(paidOrder),
+                WhatsAppService.sendAdminOrderAlert(paidOrder),
+              ]);
+            } catch (notifyErr) {
+              console.error("Payment confirmation notification error:", notifyErr);
+            }
+          }
+
+          return success({
+            paid: true,
+            status: "PAID",
+            order: storefrontOrder(paidOrder),
+          });
+        }
+
+        return success({
+          paid: false,
+          status: verifyRes.status || "UNPAID",
+        });
+      } catch (err: any) {
+        console.error("Payment session verification failed:", err);
+        return error("PAYMENT_VERIFICATION_FAILED", err?.message || "Verification failed", err?.statusCode || 400);
+      }
+    }
+
+    // 7d. Stripe Webhook Handler (PCI-DSS & SCA Compliant Settlement)
     if (path === "payments/webhook" || path === "payments/stripe-webhook") {
       const signature = req.headers.get("stripe-signature");
       if (!signature) {
@@ -1019,7 +1055,22 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
       try {
         const rawBody = Buffer.from(JSON.stringify(body || {}), "utf-8");
-        const result = await PaymentService.handleStripeWebhook(rawBody, signature);
+        const result = await (PaymentService as any).handleStripeWebhook(rawBody, signature);
+
+        // If webhook settled payment, verify and dispatch emails
+        if (result && result.status === "PROCESSED" && body?.data?.object?.metadata?.orderId) {
+          const orderId = body.data.object.metadata.orderId;
+          const freshOrder = await CheckoutService.getOrderById(orderId).catch(() => null);
+          if (freshOrder) {
+            await Promise.allSettled([
+              EmailService.sendOrderConfirmation(freshOrder),
+              EmailService.sendAdminOrderAlert(freshOrder),
+              WhatsAppService.sendOrderConfirmation(freshOrder),
+              WhatsAppService.sendAdminOrderAlert(freshOrder),
+            ]).catch(() => null);
+          }
+        }
+
         return success(result);
       } catch (err: any) {
         console.error("Stripe webhook processing error:", err);

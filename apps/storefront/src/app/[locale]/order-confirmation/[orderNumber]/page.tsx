@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay } from "@muschio/ui";
 import { Link } from "../../../../navigation";
@@ -38,6 +39,8 @@ export default function OrderStatusPage({
 }) {
   const isAr = locale === "ar";
   const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
+  const searchParams = useSearchParams();
+  const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState<StorefrontOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [paymentError, setPaymentError] = useState("");
@@ -52,6 +55,67 @@ export default function OrderStatusPage({
   const [cardCvc, setCardCvc] = useState("");
   const [cardHolder, setCardHolder] = useState("");
   const [processingCard, setProcessingCard] = useState(false);
+
+  // Automatic Stripe Checkout Session Verification
+  useEffect(() => {
+    if (!sessionId) return;
+    let isCancelled = false;
+
+    async function verifyStripePayment() {
+      try {
+        const res = await muschioApi.verifyPaymentSession(sessionId!);
+        if (!isCancelled && res?.paid && res?.order) {
+          setOrder(res.order);
+          try {
+            cart.clearCart();
+            localStorage.removeItem("muschio_pending_order");
+          } catch {}
+          setPaymentSuccess(
+            c(
+              "Payment successfully confirmed via Stripe! Your acquisition is now in Atelier preparation.",
+              "تم تأكيد الدفع بنجاح عبر Stripe! طلبك الآن قيد التجهيز الملكي في المشغل.",
+            ),
+          );
+        }
+      } catch (err) {
+        console.warn("Stripe session verification error:", err);
+      }
+    }
+
+    void verifyStripePayment();
+    return () => {
+      isCancelled = true;
+    };
+  }, [sessionId, cart, c]);
+
+  const handleLaunchStripeCheckout = async () => {
+    if (!order || processingCard) return;
+    setProcessingCard(true);
+    setPaymentError("");
+    try {
+      const origin = window.location.origin;
+      const session = await muschioApi.initiatePaymentSession({
+        orderId: order.id,
+        amount: Number(order.totalAmount),
+        currency: order.currency || "AED",
+        method: "CREDIT_CARD",
+        returnUrl: `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}`,
+        customerEmail: order.shippingAddress?.email || (order as any).customer?.email,
+        customerPhone: order.shippingAddress?.phone || (order as any).customer?.phone,
+      });
+
+      if (session && session.redirectUrl) {
+        window.location.assign(session.redirectUrl);
+        return;
+      }
+      throw new Error(c("Failed to launch secure payment session", "تعذر بدء جلسة الدفع الآمن"));
+    } catch (err: any) {
+      setPaymentError(err?.message || c("Payment initialization failed", "فشل بدء الدفع"));
+    } finally {
+      setProcessingCard(false);
+    }
+  };
 
   const refresh = useCallback(
     async (isSilent = false) => {
@@ -693,14 +757,19 @@ export default function OrderStatusPage({
 
               {/* Pay Now Button if Unpaid */}
               {order && !isPaid && !cancelled && (
-                <div className="pt-2">
+                <div className="pt-2 space-y-2">
                   <button
                     type="button"
-                    onClick={() => setShowCardModal(true)}
-                    className="w-full py-3 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm shadow-sm"
+                    disabled={processingCard}
+                    onClick={handleLaunchStripeCheckout}
+                    className="w-full py-3 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm shadow-sm disabled:opacity-50"
                   >
-                    <CreditCard size={14} />
-                    <span>{c("Pay Now via Card (Instant)", "الدفع الآن بالبطاقة (فوري)")}</span>
+                    <Lock size={14} className="text-accent" />
+                    <span>
+                      {processingCard
+                        ? c("Connecting to Stripe…", "جارٍ الاتصال بـ Stripe…")
+                        : c("Pay with Card / Apple Pay (Stripe)", "الدفع بالبطاقة أو Apple Pay (عبر Stripe)")}
+                    </span>
                   </button>
                 </div>
               )}

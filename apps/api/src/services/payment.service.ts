@@ -135,20 +135,40 @@ export class PaymentService {
     request: PaymentSessionRequest,
   ): Promise<PaymentSessionResponse> {
     this.assertAvailable(request.method);
-    const origin = new URL(
-      process.env.STOREFRONT_URL || "https://muschio.vercel.app",
-    );
+    const allowedOrigins = [
+      process.env.STOREFRONT_URL,
+      process.env.NEXT_PUBLIC_SITE_URL,
+      "https://www.muschio.ae",
+      "https://muschio.ae",
+      "https://muschio.vercel.app",
+      "http://localhost:3000",
+      "http://localhost:3001",
+    ]
+      .filter(Boolean)
+      .map((u) => {
+        try {
+          return new URL(u!).origin.toLowerCase();
+        } catch {
+          return "";
+        }
+      })
+      .filter(Boolean);
+
     const returns = [new URL(request.returnUrl), new URL(request.cancelUrl)];
     if (
       returns.some(
-        (url) => url.origin !== origin.origin || url.username || url.password,
+        (url) =>
+          !allowedOrigins.includes(url.origin.toLowerCase()) ||
+          url.username ||
+          url.password,
       )
-    )
+    ) {
       throw new ApiError(
         400,
         "INVALID_RETURN_URL",
         "Payment return URL must belong to the storefront",
       );
+    }
     const { order, payment } = await prisma.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${request.orderId} FOR UPDATE`;
       const order = await tx.order.findUnique({
@@ -275,6 +295,126 @@ export class PaymentService {
       redirectUrl: redirectFor(session),
       status: "REQUIRES_ACTION",
     };
+  }
+
+  static async verifyPaymentSession(sessionId: string) {
+    if (!sessionId || typeof sessionId !== "string" || !sessionId.startsWith("cs_")) {
+      throw new ApiError(400, "INVALID_SESSION_ID", "Valid Stripe session id required");
+    }
+
+    const stripeKey = process.env.STRIPE_SECRET_KEY;
+    if (!stripeKey) {
+      throw new ApiError(503, "PAYMENTS_UNAVAILABLE", "Stripe secret key not configured");
+    }
+
+    const sessionRes = await fetch(
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+      {
+        method: "GET",
+        headers: { Authorization: `Bearer ${stripeKey}` },
+      },
+    );
+
+    if (!sessionRes.ok) {
+      throw new ApiError(502, "PAYMENT_LOOKUP_FAILED", "Failed to retrieve session from Stripe");
+    }
+
+    const sessionData = await sessionRes.json();
+    const orderId =
+      sessionData.metadata?.orderId || sessionData.client_reference_id;
+
+    if (!orderId) {
+      throw new ApiError(404, "ORDER_NOT_FOUND", "No order associated with this Stripe session");
+    }
+
+    return await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({
+        where: { id: orderId },
+        include: {
+          items: true,
+          shippingAddress: true,
+          customer: true,
+          payments: true,
+        },
+      });
+
+      if (!order) {
+        throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
+      }
+
+      if (sessionData.payment_status === "paid") {
+        let isNewlyPaid = false;
+        if (order.status !== "PAID") {
+          isNewlyPaid = true;
+          await InventoryService.commitOrderInventory(order.id, tx);
+          await tx.order.update({
+            where: { id: order.id },
+            data: { status: "PAID" },
+          });
+
+          const existingPayment = await tx.payment.findFirst({
+            where: { orderId: order.id },
+            orderBy: { createdAt: "desc" },
+          });
+
+          if (existingPayment) {
+            await tx.payment.update({
+              where: { id: existingPayment.id },
+              data: { status: "CAPTURED", gatewayReference: sessionId },
+            });
+          } else {
+            await tx.payment.create({
+              data: {
+                orderId: order.id,
+                provider: "CREDIT_CARD",
+                status: "CAPTURED",
+                amount: order.totalAmount,
+                currency: order.currency,
+                gatewayReference: sessionId,
+              },
+            });
+          }
+
+          await tx.businessEvent.create({
+            data: {
+              eventName: "ORDER_PAID",
+              aggregateType: "ORDER",
+              aggregateId: order.id,
+              payload: {
+                orderNumber: order.orderNumber,
+                gateway: "STRIPE_CHECKOUT",
+                sessionId,
+                totalAmount: Number(order.totalAmount),
+                currency: order.currency,
+                paidAt: new Date().toISOString(),
+              },
+            },
+          });
+        }
+
+        const freshOrder = await tx.order.findUnique({
+          where: { id: order.id },
+          include: {
+            items: true,
+            shippingAddress: true,
+            customer: true,
+            payments: true,
+          },
+        });
+
+        return {
+          paid: true,
+          isNewlyPaid,
+          order: freshOrder,
+        };
+      }
+
+      return {
+        paid: false,
+        status: sessionData.payment_status,
+        order,
+      };
+    });
   }
   static async handleStripeWebhook(
     rawBody?: Buffer,

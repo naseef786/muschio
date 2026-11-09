@@ -420,6 +420,13 @@ export const muschioApi = {
       body: JSON.stringify(request),
     });
   },
+
+  async verifyPaymentSession(sessionId: string): Promise<any | null> {
+    return apiRequest<any>("/payments/verify-session", {
+      method: "POST",
+      body: JSON.stringify({ sessionId }),
+    });
+  },
   async chargeCardPayment(payload: {
     orderId?: string;
     orderNumber?: string;
