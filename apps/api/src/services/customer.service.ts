@@ -54,6 +54,35 @@ function formatClientProfile(customer: any) {
   };
 }
 
+function deduplicateAddresses<T extends { id: string; streetAddress: string; city: string; countryCode: string }>(
+  addresses: T[],
+): T[] {
+  const seen = new Set<string>();
+  const unique: T[] = [];
+  const duplicateIds: string[] = [];
+
+  for (const addr of addresses) {
+    const key = `${(addr.streetAddress || "").trim().toLowerCase()}|${(addr.city || "").trim().toLowerCase()}|${(addr.countryCode || "AE").trim().toUpperCase()}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      unique.push(addr);
+    } else {
+      duplicateIds.push(addr.id);
+    }
+  }
+
+  if (duplicateIds.length > 0) {
+    prisma.address
+      .updateMany({
+        where: { id: { in: duplicateIds } },
+        data: { customerId: null, isDefault: false },
+      })
+      .catch(() => {});
+  }
+
+  return unique;
+}
+
 export class CustomerService {
   static createToken(customerId: string, email: string) {
     return jwt.sign(
@@ -127,7 +156,7 @@ export class CustomerService {
     const token = this.createToken(customer.id, customer.email);
     return {
       customer: formatClientProfile(customer),
-      addresses: customer.addresses,
+      addresses: deduplicateAddresses(customer.addresses),
       token,
     };
   }
@@ -177,7 +206,7 @@ export class CustomerService {
     const token = this.createToken(customer.id, customer.email);
     return {
       customer: formatClientProfile(customer),
-      addresses: customer.addresses,
+      addresses: deduplicateAddresses(customer.addresses),
       token,
     };
   }
@@ -197,7 +226,7 @@ export class CustomerService {
 
     return {
       customer: formatClientProfile(customer),
-      addresses: customer.addresses,
+      addresses: deduplicateAddresses(customer.addresses),
     };
   }
 
@@ -244,16 +273,52 @@ export class CustomerService {
   // -------------------------------------------------------------
 
   static async getAddresses(customerId: string) {
-    return prisma.address.findMany({
+    const rawAddresses = await prisma.address.findMany({
       where: { customerId },
       orderBy: [{ isDefault: "desc" }, { createdAt: "desc" }],
     });
+    return deduplicateAddresses(rawAddresses);
   }
 
   static async addAddress(customerId: string, input: CreateSavedAddress) {
     return prisma.$transaction(async (tx) => {
+      const normStreet = (input.streetAddress || "").trim().toLowerCase();
+      const normCity = (input.city || "").trim().toLowerCase();
+      const normCountry = (input.countryCode || "AE").trim().toUpperCase();
+
+      const existingAddresses = await tx.address.findMany({
+        where: { customerId },
+      });
+
+      const match = existingAddresses.find(
+        (a) =>
+          (a.streetAddress || "").trim().toLowerCase() === normStreet &&
+          (a.city || "").trim().toLowerCase() === normCity &&
+          (a.countryCode || "AE").trim().toUpperCase() === normCountry,
+      );
+
+      if (match) {
+        if (input.isDefault) {
+          await tx.address.updateMany({
+            where: { customerId },
+            data: { isDefault: false },
+          });
+        }
+        return tx.address.update({
+          where: { id: match.id },
+          data: {
+            fullName: input.fullName || match.fullName,
+            phone: input.phone || match.phone,
+            apartment: input.apartment ?? match.apartment,
+            emirateState: input.emirateState ?? match.emirateState,
+            postalCode: input.postalCode ?? match.postalCode,
+            isDefault: input.isDefault ?? match.isDefault,
+          },
+        });
+      }
+
       // If this address should be default, or if it's the customer's first address, mark as default
-      const existingCount = await tx.address.count({ where: { customerId } });
+      const existingCount = existingAddresses.length;
       const makeDefault = input.isDefault || existingCount === 0;
 
       if (makeDefault) {
@@ -327,9 +392,22 @@ export class CustomerService {
       throw new ApiError(404, "ADDRESS_NOT_FOUND", "Address not found");
     }
 
-    await prisma.address.delete({
-      where: { id: addressId },
+    // Check if an existing order references this address snapshot
+    const ordersCount = await prisma.order.count({
+      where: { shippingAddressId: addressId },
     });
+
+    if (ordersCount > 0) {
+      // Safely unlink from customer profile so historical orders preserve shipping record
+      await prisma.address.update({
+        where: { id: addressId },
+        data: { customerId: null, isDefault: false },
+      });
+    } else {
+      await prisma.address.delete({
+        where: { id: addressId },
+      });
+    }
 
     // If deleted address was default, make the next one default
     if (address.isDefault) {

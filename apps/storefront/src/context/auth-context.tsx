@@ -49,6 +49,22 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 
 
+function deduplicateAddressList(list: SavedAddress[]): SavedAddress[] {
+  const seen = new Set<string>();
+  const unique: SavedAddress[] = [];
+  for (const addr of list) {
+    const street = (addr.addressLine1 || "").trim().toLowerCase();
+    const city = (addr.city || "").trim().toLowerCase();
+    const country = (addr.country || "AE").trim().toUpperCase();
+    const key = `${street}|${city}|${country}`;
+    if (street && !seen.has(key)) {
+      seen.add(key);
+      unique.push(addr);
+    }
+  }
+  return unique;
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<ClientProfile | null>(null);
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -65,7 +81,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       const storedAddresses = localStorage.getItem("muschio_client_addresses");
       if (storedAddresses) {
-        setSavedAddresses(JSON.parse(storedAddresses));
+        const parsed = JSON.parse(storedAddresses);
+        if (Array.isArray(parsed)) {
+          setSavedAddresses(deduplicateAddressList(parsed));
+        }
       }
     } catch {
       // Ignore local storage parse errors
@@ -109,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           addressLine1: a.streetAddress,
           isDefault: Boolean(a.isDefault),
         }));
-        setSavedAddresses(formatted);
+        setSavedAddresses(deduplicateAddressList(formatted));
       }
     }).catch(() => {});
 
@@ -211,32 +230,54 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const saveAddress = useCallback(
     (addrInput: Omit<SavedAddress, "id"> & { id?: string }): SavedAddress => {
-      const newAddress: SavedAddress = {
-        ...addrInput,
-        id: addrInput.id || `addr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-        label: addrInput.label || (addrInput.country === "AE" ? "Dubai Address" : "GCC Residence"),
-        isDefault: addrInput.isDefault ?? false,
-      };
+      const street = (addrInput.addressLine1 || "").trim().toLowerCase();
+      const city = (addrInput.city || "").trim().toLowerCase();
+      const country = (addrInput.country || "AE").trim().toUpperCase();
+      const normKey = `${street}|${city}|${country}`;
+
+      let returnedAddress: SavedAddress | null = null;
 
       setSavedAddresses((prev) => {
+        const existingIdx = prev.findIndex((a) => {
+          if (addrInput.id && a.id === addrInput.id) return true;
+          const aKey = `${(a.addressLine1 || "").trim().toLowerCase()}|${(a.city || "").trim().toLowerCase()}|${(a.country || "AE").trim().toUpperCase()}`;
+          return aKey === normKey;
+        });
+
         let updated: SavedAddress[];
-        const existingIdx = prev.findIndex((a) => a.id === newAddress.id);
-        if (existingIdx > -1) {
-          updated = prev.map((a, i) => (i === existingIdx ? newAddress : a));
+        const target = existingIdx > -1 ? prev[existingIdx] : undefined;
+        if (target) {
+          const merged: SavedAddress = {
+            ...target,
+            ...addrInput,
+            id: target.id,
+            label: addrInput.label || target.label,
+            isDefault: addrInput.isDefault ?? target.isDefault,
+          };
+          returnedAddress = merged;
+          updated = prev.map((a, i) => (i === existingIdx ? merged : a));
         } else {
+          const newAddress: SavedAddress = {
+            ...addrInput,
+            id: addrInput.id || `addr-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            label: addrInput.label || (addrInput.country === "AE" ? "Dubai Address" : "GCC Residence"),
+            isDefault: addrInput.isDefault ?? (prev.length === 0),
+          };
+          returnedAddress = newAddress;
           updated = [newAddress, ...prev];
         }
 
         // If this address is default, unmark others
-        if (newAddress.isDefault) {
-          updated = updated.map((a) => (a.id === newAddress.id ? a : { ...a, isDefault: false }));
+        if (addrInput.isDefault) {
+          const targetId = returnedAddress?.id;
+          updated = updated.map((a) => (a.id === targetId ? { ...a, isDefault: true } : { ...a, isDefault: false }));
         }
 
-        return updated;
+        return deduplicateAddressList(updated);
       });
 
       // Sync with backend if client is signed in
-      if (user) {
+      if (user && street) {
         muschioApi
           .createSavedAddress({
             fullName: addrInput.fullName,
@@ -252,14 +293,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           .then((created) => {
             if (created?.id) {
               setSavedAddresses((prev) =>
-                prev.map((a) => (a.id === newAddress.id ? { ...a, id: created.id } : a)),
+                deduplicateAddressList(
+                  prev.map((a) => (a.id === returnedAddress?.id ? { ...a, id: created.id } : a)),
+                ),
               );
             }
           })
           .catch(() => {});
       }
 
-      return newAddress;
+      return (
+        returnedAddress || {
+          ...addrInput,
+          id: addrInput.id || `addr-${Date.now()}`,
+          label: addrInput.label || "Dubai Address",
+          isDefault: false,
+        }
+      );
     },
     [user],
   );
@@ -299,7 +349,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const deleteAddress = useCallback(
     (id: string) => {
-      setSavedAddresses((prev) => prev.filter((a) => a.id !== id));
+      setSavedAddresses((prev) => {
+        const filtered = prev.filter((a) => a.id !== id);
+        const hadDefault = prev.find((a) => a.id === id)?.isDefault;
+        if (hadDefault && filtered.length > 0 && filtered[0]) {
+          filtered[0].isDefault = true;
+        }
+        return filtered;
+      });
       if (user && !id.startsWith("addr-")) {
         muschioApi.deleteSavedAddress(id).catch(() => {});
       }

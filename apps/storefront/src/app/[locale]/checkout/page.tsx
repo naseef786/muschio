@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ChevronUp,
   ShoppingBag,
+  Trash2,
 } from "lucide-react";
 
 export default function CheckoutPage({
@@ -59,6 +60,7 @@ export default function CheckoutPage({
     isLoggedIn,
     savedAddresses,
     saveAddress,
+    deleteAddress,
     login,
     signup,
     redeemedLoyaltyCredits,
@@ -327,7 +329,7 @@ export default function CheckoutPage({
           paymentMethod: paymentMethod === "CASH_ON_DELIVERY" ? "CASH_ON_DELIVERY" : "CREDIT_CARD",
           currency: "AED",
           customerId: user?.id,
-          saveAddressToProfile: saveToProfile,
+          saveAddressToProfile: saveToProfile && isEnteringNewAddress,
           loyaltyCreditsRedeemed: redeemedLoyaltyCredits,
         });
 
@@ -768,9 +770,10 @@ export default function CheckoutPage({
                 {savedAddresses.map((addr) => {
                   const isSelected = selectedAddressId === addr.id;
                   return (
-                    <button
+                    <div
                       key={addr.id}
-                      type="button"
+                      role="button"
+                      tabIndex={0}
                       onClick={() => {
                         setSelectedAddressId(addr.id);
                         setForm((prev) => ({
@@ -784,7 +787,12 @@ export default function CheckoutPage({
                           country: addr.country,
                         }));
                       }}
-                      className={`text-start p-3.5 border transition-all rounded-sm flex flex-col justify-between ${
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          setSelectedAddressId(addr.id);
+                        }
+                      }}
+                      className={`text-start p-3.5 border transition-all rounded-sm flex flex-col justify-between cursor-pointer relative group ${
                         isSelected
                           ? "border-luxury-text bg-luxury-surface2 shadow-sm"
                           : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
@@ -795,11 +803,34 @@ export default function CheckoutPage({
                           <span className="font-semibold text-xs text-luxury-text truncate">
                             {addr.label || addr.fullName}
                           </span>
-                          {isSelected && (
-                            <span className="w-4 h-4 rounded-full bg-luxury-text text-luxury-canvas flex items-center justify-center text-[9px]">
-                              ✓
-                            </span>
-                          )}
+                          <div className="flex items-center gap-1.5">
+                            {isSelected && (
+                              <span className="w-4 h-4 rounded-full bg-luxury-text text-luxury-canvas flex items-center justify-center text-[9px]">
+                                ✓
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                deleteAddress(addr.id);
+                                if (selectedAddressId === addr.id) {
+                                  const remaining = savedAddresses.filter((a) => a.id !== addr.id);
+                                  if (remaining.length > 0 && remaining[0]) {
+                                    setSelectedAddressId(remaining[0].id);
+                                  } else {
+                                    setSelectedAddressId(null);
+                                    setIsEnteringNewAddress(true);
+                                  }
+                                }
+                              }}
+                              title={c("Remove address", "حذف العنوان")}
+                              aria-label="Delete address"
+                              className="text-luxury-muted hover:text-rose-600 transition-colors p-1 rounded hover:bg-black/5"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
                         </div>
                         <p className="text-[11px] text-luxury-muted truncate">
                           {addr.fullName} · {addr.phone}
@@ -808,7 +839,7 @@ export default function CheckoutPage({
                           {addr.addressLine1}, {addr.city}, {addr.country}
                         </p>
                       </div>
-                    </button>
+                    </div>
                   );
                 })}
               </div>

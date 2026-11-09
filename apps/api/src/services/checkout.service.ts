@@ -175,13 +175,32 @@ export class CheckoutService {
       // Generate Luxury Order Number
       const orderNumber = `MSC-${new Date().getFullYear()}-${randomUUID().slice(0, 18).toUpperCase()}`;
 
-      // 2. Create Address record (optionally link to Customer)
+      // 2. Create Address record (check if already saved to profile to prevent duplicate rows)
+      let shouldLinkAddressToCustomer = false;
+
+      if (payload.saveAddressToProfile && verifiedCustomerId) {
+        const normStreet = (shippingAddress.addressLine1 || "").trim().toLowerCase();
+        const normCity = (shippingAddress.city || "").trim().toLowerCase();
+        const normCountry = (shippingAddress.country || "AE").trim().toUpperCase();
+
+        const existingAddresses = await tx.address.findMany({
+          where: { customerId: verifiedCustomerId },
+          select: { streetAddress: true, city: true, countryCode: true },
+        });
+
+        const alreadyExists = existingAddresses.some(
+          (addr) =>
+            addr.streetAddress.trim().toLowerCase() === normStreet &&
+            addr.city.trim().toLowerCase() === normCity &&
+            addr.countryCode.trim().toUpperCase() === normCountry,
+        );
+
+        shouldLinkAddressToCustomer = !alreadyExists;
+      }
+
       const address = await tx.address.create({
         data: {
-          customerId:
-            payload.saveAddressToProfile && verifiedCustomerId
-              ? verifiedCustomerId
-              : null,
+          customerId: shouldLinkAddressToCustomer ? verifiedCustomerId : null,
           fullName: shippingAddress.fullName,
           phone: shippingAddress.phone,
           streetAddress: shippingAddress.addressLine1 || "Dubai",
