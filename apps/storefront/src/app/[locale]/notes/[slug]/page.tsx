@@ -169,6 +169,7 @@ export default async function NoteDetailPage({
                   }
                   variants={perfume.variants}
                   image={perfume.images?.[0] || "/placeholder-flacon.png"}
+                  images={perfume.images}
                   badge={item.position ? `${item.position} Note` : undefined}
                   locale={locale}
                 />

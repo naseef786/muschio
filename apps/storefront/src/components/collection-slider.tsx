@@ -385,6 +385,7 @@ export function CollectionSlider({
                 variants={product.variants}
                 image={product.image}
                 secondaryImage={product.secondaryImage}
+                images={product.images}
                 badge={product.badge}
                 locale={locale}
                 aspectRatio="3/4"

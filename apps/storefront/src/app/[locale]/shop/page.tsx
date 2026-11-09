@@ -100,6 +100,7 @@ export default function ShopCatalogPage({
         compareAtPrice: variant?.compareAtPrice,
         image: product.images[0] || "/product-placeholder.svg",
         secondaryImage: product.images[1],
+        images: product.images,
         badge: product.brand.type === "NICHE" ? "Haute Niche" : "Private Blend",
         notes: product.notes.map((note) => (isAr ? note.nameAr : note.nameEn)),
         tags: product.tags || [],
@@ -501,6 +502,7 @@ export default function ShopCatalogPage({
                   variants={product.variants}
                   image={product.image}
                   secondaryImage={product.secondaryImage}
+                  images={product.images}
                   badge={product.badge}
                   tags={product.tags}
                   locale={locale}

@@ -148,6 +148,7 @@ export default async function BrandDetailPage({
                 variants={perfume.variants}
                 image={perfume.images?.[0] || "/placeholder-flacon.png"}
                 secondaryImage={perfume.images?.[1]}
+                images={perfume.images}
                 badge={brand.type === "NICHE" ? "Haute Niche" : undefined}
                 locale={locale}
               />

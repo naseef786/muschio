@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart } from "lucide-react";
+import { Heart, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatCurrency } from "@muschio/ui";
 import { useWishlist } from "../context/wishlist-context";
 
@@ -42,6 +42,7 @@ export interface ProductCardProps {
   hasMultipleVariants?: boolean;
   image: string;
   secondaryImage?: string;
+  images?: string[];
   badge?: string | null;
   tags?: Array<{
     id: string;
@@ -67,6 +68,7 @@ export function ProductCard({
   variants,
   image,
   secondaryImage,
+  images,
   badge,
   tags,
   locale = "en",
@@ -76,10 +78,125 @@ export function ProductCard({
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = isInWishlist(slug);
 
-  const [isHovered, setIsHovered] = useState(false);
+  const [, setIsHovered] = useState(false);
 
   const title = isAr && nameAr ? nameAr : nameEn;
-  const displayImage = isHovered && secondaryImage ? secondaryImage : image;
+
+  // Multi-image list resolution (consolidate images, image, secondaryImage without duplicates)
+  const allImages: string[] = useMemo(() => {
+    let list: string[] = [];
+    if (Array.isArray(images) && images.length > 0) {
+      list = images.filter((img): img is string => typeof img === "string" && img.trim().length > 0);
+    } else {
+      list = [image, secondaryImage].filter((img): img is string => typeof img === "string" && img.trim().length > 0);
+    }
+    const unique = list.filter((item, index) => list.indexOf(item) === index);
+    return unique.length > 0 ? unique : [image || "/product-placeholder.svg"];
+  }, [images, image, secondaryImage]);
+
+  const hasMultipleImages = allImages.length > 1;
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+
+  const canGoPrev = activeImageIndex > 0;
+  const canGoNext = activeImageIndex < allImages.length - 1;
+
+  const prevImage = useCallback(
+    (e?: React.MouseEvent | React.TouchEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setActiveImageIndex((prev) => (prev > 0 ? prev - 1 : 0));
+    },
+    [],
+  );
+
+  const nextImage = useCallback(
+    (e?: React.MouseEvent | React.TouchEvent) => {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+      setActiveImageIndex((prev) => (prev < allImages.length - 1 ? prev + 1 : prev));
+    },
+    [allImages.length],
+  );
+
+  // Touch Swipe Handling for Mobile
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
+  const isHorizontalSwipe = useRef(false);
+  const hasSwiped = useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (!hasMultipleImages) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartX.current = touch.clientX;
+    touchStartY.current = touch.clientY;
+    isHorizontalSwipe.current = false;
+    hasSwiped.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!hasMultipleImages || touchStartX.current === null || touchStartY.current === null) return;
+    const touch = e.touches[0];
+    if (!touch) return;
+    const diffX = touch.clientX - touchStartX.current;
+    const diffY = touch.clientY - touchStartY.current;
+
+    if (!isHorizontalSwipe.current) {
+      if (Math.abs(diffX) > 10 && Math.abs(diffX) > Math.abs(diffY)) {
+        isHorizontalSwipe.current = true;
+      }
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!hasMultipleImages || touchStartX.current === null) return;
+    const touch = e.changedTouches[0];
+    if (!touch) return;
+    const diffX = touch.clientX - touchStartX.current;
+
+    if (isHorizontalSwipe.current && Math.abs(diffX) > 30) {
+      hasSwiped.current = true;
+      if (diffX < 0) {
+        nextImage();
+      } else {
+        prevImage();
+      }
+    }
+
+    touchStartX.current = null;
+    touchStartY.current = null;
+    isHorizontalSwipe.current = false;
+
+    if (hasSwiped.current) {
+      setTimeout(() => {
+        hasSwiped.current = false;
+      }, 150);
+    }
+  };
+
+  // Wheel Horizontal Scroll Handling for Desktop Trackpad / Shift-Wheel
+  const lastWheelTime = useRef(0);
+  const handleWheel = (e: React.WheelEvent) => {
+    if (!hasMultipleImages) return;
+
+    const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : 0;
+    if (Math.abs(delta) < 20) return;
+
+    const now = Date.now();
+    if (now - lastWheelTime.current < 350) return;
+
+    if (delta > 0) {
+      lastWheelTime.current = now;
+      nextImage();
+    } else if (delta < 0) {
+      lastWheelTime.current = now;
+      prevImage();
+    }
+  };
 
   // Resolve variants from props
   const activeVariants: ProductCardVariant[] = useMemo(() => {
@@ -209,16 +326,26 @@ export function ProductCard({
     <Link
       href={`/product/${slug}`}
       className="group relative flex flex-col h-full select-none cursor-pointer block font-sans"
+      onClick={(e) => {
+        if (hasSwiped.current) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* 1. Image Container (Clean Luxury Canvas with Zero Padding) */}
+      {/* 1. Image Carousel Container (Clean Luxury Canvas with Zero Padding) */}
       <div
-        className={`relative ${aspectClass} w-full bg-[#F8F8F8] dark:bg-neutral-900 overflow-hidden rounded-none`}
+        className={`relative ${aspectClass} w-full bg-[#F8F8F8] dark:bg-neutral-900 overflow-hidden rounded-none select-none`}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
+        onWheel={handleWheel}
       >
         {/* Out of Stock Indicator */}
         {isOutOfStock && (
-          <div className="absolute top-3 start-3 z-20">
+          <div className="absolute top-3 start-3 z-30 pointer-events-none">
             <span className="px-2 py-0.5 text-[10px] uppercase font-sans tracking-wider bg-white/95 dark:bg-black/90 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
               {isAr ? "غير متوفر" : "Out of Stock"}
             </span>
@@ -238,7 +365,7 @@ export function ProductCard({
               ? "إضافة إلى المفضلة"
               : "Add to Wishlist"
           }
-          className="absolute top-3 end-3 z-20 p-1 text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white transition-transform active:scale-90"
+          className="absolute top-3 end-3 z-30 p-1 text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white transition-transform active:scale-90"
         >
           <Heart
             size={20}
@@ -251,36 +378,56 @@ export function ProductCard({
           />
         </button>
 
-        {/* Product Full-Bleed Image (Zero Padding) */}
-        <div className="relative w-full h-full flex items-center justify-center">
-          <Image
-            src={displayImage || "/product-placeholder.svg"}
-            alt={title}
-            fill
-            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-            className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
-          />
-        </div>
+        {/* Subtle Desktop Left/Right Navigation Arrows (Appears on Hover) */}
+        {hasMultipleImages && (
+          <>
+            {canGoPrev && (
+              <button
+                type="button"
+                onClick={prevImage}
+                aria-label={isAr ? "الصورة السابقة" : "Previous image"}
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
+              >
+                <ChevronLeft size={16} strokeWidth={1.5} />
+              </button>
+            )}
 
-        {/* Subtle Pagination Indicator Dots (Level Shoes Pattern: 5 dots) */}
-        <div className="absolute bottom-2.5 inset-x-0 flex items-center justify-center gap-1.5 z-10 pointer-events-none">
-          <span
-            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-              !isHovered || !secondaryImage
-                ? "bg-black dark:bg-white"
-                : "bg-neutral-300 dark:bg-neutral-600"
-            }`}
-          />
-          <span
-            className={`w-1.5 h-1.5 rounded-full transition-colors duration-300 ${
-              isHovered && secondaryImage
-                ? "bg-black dark:bg-white"
-                : "bg-neutral-300 dark:bg-neutral-600"
-            }`}
-          />
-          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
-          <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 dark:bg-neutral-600" />
+            {canGoNext && (
+              <button
+                type="button"
+                onClick={nextImage}
+                aria-label={isAr ? "الصورة التالية" : "Next image"}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
+              >
+                <ChevronRight size={16} strokeWidth={1.5} />
+              </button>
+            )}
+          </>
+        )}
+
+        {/* Multi-Image Horizontal Carousel Track */}
+        <div
+          dir="ltr"
+          className="w-full h-full flex transition-transform duration-500 ease-out"
+          style={{
+            transform: `translateX(-${activeImageIndex * 100}%)`,
+          }}
+        >
+          {allImages.map((src, idx) => (
+            <div
+              key={`${src}-${idx}`}
+              className="relative w-full h-full shrink-0 flex items-center justify-center"
+            >
+              <Image
+                src={src || "/product-placeholder.svg"}
+                alt={`${title} - flacon ${idx + 1}`}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                className="object-cover object-center transition-transform duration-700 ease-out group-hover:scale-105"
+                priority={idx === 0}
+              />
+            </div>
+          ))}
         </div>
       </div>
 

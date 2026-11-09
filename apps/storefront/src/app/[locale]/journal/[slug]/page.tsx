@@ -118,6 +118,7 @@ export default async function JournalDetailPage({
               compareAtPrice={featuredProduct.variants?.[0]?.compareAtPrice}
               variants={featuredProduct.variants}
               image={featuredProduct.images?.[0] || "/product-placeholder.svg"}
+              images={featuredProduct.images}
               locale={locale}
             />
           </div>

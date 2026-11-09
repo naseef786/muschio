@@ -188,6 +188,7 @@ export default async function HomePage({
       compareAtPrice: v?.compareAtPrice,
       image: p.images?.[0] || p.image || "/product-placeholder.svg",
       secondaryImage: p.images?.[1],
+      images: p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
       badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
       variants: p.variants || [],
     };
@@ -218,6 +219,7 @@ export default async function HomePage({
         compareAtPrice: v?.compareAtPrice,
         image: p.images?.[0] || p.image || "/product-placeholder.svg",
         secondaryImage: p.images?.[1],
+        images: p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
         badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
         variants: p.variants || [],
       };

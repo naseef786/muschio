@@ -1011,6 +1011,7 @@ export function ProductExperience({
                 variants: p.variants,
                 image: p.images?.[0] || p.image || "/product-placeholder.svg",
                 secondaryImage: p.images?.[1],
+                images: p.images,
                 locale: locale,
               };
             })}
@@ -1041,6 +1042,7 @@ export function ProductExperience({
                 variants: p.variants,
                 image: p.images?.[0] || p.image || "/product-placeholder.svg",
                 secondaryImage: p.images?.[1],
+                images: p.images,
                 locale: locale,
               };
             })}
