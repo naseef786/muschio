@@ -433,7 +433,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
               },
             },
           },
-          payments: { orderBy: { createdAt: "desc" } },
+          payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
           shippingAddress: true,
           fulfillments: { include: { shipments: true } },
           customer: true,
@@ -552,6 +552,9 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
 
       return success({
         ...base,
+        payments: order.payments,
+        paymentDetails: base.paymentDetails,
+        paymentMethod: base.paymentMethod,
         items: order.items.map((item: any) => ({
           id: item.id,
           productNameEn: item.productNameEn,
@@ -683,7 +686,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         include: {
           items: true,
           shippingAddress: true,
-          payments: { orderBy: { createdAt: "desc" } },
+          payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
           customer: true,
           fulfillments: { include: { shipments: true } },
         },
@@ -703,7 +706,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         include: {
           items: true,
           shippingAddress: true,
-          payments: { orderBy: { createdAt: "desc" } },
+          payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
           customer: true,
           fulfillments: { include: { shipments: true } },
         },
@@ -1157,11 +1160,31 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         },
       });
 
+      // Persist rich card payment event dossier
+      await prisma.paymentEvent.create({
+        data: {
+          paymentId: payment.id,
+          eventType: "CARD_CHARGE_SUCCESS",
+          payload: {
+            gateway: "DIRECT_CARD",
+            cardBrand: brand,
+            cardLast4: last4,
+            cardHolder: cardHolder || order.shippingAddress?.fullName || "Private Client",
+            paidAt: new Date().toISOString(),
+          },
+        },
+      });
+
       // Advance order status to PAID
       const updatedOrder = await prisma.order.update({
         where: { id: order.id },
         data: { status: "PAID" },
-        include: { items: true, payments: true, shippingAddress: true, customer: true },
+        include: {
+          items: true,
+          payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
+          shippingAddress: true,
+          customer: true,
+        },
       });
 
       // Emit business event for real-time live feed and tracking

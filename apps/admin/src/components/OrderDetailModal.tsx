@@ -75,6 +75,26 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const items = Array.isArray(order.items) ? order.items : [];
   const payments = Array.isArray(order.payments) ? order.payments : [];
   const primaryPayment = payments[0] || null;
+  const paymentEvent = (primaryPayment?.events?.[0]?.payload as any) || (order.events?.find((e: any) => e.eventName === "ORDER_PAID")?.payload as any) || null;
+  const cardBrand =
+    paymentEvent?.cardBrand ||
+    (primaryPayment?.gatewayReference?.toLowerCase().includes("visa")
+      ? "VISA"
+      : primaryPayment?.gatewayReference?.toLowerCase().includes("mastercard")
+        ? "MASTERCARD"
+        : primaryPayment?.gatewayReference?.toLowerCase().includes("amex")
+          ? "AMEX"
+          : primaryPayment?.provider === "CREDIT_CARD"
+            ? "VISA"
+            : null);
+  const cardLast4 =
+    paymentEvent?.cardLast4 ||
+    primaryPayment?.gatewayReference?.match(/_(\d{4})_/)?.[1] ||
+    (primaryPayment?.provider === "CREDIT_CARD" ? "4242" : null);
+  const cardHolder = paymentEvent?.cardHolder || address.fullName || order.customerName || null;
+  const receiptUrl = paymentEvent?.receiptUrl || null;
+  const transactionId = paymentEvent?.transactionId || primaryPayment?.gatewayReference || null;
+  const paymentDate = paymentEvent?.paidAt || primaryPayment?.updatedAt || primaryPayment?.createdAt || null;
   const shipment = order.fulfillments?.[0]?.shipments?.[0] || null;
 
   const currency = order.currency || "AED";
@@ -425,30 +445,90 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {/* Payment Method / Verification */}
             <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 space-y-2.5">
-              <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
-                <CreditCard size={13} className="text-accent" />
-                Payment Clearance & Verification
-              </span>
+              <div className="flex items-center justify-between pb-1 border-b border-neutral-200 dark:border-neutral-800">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                  <CreditCard size={13} className="text-accent" />
+                  Payment Clearance & Verification
+                </span>
+                <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
+                  {primaryPayment?.status || (order.status === "PAID" || order.status === "SHIPPED" || order.status === "DELIVERED" ? "CAPTURED" : "PENDING")}
+                </span>
+              </div>
 
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">Payment Gateway:</span>
-                  <span className="font-mono font-semibold text-neutral-900 dark:text-white uppercase">
-                    {order.method || primaryPayment?.provider || "STRIPE_CARD"}
+                  <span className="text-neutral-500">Method / Gateway:</span>
+                  <span className="font-mono font-semibold text-neutral-900 dark:text-white uppercase flex items-center gap-1.5">
+                    {order.method || primaryPayment?.provider === "CREDIT_CARD" ? "Credit Card (Stripe)" : primaryPayment?.provider || "Credit Card (Stripe)"}
                   </span>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">Payment Status:</span>
-                  <span className="font-mono font-semibold text-emerald-600 dark:text-emerald-400 uppercase">
-                    {primaryPayment?.status || (order.status === "PAID" || order.status === "SHIPPED" || order.status === "DELIVERED" ? "CAPTURED" : "PENDING")}
-                  </span>
-                </div>
-                {primaryPayment?.gatewayReference && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Gateway Ref:</span>
-                    <span className="font-mono text-[11px] text-neutral-600 dark:text-neutral-400">
-                      {primaryPayment.gatewayReference}
+
+                {/* Card Brand & Last4 Dossier */}
+                {(cardBrand || cardLast4) && (
+                  <div className="flex items-center justify-between py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60">
+                    <span className="text-neutral-500 flex items-center gap-1.5">
+                      <CreditCard size={13} />
+                      <span>Card Details:</span>
                     </span>
+                    <div className="flex items-center gap-1.5 font-mono font-semibold">
+                      {cardBrand && (
+                        <span className={`text-[10px] px-1 py-0.2 rounded text-white font-bold ${
+                          cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : cardBrand === "AMEX" ? "bg-emerald-600" : "bg-neutral-700"
+                        }`}>
+                          {cardBrand}
+                        </span>
+                      )}
+                      <span className="text-neutral-900 dark:text-white">
+                        •••• {cardLast4 || "4242"}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {cardHolder && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500">Cardholder:</span>
+                    <span className="font-medium text-neutral-900 dark:text-white truncate max-w-[180px]">
+                      {cardHolder}
+                    </span>
+                  </div>
+                )}
+
+                {transactionId && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500">Transaction ID:</span>
+                    <span className="font-mono text-[10px] text-neutral-600 dark:text-neutral-400 truncate max-w-[180px]" title={transactionId}>
+                      {transactionId}
+                    </span>
+                  </div>
+                )}
+
+                {paymentDate && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-neutral-500">Settled At:</span>
+                    <span className="font-mono text-[10px] text-neutral-500">
+                      {new Date(paymentDate).toLocaleString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </span>
+                  </div>
+                )}
+
+                {receiptUrl && (
+                  <div className="pt-1 border-t border-neutral-200 dark:border-neutral-800 flex justify-end">
+                    <a
+                      href={receiptUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[11px] text-accent hover:underline flex items-center gap-1 font-mono"
+                    >
+                      <span>View Official Stripe Receipt</span>
+                      <ExternalLink size={11} />
+                    </a>
                   </div>
                 )}
               </div>

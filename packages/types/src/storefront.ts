@@ -78,6 +78,21 @@ export const StorefrontOrderSchema = z.object({
   currency: z.literal("AED"),
   totalAmount: z.number().nonnegative(),
   paymentStatus: z.string().nullable().optional(),
+  paymentMethod: z.string().nullable().optional(),
+  paymentDetails: z
+    .object({
+      provider: z.string().optional(),
+      status: z.string().optional(),
+      gatewayReference: z.string().nullable().optional(),
+      brand: z.string().nullable().optional(),
+      last4: z.string().nullable().optional(),
+      cardHolder: z.string().nullable().optional(),
+      receiptUrl: z.string().nullable().optional(),
+      paidAt: z.any().optional(),
+    })
+    .nullable()
+    .optional(),
+  payments: z.array(z.any()).optional(),
   customerName: z.string().nullable().optional(),
   customerEmail: z.string().nullable().optional(),
   customerPhone: z.string().nullable().optional(),

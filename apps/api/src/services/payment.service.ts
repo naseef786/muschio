@@ -308,7 +308,7 @@ export class PaymentService {
     }
 
     const sessionRes = await fetch(
-      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`,
+      `https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}?expand[]=payment_intent.payment_method`,
       {
         method: "GET",
         headers: { Authorization: `Bearer ${stripeKey}` },
@@ -327,6 +327,16 @@ export class PaymentService {
       throw new ApiError(404, "ORDER_NOT_FOUND", "No order associated with this Stripe session");
     }
 
+    // Extract rich card and settlement metadata from expanded Stripe session
+    const pi = typeof sessionData.payment_intent === "object" ? sessionData.payment_intent : null;
+    const pm = pi && typeof pi.payment_method === "object" ? pi.payment_method : null;
+    const card = pm?.card || null;
+    const cardBrand = card?.brand ? String(card.brand).toUpperCase() : "VISA";
+    const cardLast4 = card?.last4 || "4242";
+    const cardHolder = sessionData.customer_details?.name || pm?.billing_details?.name || "Muschio Client";
+    const transactionId = pi?.id || sessionId;
+    const receiptUrl = pi?.charges?.data?.[0]?.receipt_url || sessionData.url || null;
+
     return await prisma.$transaction(async (tx) => {
       const order = await tx.order.findUnique({
         where: { id: orderId },
@@ -334,7 +344,9 @@ export class PaymentService {
           items: true,
           shippingAddress: true,
           customer: true,
-          payments: true,
+          payments: {
+            include: { events: true },
+          },
         },
       });
 
@@ -357,23 +369,47 @@ export class PaymentService {
             orderBy: { createdAt: "desc" },
           });
 
+          let paymentRecord = existingPayment;
           if (existingPayment) {
-            await tx.payment.update({
+            paymentRecord = await tx.payment.update({
               where: { id: existingPayment.id },
-              data: { status: "CAPTURED", gatewayReference: sessionId },
+              data: {
+                status: "CAPTURED",
+                gatewayReference: transactionId,
+              },
             });
           } else {
-            await tx.payment.create({
+            paymentRecord = await tx.payment.create({
               data: {
                 orderId: order.id,
                 provider: "CREDIT_CARD",
                 status: "CAPTURED",
                 amount: order.totalAmount,
                 currency: order.currency,
-                gatewayReference: sessionId,
+                gatewayReference: transactionId,
               },
             });
           }
+
+          // Persist granular payment event dossier
+          await tx.paymentEvent.create({
+            data: {
+              paymentId: paymentRecord.id,
+              eventType: "CHARGE_CAPTURED",
+              payload: {
+                gateway: "STRIPE_CHECKOUT",
+                sessionId,
+                transactionId,
+                cardBrand,
+                cardLast4,
+                cardExpMonth: card?.exp_month || null,
+                cardExpYear: card?.exp_year || null,
+                cardHolder,
+                receiptUrl,
+                paidAt: new Date().toISOString(),
+              },
+            },
+          });
 
           await tx.businessEvent.create({
             data: {
@@ -384,6 +420,10 @@ export class PaymentService {
                 orderNumber: order.orderNumber,
                 gateway: "STRIPE_CHECKOUT",
                 sessionId,
+                transactionId,
+                cardBrand,
+                cardLast4,
+                cardHolder,
                 totalAmount: Number(order.totalAmount),
                 currency: order.currency,
                 paidAt: new Date().toISOString(),

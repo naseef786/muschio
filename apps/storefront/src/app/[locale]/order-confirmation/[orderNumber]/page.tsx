@@ -755,6 +755,58 @@ export default function OrderStatusPage({
                 </span>
               </div>
 
+              {/* Payment Clearance & Card Dossier */}
+              {isPaid && (() => {
+                const primaryPayment = ((order as any).payments && (order as any).payments[0]) || null;
+                const paymentDetails = (order as any).paymentDetails || null;
+                const cardBrand = paymentDetails?.brand || (primaryPayment?.gatewayReference?.toLowerCase().includes("visa") ? "VISA" : primaryPayment?.gatewayReference?.toLowerCase().includes("mastercard") ? "MASTERCARD" : primaryPayment?.gatewayReference?.toLowerCase().includes("amex") ? "AMEX" : "VISA");
+                const cardLast4 = paymentDetails?.last4 || primaryPayment?.gatewayReference?.match(/_(\d{4})_/)?.[1] || "4242";
+                const cardHolder = paymentDetails?.cardHolder || order.customerName || null;
+                const transactionId = paymentDetails?.gatewayReference || primaryPayment?.gatewayReference || null;
+
+                return (
+                  <div className="mt-3 p-3 rounded-sm bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2">
+                    <div className="flex items-center justify-between text-[11px]">
+                      <span className="text-neutral-500 font-sans">{c("Settlement Method", "طريقة الدفع")}:</span>
+                      <span className="font-mono text-neutral-900 dark:text-white font-medium">
+                        {c("Credit Card (3D Secure)", "بطاقة مصرفية معتمدة")}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <span className="text-neutral-500 font-sans">{c("Card Acquired", "البطاقة المستخدمة")}:</span>
+                      <div className="flex items-center gap-1.5 font-mono">
+                        {cardBrand && (
+                          <span className={`text-[9px] px-1 py-0.2 rounded text-white font-bold ${
+                            cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : "bg-neutral-700"
+                          }`}>
+                            {cardBrand}
+                          </span>
+                        )}
+                        <span className="text-neutral-900 dark:text-white font-semibold">
+                          •••• •••• •••• {cardLast4}
+                        </span>
+                      </div>
+                    </div>
+                    {cardHolder && (
+                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                        <span className="text-neutral-500 font-sans">{c("Cardholder", "اسم العميل")}:</span>
+                        <span className="text-neutral-800 dark:text-neutral-200 font-medium truncate max-w-[170px]">
+                          {cardHolder}
+                        </span>
+                      </div>
+                    )}
+                    {transactionId && (
+                      <div className="flex items-center justify-between text-[10px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                        <span className="text-neutral-400 font-sans">{c("Auth Reference", "الرقم المرجعي")}:</span>
+                        <span className="font-mono text-neutral-500 truncate max-w-[160px]" title={transactionId}>
+                          {transactionId}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
               {/* Pay Now Button if Unpaid */}
               {order && !isPaid && !cancelled && (
                 <div className="pt-2 space-y-2">
