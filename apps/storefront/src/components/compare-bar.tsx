@@ -2,7 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
-import { Link, useRouter } from "../navigation";
+import { Link, useRouter, usePathname } from "../navigation";
 import { useCompare } from "../context/compare-context";
 import { ArrowLeftRight, X, ChevronDown, ChevronUp, Trash2, Scale } from "lucide-react";
 
@@ -13,6 +13,8 @@ interface CompareBarProps {
 export function CompareBar({ locale }: CompareBarProps) {
   const isAr = locale === "ar";
   const router = useRouter();
+  const pathname = usePathname();
+  const isPdp = typeof pathname === "string" && pathname.includes("/product/");
   const { items, itemCount, removeItem, clearCompare, isDockOpen, setIsDockOpen } =
     useCompare();
 
@@ -24,6 +26,10 @@ export function CompareBar({ locale }: CompareBarProps) {
     router.push(`/compare?items=${encodeURIComponent(slugs)}`);
   };
 
+  const pillPadding = isPdp
+    ? "pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-3"
+    : "pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-3";
+
   return (
     <aside
       aria-label={isAr ? "شريط مقارنة العطور" : "Fragrance Comparison Bar"}
@@ -31,7 +37,7 @@ export function CompareBar({ locale }: CompareBarProps) {
     >
       {/* Floating Pill Toggle (visible when dock is minimized) */}
       {!isDockOpen && (
-        <div className="max-w-7xl mx-auto px-4 pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-3 flex justify-start sm:justify-end">
+        <div className={`max-w-7xl mx-auto px-4 ${pillPadding} flex justify-start sm:justify-end transition-all duration-300`}>
           <button
             onClick={() => setIsDockOpen(true)}
             className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-luxury-surface/95 backdrop-blur-md border border-accent/60 shadow-xl text-luxury-text hover:border-accent text-xs font-sans tracking-wider uppercase transition-all duration-200 group"

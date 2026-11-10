@@ -95,7 +95,7 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
                   rel="noopener noreferrer"
                   aria-label={item.name}
                   title={`${item.name} (${item.handle})`}
-                  className="social-card-link w-9 h-9 rounded-sm bg-white/[0.06] hover:bg-white/[0.16] text-[#D4D1C8] hover:text-white border border-white/10 hover:border-white/25 flex items-center justify-center transition-all duration-200 group"
+                  className="social-card-link w-11 h-11 min-w-[44px] min-h-[44px] rounded-sm bg-white/[0.06] hover:bg-white/[0.16] text-[#D4D1C8] hover:text-white border border-white/10 hover:border-white/25 flex items-center justify-center transition-all duration-200 group active:scale-95"
                 >
                   <span className="flex items-center justify-center w-full h-full group-hover:scale-110 transition-transform duration-150 leading-none">
                     {item.icon}

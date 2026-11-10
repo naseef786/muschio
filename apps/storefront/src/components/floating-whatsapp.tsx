@@ -1,9 +1,12 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { usePathname } from "../navigation";
 
 export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
   const isAr = locale === "ar";
+  const pathname = usePathname();
+  const isPdp = typeof pathname === "string" && pathname.includes("/product/");
   const [waNumber, setWaNumber] = useState("97148006872");
   const [waMsg, setWaMsg] = useState(
     isAr
@@ -26,10 +29,15 @@ export function FloatingWhatsApp({ locale = "en" }: { locale?: "en" | "ar" }) {
   const whatsappUrl = `https://wa.me/${waNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(waMsg)}`;
   const titleText = isAr ? "تواصل عبر واتساب" : "Chat on WhatsApp";
 
+  // On PDP, elevate the floating button on mobile to avoid overlapping the sticky Add to Cart bar
+  const bottomClass = isPdp
+    ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))] md:bottom-6"
+    : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6";
+
   return (
     <aside
       aria-label={titleText}
-      className="fixed bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6 end-4 md:end-6 z-30 pointer-events-auto select-none"
+      className={`fixed ${bottomClass} end-4 md:end-6 z-30 pointer-events-auto select-none transition-all duration-300`}
     >
       <a
         href={whatsappUrl}

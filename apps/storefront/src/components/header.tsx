@@ -216,6 +216,28 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [cart]);
 
+  // Focus trap for accessibility in sliding modal drawers
+  const trapFocus = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key !== "Tab") return;
+    const focusable = e.currentTarget.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!focusable.length) return;
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (e.shiftKey) {
+      if (document.activeElement === first) {
+        e.preventDefault();
+        last?.focus();
+      }
+    } else {
+      if (document.activeElement === last) {
+        e.preventDefault();
+        first?.focus();
+      }
+    }
+  };
+
   const [navBrands, setNavBrands] = useState<Array<{ name: string; slug: string; origin?: string }>>([]);
   const [navNotes, setNavNotes] = useState<Array<{ nameEn: string; nameAr: string; slug: string; categoryEn?: string; categoryAr?: string }>>([]);
 
@@ -383,7 +405,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 className={compare.itemCount > 0 ? "text-accent" : ""}
               />
               {compare.itemCount > 0 && (
-                <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none animate-pulse">
+                <span className="text-[10px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-accent text-white rounded-full leading-none">
                   {compare.itemCount}
                 </span>
               )}
@@ -618,6 +640,8 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             className="drawer-panel-start"
             role="dialog"
             aria-modal="true"
+            onKeyDown={trapFocus}
+            tabIndex={-1}
             aria-label={c("Navigation Menu", "قائمة التصفح")}
           >
             {/* Drawer Top Header */}
@@ -931,25 +955,30 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     {recentSearches.map((term) => (
-                      <span
+                      <div
                         key={term}
-                        onClick={() => {
-                          saveRecentSearch(term);
-                          router.push(`/shop?search=${encodeURIComponent(term)}`);
-                          setSearch(false);
-                        }}
-                        className="group inline-flex items-center gap-2 px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text cursor-pointer transition-colors"
+                        className="group inline-flex items-center border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text transition-colors"
                       >
-                        <span>{term}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            saveRecentSearch(term);
+                            router.push(`/shop?search=${encodeURIComponent(term)}`);
+                            setSearch(false);
+                          }}
+                          className="px-3 py-1.5 text-xs text-luxury-text hover:text-accent font-sans text-start transition-colors"
+                        >
+                          {term}
+                        </button>
                         <button
                           type="button"
                           onClick={(e) => removeRecentSearch(term, e)}
                           aria-label={`Remove ${term}`}
-                          className="text-luxury-muted hover:text-rose-500 p-0.5 transition-colors"
+                          className="text-luxury-muted hover:text-rose-500 p-1.5 pe-2 transition-colors"
                         >
                           <X size={12} />
                         </button>
-                      </span>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -1087,6 +1116,8 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             className="drawer-panel-end"
             role="dialog"
             aria-modal="true"
+            onKeyDown={trapFocus}
+            tabIndex={-1}
             aria-label={c("Your Shopping Bag", "حقيبة التسوق")}
           >
             {/* Drawer Header */}
@@ -1176,26 +1207,27 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                           {ar ? item.titleAr : item.title}
                         </Link>
                         <p className="text-xs text-luxury-muted">{item.volume || item.sizeLabel}</p>
-                        <div className="flex items-center gap-2.5 mt-2.5">
+                        <div className="flex items-center gap-3 mt-3">
                           <button
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, -1)}
                             aria-label={c("Decrease quantity", "تقليل الكمية")}
-                            className="w-6 h-6 flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
+                            className="w-9 h-9 min-w-[36px] min-h-[36px] sm:w-10 sm:h-10 sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
                           >
-                            <Minus size={11} />
+                            <Minus size={13} />
                           </button>
-                          <span className="text-xs font-mono font-medium text-luxury-text">{item.quantity}</span>
+                          <span className="text-xs font-mono font-medium text-luxury-text min-w-[20px] text-center">{item.quantity}</span>
                           <button
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, 1)}
                             aria-label={c("Increase quantity", "زيادة الكمية")}
-                            className="w-6 h-6 flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text transition-colors"
+                            className="w-9 h-9 min-w-[36px] min-h-[36px] sm:w-10 sm:h-10 sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
                           >
-                            <Plus size={11} />
+                            <Plus size={13} />
                           </button>
                           <button
-                            className="text-[11px] text-luxury-muted hover:text-[#d2042d] ms-auto underline"
+                            type="button"
+                            className="text-xs text-luxury-muted hover:text-[#d2042d] ms-auto underline p-1.5 transition-colors"
                             onClick={() => cart.removeItem(item.id)}
                           >
                             {c("Remove", "حذف")}

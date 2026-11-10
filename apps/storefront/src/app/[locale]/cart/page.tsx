@@ -4,7 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Link, useRouter } from "../../../navigation";
 import { Button, PriceDisplay, InstallmentBadge } from "@muschio/ui";
-import { Trash2, ArrowRight, ShoppingBag } from "lucide-react";
+import { Trash2, ArrowRight, ShoppingBag, Minus, Plus } from "lucide-react";
 import { useCart } from "../../../context/cart-context";
 
 export default function CartPage({
@@ -55,28 +55,31 @@ export default function CartPage({
                 </div>
 
                 <div className="flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pt-3 sm:pt-0 border-t sm:border-t-0 border-luxury-border">
-                  <div className="flex items-center border border-luxury-border">
+                  <div className="flex items-center border border-luxury-border bg-luxury-surface">
                     <button
+                      type="button"
                       onClick={() => updateQuantity(item.id, -1)}
-                      className="px-3 py-1.5 text-xs hover:bg-luxury-surface2 text-luxury-text transition-colors"
-                      aria-label="Decrease quantity"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-luxury-surface2 text-luxury-text transition-colors active:scale-95"
+                      aria-label={isAr ? "تقليل الكمية" : "Decrease quantity"}
                     >
-                      -
+                      <Minus size={14} />
                     </button>
-                    <span className="px-3 py-1.5 text-xs font-mono text-luxury-text">{item.quantity}</span>
+                    <span className="px-3 text-xs font-mono font-medium text-luxury-text min-w-[28px] text-center">{item.quantity}</span>
                     <button
+                      type="button"
                       onClick={() => updateQuantity(item.id, 1)}
-                      className="px-3 py-1.5 text-xs hover:bg-luxury-surface2 text-luxury-text transition-colors"
-                      aria-label="Increase quantity"
+                      className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center hover:bg-luxury-surface2 text-luxury-text transition-colors active:scale-95"
+                      aria-label={isAr ? "زيادة الكمية" : "Increase quantity"}
                     >
-                      +
+                      <Plus size={14} />
                     </button>
                   </div>
 
                   <button
+                    type="button"
                     onClick={() => removeItem(item.id)}
-                    className="text-luxury-muted hover:text-accent transition-colors p-1"
-                    aria-label="Remove item"
+                    className="text-luxury-muted hover:text-rose-600 transition-colors w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center p-2 rounded-sm"
+                    aria-label={isAr ? "إزالة من الحقيبة" : "Remove from bag"}
                     title={isAr ? "إزالة من الحقيبة" : "Remove from bag"}
                   >
                     <Trash2 size={16} />
