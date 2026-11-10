@@ -78,10 +78,12 @@ export function Header({
   locale,
   initialBrands = [],
   initialNotes = [],
+  initialSettings,
 }: {
   locale: "en" | "ar";
   initialBrands?: any[];
   initialNotes?: any[];
+  initialSettings?: any;
 }) {
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
@@ -299,8 +301,8 @@ export function Header({
   }, [navBrands]);
 
   const [announcement, setAnnouncement] = useState<{ en: string; ar: string }>({
-    en: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
-    ar: "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
+    en: initialSettings?.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
+    ar: initialSettings?.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
   });
 
   useEffect(() => {

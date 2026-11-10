@@ -37,7 +37,7 @@ export default function CheckoutPage({
   const isCancelled = searchParams.get("cancelled") === "true";
   const { items, subtotal, shipping: baseShipping, clearCart } = useCart();
   const [paymentMethod, setPaymentMethod] = useState<
-    "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY"
+    "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY" | "TABBY" | "TAMARA"
   >("CREDIT_CARD");
 
   const handleExpressCheckout = (method: "APPLE_PAY" | "GOOGLE_PAY") => {
@@ -326,7 +326,7 @@ export default function CheckoutPage({
             city: cleanCity,
           },
           deliveryServiceId: delivery.id,
-          paymentMethod: paymentMethod === "CASH_ON_DELIVERY" ? "CASH_ON_DELIVERY" : "CREDIT_CARD",
+          paymentMethod: paymentMethod,
           currency: "AED",
           customerId: user?.id,
           saveAddressToProfile: saveToProfile && isEnteringNewAddress,
@@ -394,8 +394,8 @@ export default function CheckoutPage({
 
       persistOrderLocally(order.orderNumber, order);
 
-      // 1. Cash on Delivery (Instant Order Confirmation)
-      if (paymentMethod === "CASH_ON_DELIVERY") {
+      // 1. Cash on Delivery & BNPL (Tabby/Tamara) Instant Order Confirmation
+      if (paymentMethod === "CASH_ON_DELIVERY" || paymentMethod === "TABBY" || paymentMethod === "TAMARA") {
         clearCart();
         localStorage.removeItem("muschio_pending_order");
         window.location.assign(confirmationUrl);
@@ -1126,7 +1126,91 @@ export default function CheckoutPage({
                 </div>
               </div>
 
-              {/* Option D: Cash on Delivery / VIP Concierge */}
+              {/* Option D: Tabby (4 Interest-Free Installments) */}
+              <div
+                onClick={() => setPaymentMethod("TABBY")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "TABBY"
+                    ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="TABBY"
+                    checked={paymentMethod === "TABBY"}
+                    onChange={() => setPaymentMethod("TABBY")}
+                    className="mt-1 accent-emerald-600 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-luxury-text">
+                          {c("Tabby · 4 Interest-Free Payments", "تابي · قسمها على ٤ دفعات شهرية")}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-mono font-bold">
+                          tabby
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+                        AED {(estimatedTotal / 4).toFixed(0)} / mo
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c(
+                        `Pay 25% today (AED ${(estimatedTotal / 4).toFixed(0)}) and split the remainder over 3 monthly installments. No interest, no fees.`,
+                        `ادفع 25% اليوم (${(estimatedTotal / 4).toFixed(0)} د.إ) وقسّم الباقي على 3 أشهر. بدون أي فوائد أو رسوم خفية.`,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option E: Tamara (4 Interest-Free Installments) */}
+              <div
+                onClick={() => setPaymentMethod("TAMARA")}
+                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                  paymentMethod === "TAMARA"
+                    ? "border-amber-600 bg-amber-50/20 dark:bg-amber-950/20 shadow-sm"
+                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                }`}
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="radio"
+                    name="paymentMethodRadio"
+                    value="TAMARA"
+                    checked={paymentMethod === "TAMARA"}
+                    onChange={() => setPaymentMethod("TAMARA")}
+                    className="mt-1 accent-amber-600 shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-luxury-text">
+                          {c("Tamara · Split in 4 Payments", "تمارا · قسّم فاتورتك على ٤ دفعات")}
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-mono font-bold">
+                          tamara
+                        </span>
+                      </div>
+                      <span className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-300">
+                        AED {(estimatedTotal / 4).toFixed(0)} / mo
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-luxury-muted mt-0.5">
+                      {c(
+                        `Sharia-compliant installments. Split AED ${estimatedTotal} into 4 equal payments without interest or late fees.`,
+                        `دفعات متوافقة مع أحكام الشريعة الإسلامية. قسّم ${estimatedTotal} د.إ على 4 دفعات مريحة بدون فوائد.`,
+                      )}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Option F: Cash on Delivery / VIP Concierge */}
               <div
                 onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
                 className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${

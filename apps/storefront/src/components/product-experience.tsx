@@ -6,6 +6,7 @@ import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
 import { CollectionSlider } from "./collection-slider";
+import { ProductReviews } from "./product-reviews";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
 import { useCompare } from "../context/compare-context";
@@ -1020,6 +1021,13 @@ export function ProductExperience({
           />
         </div>
       )}
+
+      {/* 4b. Authentic Olfactory Impressions & Customer Reviews */}
+      <ProductReviews
+        productId={product.id}
+        productName={c(product.nameEn, product.nameAr)}
+        locale={locale as "en" | "ar"}
+      />
 
       {/* 5. You May Also Like Section (Level Shoes Recommendation Style) */}
       {relatedProducts.length > 0 && (

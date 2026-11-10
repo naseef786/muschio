@@ -14,7 +14,7 @@ import { CompareProvider } from "../../context/compare-context";
 import { CurrencyProvider } from "../../context/currency-context";
 import { CompareBar } from "../../components/compare-bar";
 import { generateOrganizationJsonLd } from "../../lib/seo";
-import { CatalogService, NotesService } from "@muschio/api";
+import { CatalogService, NotesService, SettingsService } from "@muschio/api";
 import { muschioApi } from "../../lib/api";
 import { Figtree, Cairo } from "next/font/google";
 import "../globals.css";
@@ -100,13 +100,16 @@ export default async function RootLayout({
 
   let liveBrands: any[] = [];
   let liveNotes: any[] = [];
+  let liveSettings: any = null;
   try {
-    const [b, n] = await Promise.all([
+    const [b, n, s] = await Promise.all([
       CatalogService.getBrands().catch(() => muschioApi.getBrands()),
       NotesService.getNotes({ limit: 6 }).then((res: any) => res?.items || res || []).catch(() => muschioApi.getNotes({ limit: 6 })),
+      SettingsService.getSettings().catch(() => null),
     ]);
     liveBrands = Array.isArray(b) ? b : [];
     liveNotes = Array.isArray(n) ? n : [];
+    liveSettings = s;
   } catch (err) {
     console.warn("Could not load layout navigation items:", err);
   }
@@ -129,9 +132,9 @@ export default async function RootLayout({
                   <WishlistProvider>
                     <CompareProvider>
                       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
-                      <Header locale={locale as Locale} initialBrands={liveBrands} initialNotes={liveNotes} />
+                      <Header locale={locale as Locale} initialBrands={liveBrands} initialNotes={liveNotes} initialSettings={liveSettings} />
                       <main id="main-content" className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
-                      <Footer locale={locale as Locale} brands={liveBrands} />
+                      <Footer locale={locale as Locale} brands={liveBrands} settings={liveSettings} />
                       <FloatingWhatsApp locale={locale as Locale} />
                       <CompareBar locale={locale as Locale} />
                     </CompareProvider>

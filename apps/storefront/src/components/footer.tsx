@@ -6,19 +6,33 @@ import { ShieldCheck, Phone, Mail } from "lucide-react";
 export function Footer({
   locale,
   brands: initialBrands,
+  settings,
 }: {
   locale: "en" | "ar";
   brands?: Array<{ name: string; slug: string; countryOfOrigin?: string | null }>;
+  settings?: any;
 }) {
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
   const displayBrands = initialBrands && initialBrands.length > 0 ? initialBrands.slice(0, 5) : [];
 
+  const instagramUrl = settings?.instagramUrl || "https://www.instagram.com/muschio.parfums";
+  const instagramHandle = settings?.instagramHandle || "@muschio.parfums";
+  const tiktokUrl = settings?.tiktokUrl || "https://www.tiktok.com/@muschio.haute";
+  const tiktokHandle = settings?.tiktokHandle || "@muschio.haute";
+  const twitterUrl = settings?.twitterUrl || "https://twitter.com/muschio_haute";
+  const twitterHandle = settings?.twitterHandle || "@muschio_haute";
+  const youtubeUrl = settings?.youtubeUrl || "https://www.youtube.com/@muschiohaute";
+  const conciergePhone = settings?.conciergePhone || "+971 4 800 MUSCHIO";
+  const conciergeEmail = settings?.conciergeEmail || "concierge@muschio.luxury";
+  const whatsappNumber = settings?.whatsappNumber || "97148006872";
+  const whatsappMsg = encodeURIComponent(settings?.whatsappDefaultMsg || "Hello Muschio Concierge, I would like assistance with a fragrance recommendation.");
+
   const socialLinks = [
     {
       name: "Instagram",
-      handle: "@muschio.parfums",
-      href: "https://www.instagram.com/muschio.parfums",
+      handle: instagramHandle,
+      href: instagramUrl,
       icon: (
         <svg className="w-4 h-4 fill-current block m-auto" width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
@@ -27,8 +41,8 @@ export function Footer({
     },
     {
       name: "TikTok",
-      handle: "@muschio.haute",
-      href: "https://www.tiktok.com/@muschio.haute",
+      handle: tiktokHandle,
+      href: tiktokUrl,
       icon: (
         <svg className="w-4 h-4 fill-current block m-auto" width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
           <path d="M12.525.02c1.31-.02 2.61-.01 3.91-.02.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.97v7.05c-.01 2.21-.86 4.33-2.39 5.89-1.54 1.57-3.73 2.45-5.94 2.43-2.21-.01-4.38-.91-5.9-2.5-1.52-1.58-2.34-3.73-2.29-5.94.05-2.21.94-4.34 2.51-5.87 1.57-1.52 3.73-2.34 5.94-2.29.34.01.68.04 1.01.1v4.07c-.33-.09-.68-.13-1.02-.13-1.14-.02-2.25.43-3.05 1.25-.8.81-1.23 1.94-1.18 3.08.05 1.13.56 2.21 1.41 2.96.84.75 1.99 1.13 3.12 1.05 1.13-.07 2.19-.64 2.9-1.52.42-.51.68-1.13.73-1.78.02-1.74.01-3.48.01-5.23V.02h-.37z" />
@@ -37,8 +51,8 @@ export function Footer({
     },
     {
       name: "X (Twitter)",
-      handle: "@muschio_haute",
-      href: "https://twitter.com/muschio_haute",
+      handle: twitterHandle,
+      href: twitterUrl,
       icon: (
         <svg className="w-4 h-4 fill-current block m-auto" width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
           <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
@@ -48,7 +62,7 @@ export function Footer({
     {
       name: "YouTube",
       handle: "Muschio Haute Parfumerie",
-      href: "https://www.youtube.com/@muschiohaute",
+      href: youtubeUrl,
       icon: (
         <svg className="w-4 h-4 fill-current block m-auto" width={16} height={16} viewBox="0 0 24 24" aria-hidden="true">
           <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
@@ -222,29 +236,29 @@ export function Footer({
           <div className="mt-4 pt-4 border-t border-white/10 flex flex-col space-y-3 text-xs text-[#A3A39C]">
             <div className="flex items-center">
               <a
-                href="tel:+97148006872"
+                href={`tel:${conciergePhone.replace(/[^0-9+]/g, "")}`}
                 className="footer-contact-link inline-flex items-center gap-2.5 hover:text-white transition-colors group"
               >
                 <span className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-accent group-hover:scale-110 transition-transform">
                   <Phone size={13} className="block" />
                 </span>
-                <span className="font-mono text-[#E5E3DC] inline-block">+971 4 800 MUSCHIO</span>
+                <span className="font-mono text-[#E5E3DC] inline-block">{conciergePhone}</span>
               </a>
             </div>
             <div className="flex items-center">
               <a
-                href="mailto:concierge@muschio.luxury"
+                href={`mailto:${conciergeEmail}`}
                 className="footer-contact-link inline-flex items-center gap-2.5 hover:text-white transition-colors group"
               >
                 <span className="w-4 h-4 flex items-center justify-center flex-shrink-0 text-accent group-hover:scale-110 transition-transform">
                   <Mail size={13} className="block" />
                 </span>
-                <span className="inline-block">concierge@muschio.luxury</span>
+                <span className="inline-block">{conciergeEmail}</span>
               </a>
             </div>
             <div className="flex items-center pt-0.5">
               <a
-                href="https://wa.me/97148006872?text=Hello%20Muschio%20Concierge,%20I%20would%20like%20assistance%20with%20a%20fragrance%20recommendation."
+                href={`https://wa.me/${whatsappNumber}?text=${whatsappMsg}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="footer-contact-link inline-flex items-center gap-2.5 text-emerald-400 hover:text-emerald-300 font-medium transition-colors group"
