@@ -37,12 +37,19 @@ export default function DiscoverySetsPage({
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
   const [samples, setSamples] = useState<SampleItem[]>([]);
+  const [boxProduct, setBoxProduct] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [selectedSamples, setSelectedSamples] = useState<string[]>([]);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
 
   const { addItem, setCartDrawerOpen } = useCart();
+
+  useEffect(() => {
+    muschioApi.getProductBySlug("discovery-set-5x2ml").then((prod) => {
+      if (prod) setBoxProduct(prod);
+    });
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -108,19 +115,25 @@ export default function DiscoverySetsPage({
     const chosenNamesEn = chosenSampleObjects.map((s) => s.nameEn).join(", ");
     const chosenNamesAr = chosenSampleObjects.map((s) => s.nameAr).join("، ");
 
+    const defaultVariant = boxProduct?.variants?.[0];
+    const boxVariantId = defaultVariant?.id || "discovery-set-5x2ml-box";
+    const boxPrice = Number(defaultVariant?.price || 280);
+    const boxComparePrice = defaultVariant?.compareAtPrice ? Number(defaultVariant.compareAtPrice) : 350;
+    const boxTitle = isAr ? (boxProduct?.nameAr || "مجموعة العينات الملكية المخصصة (٥ × ٢ مل)") : (boxProduct?.nameEn || "Artisanal Discovery Set (5 x 2ml)");
+    const boxBrand = boxProduct?.brand?.name || "Muschio Privé";
+    const boxImage = boxProduct?.images?.[0] || chosenSampleObjects[0]?.image || "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&q=85";
+
     try {
       await addItem({
-        variantId: "discovery-set-5x2ml-box",
+        variantId: boxVariantId,
         slug: "discovery-set-5x2ml",
-        title: "Artisanal Discovery Set (5 x 2ml)",
-        titleAr: "مجموعة العينات الملكية المخصصة (٥ × ٢ مل)",
-        brand: "Muschio Privé",
-        price: 280,
-        compareAtPrice: 350,
+        title: boxTitle,
+        titleAr: boxProduct?.nameAr || "مجموعة العينات الملكية المخصصة (٥ × ٢ مل)",
+        brand: boxBrand,
+        price: boxPrice,
+        compareAtPrice: boxComparePrice,
         quantity: 1,
-        image:
-          chosenSampleObjects[0]?.image ||
-          "https://images.unsplash.com/photo-1594035910387-fea47794261f?auto=format&fit=crop&w=600&q=85",
+        image: boxImage,
         sizeLabel: isAr
           ? `٥ عينات: ${chosenNamesAr}`
           : `5 Vials: ${chosenNamesEn}`,

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { Link, usePathname, useRouter } from "../navigation";
 import {
@@ -30,13 +30,6 @@ import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
-
-const POPULAR_SEARCHES = [
-  { nameEn: "Creed Aventus", nameAr: "كريد أفينتوس", href: "/shop?search=Aventus" },
-  { nameEn: "Amouage", nameAr: "أمواج", href: "/shop?search=Amouage" },
-  { nameEn: "Baccarat Rouge", nameAr: "باكارات روج", href: "/shop?search=Baccarat" },
-  { nameEn: "Oud & Woods", nameAr: "العود والأخشاب", href: "/shop?search=Oud" },
-];
 
 function SearchDialog({
   open,
@@ -81,7 +74,15 @@ function SearchDialog({
   );
 }
 
-export function Header({ locale }: { locale: "en" | "ar" }) {
+export function Header({
+  locale,
+  initialBrands = [],
+  initialNotes = [],
+}: {
+  locale: "en" | "ar";
+  initialBrands?: any[];
+  initialNotes?: any[];
+}) {
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
   const pathname = usePathname();
@@ -238,10 +239,25 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     }
   };
 
-  const [navBrands, setNavBrands] = useState<Array<{ name: string; slug: string; origin?: string }>>([]);
-  const [navNotes, setNavNotes] = useState<Array<{ nameEn: string; nameAr: string; slug: string; categoryEn?: string; categoryAr?: string }>>([]);
+  const [navBrands, setNavBrands] = useState<Array<{ name: string; slug: string; origin?: string }>>(() =>
+    initialBrands.slice(0, 6).map((b: any) => ({
+      name: b.name,
+      slug: b.slug,
+      origin: b.countryOfOrigin || undefined,
+    }))
+  );
+  const [navNotes, setNavNotes] = useState<Array<{ nameEn: string; nameAr: string; slug: string; categoryEn?: string; categoryAr?: string }>>(() =>
+    initialNotes.slice(0, 4).map((n: any) => ({
+      nameEn: n.nameEn,
+      nameAr: n.nameAr,
+      slug: n.slugEn || n.slug,
+      categoryEn: n.categoryEn || undefined,
+      categoryAr: n.categoryAr || undefined,
+    }))
+  );
 
   useEffect(() => {
+    if (navBrands.length > 0 && navNotes.length > 0) return;
     let active = true;
     Promise.all([
       muschioApi.getBrands(),
@@ -250,7 +266,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
       if (!active) return;
       if (Array.isArray(brands) && brands.length > 0) {
         setNavBrands(
-          brands.slice(0, 5).map((b: any) => ({
+          brands.slice(0, 6).map((b: any) => ({
             name: b.name,
             slug: b.slug,
             origin: b.countryOfOrigin || undefined,
@@ -259,7 +275,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
       }
       if (Array.isArray(notes) && notes.length > 0) {
         setNavNotes(
-          notes.slice(0, 3).map((n: any) => ({
+          notes.slice(0, 4).map((n: any) => ({
             nameEn: n.nameEn,
             nameAr: n.nameAr,
             slug: n.slugEn || n.slug,
@@ -272,7 +288,15 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
     return () => {
       active = false;
     };
-  }, []);
+  }, [navBrands.length, navNotes.length]);
+
+  const popularSearches = useMemo(() => {
+    return navBrands.slice(0, 5).map((b) => ({
+      nameEn: b.name,
+      nameAr: b.name,
+      href: `/brands/${b.slug}`,
+    }));
+  }, [navBrands]);
 
   const [announcement, setAnnouncement] = useState<{ en: string; ar: string }>({
     en: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
@@ -530,16 +554,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[420px] space-y-3 text-start normal-case">
               <span className="eyebrow">{c("Curated Haute Maisons", "دور العطور المعتمدة")}</span>
               <div className="grid grid-cols-2 gap-2 text-xs">
-                {(navBrands.length > 0
-                  ? navBrands
-                  : [
-                      { name: "Amouage", slug: "amouage", origin: c("Sultanate of Oman", "سلطنة عمان") },
-                      { name: "Roja Parfums", slug: "roja-parfums", origin: c("London, Mayfair", "لندن، مايفير") },
-                      { name: "MFK Paris", slug: "maison-francis-kurkdjian", origin: c("Paris, France", "باريس، فرنسا") },
-                      { name: "Xerjoff", slug: "xerjoff", origin: c("Turin, Italy", "تورينو، إيطاليا") },
-                      { name: "Tom Ford Privé", slug: "tom-ford", origin: c("New York", "نيويورك") },
-                    ]
-                ).map((b) => (
+                {navBrands.map((b) => (
                   <Link
                     key={b.slug}
                     href={`/brands/${b.slug}`}
@@ -571,14 +586,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
             <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[380px] space-y-3 text-start normal-case">
               <span className="eyebrow">{c("Rare Raw Materials", "مكونات نادرة")}</span>
               <div className="space-y-1.5 text-xs">
-                {(navNotes.length > 0
-                  ? navNotes
-                  : [
-                      { nameEn: "Cambodian Oud", nameAr: "عود كمبودي معتق", slug: "cambodian-oud", categoryEn: "Base Note", categoryAr: "نوتة قاعدة" },
-                      { nameEn: "Royal Taif Rose", nameAr: "ورد الطائف الملكي", slug: "taif-rose", categoryEn: "Heart Note", categoryAr: "نوتة قلب" },
-                      { nameEn: "Silver Frankincense", nameAr: "لبان حوجري فضي", slug: "silver-frankincense", categoryEn: "Sacred Resin", categoryAr: "صمغ مقدس" },
-                    ]
-                ).map((n) => (
+                {navNotes.map((n) => (
                   <Link
                     key={n.slug}
                     href={`/notes/${n.slug}`}
@@ -984,28 +992,30 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 </div>
               )}
 
-              <div>
-                <span className="eyebrow mb-2.5 block">
-                  {c("POPULAR SEARCHES", "عمليات البحث الشائعة")}
-                </span>
-                <div className="flex flex-wrap gap-2">
-                  {POPULAR_SEARCHES.map((item) => (
-                    <button
-                      key={item.href}
-                      type="button"
-                      onClick={() => {
-                        const term = ar ? item.nameAr : item.nameEn;
-                        saveRecentSearch(term);
-                        router.push(item.href);
-                        setSearch(false);
-                      }}
-                      className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text transition-colors"
-                    >
-                      {c(item.nameEn, item.nameAr)}
-                    </button>
-                  ))}
+              {popularSearches.length > 0 && (
+                <div>
+                  <span className="eyebrow mb-2.5 block">
+                    {c("POPULAR SEARCHES", "عمليات البحث الشائعة")}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {popularSearches.map((item) => (
+                      <button
+                        key={item.href}
+                        type="button"
+                        onClick={() => {
+                          const term = ar ? item.nameAr : item.nameEn;
+                          saveRecentSearch(term);
+                          router.push(item.href);
+                          setSearch(false);
+                        }}
+                        className="px-3 py-1.5 border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:border-luxury-text transition-colors"
+                      >
+                        {c(item.nameEn, item.nameAr)}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 

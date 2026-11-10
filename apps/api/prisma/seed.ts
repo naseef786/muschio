@@ -956,6 +956,90 @@ async function main() {
     },
   });
 
+  const blogCatRaw = await prisma.blogCategory.create({
+    data: {
+      nameEn: "Raw Harvests & Provenance",
+      nameAr: "أصول المكونات النادرة",
+      slug: "raw-harvests",
+    },
+  });
+
+  const blogCatHeritage = await prisma.blogCategory.create({
+    data: {
+      nameEn: "Scent Heritage of Arabia",
+      nameAr: "تراث العطور العربية والخليجية",
+      slug: "arabian-heritage",
+    },
+  });
+
+  const postAmbergris = await prisma.blogPost.create({
+    data: {
+      slug: "the-secrets-of-ambergris-oceanic-gold",
+      titleEn: "Oceanic Gold: The Mystery and Alchemy of Natural Ambergris in Royal Parfumerie",
+      titleAr: "الذهب المحيطي: أسرار وسحر العنبر الطبيعي في صناعة العطور الملكية",
+      excerptEn: "From floating for decades on open ocean currents to curing on Arabian shores, how wild white ambergris bestows an incomparable velvet glow to haute parfumerie.",
+      excerptAr: "من رحلة التعتيق لعقود فوق أمواج المحيطات إلى شواطئ الجزيرة العربية، كيف يمنح العنبر الأبيض الطبيعي هالة مخملية لا تضاهى لأفخم العطور.",
+      contentEn: "<p class='lead'>There is no synthetic molecule known to modern science that can replicate the biological wonder of aged marine ambergris...</p>",
+      contentAr: "<p class='lead'>لا يوجد جزيء اصطناعي واحد استطاع العلم الحديث ابتكاره يضاهي الأعجوبة البيولوجية للعنبر البحري الطبيعي المعتق...</p>",
+      authorName: "Farzeen Al-Tamimi",
+      coverImageUrl: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1600&q=85",
+      readingTimeMinutes: 7,
+      categoryId: blogCatRaw.id,
+      isPublished: true,
+    },
+  });
+
+  const postFrankincense = await prisma.blogPost.create({
+    data: {
+      slug: "frankincense-trail-dhofar-to-versailles",
+      titleEn: "The Sacred Boswellia Sacra: From the Valleys of Dhofar to Parisian Ateliers",
+      titleAr: "اللبان الحوجري المقدس: من أودية ظفار الساحرة إلى كبرى دور العطور الباريسية",
+      excerptEn: "Why Oman’s Silver Hojari frankincense remains the undisputed jewel of sacred perfumery, coveted by the world’s most prestigious fragrance houses.",
+      excerptAr: "لماذا يظل اللبان الحوجري الفضي العُماني جوهرة العطور المقدسة بلا منازع، ومحط أنظار كبرى دور العطور العالمية في باريس ولندن.",
+      contentEn: "<p class='lead'>High in the arid limestone crags of the Dhofar mountains in southern Oman, gnarly Boswellia sacra trees yield a resin revered by pharaohs and modern perfumers alike...</p>",
+      contentAr: "<p class='lead'>في أعالي المنحدرات الجيرية لجبال ظفار في جنوب سلطنة عُمان، تنمو أشجار اللبان المقدس لتقدم راتنجاً تنافس عليه ملوك وصناع العطور الباريسيون...</p>",
+      authorName: "Salim Al-Harthy",
+      coverImageUrl: "https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1600&q=85",
+      readingTimeMinutes: 5,
+      categoryId: blogCatHeritage.id,
+      isPublished: true,
+    },
+  });
+
+  const postSummer = await prisma.blogPost.create({
+    data: {
+      slug: "perfumers-guide-gcc-summer-fragrances",
+      titleEn: "Defying the Gulf Heat: The Science of High-Heat Sillage & Volatile Evaporation",
+      titleAr: "فن اختيار عطور الصيف في الخليج: صراع التركيز والحرارة الشديدة",
+      excerptEn: "Mastering olfactory longevity in 45°C conditions: why high concentration beats aquatic freshness and how dry woods triumph in dry desert air.",
+      excerptAr: "دليل الخبراء للثبات العطري في حرارة 45 مئوية: لماذا تتفوق الخلاصات النقية على العطور المائية، وسر انتصار الأخشاب الجافة في الصيف.",
+      contentEn: "<p class='lead'>Conventional Western fragrance advice dictates light citrus colognes for summer heat. In the Arabian Peninsula, this advice fails completely...</p>",
+      contentAr: "<p class='lead'>تنصح كتب العطور الغربية التقليدية باستخدام العطور الحمضية الخفيفة في فصل الصيف. ولكن في مناخ الخليج العربي، تفشل هذه النصيحة فشلاً ذريعاً...</p>",
+      authorName: "Dr. Elena Rostova",
+      coverImageUrl: "https://images.unsplash.com/photo-1588405748880-12d1d2a59f75?auto=format&fit=crop&w=1600&q=85",
+      readingTimeMinutes: 6,
+      categoryId: blogCat.id,
+      isPublished: true,
+    },
+  });
+
+  const postAttars = await prisma.blogPost.create({
+    data: {
+      slug: "attar-vs-extrait-heritage-distillation",
+      titleEn: "Attars, Dehn al Oud, and Extraits: An Expert Decryption of Arabian Scent Formats",
+      titleAr: "بين دهن العود والخلاصات النقية: دليل شامل لأشكال العطور الشرقية وتراكيزها",
+      excerptEn: "Demystifying the spectrum from steam-distilled pure sandalwood attars and wild agarwood oils to high-maceration modern alcohol extraits.",
+      excerptAr: "فهم الفروق الدقيقة بين دهن العود البري، والأطياب التراثية المقطرة على خشب الصندل، والخلاصات العطرية الحديثة فائقة الفخامة.",
+      contentEn: "<p class='lead'>To navigate the pinnacle of perfumery, one must distinguish between three distinct physical mediums: the pure botanical attar, the aged single-origin dehn, and the modern extrait de parfum...</p>",
+      contentAr: "<p class='lead'>للإبحار في عالم العطور الفاخرة، يجب التمييز بين ثلاثة أشكال رئيسية للطيب: العطر الزيتي التراثي، ودهن العود النقي المعتق، وخلاصة العطر الحديثة...</p>",
+      authorName: "Farzeen Al-Tamimi",
+      coverImageUrl: "https://images.unsplash.com/photo-1615397349754-cfa2066a298e?auto=format&fit=crop&w=1600&q=85",
+      readingTimeMinutes: 7,
+      categoryId: blogCatHeritage.id,
+      isPublished: true,
+    },
+  });
+
   // 18. Customer & Verified Buyer Reviews
   const customerAhmad = await prisma.customer.create({
     data: {

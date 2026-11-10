@@ -3,6 +3,9 @@ import Image from "next/image";
 import { Link } from "../../../navigation";
 import { ArrowUpRight, Clock, User } from "lucide-react";
 import { muschioApi } from "../../../lib/api";
+import { JournalService } from "@muschio/api";
+
+export const dynamic = "force-dynamic";
 
 export default async function JournalIndexPage({
   params: { locale },
@@ -12,7 +15,14 @@ export default async function JournalIndexPage({
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
-  const posts = await muschioApi.getBlogPosts(1, 20);
+  let posts: any[] = [];
+  try {
+    const res = await JournalService.getPosts(1, 20);
+    posts = res?.items || [];
+  } catch {
+    const res = await muschioApi.getBlogPosts(1, 20);
+    posts = Array.isArray(res) ? res : (res as any)?.items || [];
+  }
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-10">

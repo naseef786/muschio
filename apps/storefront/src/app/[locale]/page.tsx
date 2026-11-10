@@ -580,23 +580,14 @@ export default async function HomePage({
 
   const renderJournalFeature = (sec?: any) => {
     const post = liveJournalPost;
-    const postTitle = post
-      ? c(post.titleEn, post.titleAr)
-      : c(
-          "The Ancient Chemistry of Layering: When Cambodian Oud Meets Royal Taif Rose",
-          "فن مزج العطور التاريخي: لقاء العود الكمبودي بورد الطائف الملكي",
-        );
-    const postExcerpt = post
-      ? c(post.excerptEn || "", post.excerptAr || "")
-      : c(
-          "Explore the revered heritage of fragrance layering across the Arabian Gulf—from selecting the dense woody anchor to misting delicate crystalline florals.",
-          "اكتشف التقاليد الخليجية العريقة في مزج العطور وطبقاتها—من اختيار القاعدة الخشبية الدافئة إلى نثر النفحات الوردية الكريستالية.",
-        );
-    const postSlug = post?.slug || "art-of-layering-oud-and-taif-rose";
-    const postCategory = post?.category
+    if (!post) return null;
+    const postTitle = c(post.titleEn, post.titleAr);
+    const postExcerpt = c(post.excerptEn || "", post.excerptAr || "");
+    const postSlug = post.slug;
+    const postCategory = post.category
       ? c(post.category.nameEn, post.category.nameAr)
-      : c("RITUALS OF THE GULF", "طقوس الخليج");
-    const postImage = post?.coverImageUrl || photo("photo-1594035910387-fea47794261f", 800);
+      : c("EDITORIAL & ESSAYS", "المقالات والطقوس العطرية");
+    const postImage = post.coverImageUrl || photo("photo-1594035910387-fea47794261f", 800);
 
     return (
       <section key="JOURNAL_FEATURE" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">

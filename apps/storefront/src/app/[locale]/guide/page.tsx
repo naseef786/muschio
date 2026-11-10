@@ -233,15 +233,15 @@ export default function FragranceGuidePage({
             <div className="p-6 border border-gold/30 bg-gold/5 flex flex-col sm:flex-row items-center justify-between gap-4">
               <div className="space-y-1 text-center sm:text-start">
                 <h4 className="font-serif text-lg text-zinc-900 dark:text-zinc-100">
-                  {isAr ? "تحفة التركيز الملكي: إنترلود 53 مان (53%)" : "Featured Monumental Extrait: Interlude 53 (53%)"}
+                  {isAr ? "استكشف الخلاصات العطرية فائقة التركيز (Extraits)" : "Explore Monumental Extraits de Parfum (30-53%)"}
                 </h4>
                 <p className="text-xs text-zinc-500 font-sans">
-                  {isAr ? "معتق في سلطنة عُمان بتركيز 53% لثبات يدوم لأيام على الثوب." : "Formulated at 53% concentration for monolithic endurance."}
+                  {isAr ? "معتقة في درجات حرارة محكمة لثبات استثنائي يدوم لأيام على البشرة والأقمشة." : "Cellar-macerated formulations designed for uncompromising sillage in Arabian climates."}
                 </p>
               </div>
               <Button asChild variant="accent" size="sm">
-                <Link href="/product/amouage-interlude-53-man">
-                  {isAr ? "اكتشف العطر" : "Discover Extrait"}
+                <Link href="/shop?concentration=EXTRAIT_DE_PARFUM">
+                  {isAr ? "استكشف الخلاصات" : "Discover Extraits"}
                 </Link>
               </Button>
             </div>
@@ -443,8 +443,8 @@ export default function FragranceGuidePage({
 
             <div className="pt-2">
               <Button asChild variant="accent" size="sm">
-                <Link href="/journal/art-of-layering-oud-and-taif-rose">
-                  {isAr ? "اقرأ المقال الكامل عن فن المزج" : "Read the Comprehensive Layering Essay"} →
+                <Link href="/journal">
+                  {isAr ? "تصفح جميع مقالات المجلة العطرية" : "Explore All Journal Essays"} →
                 </Link>
               </Button>
             </div>

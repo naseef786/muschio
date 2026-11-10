@@ -36,6 +36,16 @@ export default function ComparePage({
   const { addItem: addToCart } = useCart();
   const [copiedLink, setCopiedLink] = useState(false);
   const [addingId, setAddingId] = useState<string | null>(null);
+  const [suggestedProducts, setSuggestedProducts] = useState<any[]>([]);
+
+  useEffect(() => {
+    muschioApi.getProducts({ limit: 4, sort: "featured" }).then((res: any) => {
+      const prods = res?.items || res || [];
+      if (Array.isArray(prods) && prods.length >= 2) {
+        setSuggestedProducts(prods);
+      }
+    });
+  }, []);
 
   const addProductToCompare = useCallback(
     (local: any) => {
@@ -255,41 +265,51 @@ export default function ComparePage({
           </div>
 
           {/* Curated Pre-sets */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-start">
-            <button
-              onClick={() =>
-                handleLoadCuratedPair("amouage-interlude-53-man", "creed-aventus-millesime")
-              }
-              className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
-            >
-              <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Smoky Resins vs Noble Citrus", "دخاني صمغي مقابل حمضيات نبيلة")}
-              </span>
-              <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                Amouage Interlude 53 vs Creed Aventus
-              </h4>
-              <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare 53% Extrait with Millesime Aromatic Woods", "مقارنة تركيز 53% مع فخامة أخشاب الميليسيم")}
-              </span>
-            </button>
+          {suggestedProducts.length >= 2 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 text-start">
+              <button
+                onClick={() =>
+                  handleLoadCuratedPair(suggestedProducts[0].slug, suggestedProducts[1].slug)
+                }
+                className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
+              >
+                <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
+                  {c("Featured Comparison", "مقارنة مميزة")}
+                </span>
+                <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
+                  {suggestedProducts[0].nameEn} vs {suggestedProducts[1].nameEn}
+                </h4>
+                <span className="text-xs text-luxury-muted mt-1 block">
+                  {c(
+                    `Compare ${suggestedProducts[0].brand?.name || "Haute House"} with ${suggestedProducts[1].brand?.name || "Haute House"}`,
+                    `مقارنة بين ${suggestedProducts[0].brand?.name || "دار عطرية"} و ${suggestedProducts[1].brand?.name || "دار عطرية"}`
+                  )}
+                </span>
+              </button>
 
-            <button
-              onClick={() =>
-                handleLoadCuratedPair("mfk-baccarat-rouge-540-extrait", "amouage-guidance-extrait")
-              }
-              className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
-            >
-              <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
-                {c("Amber Floral vs Luminous Woods", "كريستال عنبري مقابل أخشاب مضيئة")}
-              </span>
-              <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
-                MFK Baccarat 540 vs Amouage Guidance 46
-              </h4>
-              <span className="text-xs text-luxury-muted mt-1 block">
-                {c("Compare Glowing Ambergris with Omani Frankincense & Vanilla", "مقارنة العنبر المتوهج مع اللبان العُماني والفانيليا")}
-              </span>
-            </button>
-          </div>
+              {suggestedProducts.length >= 4 && (
+                <button
+                  onClick={() =>
+                    handleLoadCuratedPair(suggestedProducts[2].slug, suggestedProducts[3].slug)
+                  }
+                  className="p-4 rounded border border-luxury-border bg-luxury-surface2/60 hover:border-accent text-start transition-all group"
+                >
+                  <span className="text-[10px] text-accent font-mono uppercase tracking-wider block mb-1">
+                    {c("Vault Masterpieces", "تحف الخزانة العطرية")}
+                  </span>
+                  <h4 className="text-sm font-serif text-luxury-text font-medium group-hover:text-accent transition-colors">
+                    {suggestedProducts[2].nameEn} vs {suggestedProducts[3].nameEn}
+                  </h4>
+                  <span className="text-xs text-luxury-muted mt-1 block">
+                    {c(
+                      `Compare ${suggestedProducts[2].brand?.name || "Haute House"} with ${suggestedProducts[3].brand?.name || "Haute House"}`,
+                      `مقارنة بين ${suggestedProducts[2].brand?.name || "دار عطرية"} و ${suggestedProducts[3].brand?.name || "دار عطرية"}`
+                    )}
+                  </span>
+                </button>
+              )}
+            </div>
+          )}
 
           <div className="pt-2">
             <Link

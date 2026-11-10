@@ -3,9 +3,16 @@ import { Link } from "../navigation";
 import { ThemeToggle } from "./theme-toggle";
 import { ShieldCheck, Phone, Mail } from "lucide-react";
 
-export function Footer({ locale }: { locale: "en" | "ar" }) {
+export function Footer({
+  locale,
+  brands: initialBrands,
+}: {
+  locale: "en" | "ar";
+  brands?: Array<{ name: string; slug: string; countryOfOrigin?: string | null }>;
+}) {
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
+  const displayBrands = initialBrands && initialBrands.length > 0 ? initialBrands.slice(0, 5) : [];
 
   const socialLinks = [
     {
@@ -155,31 +162,19 @@ export function Footer({ locale }: { locale: "en" | "ar" }) {
             </h4>
           </div>
           <ul className="pt-4 space-y-3 text-xs sm:text-[13px]">
-            <li>
-              <Link href="/brands/amouage" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                Amouage (Oman)
-              </Link>
-            </li>
-            <li>
-              <Link href="/brands/maison-francis-kurkdjian" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                Maison Francis Kurkdjian (Paris)
-              </Link>
-            </li>
-            <li>
-              <Link href="/brands/roja-parfums" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                Roja Parfums (London)
-              </Link>
-            </li>
-            <li>
-              <Link href="/brands/xerjoff" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                Xerjoff (Turin)
-              </Link>
-            </li>
-            <li>
-              <Link href="/brands/tom-ford" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                Tom Ford Private Blend
-              </Link>
-            </li>
+            {displayBrands.map((b) => {
+              const country = b.countryOfOrigin ? b.countryOfOrigin.split(",")[0]?.trim() : "";
+              return (
+                <li key={b.slug}>
+                  <Link
+                    href={`/brands/${b.slug}`}
+                    className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block"
+                  >
+                    {b.name} {country ? `(${country})` : ""}
+                  </Link>
+                </li>
+              );
+            })}
             <li>
               <Link href="/brands" className="text-accent hover:underline inline-block font-medium">
                 {c("View All Houses (A–Z) →", "عرض جميع الدور (أ–ي) ←")}
