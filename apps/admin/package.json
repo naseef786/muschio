@@ -5,7 +5,7 @@
   "type": "module",
   "main": "./src/App.tsx",
   "module": "./src/App.tsx",
-  "types": "./src/App.d.ts",
+  "types": "./src/App.tsx",
   "exports": {
     ".": "./src/App.tsx"
   },
