@@ -234,7 +234,7 @@ export function ProductReviews({
 
                     {rev.title && (
                       <h4 className="font-medium text-xs sm:text-sm text-luxury-text tracking-tight">
-                        "{rev.title}"
+                        &ldquo;{rev.title}&rdquo;
                       </h4>
                     )}
 
@@ -465,3 +465,4 @@ export function ProductReviews({
     </section>
   );
 }
+

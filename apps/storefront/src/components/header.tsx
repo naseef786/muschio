@@ -22,6 +22,7 @@ import {
   Truck,
   Loader2,
   Clock,
+  MessageSquare,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
@@ -748,6 +749,22 @@ export function Header({
                   >
                     <span>{c("Muschio Journal", "مجلة موسكيو")}</span>
                     <ArrowRight size={14} className="opacity-50" />
+                  </Link>
+                  <Link
+                    href="/about"
+                    onClick={() => setMenu(false)}
+                    className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
+                  >
+                    <span>{c("About The Maison", "عن الدار وقصتنا")}</span>
+                    <Sparkles size={14} className="opacity-50" />
+                  </Link>
+                  <Link
+                    href="/contact"
+                    onClick={() => setMenu(false)}
+                    className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
+                  >
+                    <span>{c("Contact & VIP Concierge", "تواصل معنا والكونسيرج")}</span>
+                    <MessageSquare size={14} className="opacity-50" />
                   </Link>
                   <Link
                     href="/track"

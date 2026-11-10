@@ -1921,11 +1921,40 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success({ id: updated.id, isFeatured: updated.isFeatured });
     }
 
-    // 15. Customer & Concierge Enquiries Submission
-    if (path === "enquiries") {
-      const { name, email, phone, subject, message, fragranceInterest } = body || {};
+    // 15. Customer & Concierge Enquiries / Contact Message Submission (With Bot & Spam Defense)
+    if (path === "enquiries" || path === "contact") {
+      const { name, email, phone, subject, message, fragranceInterest, _honeypot, honeypot, website, _timeElapsed } = body || {};
+
+      // Bot Protection 1: Honeypot trap check (bots automatically fill hidden fields)
+      if (_honeypot || honeypot || website) {
+        console.warn("[Bot Protection] Honeypot triggered, discarding bot submission silently.");
+        return success({ success: true, enquiryId: `ENQ-${Date.now().toString(36).toUpperCase()}` }, 200);
+      }
+
+      // Bot Protection 2: Speed check (humans cannot submit in under 2 seconds)
+      if (typeof _timeElapsed === "number" && _timeElapsed < 2000) {
+        console.warn("[Bot Protection] Speed trap triggered (< 2000ms).");
+        return error("BOT_DETECTED", "Submission submitted too rapidly. Please retry.", 400);
+      }
+
       if (!name || !email || !message) {
         return error("INVALID_INPUT", "Name, email, and message are required", 400);
+      }
+
+      const cleanMessage = String(message).trim();
+
+      // Spam Protection 1: Excessive hyperlinks count
+      const urlMatches = (cleanMessage.match(/https?:\/\//gi) || []).length;
+      if (urlMatches > 2) {
+        return error("SPAM_DETECTED", "Messages cannot contain excessive hyperlinks.", 400);
+      }
+
+      // Spam Protection 2: Automated spam word heuristic
+      const spamKeywords = ["casino", "crypto investment", "forex signals", "viagra", "cialis", "buy backlinks", "telegram channel", "whatsapp blasting"];
+      const lowerMsg = cleanMessage.toLowerCase();
+      if (spamKeywords.some((word) => lowerMsg.includes(word))) {
+        console.warn("[Spam Protection] Message matched spam keyword heuristic.");
+        return error("SPAM_DETECTED", "Message flagged by automated spam filter.", 400);
       }
 
       const enquiryId = `ENQ-${Date.now().toString(36).toUpperCase()}-${Math.floor(100 + Math.random() * 900)}`;
@@ -1935,7 +1964,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         email: String(email).trim(),
         phone: phone ? String(phone).trim() : "",
         subject: subject ? String(subject).trim() : "VIP Fragrance Concierge Enquiry",
-        message: String(message).trim(),
+        message: cleanMessage,
         fragranceInterest: fragranceInterest ? String(fragranceInterest).trim() : "",
         status: "NEW",
         receivedAt: new Date().toISOString(),
@@ -2813,6 +2842,26 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
         });
       }
       return success({ success: true, deleted: noteIdOrSlug });
+    }
+
+    // 10. Admin Delete Enquiry / Message
+    if (route[0] === "admin" && (route[1] === "enquiries" || route[1] === "messages") && route[2]) {
+      const enquiryId = route[2];
+      await prisma.businessEvent.deleteMany({
+        where: {
+          eventName: "ENQUIRY_CREATED",
+          OR: [{ id: enquiryId }, { aggregateId: enquiryId }],
+        },
+      });
+      return success({ success: true, deleted: enquiryId });
+    }
+
+    // 11. Admin Delete Review
+    if (route[0] === "admin" && route[1] === "reviews" && route[2]) {
+      const reviewId = route[2];
+      await prisma.reviewImage.deleteMany({ where: { reviewId } }).catch(() => null);
+      await prisma.review.deleteMany({ where: { id: reviewId } });
+      return success({ success: true, deleted: reviewId });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);

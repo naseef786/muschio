@@ -45,8 +45,62 @@ function checkRateLimit(ip: string, endpointKey: string, maxRequests: number, wi
   return true;
 }
 
+// Malicious scrapers, vulnerability scanners, and automated spam attack agents
+const BLOCKED_BOT_USER_AGENTS = [
+  "sqlmap",
+  "nikto",
+  "masscan",
+  "wpscan",
+  "acunetix",
+  "dirbuster",
+  "havij",
+  "zgrab",
+  "censys",
+  "shodan",
+  "semrushbot",
+  "ahrefsbot",
+  "dotbot",
+  "petalbot",
+  "mj12bot",
+];
+
+function isMaliciousBot(userAgent: string | null): boolean {
+  if (!userAgent) return false;
+  const ua = userAgent.toLowerCase();
+  return BLOCKED_BOT_USER_AGENTS.some((bot) => ua.includes(bot));
+}
+
 export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const userAgent = req.headers.get("user-agent") || "";
+
+  // 0. Malicious Scraper & Exploit Bot Filtering
+  if (isMaliciousBot(userAgent)) {
+    return new NextResponse(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: "FORBIDDEN_AGENT",
+          message: "Automated scan signature detected. Access denied.",
+        },
+      }),
+      { status: 403, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Reject empty User-Agent on mutating POST/PUT/DELETE API endpoints (hallmark of raw bots)
+  if (pathname.startsWith("/api/") && ["POST", "PUT", "DELETE", "PATCH"].includes(req.method) && !userAgent.trim()) {
+    return new NextResponse(
+      JSON.stringify({
+        success: false,
+        error: {
+          code: "INVALID_CLIENT",
+          message: "Valid User-Agent header is required for secure operations.",
+        },
+      }),
+      { status: 400, headers: { "Content-Type": "application/json" } }
+    );
+  }
 
   // 1. API Route Protection & Sliding-Window Rate Limiting
   if (pathname.startsWith("/api/")) {
@@ -59,7 +113,7 @@ export default async function middleware(req: NextRequest) {
     let endpointKey = "api_general";
 
     if (pathname.includes("/auth/login")) {
-      maxRequests = 10;
+      maxRequests = 8;
       endpointKey = "auth_login";
     } else if (pathname.includes("/checkout")) {
       maxRequests = 20;
@@ -67,9 +121,12 @@ export default async function middleware(req: NextRequest) {
     } else if (pathname.includes("/search")) {
       maxRequests = 60;
       endpointKey = "search";
-    } else if (pathname.includes("/enquiries")) {
-      maxRequests = 12;
+    } else if (pathname.includes("/enquiries") || pathname.includes("/contact")) {
+      maxRequests = 6; // 6 submissions per minute per IP to prevent spam flood
       endpointKey = "enquiries";
+    } else if (pathname.includes("/reviews") && req.method === "POST") {
+      maxRequests = 6; // 6 review submissions per minute
+      endpointKey = "reviews_post";
     }
 
     const isAllowed = checkRateLimit(ip, endpointKey, maxRequests, 60_000);

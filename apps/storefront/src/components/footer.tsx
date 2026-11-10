@@ -206,7 +206,17 @@ export function Footer({
           </div>
           <ul className="pt-4 space-y-3 text-xs sm:text-[13px]">
             <li>
-              <Link href="/track" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block text-accent font-medium">
+              <Link href="/about" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
+                {c("About the Maison", "عن الدار وقصتنا")}
+              </Link>
+            </li>
+            <li>
+              <Link href="/contact" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block text-accent font-medium">
+                {c("Contact & VIP Concierge", "تواصل معنا والكونسيرج")}
+              </Link>
+            </li>
+            <li>
+              <Link href="/track" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
                 {c("Track Order & Dispatch", "تتبع الطلب والشحنة")}
               </Link>
             </li>

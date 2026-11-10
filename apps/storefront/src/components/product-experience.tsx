@@ -3,7 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
-import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight } from "lucide-react";
+import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight, Star } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
 import { CollectionSlider } from "./collection-slider";
 import { ProductReviews } from "./product-reviews";
@@ -457,6 +457,27 @@ export function ProductExperience({
               <p className="text-xs uppercase tracking-wider text-neutral-400 mt-1 font-sans">
                 {product.concentration.replaceAll("_", " ")}
               </p>
+
+              {/* Star Rating & Jump to Customer Impressions Anchor */}
+              <div className="mt-2">
+                <a
+                  href="#reviews-section"
+                  className="inline-flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors group cursor-pointer"
+                >
+                  <div className="flex items-center text-amber-500">
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                    <Star size={13} className="fill-amber-400 text-amber-400" />
+                  </div>
+                  <span className="font-semibold text-neutral-900 dark:text-white font-mono">5.0</span>
+                  <span className="text-neutral-300 dark:text-neutral-700">·</span>
+                  <span className="underline decoration-neutral-300 dark:decoration-neutral-700 underline-offset-4 group-hover:decoration-neutral-900 dark:group-hover:decoration-white font-sans text-[11px]">
+                    {c("Verified Impressions & Reviews", "التقييمات الموثقة")}
+                  </span>
+                </a>
+              </div>
 
               {/* Product Tags & Olfactory Curations */}
               {product.tags && product.tags.length > 0 && (

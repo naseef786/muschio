@@ -431,7 +431,7 @@ export function App() {
   // GLOBAL DELETE CONFIRMATION STATE (SAFETY & FALLBACK)
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
-    itemType: "Product" | "Collection" | "Tag" | "Maison" | "Scent Note" | "Banner";
+    itemType: "Product" | "Collection" | "Tag" | "Maison" | "Scent Note" | "Banner" | "Review" | "Enquiry";
     itemId: string;
     itemName: string;
     warning?: string;
@@ -995,10 +995,14 @@ export function App() {
               json.data.map((r: any) => ({
                 id: r.id,
                 customer: r.customer ? `${r.customer.firstName} ${r.customer.lastName || ""}`.trim() : "Collector",
+                email: r.customer?.email,
                 product: r.product?.nameEn || "Fragrance Flacon",
                 rating: r.rating,
                 review: r.body,
                 title: r.title,
+                longevity: r.longevityRating || 4,
+                sillage: r.sillageRating || 4,
+                isVerifiedPurchase: r.isVerifiedPurchase,
                 status: r.status,
                 date: new Date(r.createdAt).toLocaleDateString("en-GB", {
                   month: "short",
@@ -1154,6 +1158,8 @@ export function App() {
 
   // 5. REVIEWS
   const [reviews, setReviews] = usePersistentState<any[]>("reviews", []);
+  const [reviewStatusFilter, setReviewStatusFilter] = useState<string>("ALL");
+  const [reviewSearch, setReviewSearch] = useState<string>("");
 
   // 6. BANNERS
   const [banners, setBanners] = usePersistentState<BannerItem[]>("banners", []);
@@ -2700,6 +2706,62 @@ export function App() {
     }
   };
 
+  const promptDeleteReview = (review: any) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Review",
+      itemId: review.id,
+      itemName: `Review by ${review.customer || "Client"} ("${review.title || review.product || "Review"}")`,
+      warning: "This client review will be permanently deleted from the Neon database.",
+      isDeleting: false,
+      onConfirm: async () => {
+        try {
+          const token = authSession?.token;
+          await fetch(`/api/v1/admin/reviews/${review.id}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          setReviews((prev) => prev.filter((r) => r.id !== review.id));
+          addAuditLog("REVIEW_DELETED", `Deleted review ${review.id}`);
+          addToast("system", "Review Deleted", "Client review permanently removed");
+        } catch (err: any) {
+          console.error("Failed to delete review:", err);
+          addToast("cancel", "Delete Failed", err.message || "Failed to remove review");
+        } finally {
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        }
+      },
+    });
+  };
+
+  const promptDeleteEnquiry = (enquiry: EnquiryItem) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Enquiry",
+      itemId: enquiry.id,
+      itemName: `Message from ${enquiry.name} (${enquiry.enquiryId || enquiry.id})`,
+      warning: "This contact message/enquiry will be permanently deleted from the database.",
+      isDeleting: false,
+      onConfirm: async () => {
+        try {
+          const token = authSession?.token;
+          await fetch(`/api/v1/admin/enquiries/${enquiry.id}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          setEnquiries((prev) => prev.filter((e) => e.id !== enquiry.id));
+          addAuditLog("ENQUIRY_DELETED", `Deleted enquiry ${enquiry.id}`);
+          addToast("system", "Message Deleted", "Enquiry record permanently removed");
+        } catch (err: any) {
+          console.error("Failed to delete enquiry:", err);
+          addToast("cancel", "Delete Failed", err.message || "Failed to remove enquiry");
+        } finally {
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        }
+      },
+    });
+  };
+
   // Settings Save
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2824,7 +2886,7 @@ export function App() {
       <aside
         className={`fixed inset-y-0 start-0 z-50 ${
           isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
+        } w-72 max-w-[85vw] h-[100dvh] max-h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -2897,7 +2959,7 @@ export function App() {
               { id: "purchasing", label: "Purchasing", icon: FileText },
               { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
               { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
-              { id: "enquiries", label: "VIP Enquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
+              { id: "enquiries", label: "Messages & Inquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
               { id: "reviews", label: "Reviews", icon: Star, count: pendingReviewsCount > 0 ? pendingReviewsCount : undefined },
               { id: "markets", label: "Markets", icon: Globe },
               { id: "banners", label: "Banners", icon: ImageIcon, count: banners.length },
@@ -2923,8 +2985,8 @@ export function App() {
                       : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
                   }`}
                 >
-                  <span className={`flex items-center ${showText ? "gap-3" : "justify-center"}`}>
-                    <div className="relative flex items-center justify-center">
+                  <span className={`flex items-center min-w-0 ${showText ? "gap-3" : "justify-center"}`}>
+                    <div className="relative flex items-center justify-center shrink-0">
                       <Icon size={16} />
                       {!showText && item.count !== undefined && (
                         <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
@@ -2932,11 +2994,11 @@ export function App() {
                         </span>
                       )}
                     </div>
-                    {showText && <span>{item.label}</span>}
+                    {showText && <span className="truncate">{item.label}</span>}
                   </span>
                   {showText && item.count !== undefined && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
                         isActive
                           ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
                           : "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800"
@@ -5441,6 +5503,16 @@ export function App() {
                             <Send size={13} />
                             <span>Email</span>
                           </a>
+
+                          <button
+                            type="button"
+                            onClick={() => promptDeleteEnquiry(enq)}
+                            className="p-1.5 border border-neutral-300 dark:border-neutral-700 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-500 hover:text-rose-600 rounded transition-colors"
+                            title="Delete Enquiry"
+                            aria-label="Delete Enquiry"
+                          >
+                            <Trash2 size={13} />
+                          </button>
                         </div>
                       </div>
 
@@ -6173,160 +6245,263 @@ export function App() {
         )}
 
         {/* 8. REVIEWS MODERATION */}
-        {activeTab === "reviews" && (
-          <div className="space-y-6">
-            <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
-              <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Fragrance Reviews Moderation</h2>
-              <span className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400 rounded">
-                {reviews.length} Verified Reviews
-              </span>
-            </div>
+        {activeTab === "reviews" && (() => {
+          const approvedReviews = reviews.filter((r) => r.status === "APPROVED");
+          const pendingCount = reviews.filter((r) => r.status === "PENDING" || !r.status).length;
+          const avgScore = approvedReviews.length > 0
+            ? (approvedReviews.reduce((sum, r) => sum + Number(r.rating || 5), 0) / approvedReviews.length).toFixed(1)
+            : "5.0";
 
-            {/* MOBILE REVIEWS CARDS (hidden on md+, visible on mobile) */}
-            <div className="block md:hidden space-y-3">
-              {reviews.length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
-                  No customer reviews waiting for moderation.
-                </div>
-              ) : (
-                reviews.map((r) => (
-                  <div
-                    key={r.id}
-                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <span className="font-semibold text-xs text-neutral-900 dark:text-white block">
-                          {r.product}
-                        </span>
-                        <span className="text-[11px] text-neutral-500">By {r.customer}</span>
-                      </div>
-                      <span
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${
-                          r.status === "APPROVED"
-                            ? "bg-black text-white dark:bg-white dark:text-black"
-                            : r.status === "REJECTED"
-                            ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
-                            : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
-                        }`}
-                      >
-                        {r.status}
-                      </span>
-                    </div>
+          const filteredReviews = reviews.filter((r) => {
+            if (reviewStatusFilter !== "ALL" && r.status !== reviewStatusFilter) return false;
+            if (reviewSearch.trim()) {
+              const q = reviewSearch.toLowerCase();
+              return (
+                (r.product && r.product.toLowerCase().includes(q)) ||
+                (r.customer && r.customer.toLowerCase().includes(q)) ||
+                (r.title && r.title.toLowerCase().includes(q)) ||
+                (r.review && r.review.toLowerCase().includes(q))
+              );
+            }
+            return true;
+          });
 
-                    <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="text-amber-500 font-semibold text-xs">★ {r.rating} / 5</span>
-                        <span className="text-neutral-900 dark:text-white font-medium text-xs">"{r.title}"</span>
-                      </div>
-                      <div className="font-mono text-[11px] text-neutral-500 flex items-center gap-3">
-                        <span>Longevity: <strong className="text-neutral-700 dark:text-neutral-300">{r.longevity}/5</strong></span>
-                        <span>•</span>
-                        <span>Sillage: <strong className="text-neutral-700 dark:text-neutral-300">{r.sillage}/5</strong></span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 pt-1">
-                      {r.status !== "APPROVED" && (
-                        <button
-                          type="button"
-                          onClick={() => handleReviewAction(r.id, "APPROVED")}
-                          className="flex-1 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded shadow-sm text-center"
-                        >
-                          Approve
-                        </button>
-                      )}
-                      {r.status !== "REJECTED" && (
-                        <button
-                          type="button"
-                          onClick={() => handleReviewAction(r.id, "REJECTED")}
-                          className="flex-1 py-1.5 border border-rose-300 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-xs font-medium rounded text-center"
-                        >
-                          Reject
-                        </button>
-                      )}
-                    </div>
+          return (
+            <div className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Reviews</span>
+                  <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
+                    {reviews.length}
                   </div>
-                ))
-              )}
-            </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Pending Approval</span>
+                  <div className="font-serif text-2xl font-light text-amber-500 mt-1">
+                    {pendingCount}
+                  </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Approved Active</span>
+                  <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
+                    {approvedReviews.length}
+                  </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Storefront Average</span>
+                  <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1 flex items-center gap-1.5">
+                    <span>{avgScore}</span>
+                    <span className="text-amber-500 text-base">★</span>
+                  </div>
+                </div>
+              </div>
 
-            {/* DESKTOP & LAPTOP REVIEWS TABLE (hidden on mobile, visible md+) */}
-            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
-              <table className="w-full text-start text-xs font-sans min-w-[850px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
-                  <tr>
-                    <th className="py-3.5 px-4 text-start min-w-[200px]">Product / Customer</th>
-                    <th className="py-3.5 px-4 text-start min-w-[240px]">Title & Rating</th>
-                    <th className="py-3.5 px-4 text-start min-w-[170px]">Longevity / Sillage</th>
-                    <th className="py-3.5 px-4 text-start min-w-[120px]">Status</th>
-                    <th className="py-3.5 px-4 text-end min-w-[140px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                  {reviews.length === 0 ? (
-                    <tr>
-                      <td colSpan={5} className="py-12 text-center text-neutral-500 font-sans">
-                        No customer reviews waiting for moderation. Verified client reviews submitted on the storefront will appear here.
-                      </td>
-                    </tr>
-                  ) : (
-                    reviews.map((r) => (
-                    <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
-                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-neutral-900 dark:text-white block font-medium">"{r.title}"</span>
-                        <span className="text-amber-500 font-medium">★ {r.rating} / 5</span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">
-                        L: {r.longevity}/5 • S: {r.sillage}/5
-                      </td>
-                      <td className="py-3.5 px-4">
+              {/* Filter and Search Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                  {["ALL", "PENDING", "APPROVED", "REJECTED"].map((st) => (
+                    <button
+                      key={st}
+                      type="button"
+                      onClick={() => setReviewStatusFilter(st)}
+                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
+                        reviewStatusFilter === st
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
+                          : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                      }`}
+                    >
+                      {st === "ALL" ? `All Reviews (${reviews.length})` : `${st} (${reviews.filter((r) => (st === "PENDING" ? r.status === "PENDING" || !r.status : r.status === st)).length})`}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search reviews by flacon, collector, keyword..."
+                  value={reviewSearch}
+                  onChange={(e) => setReviewSearch(e.target.value)}
+                  className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
+                />
+              </div>
+
+              {/* MOBILE REVIEWS CARDS (hidden on md+, visible on mobile) */}
+              <div className="block md:hidden space-y-3">
+                {filteredReviews.length === 0 ? (
+                  <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
+                    No customer reviews match your filter.
+                  </div>
+                ) : (
+                  filteredReviews.map((r) => (
+                    <div
+                      key={r.id}
+                      className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="font-semibold text-xs text-neutral-900 dark:text-white block">
+                            {r.product}
+                          </span>
+                          <span className="text-[11px] text-neutral-500">By {r.customer}</span>
+                        </div>
                         <span
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${
                             r.status === "APPROVED"
                               ? "bg-black text-white dark:bg-white dark:text-black"
                               : r.status === "REJECTED"
                               ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
-                              : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
+                              : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-900"
                           }`}
                         >
-                          {r.status}
+                          {r.status || "PENDING"}
                         </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-end">
-                        <div className="flex items-center justify-end gap-2">
-                          {r.status !== "APPROVED" && (
-                            <button
-                              type="button"
-                              onClick={() => handleReviewAction(r.id, "APPROVED")}
-                              className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
-                            >
-                              Approve
-                            </button>
-                          )}
-                          {r.status !== "REJECTED" && (
-                            <button
-                              type="button"
-                              onClick={() => handleReviewAction(r.id, "REJECTED")}
-                              className="px-2.5 py-1.5 border border-rose-300 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-rose-600 dark:text-rose-400 text-[11px] rounded"
-                            >
-                              Reject
-                            </button>
-                          )}
+                      </div>
+
+                      <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-amber-500 font-semibold text-xs">★ {r.rating} / 5</span>
+                          {r.title && <span className="text-neutral-900 dark:text-white font-medium text-xs">"{r.title}"</span>}
                         </div>
-                      </td>
-                    </tr>
+                        {r.review && <p className="text-neutral-600 dark:text-neutral-300 text-xs">{r.review}</p>}
+                        <div className="font-mono text-[11px] text-neutral-500 flex items-center gap-3">
+                          <span>Longevity: <strong className="text-neutral-700 dark:text-neutral-300">{r.longevity || 4}/5</strong></span>
+                          <span>•</span>
+                          <span>Sillage: <strong className="text-neutral-700 dark:text-neutral-300">{r.sillage || 4}/5</strong></span>
+                          {r.isVerifiedPurchase && <span className="text-emerald-600 dark:text-emerald-400">✓ Verified Purchase</span>}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-1">
+                        {r.status !== "APPROVED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleReviewAction(r.id, "APPROVED")}
+                            className="flex-1 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded shadow-sm text-center"
+                          >
+                            Approve
+                          </button>
+                        )}
+                        {r.status !== "REJECTED" && (
+                          <button
+                            type="button"
+                            onClick={() => handleReviewAction(r.id, "REJECTED")}
+                            className="flex-1 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-xs font-medium rounded text-center"
+                          >
+                            Reject
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => promptDeleteReview(r)}
+                          className="p-1.5 border border-neutral-300 dark:border-neutral-700 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-500 hover:text-rose-600 rounded transition-colors"
+                          title="Delete Review"
+                          aria-label="Delete Review"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
                   ))
                 )}
-                </tbody>
-              </table>
+              </div>
+
+              {/* DESKTOP & LAPTOP REVIEWS TABLE (hidden on mobile, visible md+) */}
+              <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+                <table className="w-full text-start text-xs font-sans min-w-[850px]">
+                  <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                    <tr>
+                      <th className="py-3.5 px-4 text-start min-w-[200px]">Product / Customer</th>
+                      <th className="py-3.5 px-4 text-start min-w-[240px]">Title, Rating & Impression</th>
+                      <th className="py-3.5 px-4 text-start min-w-[170px]">Longevity / Sillage</th>
+                      <th className="py-3.5 px-4 text-start min-w-[120px]">Status</th>
+                      <th className="py-3.5 px-4 text-end min-w-[170px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                    {filteredReviews.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-neutral-500 font-sans">
+                          No customer reviews match your filter.
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredReviews.map((r) => (
+                      <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
+                          {r.isVerifiedPurchase && (
+                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono mt-0.5">
+                              ✓ Verified Purchase
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 max-w-sm">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-amber-500 font-medium">★ {r.rating} / 5</span>
+                            {r.title && <span className="text-neutral-900 dark:text-white font-medium">"{r.title}"</span>}
+                          </div>
+                          {r.review && (
+                            <p className="text-neutral-600 dark:text-neutral-400 text-xs line-clamp-2">
+                              {r.review}
+                            </p>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">
+                          L: {r.longevity || 4}/5 • S: {r.sillage || 4}/5
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${
+                              r.status === "APPROVED"
+                                ? "bg-black text-white dark:bg-white dark:text-black"
+                                : r.status === "REJECTED"
+                                ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
+                                : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-900"
+                            }`}
+                          >
+                            {r.status || "PENDING"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            {r.status !== "APPROVED" && (
+                              <button
+                                type="button"
+                                onClick={() => handleReviewAction(r.id, "APPROVED")}
+                                className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                              >
+                                Approve
+                              </button>
+                            )}
+                            {r.status !== "REJECTED" && (
+                              <button
+                                type="button"
+                                onClick={() => handleReviewAction(r.id, "REJECTED")}
+                                className="px-2.5 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[11px] rounded"
+                              >
+                                Reject
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => promptDeleteReview(r)}
+                              className="p-1.5 border border-neutral-300 dark:border-neutral-700 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-500 hover:text-rose-600 rounded transition-colors"
+                              title="Delete Review"
+                              aria-label="Delete Review"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 9. MARKETS & GCC VAT */}
         {activeTab === "markets" && (
