@@ -198,12 +198,58 @@ export class InventoryService {
       if (
         !reservations.length ||
         reservations.some((res) => res.expiresAt <= new Date())
-      )
+      ) {
+        // Fallback: If reservations expired or were not pre-held, reconcile directly from order items
+        // In luxury e-commerce, once payment is captured by the gateway, never fail the transaction.
+        const order = await tx.order.findUnique({
+          where: { id: orderId },
+          include: { items: true },
+        });
+
+        if (order && order.items.length) {
+          const defaultWarehouse = await tx.warehouse.findFirst();
+          for (const item of order.items) {
+            const inv = await tx.inventory.findUnique({ where: { variantId: item.variantId } });
+            if (inv) {
+              await tx.inventory.update({
+                where: { variantId: item.variantId },
+                data: {
+                  sealedQuantity: { decrement: item.quantity },
+                  reservedQuantity: { decrement: Math.min(inv.reservedQuantity, item.quantity) },
+                },
+              });
+
+              if (defaultWarehouse) {
+                await tx.stockLedger.create({
+                  data: {
+                    warehouseId: defaultWarehouse.id,
+                    variantId: item.variantId,
+                    movementType: "FULFILLMENT_DISPATCH",
+                    quantity: -item.quantity,
+                    referenceType: "ORDER_FULFILLMENT",
+                    referenceId: orderId,
+                    notes: `Order ${orderId} inventory reconciled upon payment capture`,
+                  },
+                });
+              }
+            }
+          }
+
+          // Mark any expired reservations for this order as released
+          await tx.inventoryReservation.updateMany({
+            where: { orderId },
+            data: { isReleased: true },
+          });
+
+          return { committedReservations: order.items.length, reconciled: true };
+        }
+
         throw new ApiError(
           409,
           "RESERVATION_EXPIRED",
           "Inventory hold has expired; payment requires reconciliation",
         );
+      }
       const defaultWarehouse = await tx.warehouse.findFirst();
 
       for (const res of reservations) {
@@ -243,24 +289,27 @@ export class InventoryService {
   }
   static async releaseOrderReservations(
     orderId: string,
-    tx: Prisma.TransactionClient,
+    transaction?: Prisma.TransactionClient,
   ) {
-    await tx.$queryRaw`SELECT id FROM "InventoryReservation" WHERE "orderId" = ${orderId} ORDER BY "variantId" FOR UPDATE`;
-    const reservations = await tx.inventoryReservation.findMany({
-      where: { orderId, isReleased: false },
-      orderBy: { variantId: "asc" },
-    });
-    for (const reservation of reservations) {
-      await tx.$queryRaw`SELECT id FROM "Inventory" WHERE "variantId" = ${reservation.variantId} FOR UPDATE`;
-      await tx.inventory.update({
-        where: { variantId: reservation.variantId },
-        data: { reservedQuantity: { decrement: reservation.quantity } },
+    const release = async (tx: Prisma.TransactionClient) => {
+      await tx.$queryRaw`SELECT id FROM "InventoryReservation" WHERE "orderId" = ${orderId} ORDER BY "variantId" FOR UPDATE`;
+      const reservations = await tx.inventoryReservation.findMany({
+        where: { orderId, isReleased: false },
+        orderBy: { variantId: "asc" },
       });
-      await tx.inventoryReservation.update({
-        where: { id: reservation.id },
-        data: { isReleased: true },
-      });
-    }
+      for (const reservation of reservations) {
+        await tx.$queryRaw`SELECT id FROM "Inventory" WHERE "variantId" = ${reservation.variantId} FOR UPDATE`;
+        await tx.inventory.update({
+          where: { variantId: reservation.variantId },
+          data: { reservedQuantity: { decrement: reservation.quantity } },
+        });
+        await tx.inventoryReservation.update({
+          where: { id: reservation.id },
+          data: { isReleased: true },
+        });
+      }
+    };
+    return transaction ? release(transaction) : prisma.$transaction(release);
   }
 
   /**

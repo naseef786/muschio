@@ -3,7 +3,7 @@ import { DeliveryService } from "./delivery.service";
 import { DeliveryRequestSchema } from "@muschio/types";
 import { ApiError } from "../middleware/error-handler";
 import { CheckoutPayload } from "@muschio/types";
-import { OrderStatus, Prisma } from "@prisma/client";
+import { OrderStatus, PaymentMethodType, PaymentStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { InventoryService } from "./inventory.service";
 
@@ -247,8 +247,42 @@ export class CheckoutService {
         include: {
           items: true,
           shippingAddress: true,
+          payments: true,
         },
       });
+
+      // 3b. Create initial Payment record in DB (Guarantees every order has an immutable payment ledger entry)
+      const isTabby = payload.paymentMethod === "TABBY";
+      const isTamara = payload.paymentMethod === "TAMARA";
+      const isApplePay = payload.paymentMethod === "APPLE_PAY";
+      const isGooglePay = payload.paymentMethod === "GOOGLE_PAY";
+
+      const initialProvider = isCod
+        ? PaymentMethodType.CASH_ON_DELIVERY
+        : isTabby
+          ? PaymentMethodType.TABBY
+          : isTamara
+            ? PaymentMethodType.TAMARA
+            : isApplePay
+              ? PaymentMethodType.APPLE_PAY
+              : isGooglePay
+                ? PaymentMethodType.GOOGLE_PAY
+                : PaymentMethodType.CREDIT_CARD;
+
+      const initialPaymentStatus = PaymentStatus.INITIATED;
+
+      const payment = await tx.payment.create({
+        data: {
+          orderId: order.id,
+          provider: initialProvider,
+          status: initialPaymentStatus,
+          amount: totalAmount,
+          currency,
+          gatewayReference: isCod ? `cod_${order.orderNumber}` : isTabby ? `tabby_${order.orderNumber}` : isTamara ? `tamara_${order.orderNumber}` : null,
+        },
+      });
+
+      (order as any).payments = [payment];
 
       // 4. Reserve inventory for 35 minutes
       await InventoryService.reserveInventory(

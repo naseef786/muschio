@@ -22,6 +22,7 @@ import {
   ReturnsService,
   AuditService,
   TagService,
+  InventoryService,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
@@ -853,9 +854,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
   try {
     const route = params.route || [];
     const path = route.join("/");
+    let rawText = "";
     let body: any = {};
     try {
-      body = await req.json();
+      rawText = await req.text();
+      if (rawText && rawText.trim()) {
+        body = JSON.parse(rawText);
+      }
     } catch {}
 
     // Require administrator authorization for all admin endpoints (except login)
@@ -1096,7 +1101,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         return error("BAD_REQUEST", "Stripe-Signature header is missing", 400);
       }
       try {
-        const rawBody = Buffer.from(JSON.stringify(body || {}), "utf-8");
+        const rawBody = Buffer.from(rawText || JSON.stringify(body || {}), "utf-8");
         const result = await (PaymentService as any).handleStripeWebhook(rawBody, signature);
 
         // If webhook settled payment, verify and dispatch emails
@@ -1134,7 +1139,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             ...(orderNumber ? [{ orderNumber }] : []),
           ],
         },
-        include: { items: true, payments: true, shippingAddress: true, customer: true },
+        include: { items: true, payments: { include: { events: true }, orderBy: { createdAt: "desc" } }, shippingAddress: true, customer: true },
       });
 
       if (!order) return error("NOT_FOUND", "Order not found", 404);
@@ -1148,17 +1153,51 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           ? "MASTERCARD"
           : "VISA";
 
-      // Create captured payment record
-      const payment = await prisma.payment.create({
-        data: {
-          orderId: order.id,
-          provider: "CREDIT_CARD",
-          status: "CAPTURED",
-          amount: order.totalAmount,
-          currency: order.currency,
-          gatewayReference: `card_${brand.toLowerCase()}_${last4}_${Date.now()}`,
-        },
-      });
+      // Idempotency: Return immediately if already paid & captured
+      const existingCaptured = order.payments?.find((p) => p.status === "CAPTURED");
+      if (order.status === "PAID" && existingCaptured) {
+        return success({
+          success: true,
+          paymentId: existingCaptured.id,
+          order: storefrontOrder(order),
+          transaction: {
+            brand,
+            last4,
+            gatewayReference: existingCaptured.gatewayReference,
+            status: "CAPTURED",
+          },
+        });
+      }
+
+      // Update existing initiated payment or create captured payment record
+      const existingInitiated = order.payments?.find((p) => p.status === "INITIATED" || (p.status as any) === "PENDING");
+      let payment;
+      if (existingInitiated) {
+        payment = await prisma.payment.update({
+          where: { id: existingInitiated.id },
+          data: {
+            status: "CAPTURED",
+            provider: "CREDIT_CARD",
+            gatewayReference: `card_${brand.toLowerCase()}_${last4}_${Date.now()}`,
+          },
+        });
+      } else {
+        payment = await prisma.payment.create({
+          data: {
+            orderId: order.id,
+            provider: "CREDIT_CARD",
+            status: "CAPTURED",
+            amount: order.totalAmount,
+            currency: order.currency,
+            gatewayReference: `card_${brand.toLowerCase()}_${last4}_${Date.now()}`,
+          },
+        });
+      }
+
+      // Commit stock in inventory ledger
+      await InventoryService.commitOrderInventory(order.id).catch((err: any) =>
+        console.warn("Stock commitment notice:", err)
+      );
 
       // Persist rich card payment event dossier
       await prisma.paymentEvent.create({
@@ -2122,6 +2161,20 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             });
           }
         }
+        await InventoryService.commitOrderInventory(order.id).catch(() => null);
+      }
+
+      // When cancelling, release reserved stock and update payment record
+      if (status === "CANCELLED") {
+        await InventoryService.releaseOrderReservations(order.id).catch(() => null);
+        const primaryPayment = order.payments[0];
+        if (primaryPayment) {
+          const nextPaymentStatus = primaryPayment.status === "CAPTURED" ? "REFUNDED" : "CANCELLED";
+          await prisma.payment.update({
+            where: { id: primaryPayment.id },
+            data: { status: nextPaymentStatus as any },
+          });
+        }
       }
 
       // When transitioning to SHIPPED, ensure fulfillment and shipment tracking exist
@@ -2239,8 +2292,19 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       const updated = await prisma.order.update({
         where: { id: order.id },
         data: { status: "CANCELLED" },
-        include: { items: true, shippingAddress: true, customer: true },
+        include: { items: true, shippingAddress: true, customer: true, payments: true },
       });
+
+      // Release inventory hold
+      await InventoryService.releaseOrderReservations(order.id).catch(() => null);
+
+      // Cancel payment if pending
+      if (order.payments && order.payments[0]) {
+        await prisma.payment.update({
+          where: { id: order.payments[0].id },
+          data: { status: "CANCELLED" },
+        }).catch(() => null);
+      }
 
       await prisma.businessEvent.create({
         data: {

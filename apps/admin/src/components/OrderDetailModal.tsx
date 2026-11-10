@@ -459,9 +459,39 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <div className="flex items-center justify-between">
                   <span className="text-neutral-500">Method / Gateway:</span>
                   <span className="font-mono font-semibold text-neutral-900 dark:text-white uppercase flex items-center gap-1.5">
-                    {order.method || primaryPayment?.provider === "CREDIT_CARD" ? "Credit Card (Stripe)" : primaryPayment?.provider || "Credit Card (Stripe)"}
+                    {primaryPayment?.provider === "CASH_ON_DELIVERY"
+                      ? "Cash on Delivery (COD)"
+                      : primaryPayment?.provider === "TABBY"
+                        ? "Tabby (4 Installments)"
+                        : primaryPayment?.provider === "TAMARA"
+                          ? "Tamara (4 Installments)"
+                          : primaryPayment?.provider === "APPLE_PAY"
+                            ? "Apple Pay"
+                            : primaryPayment?.provider === "GOOGLE_PAY"
+                              ? "Google Pay"
+                              : "Credit / Debit Card (Stripe)"}
                   </span>
                 </div>
+
+                {/* Tabby / Tamara Installment Schedule */}
+                {(primaryPayment?.provider === "TABBY" || primaryPayment?.provider === "TAMARA") && (
+                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-neutral-500">Installments:</span>
+                    <span className="font-mono text-neutral-900 dark:text-white font-semibold">
+                      4 × {currency} {(totalAmount / 4).toFixed(2)} (0% Interest)
+                    </span>
+                  </div>
+                )}
+
+                {/* Cash on Delivery Delivery Note */}
+                {primaryPayment?.provider === "CASH_ON_DELIVERY" && (
+                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-[11px] flex items-center justify-between">
+                    <span className="text-neutral-500">Collection:</span>
+                    <span className="font-medium text-amber-700 dark:text-amber-400">
+                      Collect {currency} {totalAmount.toLocaleString()} upon client handover
+                    </span>
+                  </div>
+                )}
 
                 {/* Card Brand & Last4 Dossier */}
                 {(cardBrand || cardLast4) && (

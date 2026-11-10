@@ -2978,20 +2978,20 @@ export function App() {
           )}
         </div>
 
-        {/* 2. Scrollable Navigation List - Isolated Scroll Container (never collides with footer) */}
-        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain px-3 py-2 space-y-1">
-          <nav className="space-y-1 text-xs font-sans pb-2">
+        {/* 2. Scrollable Navigation List - Fully Isolated Container */}
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain px-2.5 py-2">
+          <nav className="space-y-0.5 text-xs font-sans pb-6">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+              { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
               { id: "products", label: "Products", icon: Package, count: products.length },
+              { id: "inventory", label: "Inventory", icon: Warehouse },
               { id: "collections", label: "Collections", icon: Sparkles, count: collections.length },
-              { id: "tags", label: "Tags", icon: Tag, count: tags.length },
               { id: "brands", label: "Brands", icon: Award, count: brands.length },
               { id: "notes", label: "Notes", icon: Layers, count: notes.length },
-              { id: "inventory", label: "Inventory", icon: Warehouse },
+              { id: "tags", label: "Tags", icon: Tag, count: tags.length },
               { id: "purchasing", label: "Purchasing", icon: FileText },
               { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
-              { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
               { id: "enquiries", label: "Messages & Inquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
               { id: "reviews", label: "Reviews", icon: Star, count: pendingReviewsCount > 0 ? pendingReviewsCount : undefined },
               { id: "markets", label: "Markets", icon: Globe },
@@ -3011,17 +3011,17 @@ export function App() {
                   }}
                   title={`${item.label}${item.count !== undefined ? ` (${item.count})` : ""}`}
                   className={`w-full shrink-0 flex items-center ${
-                    showText ? "justify-between px-3 py-2.5" : "justify-center px-2 py-2.5"
-                  } rounded-md text-xs font-medium transition-colors ${
+                    showText ? "justify-between px-3 py-2" : "justify-center px-2 py-2"
+                  } rounded-lg text-xs font-medium transition-all ${
                     isActive
                       ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
                       : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
                   }`}
                 >
-                  <span className={`flex items-center min-w-0 ${showText ? "gap-3" : "justify-center"}`}>
+                  <span className={`flex items-center min-w-0 ${showText ? "gap-2.5" : "justify-center"}`}>
                     <div className="relative flex items-center justify-center shrink-0">
                       <Icon size={16} />
-                      {!showText && item.count !== undefined && (
+                      {!showText && item.count !== undefined && item.count > 0 && (
                         <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
                           {item.count > 99 ? "99+" : item.count}
                         </span>
@@ -3029,7 +3029,7 @@ export function App() {
                     </div>
                     {showText && <span className="truncate">{item.label}</span>}
                   </span>
-                  {showText && item.count !== undefined && (
+                  {showText && item.count !== undefined && item.count > 0 && (
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
                         isActive
@@ -3046,15 +3046,18 @@ export function App() {
           </nav>
         </div>
 
-        {/* 3. User Session Footer - Anchored cleanly at the bottom, 100% solid & isolated */}
-        <div className={`shrink-0 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black relative z-20 ${isSidebarCollapsed && !isMobileNavOpen ? "p-2" : "p-3"}`}>
+        {/* 3. User Session Footer - Compact, Solid & Never Colliding */}
+        <div className={`shrink-0 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black shadow-[0_-4px_12px_rgba(0,0,0,0.02)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.3)] relative z-20 ${isSidebarCollapsed && !isMobileNavOpen ? "p-2" : "p-2.5"}`}>
           {isSidebarCollapsed && !isMobileNavOpen ? (
             <div className="flex flex-col items-center gap-2">
-              <div
-                className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default"
-                title={`${authSession.user.name} (${authSession.user.role})`}
-              >
-                {authSession.user.name.charAt(0) || "A"}
+              <div className="relative">
+                <div
+                  className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default ring-1 ring-neutral-300 dark:ring-neutral-700"
+                  title={`${authSession.user.name} (${authSession.user.role})`}
+                >
+                  {authSession.user.name.charAt(0) || "A"}
+                </div>
+                <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-black" />
               </div>
               <button
                 type="button"
@@ -3062,32 +3065,29 @@ export function App() {
                   setIsMobileNavOpen(false);
                   handleLogout();
                 }}
-                className="p-1.5 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
+                className="p-1.5 rounded-lg bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
                 title="Sign Out Session"
                 aria-label="Sign Out Session"
               >
-                <LogOut size={12} />
+                <LogOut size={13} />
               </button>
             </div>
           ) : (
-            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-2.5 space-y-2 text-[11px]">
+            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-2 flex items-center justify-between gap-2">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
-                  {authSession.user.name.charAt(0) || "A"}
+                <div className="relative shrink-0">
+                  <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs ring-1 ring-neutral-300 dark:ring-neutral-700">
+                    {authSession.user.name.charAt(0) || "A"}
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-black" title="Active Administrator" />
                 </div>
-                <div className="min-w-0 flex-1">
-                  <div className="font-medium text-neutral-900 dark:text-white truncate">{authSession.user.name}</div>
-                  <div className="text-neutral-500 font-mono text-[9px] truncate">{authSession.user.email}</div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between pt-1 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
-                <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
-                  {authSession.user.role.replace("_", " ")}
-                </span>
-                <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                  <span>Active</span>
+                <div className="min-w-0">
+                  <div className="font-medium text-neutral-900 dark:text-white text-xs truncate leading-snug">
+                    {authSession.user.name}
+                  </div>
+                  <div className="text-[10px] text-neutral-500 font-mono truncate leading-tight">
+                    {authSession.user.role.replace("_", " ")}
+                  </div>
                 </div>
               </div>
 
@@ -3097,10 +3097,11 @@ export function App() {
                   setIsMobileNavOpen(false);
                   handleLogout();
                 }}
-                className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
+                className="p-1.5 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-rose-600 dark:hover:text-rose-400 transition-colors shrink-0"
+                title="Sign Out Session"
+                aria-label="Sign Out Session"
               >
-                <LogOut size={12} />
-                <span>Sign Out Session</span>
+                <LogOut size={14} />
               </button>
             </div>
           )}

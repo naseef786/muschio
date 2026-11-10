@@ -220,12 +220,24 @@ export class PaymentService {
       const held = await tx.inventoryReservation.count({
         where: { orderId: order.id, isReleased: false },
       });
-      if (expired || !held)
-        throw new ApiError(
-          409,
-          "RESERVATION_EXPIRED",
-          "The inventory hold has expired",
-        );
+      if (expired || !held) {
+        // Auto-refresh / re-reserve hold for 35 minutes so client can seamlessly proceed
+        const orderItems = await tx.orderItem.findMany({ where: { orderId: order.id } });
+        if (orderItems.length) {
+          await tx.inventoryReservation.updateMany({
+            where: { orderId: order.id },
+            data: { isReleased: true },
+          });
+          await InventoryService.reserveInventory(
+            {
+              items: orderItems.map((i) => ({ variantId: i.variantId, quantity: i.quantity })),
+              orderId: order.id,
+              durationMinutes: 35,
+            },
+            tx,
+          );
+        }
+      }
       let payment = await tx.payment.findFirst({
         where: {
           orderId: order.id,
@@ -272,7 +284,7 @@ export class PaymentService {
         "line_items[0][price_data][product_data][name]": `Muschio order ${order.orderNumber}`,
         "line_items[0][quantity]": "1",
         expires_at: String(
-          Math.floor(payment.createdAt.getTime() / 1000) + 1860,
+          Math.floor(Date.now() / 1000) + 2100,
         ),
       });
       session = await stripeRequest(
