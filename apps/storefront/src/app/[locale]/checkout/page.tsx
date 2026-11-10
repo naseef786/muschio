@@ -420,15 +420,19 @@ export default function CheckoutPage({
           window.location.assign(session.redirectUrl);
           return;
         }
+
+        throw new Error("Unable to establish secure card session with Stripe");
       } catch (payErr: any) {
         console.warn("Stripe Checkout initiation error:", payErr);
+        setError(
+          c(
+            "Secure card checkout could not be initiated. Your bag is saved. Please select Cash on Delivery or contact VIP concierge.",
+            "تعذر الاتصال ببوابة الدفع بالبطاقة. حقيبتك محفوظة بالكامل. يرجى اختيار الدفع عند الاستلام أو التواصل مع خدمة العملاء.",
+          ),
+        );
+        setLoading(false);
+        return;
       }
-
-      // Direct fallback if session creation fails
-      clearCart();
-      localStorage.removeItem("muschio_pending_order");
-      window.location.assign(confirmationUrl);
-      return;
     } catch (err: any) {
       console.error("Checkout submission failed:", err);
       setError(

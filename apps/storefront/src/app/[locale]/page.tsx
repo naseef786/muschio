@@ -297,7 +297,7 @@ export default async function HomePage({
             className="object-cover"
           />
           {heroOverlay && (
-            <div className="absolute bottom-4 start-4 left-4 rtl:left-auto rtl:right-4 bg-luxury-surface/90 px-3 py-1.5 text-[10px] font-sans uppercase tracking-[0.16em] text-luxury-text border border-luxury-border">
+            <div className="absolute bottom-4 start-4 bg-luxury-surface/90 px-3 py-1.5 text-[10px] font-sans uppercase tracking-[0.16em] text-luxury-text border border-luxury-border">
               {heroOverlay}
             </div>
           )}
@@ -449,7 +449,7 @@ export default async function HomePage({
             className="object-cover"
           />
           {(offerBanner.overlayLabelEn || offerBanner.overlayLabelAr) && (
-            <div className="absolute top-4 start-4 left-4 rtl:left-auto rtl:right-4 bg-luxury-surface/95 px-3.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-accent border border-luxury-border font-semibold shadow-sm">
+            <div className="absolute top-4 start-4 bg-luxury-surface/95 px-3.5 py-1.5 text-[11px] font-mono uppercase tracking-[0.16em] text-accent border border-luxury-border font-semibold shadow-sm">
               {c(offerBanner.overlayLabelEn || "", offerBanner.overlayLabelAr || "")}
             </div>
           )}
@@ -512,7 +512,7 @@ export default async function HomePage({
                       className="object-cover group-hover:scale-105 transition-transform duration-500"
                     />
                     {savingsPct > 0 && (
-                      <span className="absolute top-2 start-2 left-2 rtl:left-auto rtl:right-2 bg-rose-950/80 text-rose-300 border border-rose-500/30 text-[9px] font-bold px-1.5 py-0.5 rounded">
+                      <span className="absolute top-2 start-2 bg-rose-950/80 text-rose-300 border border-rose-500/30 text-[11px] font-bold px-1.5 py-0.5 rounded">
                         -{savingsPct}%
                       </span>
                     )}

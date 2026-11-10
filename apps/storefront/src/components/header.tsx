@@ -895,7 +895,7 @@ export function Header({ locale }: { locale: "en" | "ar" }) {
                 )}
                 className="w-full p-3.5 pe-12 border border-luxury-border bg-luxury-surface text-sm text-luxury-text focus:outline-none focus:border-luxury-text transition-colors"
               />
-              <div className="absolute inset-y-0 end-0 right-0 rtl:right-auto rtl:left-0 px-3.5 flex items-center justify-center gap-1.5 text-luxury-muted">
+              <div className="absolute inset-y-0 end-0 px-3.5 flex items-center justify-center gap-1.5 text-luxury-muted">
                 {isSearching ? (
                   <Loader2 size={16} className="animate-spin text-neutral-900 dark:text-neutral-100" />
                 ) : (

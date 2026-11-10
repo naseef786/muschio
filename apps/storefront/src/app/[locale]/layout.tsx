@@ -26,40 +26,56 @@ const figtree = Figtree({
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "MUSCHIO — Haute Parfumerie & Rare Niche Fragrances | Dubai & GCC",
-  description: "Discover niche fragrance houses, scent notes, personal discovery sets, and the Muschio fragrance journal.",
-  keywords: [
-    "Niche Perfumes Dubai",
-    "Haute Parfumerie UAE",
-    "Amouage Extrait",
-    "Maison Francis Kurkdjian Dubai",
-    "Roja Parfums GCC",
-    "عطور نيش دبي",
-    "عطور أصلية الإمارات",
-    "دهن عود معتق",
-    "لبان حوجري فضي",
-  ],
-  alternates: {
-    canonical: "https://www.muschio.ae",
-    languages: {
-      "en-AE": "https://www.muschio.ae/en",
-      "ar-AE": "https://www.muschio.ae/ar",
-      "en-SA": "https://www.muschio.ae/en",
-      "ar-SA": "https://www.muschio.ae/ar",
-      "x-default": "https://www.muschio.ae/en",
+export async function generateMetadata({
+  params: { locale },
+}: {
+  params: { locale: string };
+}) {
+  const isAr = locale === "ar";
+  return {
+    metadataBase: new URL("https://www.muschio.ae"),
+    title: isAr
+      ? "موسكيو — دار العطور النيش النادرة والفاخرة | دبي والخليج العربي"
+      : "MUSCHIO — Haute Parfumerie & Rare Niche Fragrances | Dubai & GCC",
+    description: isAr
+      ? "اكتشف أرقى دور العطور العالمية، خلاصات العطور النقية، مجموعات العينات الفاخرة، ومجلة موسكيو للطقوس العطرية."
+      : "Discover rare niche fragrance houses, pure extraits de parfum, artisanal discovery sets, and the Muschio fragrance journal.",
+    keywords: [
+      "Niche Perfumes Dubai",
+      "Haute Parfumerie UAE",
+      "Amouage Extrait",
+      "Maison Francis Kurkdjian Dubai",
+      "Roja Parfums GCC",
+      "عطور نيش دبي",
+      "عطور أصلية الإمارات",
+      "دهن عود معتق",
+      "لبان حوجري فضي",
+    ],
+    alternates: {
+      canonical: `https://www.muschio.ae/${locale}`,
+      languages: {
+        "en-AE": "https://www.muschio.ae/en",
+        "ar-AE": "https://www.muschio.ae/ar",
+        "en-SA": "https://www.muschio.ae/en",
+        "ar-SA": "https://www.muschio.ae/ar",
+        "x-default": "https://www.muschio.ae/en",
+      },
     },
-  },
-  openGraph: {
-    title: "MUSCHIO — Haute Parfumerie & Luxury Niche Fragrances",
-    description: "A considered collection. A personal discovery. Explore fragrance, notes, and the rituals that make a scent your own.",
-    url: "https://www.muschio.ae",
-    siteName: "Muschio Haute Parfumerie",
-    locale: "en_AE",
-    alternateLocale: ["ar_AE", "ar_SA"],
-    type: "website",
-  },
-};
+    openGraph: {
+      title: isAr
+        ? "موسكيو — دار العطور النيش النادرة والفاخرة"
+        : "MUSCHIO — Haute Parfumerie & Luxury Niche Fragrances",
+      description: isAr
+        ? "مقتنيات عطرية فاخرة وخلاصات نادرة منتقاة لصفوة عشاق العطور في الخليج العربي."
+        : "A considered collection. A personal discovery. Explore fragrance, notes, and the rituals that make a scent your own.",
+      url: `https://www.muschio.ae/${locale}`,
+      siteName: isAr ? "موسكيو للعطور الفاخرة" : "Muschio Haute Parfumerie",
+      locale: isAr ? "ar_AE" : "en_AE",
+      alternateLocale: isAr ? ["en_AE"] : ["ar_AE", "ar_SA"],
+      type: "website",
+    },
+  };
+}
 
 export default async function RootLayout({
   children,
