@@ -212,13 +212,16 @@ export class CheckoutService {
         },
       });
 
-      // 3. Create Order in PENDING status
+      // 3. Create Order (PENDING for COD, PAYMENT_PENDING for online card payments)
+      const isCod = payload.paymentMethod === "CASH_ON_DELIVERY" || (payload as any).paymentMethod === "COD";
+      const initialStatus = isCod ? OrderStatus.PENDING : OrderStatus.PAYMENT_PENDING;
+
       const order = await tx.order.create({
         data: {
           orderNumber,
           guestEmail: shippingAddress.email,
           customerId: verifiedCustomerId || null,
-          status: OrderStatus.PENDING,
+          status: initialStatus,
           currency,
           subtotal,
           discountAmount,

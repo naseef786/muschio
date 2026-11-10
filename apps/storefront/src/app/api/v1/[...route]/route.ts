@@ -988,18 +988,22 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         },
       }).catch((err) => console.error("Failed to log ORDER_CREATED event:", err));
 
-      // Dispatch transactional confirmations to customer and admin
-      // In serverless environments (Vercel), we MUST await or promise-settle before returning
-      // so the container doesn't terminate before the SMTP/API socket flushes.
-      try {
-        await Promise.allSettled([
-          EmailService.sendOrderConfirmation(orderToLog),
-          EmailService.sendAdminOrderAlert(orderToLog),
-          WhatsAppService.sendOrderConfirmation(orderToLog),
-          WhatsAppService.sendAdminOrderAlert(orderToLog),
-        ]);
-      } catch (notifyErr) {
-        console.error("Order notification dispatch error:", notifyErr);
+      // Dispatch transactional confirmations to customer and admin ONLY for orders that do not require online upfront payment (e.g. CASH_ON_DELIVERY)!
+      // For CREDIT_CARD, APPLE_PAY, and GOOGLE_PAY, confirmations are deferred until payment is authorized & captured in /payments/card-charge or /payments/verify-session!
+      const paymentMethodUpper = String(body.paymentMethod || "").toUpperCase();
+      const isOnlinePrepayment = ["CREDIT_CARD", "APPLE_PAY", "GOOGLE_PAY", "STRIPE"].includes(paymentMethodUpper);
+
+      if (!isOnlinePrepayment) {
+        try {
+          await Promise.allSettled([
+            EmailService.sendOrderConfirmation(orderToLog),
+            EmailService.sendAdminOrderAlert(orderToLog),
+            WhatsAppService.sendOrderConfirmation(orderToLog),
+            WhatsAppService.sendAdminOrderAlert(orderToLog),
+          ]);
+        } catch (notifyErr) {
+          console.error("Order notification dispatch error:", notifyErr);
+        }
       }
 
       return success(storefrontOrder(orderToLog), 201);

@@ -40,6 +40,40 @@ export default function CheckoutPage({
     "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY" | "TABBY" | "TAMARA"
   >("CREDIT_CARD");
 
+  // Direct Card Payment Input States
+  const [cardNumber, setCardNumber] = useState("");
+  const [cardExp, setCardExp] = useState("");
+  const [cardCvc, setCardCvc] = useState("");
+  const [cardHolder, setCardHolder] = useState("");
+  const [useStripeHosted, setUseStripeHosted] = useState(false);
+
+  const fillTestCard = () => {
+    setCardNumber("4242 4242 4242 4242");
+    setCardExp("12/28");
+    setCardCvc("123");
+    setCardHolder(form.fullName || "Private Client");
+  };
+
+  const handleCardNumberChange = (val: string) => {
+    const raw = val.replace(/\D/g, "").slice(0, 16);
+    const formatted = raw.match(/.{1,4}/g)?.join(" ") || raw;
+    setCardNumber(formatted);
+  };
+
+  const handleCardExpChange = (val: string) => {
+    const raw = val.replace(/\D/g, "").slice(0, 4);
+    if (raw.length >= 3) {
+      setCardExp(`${raw.slice(0, 2)}/${raw.slice(2)}`);
+    } else {
+      setCardExp(raw);
+    }
+  };
+
+  const handleCardCvcChange = (val: string) => {
+    const raw = val.replace(/\D/g, "").slice(0, 4);
+    setCardCvc(raw);
+  };
+
   const handleExpressCheckout = (method: "APPLE_PAY" | "GOOGLE_PAY") => {
     setPaymentMethod(method);
     if (!form.fullName || !form.phone || !form.addressLine1) {
@@ -222,6 +256,23 @@ export default function CheckoutPage({
       return;
     }
 
+    // Direct Card Field Validation (Prevent order creation before payment details are verified)
+    if (paymentMethod === "CREDIT_CARD" && !useStripeHosted) {
+      const cleanCard = cardNumber.replace(/\s+/g, "");
+      if (!cleanCard || cleanCard.length < 15) {
+        setError(c("Please enter a valid 15 or 16-digit card number.", "يرجى إدخال رقم بطاقة مصرفية صحيح (15 أو 16 رقماً)."));
+        return;
+      }
+      if (!cardExp || !cardExp.includes("/") || cardExp.length < 5) {
+        setError(c("Please enter a valid card expiration date (MM/YY).", "يرجى إدخال تاريخ انتهاء البطاقة بصيغة (شهر/سنة)."));
+        return;
+      }
+      if (!cardCvc || cardCvc.length < 3) {
+        setError(c("Please enter a valid 3 or 4-digit security CVC code.", "يرجى إدخال رمز الأمان (CVC) المكون من 3 أو 4 أرقام."));
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
@@ -402,7 +453,42 @@ export default function CheckoutPage({
         return;
       }
 
-      // 2. Card / Apple Pay / Google Pay: Standard Stripe Checkout (Global Recommended Standard)
+      // 2. Direct In-Checkout Credit Card Payment (Card charged BEFORE order is marked paid or emails sent)
+      if (paymentMethod === "CREDIT_CARD" && !useStripeHosted) {
+        try {
+          const chargeResult = await muschioApi.chargeCardPayment({
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            cardNumber: cardNumber.replace(/\s+/g, ""),
+            cardExp,
+            cardCvc,
+            cardHolder: cardHolder.trim() || form.fullName.trim() || "Private Client",
+          });
+
+          if (chargeResult && (chargeResult.success || chargeResult.paymentId)) {
+            clearCart();
+            localStorage.removeItem("muschio_pending_order");
+            persistOrderLocally(order.orderNumber, { ...order, status: "PAID" });
+            window.location.assign(confirmationUrl);
+            return;
+          }
+
+          throw new Error(chargeResult?.error || "Card payment charge could not be authorized");
+        } catch (cardErr: any) {
+          console.error("Direct card charge failed:", cardErr);
+          setError(
+            cardErr?.message ||
+              c(
+                "Card payment authorization declined. Please verify your card details or select another payment method.",
+                "تم رفض تفويض الدفع بالبطاقة. يرجى التحقق من بيانات البطاقة أو اختيار طريقة دفع أخرى.",
+              ),
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. Card (Stripe Hosted) / Apple Pay / Google Pay: Standard Stripe Checkout
       try {
         const session = await muschioApi.initiatePaymentSession({
           orderId: order.id,
@@ -1024,32 +1110,144 @@ export default function CheckoutPage({
 
                 {paymentMethod === "CREDIT_CARD" && (
                   <div className="mt-3 pt-3 border-t border-luxury-border space-y-3">
-                    <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-sans font-medium text-luxury-text uppercase tracking-wider flex items-center gap-1.5">
-                          <Lock size={12} className="text-accent" />
-                          {c("Stripe Hosted Checkout · PCI Level 1", "بوابة Stripe العالمية المعتمدة · حماية مصرفية")}
+                    {/* Mode Selector & Quick Fill Banner */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
+                      <div className="flex items-center gap-1.5 text-[11px] font-sans font-medium text-luxury-text uppercase tracking-wider">
+                        <Lock size={12} className="text-accent" />
+                        <span>
+                          {useStripeHosted
+                            ? c("Stripe Hosted Checkout", "بوابة Stripe الرسمية")
+                            : c("Direct Card Payment", "الدفع المباشر بالبطاقة")}
                         </span>
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-600 text-white font-bold">VISA</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-red-600 text-white font-bold">MC</span>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-600 text-white font-bold">AMEX</span>
-                        </div>
                       </div>
-                      <p className="text-[11px] text-luxury-muted leading-relaxed">
-                        {c(
-                          "When you proceed, you will be securely redirected to the official Stripe payment gateway to complete your card transaction with 3D Secure bank OTP verification and 256-bit encryption.",
-                          "عند المتابعة، سيتم توجيهك بأمان إلى بوابة Stripe الرسمية لإتمام الدفع ببطاقتك مع التحقق المصرفي المعتمد (OTP) وحماية مشفرة 256-بت.",
+                      <div className="flex items-center gap-2">
+                        {!useStripeHosted && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              fillTestCard();
+                            }}
+                            className="text-[10px] font-mono px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white transition-colors"
+                            title="Fill standard test card credentials"
+                          >
+                            ⚡ {c("Test Card (4242...)", "بطاقة تجريبية")}
+                          </button>
                         )}
-                      </p>
-                      <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
-                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                          <ShieldCheck size={13} />
-                          {c("Zero Card Data Stored on Server", "لا يتم حفظ أي بيانات مصرفية على الخادم")}
-                        </span>
-                        <span className="font-mono opacity-75">3D Secure 2.0</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setUseStripeHosted(!useStripeHosted);
+                          }}
+                          className="text-[10px] font-sans text-neutral-500 hover:text-black dark:hover:text-white underline underline-offset-2 transition-colors"
+                        >
+                          {useStripeHosted
+                            ? c("Switch to In-Checkout Card", "الدفع داخل الصفحة")
+                            : c("Switch to Stripe Hosted", "التحويل لبوابة Stripe")}
+                        </button>
                       </div>
                     </div>
+
+                    {!useStripeHosted ? (
+                      <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-3" onClick={(e) => e.stopPropagation()}>
+                        {/* Cardholder Name */}
+                        <div>
+                          <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
+                            {c("Cardholder Name", "اسم حامل البطاقة")}
+                          </label>
+                          <input
+                            type="text"
+                            value={cardHolder}
+                            onChange={(e) => setCardHolder(e.target.value)}
+                            placeholder={form.fullName || c("Full name on card", "الاسم كما هو مدون على البطاقة")}
+                            className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-sans text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
+                          />
+                        </div>
+
+                        {/* Card Number */}
+                        <div>
+                          <div className="flex items-center justify-between mb-1">
+                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium">
+                              {c("Card Number", "رقم البطاقة")}
+                            </label>
+                            <div className="flex items-center gap-1">
+                              <span className="text-[9px] font-mono px-1 py-0.2 bg-blue-600 text-white rounded font-bold">VISA</span>
+                              <span className="text-[9px] font-mono px-1 py-0.2 bg-red-600 text-white rounded font-bold">MC</span>
+                              <span className="text-[9px] font-mono px-1 py-0.2 bg-emerald-600 text-white rounded font-bold">AMEX</span>
+                            </div>
+                          </div>
+                          <div className="relative">
+                            <input
+                              type="text"
+                              value={cardNumber}
+                              onChange={(e) => handleCardNumberChange(e.target.value)}
+                              placeholder="4242 4242 4242 4242"
+                              maxLength={19}
+                              className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono tracking-wider text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
+                            />
+                            <CreditCard size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-luxury-muted pointer-events-none" />
+                          </div>
+                        </div>
+
+                        {/* Expiry & CVC Grid */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
+                              {c("Expiration Date", "تاريخ الانتهاء")}
+                            </label>
+                            <input
+                              type="text"
+                              value={cardExp}
+                              onChange={(e) => handleCardExpChange(e.target.value)}
+                              placeholder="MM/YY"
+                              maxLength={5}
+                              className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
+                              {c("Security Code (CVC)", "رمز الأمان (CVC)")}
+                            </label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                value={cardCvc}
+                                onChange={(e) => handleCardCvcChange(e.target.value)}
+                                placeholder="123"
+                                maxLength={4}
+                                className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
+                              />
+                              <Lock size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-luxury-muted pointer-events-none" />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
+                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
+                            <ShieldCheck size={12} />
+                            {c("Pre-authorized & Verified before confirmation", "يتم التحقق واقتطاع المبلغ قبل تأكيد الطلب")}
+                          </span>
+                          <span className="font-mono text-[9px] opacity-75">3D Secure 2.0</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-2.5" onClick={(e) => e.stopPropagation()}>
+                        <p className="text-[11px] text-luxury-muted leading-relaxed">
+                          {c(
+                            "When you proceed, you will be securely redirected to the official Stripe payment gateway to complete your card transaction with 3D Secure bank OTP verification and 256-bit encryption.",
+                            "عند المتابعة، سيتم توجيهك بأمان إلى بوابة Stripe الرسمية لإتمام الدفع ببطاقتك مع التحقق المصرفي المعتمد (OTP) وحماية مشفرة 256-بت.",
+                          )}
+                        </p>
+                        <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
+                          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                            <ShieldCheck size={13} />
+                            {c("Zero Card Data Stored on Server", "لا يتم حفظ أي بيانات مصرفية على الخادم")}
+                          </span>
+                          <span className="font-mono opacity-75">3D Secure 2.0</span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
