@@ -71,7 +71,8 @@ function serializeProduct(p: any) {
           slug: p.scentFamily.slug,
         }
       : null,
-    concentration: (p.concentration || "EXTRAIT_DE_PARFUM").replaceAll("_", " "),
+    concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+    concentrationLabel: (p.concentration || "EXTRAIT_DE_PARFUM").replaceAll("_", " "),
     gender: p.gender || "UNISEX",
     price: primaryVariant?.price ?? 0,
     compareAtPrice: primaryVariant?.compareAtPrice ?? null,
@@ -295,47 +296,58 @@ function normalizeConcentration(val: any): "EXTRAIT_DE_PARFUM" | "EAU_DE_PARFUM"
   return "EXTRAIT_DE_PARFUM";
 }
 
+function normalizeGender(val: any): "UNISEX" | "MEN" | "WOMEN" {
+  if (!val || typeof val !== "string") return "UNISEX";
+  const upper = val.trim().toUpperCase();
+  if (upper === "MEN" || upper === "MALE" || upper === "FOR MEN" || upper === "HOMME") return "MEN";
+  if (upper === "WOMEN" || upper === "FEMALE" || upper === "FOR WOMEN" || upper === "FEMME") return "WOMEN";
+  return "UNISEX";
+}
+
 /**
  * POST /api/products
- * Creates or updates a product in Neon DB with brand, variants, and inventory.
+ * Bulletproof Create or Update product in Neon DB with brand, scentFamily, variants, and inventory.
  */
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const {
-      name,
-      nameAr,
-      brand: brandName,
-      scentFamily: familyName,
-      concentration = "EXTRAIT_DE_PARFUM",
-      gender = "UNISEX",
-      price,
-      basePrice,
-      sku,
-      volumeMl = 100,
-      stock = 20,
-      images = [],
-      imageUrl,
-      descriptionEn,
-      descriptionAr,
-      status = "PUBLISHED",
-      variants: rawVariants,
-    } = body || {};
+    const resolvedName = String(body.name || body.nameEn || "").trim();
+    const resolvedNameAr = String(body.nameAr || body.nameArabic || resolvedName).trim();
 
-    if (!name || (!sku && (!rawVariants || rawVariants.length === 0))) {
+    if (!resolvedName) {
       return NextResponse.json(
-        { success: false, error: "Validation Error: 'name' and 'sku' or 'variants' are required" },
+        { success: false, error: "Validation Error: 'name' or 'nameEn' is required" },
         { status: 400 }
       );
     }
 
-    const validConcentration = normalizeConcentration(concentration);
+    const rawVariants = Array.isArray(body.variants) ? body.variants : [];
+    if (!body.sku && rawVariants.length === 0) {
+      return NextResponse.json(
+        { success: false, error: "Validation Error: 'sku' or at least one variant is required" },
+        { status: 400 }
+      );
+    }
+
+    const validConcentration = normalizeConcentration(body.concentration);
+    const validGender = normalizeGender(body.gender);
 
     // 1. Resolve or create Brand in Neon DB
-    const resolvedBrandName = String(brandName || "Haute Niche").trim();
-    let brand = await prisma.brand.findFirst({
-      where: { name: { equals: resolvedBrandName, mode: "insensitive" } },
-    });
+    let brand = null;
+    const rawBrandId = body.brandId || (typeof body.brand === "object" ? body.brand?.id : undefined);
+    if (rawBrandId) {
+      brand = await prisma.brand.findUnique({
+        where: { id: String(rawBrandId) },
+      });
+    }
+    const resolvedBrandName = String(
+      body.brandName || (typeof body.brand === "string" ? body.brand : body.brand?.name) || "Haute Niche"
+    ).trim();
+    if (!brand) {
+      brand = await prisma.brand.findFirst({
+        where: { name: { equals: resolvedBrandName, mode: "insensitive" } },
+      });
+    }
     if (!brand) {
       const bSlug = resolvedBrandName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       brand = await prisma.brand.create({
@@ -350,8 +362,16 @@ export async function POST(req: NextRequest) {
 
     // 2. Resolve or create ScentFamily in Neon DB
     let scentFamily = null;
-    if (familyName && String(familyName).trim()) {
-      const resolvedFamily = String(familyName).trim();
+    const rawFamilyId = body.scentFamilyId || (typeof body.scentFamily === "object" ? body.scentFamily?.id : undefined);
+    if (rawFamilyId) {
+      scentFamily = await prisma.scentFamily.findUnique({
+        where: { id: String(rawFamilyId) },
+      });
+    }
+    const resolvedFamily = String(
+      body.scentFamily || body.familyName || (typeof body.scentFamily === "object" ? body.scentFamily?.nameEn : "") || ""
+    ).trim();
+    if (!scentFamily && resolvedFamily) {
       scentFamily = await prisma.scentFamily.findFirst({
         where: { nameEn: { equals: resolvedFamily, mode: "insensitive" } },
       });
@@ -371,25 +391,32 @@ export async function POST(req: NextRequest) {
 
     // 3. Resolve images
     let productImages: string[] = [];
-    if (Array.isArray(images) && images.length > 0) {
-      productImages = images.map((img) => String(img).trim()).filter(Boolean);
-    } else if (imageUrl) {
-      productImages = [String(imageUrl).trim()];
+    if (Array.isArray(body.images) && body.images.length > 0) {
+      productImages = body.images.map((img: any) => String(img).trim()).filter(Boolean);
+    } else if (body.imageUrl) {
+      productImages = [String(body.imageUrl).trim()];
     }
     if (productImages.length === 0) {
       productImages = ["/product-placeholder.svg"];
     }
 
     // 4. Resolve slug and target product for CREATE or UPDATE
-    const baseSlug = String(name)
+    const baseSlug = String(body.slug || resolvedName)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
 
     let targetProduct = null;
-    if (body.id) {
+    const incomingId = body.id || body.productId;
+    if (incomingId) {
       targetProduct = await prisma.product.findUnique({
-        where: { id: String(body.id) },
+        where: { id: String(incomingId) },
+        include: { variants: true },
+      });
+    }
+    if (!targetProduct && body.slug) {
+      targetProduct = await prisma.product.findUnique({
+        where: { slug: String(body.slug).trim() },
         include: { variants: true },
       });
     }
@@ -399,42 +426,51 @@ export async function POST(req: NextRequest) {
         include: { variants: true },
       });
     }
-    if (!targetProduct && sku) {
+    if (!targetProduct && body.sku) {
       targetProduct = await prisma.product.findFirst({
-        where: { variants: { some: { sku: String(sku).trim() } } },
+        where: { variants: { some: { sku: String(body.sku).trim() } } },
         include: { variants: true },
       });
     }
-
-    let slug = targetProduct ? targetProduct.slug : baseSlug;
-    if (!targetProduct) {
-      const existing = await prisma.product.findUnique({ where: { slug } });
-      if (existing) {
-        slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    // Inspect variant SKUs to detect existing product on rename
+    if (!targetProduct && rawVariants.length > 0) {
+      for (const v of rawVariants) {
+        if (v?.sku && String(v.sku).trim()) {
+          const matchVar = await prisma.productVariant.findUnique({
+            where: { sku: String(v.sku).trim() },
+            include: { product: { include: { variants: true } } },
+          });
+          if (matchVar?.product) {
+            targetProduct = matchVar.product;
+            break;
+          }
+        }
       }
     }
 
     // 5. Build variants
-    const numPrice = Number(String(price || basePrice || 0).replace(/[^0-9.]/g, "")) || 0;
-    const numBasePrice = Number(String(basePrice || price || 0).replace(/[^0-9.]/g, "")) || numPrice;
-    const numStock = Number(stock) >= 0 ? Number(stock) : 20;
-    const primarySku = String(sku || `${baseSlug}-${volumeMl}`).trim();
+    const numPrice = Math.max(0, Number(String(body.price || body.basePrice || 0).replace(/[^0-9.]/g, "")) || 0);
+    const numBasePrice = Math.max(0, Number(String(body.basePrice || body.price || 0).replace(/[^0-9.]/g, "")) || numPrice);
+    const numStock = Math.max(0, Number(body.stock) >= 0 ? Number(body.stock) : 20);
+    const primarySku = String(body.sku || `${baseSlug}-${body.volumeMl || 100}`).trim();
 
-    const variantsData = (Array.isArray(rawVariants) && rawVariants.length > 0)
+    const variantsData = (rawVariants.length > 0)
       ? rawVariants.map((v: any, idx: number) => {
           const vVolNum = Number(v.volumeMl) || (typeof v.volume === "number" ? v.volume : parseInt(String(v.volume || "100").replace(/[^0-9]/g, ""), 10)) || 100;
           const vVol = String(v.volume || `${vVolNum}ml`).trim().endsWith("ml") ? String(v.volume || `${vVolNum}ml`).trim() : `${vVolNum}ml`;
-          const vBasePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.price ?? numBasePrice).replace(/[^0-9.]/g, "")) || numBasePrice;
-          const vPrice = Number(String(v.price ?? vBasePrice).replace(/[^0-9.]/g, "")) || vBasePrice;
-          const vStock = Number(v.stockQuantity ?? v.stock ?? numStock);
+          const rawVBase = Number(String(v.basePrice ?? v.regularPrice ?? v.price ?? numBasePrice).replace(/[^0-9.]/g, "")) || numBasePrice;
+          const rawVPrice = Number(String(v.price ?? rawVBase).replace(/[^0-9.]/g, "")) || rawVBase;
+          const vPrice = Math.max(0, rawVPrice);
+          const vBasePrice = Math.max(vPrice, rawVBase);
+          const vStock = Math.max(0, Number(v.stockQuantity ?? v.stock ?? numStock));
           const vSku = String(v.sku || `${primarySku}-${vVolNum}`).trim();
 
           return {
             sku: vSku,
             volume: vVol,
             volumeMl: vVolNum,
-            sizeLabelEn: `${vVol} Flacon`,
-            sizeLabelAr: `${vVolNum} مل إكستريت`,
+            sizeLabelEn: v.sizeLabelEn || `${vVol} Flacon`,
+            sizeLabelAr: v.sizeLabelAr || `${vVolNum} مل إكستريت`,
             price: vPrice,
             compareAtPrice: vBasePrice > vPrice ? vBasePrice : null,
             discountPrice: vBasePrice > vPrice ? vPrice : null,
@@ -451,10 +487,10 @@ export async function POST(req: NextRequest) {
       : [
           {
             sku: primarySku,
-            volume: `${volumeMl}ml`,
-            volumeMl: Number(volumeMl) || 100,
-            sizeLabelEn: `${volumeMl}ml Flacon`,
-            sizeLabelAr: `${volumeMl} مل إكستريت`,
+            volume: `${body.volumeMl || 100}ml`,
+            volumeMl: Number(body.volumeMl) || 100,
+            sizeLabelEn: `${body.volumeMl || 100}ml Flacon`,
+            sizeLabelAr: `${body.volumeMl || 100} مل إكستريت`,
             price: numPrice,
             compareAtPrice: numBasePrice > numPrice ? numBasePrice : null,
             discountPrice: numBasePrice > numPrice ? numPrice : null,
@@ -509,10 +545,14 @@ export async function POST(req: NextRequest) {
             },
           });
         } else {
+          // Check for SKU conflict with other products
+          const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
+          const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+
           await prisma.productVariant.create({
             data: {
               productId: targetProduct.id,
-              sku: iv.sku,
+              sku: safeSku,
               volume: iv.volume,
               volumeMl: iv.volumeMl,
               sizeLabelEn: iv.sizeLabelEn,
@@ -531,16 +571,16 @@ export async function POST(req: NextRequest) {
       const updatedProduct = await prisma.product.update({
         where: { id: targetProduct.id },
         data: {
-          nameEn: String(name).trim(),
-          nameAr: String(nameAr || name).trim(),
-          descriptionEn: String(descriptionEn || name).trim(),
-          descriptionAr: String(descriptionAr || nameAr || name).trim(),
+          nameEn: resolvedName,
+          nameAr: resolvedNameAr,
+          descriptionEn: String(body.descriptionEn || resolvedName).trim(),
+          descriptionAr: String(body.descriptionAr || resolvedNameAr || resolvedName).trim(),
           brandId: brand.id,
           scentFamilyId: scentFamily?.id,
           concentration: validConcentration,
-          gender: (gender as any) || "UNISEX",
+          gender: validGender,
           images: productImages,
-          isPublished: status !== "DRAFT",
+          isPublished: body.status !== "DRAFT",
           isFeatured: true,
           updatedAt: new Date(),
         },
@@ -566,23 +606,39 @@ export async function POST(req: NextRequest) {
     }
 
     // 6. Insert new Product into Neon PostgreSQL
+    let slug = baseSlug;
+    const existingSlug = await prisma.product.findUnique({ where: { slug } });
+    if (existingSlug) {
+      slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
+    }
+
+    const uniqueVariantsData = [];
+    for (const iv of variantsData) {
+      const existingSku = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
+      const safeSku = existingSku ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+      uniqueVariantsData.push({
+        ...iv,
+        sku: safeSku,
+      });
+    }
+
     const createdProduct = await prisma.product.create({
       data: {
         slug,
-        nameEn: String(name).trim(),
-        nameAr: String(nameAr || name).trim(),
-        descriptionEn: String(descriptionEn || name).trim(),
-        descriptionAr: String(descriptionAr || nameAr || name).trim(),
+        nameEn: resolvedName,
+        nameAr: resolvedNameAr,
+        descriptionEn: String(body.descriptionEn || resolvedName).trim(),
+        descriptionAr: String(body.descriptionAr || resolvedNameAr || resolvedName).trim(),
         brandId: brand.id,
         scentFamilyId: scentFamily?.id,
         concentration: validConcentration,
-        gender: (gender as any) || "UNISEX",
+        gender: validGender,
         images: productImages,
-        isPublished: status !== "DRAFT",
+        isPublished: body.status !== "DRAFT",
         isFeatured: true,
         isNewArrival: true,
         variants: {
-          create: variantsData,
+          create: uniqueVariantsData,
         },
       },
       include: {
@@ -616,7 +672,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: "Failed to insert product into Neon PostgreSQL database",
+        error: "Failed to persist product into Neon PostgreSQL database",
         message: err?.message || String(err),
       },
       { status: 500 }

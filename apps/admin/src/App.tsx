@@ -1563,6 +1563,33 @@ export function App() {
     setShowProductModal(true);
   };
 
+  function normalizeConcentrationKey(val: any): "EXTRAIT_DE_PARFUM" | "EAU_DE_PARFUM" | "EAU_DE_TOILETTE" | "EAU_DE_COLOGNE" | "PARFUM_OIL" | "ATTAR" | "DISCOVERY_SET" {
+    if (!val || typeof val !== "string") return "EXTRAIT_DE_PARFUM";
+    const upper = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+    if (upper === "PARFUM" || upper === "EXTRAIT" || upper === "EXTRAIT_DE_PARFUM" || upper === "PURE_PARFUM" || upper === "PARFUM_PURE") {
+      return "EXTRAIT_DE_PARFUM";
+    }
+    if (upper === "EDP" || upper === "EAU_DE_PARFUM") {
+      return "EAU_DE_PARFUM";
+    }
+    if (upper === "EDT" || upper === "EAU_DE_TOILETTE") {
+      return "EAU_DE_TOILETTE";
+    }
+    if (upper === "EDC" || upper === "EAU_DE_COLOGNE") {
+      return "EAU_DE_COLOGNE";
+    }
+    if (upper === "OIL" || upper === "PARFUM_OIL" || upper === "PERFUME_OIL") {
+      return "PARFUM_OIL";
+    }
+    if (upper === "ATTAR") {
+      return "ATTAR";
+    }
+    if (upper === "DISCOVERY_SET" || upper === "SET" || upper === "SAMPLE_SET") {
+      return "DISCOVERY_SET";
+    }
+    return "EXTRAIT_DE_PARFUM";
+  }
+
   const handleOpenEditProduct = (p: ProductItem) => {
     if (!p) return;
     setEditingProductId(p.id);
@@ -1573,7 +1600,7 @@ export function App() {
     const pSku = p.sku || (p as any).skuCode || "";
     const pBrand = p.brand || (typeof (p as any).brand === "object" ? (p as any).brand?.name : "") || "Amouage";
     const pScentFamily = p.scentFamily || (typeof (p as any).scentFamily === "object" ? (p as any).scentFamily?.nameEn : "") || "Woody Amber";
-    const pConcentration = p.concentration || "EXTRAIT_DE_PARFUM";
+    const pConcentration = normalizeConcentrationKey(p.concentration);
     const pVolumeMl = typeof p.volumeMl === "number" ? p.volumeMl : (parseInt(String(p.volumeMl || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
 
     // Notes normalization (supports array of strings, comma-separated string, or note objects)
@@ -1701,12 +1728,12 @@ export function App() {
   };
 
   const handleSaveProduct = async () => {
-    if (!productForm.name) {
-      alert("Product name is required.");
+    if (!productForm.name || !productForm.name.trim()) {
+      addToast("cancel", "Validation Error", "Product name (English) is required.");
       return;
     }
     if (!productForm.variants || productForm.variants.length === 0) {
-      alert("At least one volume variant row must be added before saving.");
+      addToast("cancel", "Validation Error", "At least one volume variant row must be added before saving.");
       return;
     }
     for (let i = 0; i < productForm.variants.length; i++) {
@@ -1714,34 +1741,33 @@ export function App() {
       if (!v) continue;
       const vol = typeof v.volume === "number" ? v.volume : Number(String(v.volume).replace(/[^0-9.]/g, ""));
       if (isNaN(vol) || vol <= 0) {
-        alert(`Variant #${i + 1}: Volume (ml) must be a positive number greater than 0.`);
+        addToast("cancel", "Validation Error", `Variant #${i + 1}: Volume (ml) must be a positive number greater than 0.`);
         return;
       }
-      const basePrice = Number(v.basePrice ?? v.regularPrice);
-      if (isNaN(basePrice) || basePrice <= 0) {
-        alert(`Variant #${i + 1} (${vol}ml): Base Price / Regular Price must be a positive number greater than 0 AED.`);
-        return;
-      }
-      const sellingPrice = Number(v.price);
+      const sellingPrice = Number(String(v.price ?? 0).replace(/[^0-9.]/g, ""));
       if (isNaN(sellingPrice) || sellingPrice <= 0) {
-        alert(`Variant #${i + 1} (${vol}ml): Selling Price must be a positive number greater than 0 AED.`);
+        addToast("cancel", "Validation Error", `Variant #${i + 1} (${vol}ml): Selling Price must be a positive number greater than 0 AED.`);
         return;
+      }
+      let basePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? sellingPrice).replace(/[^0-9.]/g, ""));
+      if (isNaN(basePrice) || basePrice <= 0) {
+        basePrice = sellingPrice;
       }
       if (sellingPrice > basePrice) {
-        alert(`Variant #${i + 1} (${vol}ml): Selling Price (${sellingPrice} AED) cannot exceed Base Price (${basePrice} AED).`);
-        return;
+        basePrice = sellingPrice;
       }
       const stock = Number(v.stock ?? v.stockQuantity);
       if (isNaN(stock) || stock < 0) {
-        alert(`Variant #${i + 1} (${vol}ml): Stock quantity must be 0 or greater.`);
+        addToast("cancel", "Validation Error", `Variant #${i + 1} (${vol}ml): Stock quantity must be 0 or greater.`);
         return;
       }
     }
 
     let activeVariants = productForm.variants.map((v, i) => {
       const volNum = typeof v.volume === "number" ? v.volume : (Number(String(v.volume).replace(/[^0-9.]/g, "")) || 100);
-      const basePrice = Number(v.basePrice ?? v.regularPrice ?? v.price);
-      const sellingPrice = Number(v.price ?? basePrice);
+      const sellingPrice = Number(String(v.price ?? 0).replace(/[^0-9.]/g, "")) || 1000;
+      let basePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? sellingPrice).replace(/[^0-9.]/g, "")) || sellingPrice;
+      if (basePrice < sellingPrice) basePrice = sellingPrice;
       const stock = Number(v.stock ?? v.stockQuantity) >= 0 ? Number(v.stock ?? v.stockQuantity) : 0;
       const warehouse = v.warehouse || productForm.warehouse || "DXB-MAIN";
       const sku = v.sku?.trim() || `${productForm.sku || "SKU"}-${volNum}`;
@@ -1771,7 +1797,7 @@ export function App() {
     }
     const defaultVariant = activeVariants.find((v) => v.isDefault) || activeVariants[0];
     if (!defaultVariant) {
-      alert("Invalid variant configuration.");
+      addToast("cancel", "Validation Error", "Invalid variant configuration.");
       return;
     }
     const primarySku = defaultVariant.sku || productForm.sku || `SKU-${slugify(productForm.name)}`;
@@ -1806,6 +1832,8 @@ export function App() {
       ? productForm.perfumer.split(",").map((s) => s.trim()).filter(Boolean)
       : [];
 
+    const normalizedConcentration = normalizeConcentrationKey(productForm.concentration);
+
     const newP: ProductItem = {
       id: editingProductId || `p-${Date.now()}`,
       sku: primarySku,
@@ -1818,7 +1846,7 @@ export function App() {
       perfumer: productForm.perfumer.trim() || undefined,
       perfumers: perfumerArray.length > 0 ? perfumerArray : undefined,
       perfumerBio: productForm.perfumerBio.trim() || undefined,
-      concentration: productForm.concentration || "EXTRAIT_DE_PARFUM",
+      concentration: normalizedConcentration,
       gender: "UNISEX",
       volumeMl: primaryVolumeMl,
       price: primaryPrice,
@@ -1851,12 +1879,17 @@ export function App() {
       const token = authSession?.token;
       const payload = {
         ...productForm,
+        name: productForm.name,
+        nameEn: productForm.name,
+        nameAr: productForm.nameAr || productForm.name,
+        concentration: normalizedConcentration,
         sku: primarySku,
         price: defaultVariant.price,
         volumeMl: primaryVolumeMl,
         stock: primaryStock,
         variants: activeVariants,
         id: editingProductId || undefined,
+        productId: editingProductId || undefined,
         scentFamily: productForm.scentFamily || "Woody Amber",
         perfumer: productForm.perfumer.trim() || undefined,
         perfumers: perfumerArray,
@@ -2882,16 +2915,16 @@ export function App() {
         />
       )}
 
-      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Fixed Rail/Panel on Desktop) */}
+      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Sticky Pinned on Desktop) */}
       <aside
         className={`fixed inset-y-0 start-0 z-50 ${
           isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] h-[100dvh] md:h-full md:static bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
+        } w-72 max-w-[85vw] h-[100dvh] max-h-[100dvh] md:h-screen md:max-h-screen md:sticky md:top-0 md:self-start bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 overflow-hidden transform transition-all duration-300 ease-in-out md:translate-x-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
         {/* 1. Header (Brand Logo & Collapse/Close Controls) - Fixed at top, never scrolls */}
-        <div className={`shrink-0 border-b border-neutral-200 dark:border-neutral-800 ${isSidebarCollapsed ? "p-3" : "px-4 py-3.5"}`}>
+        <div className={`shrink-0 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black ${isSidebarCollapsed ? "p-3" : "px-4 py-3.5"}`}>
           <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}>
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm shrink-0">
@@ -2900,7 +2933,7 @@ export function App() {
               {(!isSidebarCollapsed || isMobileNavOpen) && (
                 <div className="transition-opacity duration-200 overflow-hidden">
                   <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white block whitespace-nowrap">MUSCHIO</span>
-                  <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Console</span>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Panel</span>
                 </div>
               )}
             </div>
@@ -2946,8 +2979,8 @@ export function App() {
         </div>
 
         {/* 2. Scrollable Navigation List - Isolated Scroll Container (never collides with footer) */}
-        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain px-3 py-3 space-y-1">
-          <nav className="space-y-1 text-xs font-sans">
+        <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar overscroll-contain px-3 py-2 space-y-1">
+          <nav className="space-y-1 text-xs font-sans pb-2">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "products", label: "Products", icon: Package, count: products.length },
@@ -2977,7 +3010,7 @@ export function App() {
                     setIsMobileNavOpen(false);
                   }}
                   title={`${item.label}${item.count !== undefined ? ` (${item.count})` : ""}`}
-                  className={`w-full flex items-center ${
+                  className={`w-full shrink-0 flex items-center ${
                     showText ? "justify-between px-3 py-2.5" : "justify-center px-2 py-2.5"
                   } rounded-md text-xs font-medium transition-colors ${
                     isActive
@@ -3013,8 +3046,8 @@ export function App() {
           </nav>
         </div>
 
-        {/* 3. User Session Footer - Anchored cleanly at the bottom, never covered */}
-        <div className={`shrink-0 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/60 ${isSidebarCollapsed && !isMobileNavOpen ? "p-2" : "p-3"}`}>
+        {/* 3. User Session Footer - Anchored cleanly at the bottom, 100% solid & isolated */}
+        <div className={`shrink-0 border-t border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black relative z-20 ${isSidebarCollapsed && !isMobileNavOpen ? "p-2" : "p-3"}`}>
           {isSidebarCollapsed && !isMobileNavOpen ? (
             <div className="flex flex-col items-center gap-2">
               <div
@@ -3037,7 +3070,7 @@ export function App() {
               </button>
             </div>
           ) : (
-            <div className="space-y-2 text-[11px]">
+            <div className="rounded-xl border border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/60 p-2.5 space-y-2 text-[11px]">
               <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
                   {authSession.user.name.charAt(0) || "A"}

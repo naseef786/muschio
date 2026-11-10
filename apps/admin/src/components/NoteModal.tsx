@@ -74,7 +74,10 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.nameEn.trim()) return;
+    if (!formData.nameEn.trim()) {
+      setErrorMsg("English note name is required.");
+      return;
+    }
 
     const finalSlug = formData.slug.trim() || slugify(formData.nameEn);
     const finalMetaTitle = formData.metaTitle.trim() || generateNoteMetaTitle(formData.nameEn, formData.family);
@@ -137,6 +140,11 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
 
         {/* FORM */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+          {errorMsg && (
+            <div className="p-3 rounded bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
+              {errorMsg}
+            </div>
+          )}
           {/* Row 1: English & Arabic Names */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

@@ -138,6 +138,14 @@ function resolveConcentration(val: any): "EXTRAIT_DE_PARFUM" | "EAU_DE_PARFUM" |
   return "EXTRAIT_DE_PARFUM";
 }
 
+function resolveGender(val: any): "UNISEX" | "MEN" | "WOMEN" {
+  if (!val || typeof val !== "string") return "UNISEX";
+  const upper = val.trim().toUpperCase();
+  if (upper === "MEN" || upper === "MALE" || upper === "FOR MEN" || upper === "HOMME") return "MEN";
+  if (upper === "WOMEN" || upper === "FEMALE" || upper === "FOR WOMEN" || upper === "FEMME") return "WOMEN";
+  return "UNISEX";
+}
+
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
   try {
     const route = params.route || [];
@@ -1235,12 +1243,16 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     if (path === "admin/products") {
       const {
         id: existingId,
+        productId,
         name,
+        nameEn,
         nameAr,
         sku,
         price,
         brand: brandName,
+        brandId: rawBrandId,
         scentFamily: familyName,
+        scentFamilyId: rawFamilyId,
         perfumer: perfumerName,
         perfumers: perfumersList,
         perfumerBio,
@@ -1256,14 +1268,25 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         descriptionAr,
       } = body || {};
 
-      if (!name || !sku) {
-        return error("INVALID_INPUT", "Name and SKU are required", 400);
+      const resolvedName = String(name || nameEn || "").trim();
+      const resolvedNameAr = String(nameAr || body.nameArabic || resolvedName).trim();
+      const rawVariants = Array.isArray(body?.variants) ? body.variants : [];
+
+      if (!resolvedName || (!sku && rawVariants.length === 0)) {
+        return error("INVALID_INPUT", "Product name and SKU or variants are required", 400);
       }
 
       // 1. Resolve or create Brand
-      let brand = await prisma.brand.findFirst({
-        where: { name: { equals: String(brandName || "Haute Niche").trim(), mode: "insensitive" } },
-      });
+      let brand = null;
+      const targetBrandId = rawBrandId || body.brandId;
+      if (targetBrandId) {
+        brand = await prisma.brand.findUnique({ where: { id: String(targetBrandId) } });
+      }
+      if (!brand) {
+        brand = await prisma.brand.findFirst({
+          where: { name: { equals: String(brandName || "Haute Niche").trim(), mode: "insensitive" } },
+        });
+      }
       if (!brand) {
         const brandSlug = String(brandName || "haute-niche")
           .toLowerCase()
@@ -1280,7 +1303,11 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
       // 2. Resolve or create ScentFamily if provided
       let scentFamily = null;
-      if (familyName) {
+      const targetFamilyId = rawFamilyId || body.scentFamilyId;
+      if (targetFamilyId) {
+        scentFamily = await prisma.scentFamily.findUnique({ where: { id: String(targetFamilyId) } });
+      }
+      if (!scentFamily && familyName) {
         scentFamily = await prisma.scentFamily.findFirst({
           where: { nameEn: { equals: String(familyName).trim(), mode: "insensitive" } },
         });
@@ -1347,7 +1374,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
 
       // 3. Generate product slug
-      const baseSlug = String(name)
+      const baseSlug = String(body.slug || resolvedName)
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -1375,8 +1402,8 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         stockQuantity: number;
         warehouse: string;
         isDefault: boolean;
-      }> = (Array.isArray(body?.variants) && body.variants.length > 0)
-        ? body.variants.map((v: any, index: number) => {
+      }> = (rawVariants.length > 0)
+        ? rawVariants.map((v: any, index: number) => {
             const vVolNum = Number(v.volumeMl) || (typeof v.volume === "number" ? v.volume : parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10)) || 100;
             const vVol = String(v.volume || `${vVolNum}ml`).trim().endsWith("ml") ? String(v.volume || `${vVolNum}ml`).trim() : `${vVolNum}ml`;
             const vBasePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? v.price ?? 0).replace(/[^0-9.]/g, "")) || 0;
@@ -1386,7 +1413,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             const vDiscPrice = (vSellingPrice < vBasePrice) ? vSellingPrice : null;
             const vStock = Number(v.stockQuantity ?? v.stock) >= 0 ? Number(v.stockQuantity ?? v.stock) : 10;
             const vWarehouse = String(v.warehouse || body.warehouse || "DXB-MAIN").trim();
-            const vSku = String(v.sku || `${sku}-${vVolNum}`).trim();
+            const vSku = String(v.sku || `${sku || baseSlug}-${vVolNum}`).trim();
             const vIsDefault = Boolean(v.isDefault ?? index === 0);
             return {
               volume: vVol,
@@ -1419,7 +1446,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
               compareAtPrice: null,
               discountPrice: null,
               salePrice: null,
-              sku: String(sku).trim(),
+              sku: String(sku || `${baseSlug}-${numVolume}`).trim(),
               stockQuantity: numStock,
               warehouse: String(body?.warehouse || "DXB-MAIN").trim(),
               isDefault: true,
@@ -1428,13 +1455,35 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
       // Check if product already exists to update
       let targetProduct = null;
-      if (existingId) {
-        targetProduct = await prisma.product.findUnique({ where: { id: existingId } });
+      const targetId = existingId || productId;
+      if (targetId) {
+        targetProduct = await prisma.product.findUnique({ where: { id: String(targetId) } });
       }
-      if (!targetProduct) {
+      if (!targetProduct && body.slug) {
+        targetProduct = await prisma.product.findUnique({ where: { slug: String(body.slug).trim() } });
+      }
+      if (!targetProduct && baseSlug) {
+        targetProduct = await prisma.product.findUnique({ where: { slug: baseSlug } });
+      }
+      if (!targetProduct && sku) {
         targetProduct = await prisma.product.findFirst({
           where: { variants: { some: { sku: String(sku).trim() } } },
         });
+      }
+      // Check variant SKUs for update detection
+      if (!targetProduct && incomingVariants.length > 0) {
+        for (const iv of incomingVariants) {
+          if (iv.sku) {
+            const matchVar = await prisma.productVariant.findUnique({
+              where: { sku: iv.sku },
+              include: { product: true },
+            });
+            if (matchVar?.product) {
+              targetProduct = matchVar.product;
+              break;
+            }
+          }
+        }
       }
 
       let savedProduct;
@@ -1483,10 +1532,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
               },
             });
           } else {
+            const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
+            const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+
             await prisma.productVariant.create({
               data: {
                 productId: targetProduct.id,
-                sku: iv.sku,
+                sku: safeSku,
                 volume: iv.volume,
                 volumeMl: iv.volumeMl,
                 sizeLabelEn: iv.sizeLabelEn,
@@ -1510,14 +1562,14 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         savedProduct = await prisma.product.update({
           where: { id: targetProduct.id },
           data: {
-            nameEn: String(name).trim(),
-            nameAr: String(nameAr || name).trim(),
-            descriptionEn: String(descriptionEn || name).trim(),
-            descriptionAr: String(descriptionAr || nameAr || name).trim(),
+            nameEn: resolvedName,
+            nameAr: resolvedNameAr,
+            descriptionEn: String(descriptionEn || resolvedName).trim(),
+            descriptionAr: String(descriptionAr || resolvedNameAr || resolvedName).trim(),
             brandId: brand.id,
             scentFamilyId: scentFamily?.id,
             concentration: resolveConcentration(concentration),
-            gender: (gender as any) || "UNISEX",
+            gender: resolveGender(gender),
             images: productImages,
             isPublished: status !== "DRAFT",
             perfumers: resolvedPerfumerIds.length > 0
@@ -1543,17 +1595,41 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           slug = `${baseSlug}-${Date.now().toString().slice(-4)}`;
         }
 
+        const safeVariantsData = [];
+        for (const iv of incomingVariants) {
+          const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
+          const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+          safeVariantsData.push({
+            sku: safeSku,
+            volume: iv.volume,
+            volumeMl: iv.volumeMl,
+            sizeLabelEn: iv.sizeLabelEn,
+            sizeLabelAr: iv.sizeLabelAr,
+            price: iv.price,
+            compareAtPrice: iv.compareAtPrice,
+            discountPrice: iv.discountPrice,
+            warehouse: iv.warehouse,
+            isDefault: iv.isDefault,
+            inventory: {
+              create: {
+                sealedQuantity: iv.stockQuantity,
+                testerQuantity: numTesterStock,
+              },
+            },
+          });
+        }
+
         savedProduct = await prisma.product.create({
           data: {
             slug,
-            nameEn: String(name).trim(),
-            nameAr: String(nameAr || name).trim(),
-            descriptionEn: String(descriptionEn || name).trim(),
-            descriptionAr: String(descriptionAr || nameAr || name).trim(),
+            nameEn: resolvedName,
+            nameAr: resolvedNameAr,
+            descriptionEn: String(descriptionEn || resolvedName).trim(),
+            descriptionAr: String(descriptionAr || resolvedNameAr || resolvedName).trim(),
             brandId: brand.id,
             scentFamilyId: scentFamily?.id,
             concentration: resolveConcentration(concentration),
-            gender: (gender as any) || "UNISEX",
+            gender: resolveGender(gender),
             images: productImages,
             isPublished: status !== "DRAFT",
             perfumers: resolvedPerfumerIds.length > 0
@@ -1565,24 +1641,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
                 }
               : undefined,
             variants: {
-              create: incomingVariants.map((iv) => ({
-                sku: iv.sku,
-                volume: iv.volume,
-                volumeMl: iv.volumeMl,
-                sizeLabelEn: iv.sizeLabelEn,
-                sizeLabelAr: iv.sizeLabelAr,
-                price: iv.price,
-                compareAtPrice: iv.compareAtPrice,
-                discountPrice: iv.discountPrice,
-                warehouse: iv.warehouse,
-                isDefault: iv.isDefault,
-                inventory: {
-                  create: {
-                    sealedQuantity: iv.stockQuantity,
-                    testerQuantity: numTesterStock,
-                  },
-                },
-              })),
+              create: safeVariantsData,
             },
           },
           include: {

@@ -31,8 +31,10 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
     isFeatured: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
+    setErrorMsg("");
     if (tagToEdit) {
       setFormData({
         nameEn: tagToEdit.nameEn,
@@ -65,9 +67,10 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.nameEn.trim()) {
-      alert("English name is required.");
+      setErrorMsg("English tag name is required.");
       return;
     }
+    setErrorMsg("");
 
     const finalSlug = (formData.slug.trim() || slugify(formData.nameEn)).toLowerCase();
     const tag: TagItem = {
@@ -125,6 +128,11 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
 
         {/* Modal Form */}
         <form onSubmit={handleSubmit} className="p-5 space-y-4 overflow-y-auto text-xs">
+          {errorMsg && (
+            <div className="p-3 rounded bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs">
+              {errorMsg}
+            </div>
+          )}
           {/* Tag Name English & Arabic */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>

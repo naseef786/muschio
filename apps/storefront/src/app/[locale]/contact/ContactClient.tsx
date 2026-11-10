@@ -564,3 +564,4 @@ export function ContactClient({ locale }: { locale: "en" | "ar" }) {
     </div>
   );
 }
+
