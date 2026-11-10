@@ -2817,7 +2817,7 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen ${
+      className={`min-h-screen md:h-screen md:overflow-hidden ${
         adminTheme === "light" ? "bg-neutral-100 text-neutral-900" : "bg-black text-white"
       } flex flex-col md:flex-row font-sans antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black`}
     >
@@ -2882,11 +2882,11 @@ export function App() {
         />
       )}
 
-      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Collapsible Sticky on Desktop) */}
+      {/* SIDEBAR NAVIGATION (Drawer on Mobile, Fixed Rail/Panel on Desktop) */}
       <aside
         className={`fixed inset-y-0 start-0 z-50 ${
           isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] h-[100dvh] max-h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
+        } w-72 max-w-[85vw] h-[100dvh] md:h-full md:static bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
@@ -2946,7 +2946,7 @@ export function App() {
         </div>
 
         {/* 2. Scrollable Navigation List - Isolated Scroll Container (never collides with footer) */}
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1">
+        <div className="flex-1 min-h-0 overflow-y-auto custom-scrollbar overscroll-contain px-3 py-3 space-y-1">
           <nav className="space-y-1 text-xs font-sans">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -3075,7 +3075,7 @@ export function App() {
       </aside>
 
       {/* MAIN VIEWPORT */}
-      <main className="flex-1 min-w-0 p-4 sm:p-5 lg:p-7 space-y-6 overflow-y-auto">
+      <main className="flex-1 min-w-0 md:h-full p-4 sm:p-5 lg:p-7 space-y-6 overflow-y-auto custom-scrollbar">
         {/* HEADER */}
         <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 md:pb-6 border-b border-neutral-200 dark:border-neutral-800">
           <div className="flex items-center gap-3">
@@ -5369,79 +5369,83 @@ export function App() {
         )}
 
         {/* 7.5 VIP CONCIERGE & CLIENT ENQUIRIES */}
-        {activeTab === "enquiries" && (
-          <div className="space-y-6">
-            {/* KPI Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
-              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Requests</span>
-                <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
-                  {enquiries.length}
-                </div>
-              </div>
-              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">New Pending</span>
-                <div className="font-serif text-2xl font-light text-amber-500 mt-1">
-                  {enquiries.filter((e) => e.status === "NEW").length}
-                </div>
-              </div>
-              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">In Progress</span>
-                <div className="font-serif text-2xl font-light text-blue-500 mt-1">
-                  {enquiries.filter((e) => e.status === "IN_PROGRESS").length}
-                </div>
-              </div>
-              <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Resolved</span>
-                <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
-                  {enquiries.filter((e) => e.status === "RESOLVED").length}
-                </div>
-              </div>
-            </div>
+        {activeTab === "enquiries" && (() => {
+          const filteredEnquiries = enquiries.filter((e) => {
+            if (enquiryStatusFilter !== "ALL" && e.status !== enquiryStatusFilter) return false;
+            if (enquirySearch.trim()) {
+              const q = enquirySearch.toLowerCase();
+              return (
+                e.name.toLowerCase().includes(q) ||
+                e.email.toLowerCase().includes(q) ||
+                (e.subject && e.subject.toLowerCase().includes(q)) ||
+                (e.fragranceInterest && e.fragranceInterest.toLowerCase().includes(q))
+              );
+            }
+            return true;
+          });
 
-            {/* Filter and Search Bar */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
-                {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "ARCHIVED"].map((st) => (
-                  <button
-                    key={st}
-                    onClick={() => setEnquiryStatusFilter(st)}
-                    className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
-                      enquiryStatusFilter === st
-                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
-                        : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
-                    }`}
-                  >
-                    {st === "ALL" ? "All Requests" : st}
-                  </button>
-                ))}
+          return (
+            <div className="space-y-6">
+              {/* KPI Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Requests</span>
+                  <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
+                    {enquiries.length}
+                  </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">New Pending</span>
+                  <div className="font-serif text-2xl font-light text-amber-500 mt-1">
+                    {enquiries.filter((e) => e.status === "NEW").length}
+                  </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">In Progress</span>
+                  <div className="font-serif text-2xl font-light text-blue-500 mt-1">
+                    {enquiries.filter((e) => e.status === "IN_PROGRESS").length}
+                  </div>
+                </div>
+                <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Resolved</span>
+                  <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
+                    {enquiries.filter((e) => e.status === "RESOLVED").length}
+                  </div>
+                </div>
               </div>
-              <input
-                type="text"
-                placeholder="Search by client, scent, email..."
-                value={enquirySearch}
-                onChange={(e) => setEnquirySearch(e.target.value)}
-                className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
-              />
-            </div>
 
-            {/* Enquiries List */}
-            <div className="space-y-3">
-              {enquiries
-                .filter((e) => {
-                  if (enquiryStatusFilter !== "ALL" && e.status !== enquiryStatusFilter) return false;
-                  if (enquirySearch.trim()) {
-                    const q = enquirySearch.toLowerCase();
+              {/* Filter and Search Bar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto w-full sm:w-auto">
+                  {["ALL", "NEW", "IN_PROGRESS", "RESOLVED", "ARCHIVED"].map((st) => {
+                    const count = st === "ALL" ? enquiries.length : enquiries.filter((e) => e.status === st).length;
                     return (
-                      e.name.toLowerCase().includes(q) ||
-                      e.email.toLowerCase().includes(q) ||
-                      (e.subject && e.subject.toLowerCase().includes(q)) ||
-                      (e.fragranceInterest && e.fragranceInterest.toLowerCase().includes(q))
+                      <button
+                        key={st}
+                        onClick={() => setEnquiryStatusFilter(st)}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
+                          enquiryStatusFilter === st
+                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
+                            : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                        }`}
+                      >
+                        {st === "ALL" ? `All Requests (${count})` : `${st.replace("_", " ")} (${count})`}
+                      </button>
                     );
-                  }
-                  return true;
-                })
-                .map((enq) => {
+                  })}
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by client, scent, email..."
+                  value={enquirySearch}
+                  onChange={(e) => setEnquirySearch(e.target.value)}
+                  className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
+                />
+              </div>
+
+              {/* Enquiries List */}
+              <div className="space-y-3">
+                {filteredEnquiries.map((enq) => {
                   const id = enq.enquiryId || enq.aggregateId || enq.id;
                   const cleanPhone = enq.phone ? enq.phone.replace(/[^0-9]/g, "") : "";
                   return (
@@ -5547,18 +5551,23 @@ export function App() {
                   );
                 })}
 
-              {enquiries.length === 0 && (
-                <div className="p-12 text-center text-neutral-500 border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <MessageSquare size={32} className="mx-auto mb-2 opacity-40" />
-                  <div className="font-serif text-lg text-neutral-800 dark:text-neutral-200">No VIP Enquiries Yet</div>
-                  <div className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
-                    When customers submit bespoke fragrance consultations on the storefront, they appear here live with instant alerts.
+                {filteredEnquiries.length === 0 && (
+                  <div className="p-12 text-center text-neutral-500 border border-neutral-200 dark:border-neutral-800 rounded-lg">
+                    <MessageSquare size={32} className="mx-auto mb-2 opacity-40" />
+                    <div className="font-serif text-lg text-neutral-800 dark:text-neutral-200">
+                      {enquiries.length === 0 ? "No VIP Enquiries Yet" : "No Matching Inquiries Found"}
+                    </div>
+                    <div className="text-xs text-neutral-500 max-w-sm mx-auto mt-1">
+                      {enquiries.length === 0
+                        ? "When customers submit bespoke fragrance consultations on the storefront, they appear here live with instant alerts."
+                        : "Try adjusting your search keywords or switching status filters above."}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         {/* 3. NOTES */}
         {activeTab === "notes" && (

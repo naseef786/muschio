@@ -241,6 +241,22 @@ export function ProductReviews({
                     <p className="text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed font-sans">
                       {rev.body}
                     </p>
+
+                    {(rev.longevityRating || rev.sillageRating) && (
+                      <div className="flex items-center gap-3 pt-1 text-[11px] font-mono text-neutral-500">
+                        {rev.longevityRating && (
+                          <span>
+                            {c("Longevity", "الثبات")}: <strong className="text-neutral-700 dark:text-neutral-300">{rev.longevityRating}/5</strong>
+                          </span>
+                        )}
+                        {rev.longevityRating && rev.sillageRating && <span>•</span>}
+                        {rev.sillageRating && (
+                          <span>
+                            {c("Sillage", "الفوحان")}: <strong className="text-neutral-700 dark:text-neutral-300">{rev.sillageRating}/5</strong>
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="pt-3 border-t border-luxury-border/40 flex items-center justify-between text-[11px] text-neutral-400">

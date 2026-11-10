@@ -462,6 +462,13 @@ export function ProductExperience({
               <div className="mt-2">
                 <a
                   href="#reviews-section"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    const el = document.getElementById("reviews-section");
+                    if (el) {
+                      el.scrollIntoView({ behavior: "smooth" });
+                    }
+                  }}
                   className="inline-flex items-center gap-2 text-xs text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors group cursor-pointer"
                 >
                   <div className="flex items-center text-amber-500">

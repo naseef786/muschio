@@ -1,6 +1,17 @@
 import React from "react";
 import { Link } from "../../../navigation";
-import { Sparkles, ShieldCheck, Compass, ThermometerSnowflake, Crown, ArrowRight, HeartHandshake } from "lucide-react";
+import {
+  Sparkles,
+  ShieldCheck,
+  Compass,
+  ThermometerSnowflake,
+  Crown,
+  ArrowRight,
+  HeartHandshake,
+  MapPin,
+  Clock,
+  Quote,
+} from "lucide-react";
 
 export async function generateMetadata({
   params: { locale },
@@ -84,13 +95,68 @@ export default function AboutPage({
     },
   ];
 
+  const milestones = [
+    {
+      year: "2021",
+      title: c("The Private Atelier Inception", "تأسيس الصالون الخاص في دبي"),
+      desc: c(
+        "Conceived in Downtown Dubai as an exclusive private collector's salon, catering to bespoke perfume commissions.",
+        "انطلقت الدار كصالون خاص لمتذوقي العطور النادرة في وسط مدينة دبي."
+      ),
+    },
+    {
+      year: "2023",
+      title: c("Direct European Maison Alliances", "شراكات حصرية مع كبرى دور النيش"),
+      desc: c(
+        "Established direct importing rights with premier independent perfumers in Grasse, Milan, and London.",
+        "توقيع اتفاقيات استيراد مباشرة مع كبار صناع العطور المستقلين في غراس وميلانو ولندن."
+      ),
+    },
+    {
+      year: "2024",
+      title: c("Climate-Protected GCC Courier", "تدشين الشحن المبرد في الخليج"),
+      desc: c(
+        "Pioneered thermal-insulated constant 18°C dispatch across UAE, Saudi Arabia, Qatar, and Kuwait.",
+        "إطلاق أول شبكة توصيل مبردة تضمن وصول العطور بدرجة حرارة ثابتة ١٨ مئوية في كافة دول الخليج."
+      ),
+    },
+    {
+      year: "2026",
+      title: c("Digital Sanctuary & AI Sommelier", "الملاذ الرقمي ومستشار العطور الذكي"),
+      desc: c(
+        "Launched the global digital boutique and our proprietary AI Scent Sommelier for personalized olfactory discovery.",
+        "إطلاق المنصة الرقمية المتطورة ومستشار العطور الذكي لاكتشاف التوقيع العطري المثالي."
+      ),
+    },
+  ];
+
+  const salons = [
+    {
+      city: c("Dubai Flagship Atelier", "صالون دبي الرئيسي"),
+      address: c("Fashion Avenue, Level 1 · The Dubai Mall, Downtown Dubai", "جناح الأزياء، الطابق الأول · دبي مول، وسط مدينة دبي"),
+      hours: c("Daily: 10:00 AM – 12:00 Midnight (GST)", "يومياً: ١٠:٠٠ صباحاً – ١٢:٠٠ منتصف الليل"),
+      phone: "+971 4 800 MUSCHIO",
+    },
+    {
+      city: c("Riyadh Salon Privé", "صالون الرياض برايفيت"),
+      address: c("Centria Mall, Olaya Luxury Boulevard · Riyadh, Saudi Arabia", "سنتريا مول، بوليفارد العليا الراقي · الرياض، المملكة العربية السعودية"),
+      hours: c("Sat – Thu: 10:00 AM – 11:00 PM | Fri: 2:00 PM – 11:30 PM", "السبت – الخميس: ١٠:٠٠ ص – ١١:٠٠ م | الجمعة: ٢:٠٠ م – ١١:٣٠ م"),
+      phone: "+966 11 800 MUSCHIO",
+    },
+    {
+      city: c("Doha VIP Suite", "جناح الدوحة لكبار الشخصيات"),
+      address: c("Place Vendôme Mall, Canal Precinct · Lusail, Qatar", "بلاس فاندوم مول، منطقة القناة المائية · لوسيل، قطر"),
+      hours: c("Sat – Wed: 10:00 AM – 10:00 PM | Thu – Fri: 10:00 AM – 11:00 PM", "السبت – الأربعاء: ١٠:٠٠ ص – ١٠:٠٠ م | الخميس والجمعة: ١٠:٠٠ ص – ١١:٠٠ م"),
+      phone: "+974 4 800 MUSCHIO",
+    },
+  ];
+
   return (
     <div className="bg-luxury-canvas text-luxury-text min-h-screen selection:bg-accent selection:text-white font-sans">
       {/* 1. Hero Section */}
-      <section className="relative border-b border-luxury-border/60 py-16 sm:py-24 lg:py-32 overflow-hidden">
-        <div className="absolute inset-0 bg-radial-gradient opacity-40 pointer-events-none" />
+      <section className="relative border-b border-luxury-border/60 py-16 sm:py-24 lg:py-32 overflow-hidden bg-luxury-surface/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-6 relative z-10">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-luxury-border bg-luxury-surface text-[10px] sm:text-xs font-mono uppercase tracking-[0.25em] text-accent">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-luxury-border bg-luxury-surface text-[10px] sm:text-xs font-mono uppercase tracking-[0.25em] text-accent">
             <Sparkles size={13} />
             <span>{c("L'Atelier De Haute Parfumerie · UAE & GCC", "دار العطور النادرة والفاخرة · الخليج العربي")}</span>
           </div>
@@ -109,13 +175,13 @@ export default function AboutPage({
       </section>
 
       {/* 2. Brand Story / Manifesto */}
-      <section className="py-16 sm:py-24 max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 lg:gap-12 items-center">
-          <div className="space-y-5">
+      <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 lg:gap-12 items-center">
+          <div className="md:col-span-7 space-y-5">
             <span className="text-xs uppercase font-mono tracking-[0.2em] text-accent block font-semibold">
               {c("OUR PHILOSOPHY", "فلسفتنا العطرية")}
             </span>
-            <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text leading-snug">
+            <h2 className="font-serif text-2xl sm:text-4xl text-luxury-text leading-snug">
               {c("Where Ancient Arabian Heritage Meets Grasse Mastery", "حيث يلتقي عبق التراث العربي الأصيل بحرفية غراس الأوروبية")}
             </h2>
             <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-300 leading-relaxed">
@@ -132,14 +198,14 @@ export default function AboutPage({
             </p>
           </div>
 
-          <div className="p-8 sm:p-10 bg-luxury-surface border border-luxury-border rounded-sm space-y-6 shadow-sm">
-            <div className="border-b border-luxury-border/60 pb-4">
+          <div className="md:col-span-5 p-8 sm:p-10 bg-luxury-surface border border-luxury-border rounded-sm space-y-6 shadow-sm">
+            <div className="border-b border-luxury-border/60 pb-5">
               <span className="font-serif text-3xl sm:text-4xl text-luxury-text block">100%</span>
               <span className="text-xs text-neutral-500 font-mono uppercase tracking-wider block mt-1">
-                {c("Authentic Maison Flacons", "عطور أصلية معتمدة من الدار")}
+                {c("Direct Maison Authenticity", "أصالة مباشرة ومضمونة من الدار")}
               </span>
             </div>
-            <div className="border-b border-luxury-border/60 pb-4">
+            <div className="border-b border-luxury-border/60 pb-5">
               <span className="font-serif text-3xl sm:text-4xl text-luxury-text block">18°C</span>
               <span className="text-xs text-neutral-500 font-mono uppercase tracking-wider block mt-1">
                 {c("Climate-Controlled Vault Preservation", "أقبية حفظ مبردة على مدار الساعة")}
@@ -155,44 +221,58 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* 3. The Four Pillars */}
-      <section className="py-16 sm:py-20 bg-luxury-surface border-y border-luxury-border/60">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
-          <div className="text-center space-y-3 max-w-2xl mx-auto">
-            <span className="text-xs uppercase font-mono tracking-[0.2em] text-accent font-semibold block">
-              {c("STANDARDS OF EXCELLENCE", "معايير التميز في موسكيو")}
-            </span>
-            <h2 className="font-serif text-2xl sm:text-4xl text-luxury-text">
-              {c("The Muschio Commitments", "التزاماتنا لعملائنا في الخليج")}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {pillars.map((p, idx) => {
-              const Icon = p.icon;
-              return (
-                <div
-                  key={idx}
-                  className="p-6 bg-luxury-canvas border border-luxury-border/70 rounded-sm space-y-3 flex flex-col justify-between hover:border-luxury-border transition-colors"
-                >
-                  <div className="space-y-3">
-                    <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
-                      <Icon size={18} />
-                    </div>
-                    <h3 className="font-serif text-lg text-luxury-text">{p.title}</h3>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
-                      {p.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+      {/* 3. Master Perfumer Quote Banner */}
+      <section className="py-14 sm:py-20 border-y border-luxury-border/60 bg-luxury-surface/50">
+        <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center space-y-4">
+          <Quote size={28} className="mx-auto text-accent opacity-60" />
+          <p className="font-serif text-lg sm:text-2xl text-luxury-text font-light italic leading-relaxed">
+            {c(
+              "\"In the warmth of the Arabian night, an authentic extrait does not evaporate — it blooms, announcing your presence before a single word is spoken.\"",
+              "«في سحر ليالي الخليج، لا يتبخر العطر النقي، بل يتفتح ويزهر معلناً عن حضورك المهيب قبل أن تنطق بكلمة واحدة.»"
+            )}
+          </p>
+          <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest block pt-2">
+            {c("Muschio Olfactory Direction · Dubai", "الإدارة الإبداعية للعطور · دار موسكيو دبي")}
+          </span>
         </div>
       </section>
 
-      {/* 4. Sourcing & Noble Ingredients */}
+      {/* 4. The Four Pillars */}
       <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+        <div className="text-center space-y-3 max-w-2xl mx-auto">
+          <span className="text-xs uppercase font-mono tracking-[0.2em] text-accent font-semibold block">
+            {c("STANDARDS OF EXCELLENCE", "معايير التميز في موسكيو")}
+          </span>
+          <h2 className="font-serif text-2xl sm:text-4xl text-luxury-text">
+            {c("The Muschio Commitments", "التزاماتنا لعملائنا في الخليج")}
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {pillars.map((p, idx) => {
+            const Icon = p.icon;
+            return (
+              <div
+                key={idx}
+                className="p-6 bg-luxury-surface border border-luxury-border rounded-sm space-y-3 flex flex-col justify-between hover:border-luxury-borderBold transition-colors shadow-sm"
+              >
+                <div className="space-y-3">
+                  <div className="w-10 h-10 rounded-full bg-accent/10 border border-accent/20 text-accent flex items-center justify-center">
+                    <Icon size={18} />
+                  </div>
+                  <h3 className="font-serif text-lg text-luxury-text">{p.title}</h3>
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed font-sans">
+                    {p.desc}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 5. Sourcing & Noble Ingredients Cartography */}
+      <section className="py-16 sm:py-24 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12 border-t border-luxury-border/60">
         <div className="text-center space-y-3 max-w-2xl mx-auto">
           <span className="text-xs uppercase font-mono tracking-[0.2em] text-accent font-semibold block">
             {c("NOBLE INGREDIENTS", "أندر المكونات العطرية")}
@@ -200,10 +280,10 @@ export default function AboutPage({
           <h2 className="font-serif text-2xl sm:text-4xl text-luxury-text">
             {c("The Olfactory Cartography", "خريطة استخلاص النوتات النبيلة")}
           </h2>
-          <p className="text-xs sm:text-sm text-neutral-500">
+          <p className="text-xs sm:text-sm text-neutral-500 max-w-xl mx-auto">
             {c(
-              "We prioritize maisons that preserve regenerative farming and centuries-old distillation methods.",
-              "ندعم الدور التي تحافظ على طرق التقطير التراثية والزراعة العضوية النادرة."
+              "We prioritize maisons that preserve regenerative farming, ethical harvesting, and centuries-old distillation methods.",
+              "ندعم الدور التي تحافظ على طرق التقطير التراثية، الحصاد الأخلاقي، والزراعة العضوية النادرة."
             )}
           </p>
         </div>
@@ -214,7 +294,7 @@ export default function AboutPage({
               key={i}
               className="p-6 bg-luxury-surface border border-luxury-border rounded-sm space-y-3 hover:shadow-md transition-shadow"
             >
-              <div className="flex items-center gap-2 text-accent text-xs font-mono">
+              <div className="flex items-center gap-2 text-accent text-xs font-mono font-medium">
                 <Compass size={14} />
                 <span>{orig.region}</span>
               </div>
@@ -225,31 +305,89 @@ export default function AboutPage({
         </div>
       </section>
 
-      {/* 5. Physical Salons & VIP Concierge */}
-      <section className="py-16 bg-neutral-900 text-white border-t border-neutral-800">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-8">
-          <div className="space-y-3">
+      {/* 6. Heritage Journey / Milestones */}
+      <section className="py-16 sm:py-24 bg-luxury-surface/40 border-t border-luxury-border/60">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
+            <span className="text-xs uppercase font-mono tracking-[0.2em] text-accent font-semibold block">
+              {c("THE CHRONOLOGY", "مسيرة التميز")}
+            </span>
+            <h2 className="font-serif text-2xl sm:text-4xl text-luxury-text">
+              {c("Milestones of Our Atelier", "محطات بارزة في رحلتنا")}
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            {milestones.map((m, idx) => (
+              <div
+                key={idx}
+                className="p-6 bg-luxury-surface border border-luxury-border rounded-sm space-y-3 relative"
+              >
+                <span className="font-serif text-2xl sm:text-3xl font-light text-accent block">
+                  {m.year}
+                </span>
+                <h4 className="font-serif text-sm font-medium text-luxury-text">
+                  {m.title}
+                </h4>
+                <p className="text-xs text-neutral-500 leading-relaxed">
+                  {m.desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* 7. Flagship Salons & Private Tasting Appointment CTA */}
+      <section className="py-16 sm:py-24 bg-neutral-950 text-white border-t border-neutral-800">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+          <div className="text-center space-y-3 max-w-2xl mx-auto">
             <span className="text-xs uppercase font-mono tracking-[0.25em] text-[#C5A059] block">
-              {c("PRIVATE APPOINTMENTS", "زيارات واستشارات خاصة")}
+              {c("PHYSICAL PRESENCE", "الصالونات الحصرية")}
             </span>
             <h2 className="font-serif text-2xl sm:text-4xl text-white">
               {c("Experience The Atelier in Person", "تفضل بزيارة صالوناتنا العطرية")}
             </h2>
-            <p className="text-xs sm:text-sm text-neutral-400 max-w-xl mx-auto leading-relaxed">
+            <p className="text-xs sm:text-sm text-neutral-400 leading-relaxed">
               {c(
-                "Private tasting salons in Downtown Dubai and Riyadh Olaya offer discreet one-on-one olfactory consultations with certified master sommeliers.",
-                "تفضل بزيارة صالوناتنا في دبي والرياض لجلسة تذوق عطري خاصة واستشارة منفردة مع كبار خبراء العطور لدينا."
+                "Private tasting salons in Downtown Dubai, Riyadh, and Lusail offer discreet one-on-one olfactory consultations with certified master sommeliers.",
+                "تفضل بزيارة صالوناتنا في دبي والرياض والدوحة لجلسة تذوق عطري خاصة واستشارة منفردة مع كبار خبراء العطور لدينا."
               )}
             </p>
           </div>
 
-          <div className="pt-2 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {salons.map((salon, i) => (
+              <div
+                key={i}
+                className="p-6 rounded-sm bg-white/[0.04] border border-white/10 space-y-4 flex flex-col justify-between"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-mono text-[#C5A059]">
+                    <MapPin size={14} />
+                    <span>{salon.city}</span>
+                  </div>
+                  <p className="text-xs text-neutral-300 leading-relaxed">{salon.address}</p>
+                </div>
+
+                <div className="space-y-2 pt-3 border-t border-white/10 text-[11px] text-neutral-400">
+                  <div className="flex items-center gap-2">
+                    <Clock size={12} className="text-[#C5A059] shrink-0" />
+                    <span>{salon.hours}</span>
+                  </div>
+                  <div className="font-mono text-[#C5A059]">{salon.phone}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/contact"
               className="w-full sm:w-auto px-8 py-3.5 bg-[#C5A059] hover:bg-[#b08e4d] text-neutral-950 text-xs font-semibold uppercase tracking-[0.15em] transition-all rounded-sm shadow-md flex items-center justify-center gap-2"
             >
-              <span>{c("Schedule Consultation", "حجز موعد استشارة")}</span>
-              <ArrowRight size={14} />
+              <span>{c("Schedule Private Appointment", "حجز موعد استشارة خاصة")}</span>
+              <ArrowRight size={14} className="rtl:rotate-180" />
             </Link>
             <Link
               href="/shop"
