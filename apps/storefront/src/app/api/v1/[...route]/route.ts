@@ -111,6 +111,33 @@ function getAuth(req: NextRequest) {
   return { customerId, guestSessionId, token };
 }
 
+function resolveConcentration(val: any): "EXTRAIT_DE_PARFUM" | "EAU_DE_PARFUM" | "EAU_DE_TOILETTE" | "EAU_DE_COLOGNE" | "PARFUM_OIL" | "ATTAR" | "DISCOVERY_SET" {
+  if (!val || typeof val !== "string") return "EXTRAIT_DE_PARFUM";
+  const upper = val.trim().toUpperCase().replace(/[\s-]+/g, "_");
+  if (upper === "PARFUM" || upper === "EXTRAIT" || upper === "EXTRAIT_DE_PARFUM" || upper === "PURE_PARFUM" || upper === "PARFUM_PURE") {
+    return "EXTRAIT_DE_PARFUM";
+  }
+  if (upper === "EDP" || upper === "EAU_DE_PARFUM") {
+    return "EAU_DE_PARFUM";
+  }
+  if (upper === "EDT" || upper === "EAU_DE_TOILETTE") {
+    return "EAU_DE_TOILETTE";
+  }
+  if (upper === "EDC" || upper === "EAU_DE_COLOGNE") {
+    return "EAU_DE_COLOGNE";
+  }
+  if (upper === "OIL" || upper === "PARFUM_OIL" || upper === "PERFUME_OIL") {
+    return "PARFUM_OIL";
+  }
+  if (upper === "ATTAR") {
+    return "ATTAR";
+  }
+  if (upper === "DISCOVERY_SET" || upper === "SET" || upper === "SAMPLE_SET") {
+    return "DISCOVERY_SET";
+  }
+  return "EXTRAIT_DE_PARFUM";
+}
+
 export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
   try {
     const route = params.route || [];
@@ -1489,7 +1516,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             descriptionAr: String(descriptionAr || nameAr || name).trim(),
             brandId: brand.id,
             scentFamilyId: scentFamily?.id,
-            concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
+            concentration: resolveConcentration(concentration),
             gender: (gender as any) || "UNISEX",
             images: productImages,
             isPublished: status !== "DRAFT",
@@ -1525,7 +1552,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             descriptionAr: String(descriptionAr || nameAr || name).trim(),
             brandId: brand.id,
             scentFamilyId: scentFamily?.id,
-            concentration: (concentration as any) || "EXTRAIT_DE_PARFUM",
+            concentration: resolveConcentration(concentration),
             gender: (gender as any) || "UNISEX",
             images: productImages,
             isPublished: status !== "DRAFT",
@@ -1615,12 +1642,35 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(tag);
     }
 
-    // 13. Admin Create Brand
-    if (path === "admin/brands") {
-      const { name, storyEn, storyAr, countryEn, logoUrl, heroImageUrl, type } = body || {};
+    // 13. Admin Create or Update Brand
+    if (path === "admin/brands" || (route[0] === "admin" && route[1] === "brands")) {
+      const { id, name, storyEn, storyAr, countryEn, countryAr, logoUrl, heroImageUrl, type, slug: customSlug } = body || {};
       if (!name) return error("INVALID_INPUT", "Brand name is required", 400);
 
-      const baseSlug = String(name)
+      const brandId = id || (route[2] ? route[2] : null);
+      if (brandId) {
+        const existing = await prisma.brand.findFirst({
+          where: { OR: [{ id: brandId }, { slug: customSlug || "" }] },
+        });
+        if (existing) {
+          const updated = await prisma.brand.update({
+            where: { id: existing.id },
+            data: {
+              name: String(name).trim(),
+              slug: customSlug || existing.slug,
+              type: type === "DESIGNER" ? "DESIGNER" : "NICHE",
+              descriptionEn: storyEn !== undefined ? storyEn : existing.descriptionEn,
+              descriptionAr: storyAr !== undefined ? storyAr : existing.descriptionAr,
+              countryOfOrigin: countryEn || countryAr || existing.countryOfOrigin,
+              logoUrl: logoUrl !== undefined ? logoUrl : existing.logoUrl,
+              heroImageUrl: heroImageUrl !== undefined ? heroImageUrl : existing.heroImageUrl,
+            },
+          });
+          return success(updated);
+        }
+      }
+
+      const baseSlug = (customSlug || String(name))
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -1635,7 +1685,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           type: type === "DESIGNER" ? "DESIGNER" : "NICHE",
           descriptionEn: storyEn || "",
           descriptionAr: storyAr || "",
-          countryOfOrigin: countryEn || "France",
+          countryOfOrigin: countryEn || countryAr || "France",
           logoUrl,
           heroImageUrl,
         },
@@ -1643,10 +1693,32 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(brand, 201);
     }
 
-    // 14. Admin Create Note
-    if (path === "admin/notes") {
-      const { name, nameAr, categoryEn, categoryAr, descriptionEn, descriptionAr, heroImageUrl } = body || {};
+    // 14. Admin Create or Update Note
+    if (path === "admin/notes" || (route[0] === "admin" && route[1] === "notes")) {
+      const { id, name, nameAr, categoryEn, categoryAr, descriptionEn, descriptionAr, heroImageUrl, slug } = body || {};
       if (!name) return error("INVALID_INPUT", "Note name is required", 400);
+
+      const noteId = id || (route[2] ? route[2] : null);
+      if (noteId) {
+        const existing = await prisma.note.findFirst({
+          where: { OR: [{ id: noteId }, { slugEn: slug || "" }] },
+        });
+        if (existing) {
+          const updated = await prisma.note.update({
+            where: { id: existing.id },
+            data: {
+              nameEn: String(name).trim(),
+              nameAr: String(nameAr || name).trim(),
+              categoryEn: categoryEn !== undefined ? categoryEn : existing.categoryEn,
+              categoryAr: categoryAr !== undefined ? categoryAr : existing.categoryAr,
+              descriptionEn: descriptionEn !== undefined ? descriptionEn : existing.descriptionEn,
+              descriptionAr: descriptionAr !== undefined ? descriptionAr : existing.descriptionAr,
+              heroImageUrl: heroImageUrl !== undefined ? heroImageUrl : existing.heroImageUrl,
+            },
+          });
+          return success(updated);
+        }
+      }
 
       const slugEn = String(name).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
       const slugAr = String(nameAr || name).toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").replace(/(^-|-$)/g, "");
@@ -1661,7 +1733,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           categoryAr: categoryAr || "عام",
           descriptionEn: descriptionEn || "",
           descriptionAr: descriptionAr || "",
-          heroImageUrl,
+          heroImageUrl: heroImageUrl || null,
         },
       });
       return success(note, 201);
@@ -2637,11 +2709,26 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
     if (route[0] === "admin" && route[1] === "products" && route[2]) {
       const productIdOrSlug = route[2];
       try {
-        await prisma.product.delete({
-          where: { id: productIdOrSlug },
+        const prod = await prisma.product.findFirst({
+          where: { OR: [{ id: productIdOrSlug }, { slug: productIdOrSlug }] },
+          select: { id: true },
         });
-      } catch {
-        // Fallback to slug or unpublish if referenced by foreign keys
+        const targetId = prod?.id || productIdOrSlug;
+
+        // Disassociate relations safely to avoid foreign key violation
+        await prisma.productTag.deleteMany({ where: { productId: targetId } }).catch(() => null);
+        await prisma.productNote.deleteMany({ where: { productId: targetId } }).catch(() => null);
+        await prisma.productCollection.deleteMany({ where: { productId: targetId } }).catch(() => null);
+        await prisma.productPerfumer.deleteMany({ where: { productId: targetId } }).catch(() => null);
+        await prisma.inventory.deleteMany({
+          where: { variant: { productId: targetId } },
+        }).catch(() => null);
+        await prisma.productVariant.deleteMany({ where: { productId: targetId } }).catch(() => null);
+        await prisma.product.delete({
+          where: { id: targetId },
+        });
+      } catch (err: any) {
+        console.warn("Product direct deletion failed, fallback to soft unpublish:", err);
         await prisma.product.updateMany({
           where: { OR: [{ id: productIdOrSlug }, { slug: productIdOrSlug }] },
           data: { isPublished: false },
@@ -2681,6 +2768,51 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
       const tagId = route[2];
       await TagService.deleteTag(tagId);
       return success({ success: true, deleted: tagId });
+    }
+
+    // 8. Admin Delete Brand
+    if (route[0] === "admin" && route[1] === "brands" && route[2]) {
+      const brandIdOrSlug = route[2];
+      const target = await prisma.brand.findFirst({
+        where: {
+          OR: [{ id: brandIdOrSlug }, { slug: brandIdOrSlug }],
+        },
+      });
+      if (target) {
+        // Reassign products to an alternate brand if any exist to satisfy foreign key constraint
+        const fallbackBrand = await prisma.brand.findFirst({
+          where: { id: { not: target.id } },
+        });
+        if (fallbackBrand) {
+          await prisma.product.updateMany({
+            where: { brandId: target.id },
+            data: { brandId: fallbackBrand.id },
+          }).catch(() => null);
+        }
+        await prisma.brand.delete({
+          where: { id: target.id },
+        });
+      }
+      return success({ success: true, deleted: brandIdOrSlug });
+    }
+
+    // 9. Admin Delete Note
+    if (route[0] === "admin" && route[1] === "notes" && route[2]) {
+      const noteIdOrSlug = route[2];
+      const target = await prisma.note.findFirst({
+        where: {
+          OR: [{ id: noteIdOrSlug }, { slugEn: noteIdOrSlug }, { slugAr: noteIdOrSlug }],
+        },
+      });
+      if (target) {
+        await prisma.productNote.deleteMany({
+          where: { noteId: target.id },
+        }).catch(() => null);
+        await prisma.note.delete({
+          where: { id: target.id },
+        });
+      }
+      return success({ success: true, deleted: noteIdOrSlug });
     }
 
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);

@@ -83,7 +83,21 @@ export default async function HomePage({
       BannerService.getActiveBanners("CAMPAIGN_MID").catch(() => muschioApi.getActiveBanners("CAMPAIGN_MID")),
       BannerService.getActiveBanners("PROMO_STRIP").catch(() => muschioApi.getActiveBanners("PROMO_STRIP")),
       BannerService.getVisibleSections().catch(() => muschioApi.getHomepageSections()),
-      CatalogService.getProducts({ page: 1, limit: 16, sort: "featured" }).then((res: any) => (res?.items || res || []).map(storefrontProduct)).catch(() => muschioApi.getProducts({ limit: 16 })),
+      prisma.product.findMany({
+        where: { isPublished: true },
+        include: {
+          brand: true,
+          scentFamily: true,
+          variants: {
+            include: { inventory: true },
+            orderBy: { price: "asc" },
+          },
+          notes: { include: { note: true } },
+          tags: { include: { tag: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        take: 16,
+      }).then((items) => items.map(storefrontProduct)).catch(() => muschioApi.getProducts({ limit: 16 })),
       CatalogService.getBrands().catch(() => muschioApi.getBrands()),
       NotesService.getNotes({ limit: 6 }).then((res: any) => res?.items || res || []).catch(() => muschioApi.getNotes({ limit: 6 })),
       prisma.collection.findMany({
@@ -187,19 +201,30 @@ export default async function HomePage({
   // Format live products
   const featuredProducts = (liveProducts || []).map((p: any) => {
     const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
+    const price = Number(v?.price ?? p.price ?? 0);
+    const compareAtPrice = v?.compareAtPrice !== null && v?.compareAtPrice !== undefined
+      ? Number(v.compareAtPrice)
+      : (p.compareAtPrice ? Number(p.compareAtPrice) : null);
+
     return {
+      id: String(p.id || p._id || p.slug),
+      _id: String(p.id || p._id || p.slug),
       slug: p.slug,
       nameEn: p.nameEn,
       nameAr: p.nameAr,
       brand: p.brand?.name || p.brand || "",
       concentration: (p.concentration || "").replaceAll("_", " "),
-      price: v?.price || p.price || 0,
-      compareAtPrice: v?.compareAtPrice,
+      price,
+      compareAtPrice,
       image: p.images?.[0] || p.image || "/product-placeholder.svg",
       secondaryImage: p.images?.[1],
       images: p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
       badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
-      variants: p.variants || [],
+      variants: (p.variants || []).map((varItem: any) => ({
+        ...varItem,
+        price: Number(varItem.price) || 0,
+        compareAtPrice: varItem.compareAtPrice ? Number(varItem.compareAtPrice) : null,
+      })),
     };
   });
 

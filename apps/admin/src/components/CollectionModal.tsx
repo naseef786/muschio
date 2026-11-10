@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Sparkles, Search, ChevronUp, ChevronDown, Check, Trash2, Plus, Image as ImageIcon } from "lucide-react";
+import { X, Sparkles, Search, ChevronUp, ChevronDown, Check, Trash2, Plus, Image as ImageIcon, Loader2 } from "lucide-react";
 import { CollectionItem, ProductItem, slugify } from "../seo-utils";
 import { MediaUploadField } from "./MediaUploadField";
 
@@ -435,10 +435,13 @@ export function CollectionModal({
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2 text-xs font-medium rounded bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white transition-colors flex items-center gap-1.5 shadow-md shadow-black/10"
+              className="px-5 py-2 text-xs font-medium rounded bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white transition-colors flex items-center gap-1.5 shadow-md shadow-black/10 disabled:opacity-50"
             >
               {isSaving ? (
-                <span>Saving Collection...</span>
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Saving Collection...</span>
+                </>
               ) : (
                 <>
                   <Check size={14} />

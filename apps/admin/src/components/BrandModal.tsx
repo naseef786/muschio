@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Award, Globe, CheckCircle2 } from "lucide-react";
+import { X, Award, Globe, CheckCircle2, Loader2, AlertCircle } from "lucide-react";
 import { BrandItem, slugify, generateBrandMetaTitle, generateBrandMetaDescription } from "../seo-utils";
 import { MediaUploadField } from "./MediaUploadField";
 
@@ -7,10 +7,12 @@ interface BrandModalProps {
   isOpen: boolean;
   onClose: () => void;
   brandToEdit: BrandItem | null;
-  onSave: (brand: BrandItem) => void;
+  onSave: (brand: BrandItem) => Promise<void> | void;
 }
 
 export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
@@ -71,7 +73,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
     setFormData(updated);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
 
@@ -96,8 +98,16 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
       perfumesCount: brandToEdit ? brandToEdit.perfumesCount : 0,
     };
 
-    onSave(brand);
-    onClose();
+    setIsSaving(true);
+    setErrorMsg("");
+    try {
+      await onSave(brand);
+      onClose();
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to persist Maison brand to database.");
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -308,21 +318,39 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
             </div>
           </div>
 
+          {errorMsg && (
+            <div className="p-3 rounded bg-rose-500/10 border border-rose-500/30 text-rose-500 text-xs flex items-center gap-2">
+              <AlertCircle size={14} className="shrink-0" />
+              <span>{errorMsg}</span>
+            </div>
+          )}
+
           {/* FOOTER ACTIONS */}
           <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md"
+              disabled={isSaving}
+              className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md disabled:opacity-50"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded-md flex items-center gap-1.5 transition-colors"
+              disabled={isSaving}
+              className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded-md flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-md shadow-black/10"
             >
-              <CheckCircle2 size={14} />
-              <span>Save Brand</span>
+              {isSaving ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Saving Maison...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>{brandToEdit ? "Update Maison" : "Save Maison"}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

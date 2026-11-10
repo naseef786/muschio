@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { X, Tag, CheckCircle2, Sparkles } from "lucide-react";
+import { X, Tag, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { TagItem, slugify } from "../seo-utils";
 
 interface TagModalProps {
@@ -286,8 +286,17 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
               disabled={isSubmitting}
               className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5 transition-colors disabled:opacity-50"
             >
-              <CheckCircle2 size={14} />
-              <span>{isSubmitting ? "Saving..." : tagToEdit ? "Update Tag" : "Create Tag"}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={14} className="animate-spin" />
+                  <span>Saving Tag...</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={14} />
+                  <span>{tagToEdit ? "Update Tag" : "Create Tag"}</span>
+                </>
+              )}
             </button>
           </div>
         </form>

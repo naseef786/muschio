@@ -108,9 +108,9 @@ export class CatalogService {
       };
     }
 
-    let orderBy: any = [{ isFeatured: "desc" }, { createdAt: "desc" }];
-    if (sort === "newest") orderBy = { createdAt: "desc" };
-    if (sort === "rating") orderBy = { ratingAverage: "desc" };
+    let orderBy: any = [{ createdAt: "desc" }];
+    if (sort === "newest" || sort === "featured") orderBy = { createdAt: "desc" };
+    if (sort === "rating") orderBy = [{ ratingAverage: "desc" }, { createdAt: "desc" }];
 
     try {
       const [items, totalItems] = await Promise.all([

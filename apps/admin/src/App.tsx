@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -44,6 +44,7 @@ import {
   AlertTriangle,
   Tag,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import {
   BrandItem,
@@ -152,7 +153,7 @@ interface EnquiryItem {
 
 interface LiveToast {
   id: string;
-  type: "order" | "cancel" | "enquiry" | "review" | "return" | "settings";
+  type: "order" | "cancel" | "enquiry" | "review" | "return" | "settings" | "system";
   title: string;
   message: string;
   time: string;
@@ -353,13 +354,62 @@ export function App() {
     }
   });
 
-  const handleLogout = () => {
+  const handleUnauthorized = useCallback(() => {
     try {
       localStorage.removeItem("muschio_admin_auth");
       sessionStorage.removeItem("muschio_admin_auth");
     } catch {}
     setAuthSession(null);
+  }, []);
+
+  const handleLogout = () => {
+    handleUnauthorized();
   };
+
+  // Intercept any 401 Unauthorized response across the admin dashboard and redirect immediately to login
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const originalFetch = window.fetch;
+    window.fetch = async (...args) => {
+      const response = await originalFetch(...args);
+      if (response.status === 401) {
+        const url = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
+        // Avoid intercepting the login endpoint itself so invalid credentials error can be displayed
+        if (!url.includes("/admin/auth/login") && !url.includes("/admin/login")) {
+          console.warn(`[Admin Security] 401 Unauthorized received from ${url}. Switching immediately to login page.`);
+          handleUnauthorized();
+        }
+      }
+      return response;
+    };
+
+    return () => {
+      window.fetch = originalFetch;
+    };
+  }, [handleUnauthorized]);
+
+  // Proactively verify token validity against Neon DB on initial mount
+  useEffect(() => {
+    if (!authSession?.token) return;
+    let active = true;
+
+    fetch("/api/v1/admin/dashboard", {
+      headers: { Authorization: `Bearer ${authSession.token}` },
+    })
+      .then((res) => {
+        if (!active) return;
+        if (res.status === 401) {
+          console.warn("[Admin Security] Active token rejected with 401. Clearing session.");
+          handleUnauthorized();
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, [authSession?.token, handleUnauthorized]);
 
   // 1. PRODUCTS (PRO SEO ENHANCED)
   const [products, setProducts] = usePersistentState<ProductItem[]>("products", []);
@@ -377,6 +427,30 @@ export function App() {
   const [tagSearch, setTagSearch] = useState("");
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
+
+  // GLOBAL DELETE CONFIRMATION STATE (SAFETY & FALLBACK)
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    isOpen: boolean;
+    itemType: "Product" | "Collection" | "Tag" | "Maison" | "Scent Note" | "Banner";
+    itemId: string;
+    itemName: string;
+    warning?: string;
+    isDeleting: boolean;
+    onConfirm: () => Promise<void>;
+  }>({
+    isOpen: false,
+    itemType: "Product",
+    itemId: "",
+    itemName: "",
+    warning: "",
+    isDeleting: false,
+    onConfirm: async () => {},
+  });
+
+  // SAVE LOADING STATES FOR SECTIONS
+  const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [isSavingBanner, setIsSavingBanner] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
@@ -835,7 +909,7 @@ export function App() {
   };
 
   // Toast notification dispatcher
-  const addToast = (type: "order" | "cancel" | "enquiry" | "review" | "return" | "settings", title: string, message: string) => {
+  const addToast = (type: "order" | "cancel" | "enquiry" | "review" | "return" | "settings" | "system", title: string, message: string) => {
     const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`;
     setToasts((prev) => [{ id, type, title, message, time: "Just now" }, ...prev.slice(0, 3)]);
     setTimeout(() => {
@@ -1197,16 +1271,59 @@ export function App() {
     setShowBannerForm(true);
   };
 
+  const promptDeleteBanner = (banner: BannerItem) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Banner",
+      itemId: banner.id,
+      itemName: banner.titleEn || banner.slot,
+      warning: "This promotional banner will be immediately removed from the live storefront.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const authHeaders: Record<string, string> = {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          };
+          const res = await fetch(`/api/v1/admin/banners/${banner.id}`, {
+            method: "DELETE",
+            headers: authHeaders,
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Server rejected banner deletion");
+          }
+          setBanners((prev) => prev.filter((b) => b.id !== banner.id));
+          addAuditLog("BANNER_DELETED", `Banner ${banner.id}`);
+          addToast("system", "Banner Removed", `Banner "${banner.titleEn || banner.slot}" was removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (e: any) {
+          console.error("Error deleting banner:", e);
+          addToast("cancel", "Deletion Failed", e?.message || "Failed to delete banner from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
+    });
+  };
+
+  const deleteBanner = async (id: string) => {
+    const banner = banners.find((b) => b.id === id);
+    promptDeleteBanner(banner || ({ id, slot: "BANNER", titleEn: "Promotional Banner" } as any));
+  };
+
   const handleSaveBanner = async () => {
     if (!bannerForm.titleEn?.trim()) {
-      addToast("order", "Title Required", "Please enter a banner headline / title (English).");
+      addToast("cancel", "Title Required", "Please enter a banner headline / title (English).");
       return;
     }
     if (!bannerForm.imageUrl?.trim()) {
-      addToast("order", "Image Required", "Please upload or provide a desktop banner image URL.");
+      addToast("cancel", "Image Required", "Please upload or provide a desktop banner image URL.");
       return;
     }
 
+    setIsSavingBanner(true);
     const payload = {
       ...bannerForm,
       titleEn: bannerForm.titleEn.trim(),
@@ -1235,6 +1352,10 @@ export function App() {
           headers: authHeaders,
           body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error?.message || errData?.message || "Server rejected banner update");
+        }
         const json = await res.json();
         if (json.success && json.data) {
           setBanners((prev) =>
@@ -1246,13 +1367,17 @@ export function App() {
           );
         }
         addAuditLog("BANNER_UPDATED", `${payload.slot} ${editingBanner.id}`);
-        addToast("order", "Banner Updated", "Promotional offer banner saved to live database.");
+        addToast("system", "Banner Updated", "Promotional offer banner saved to live database.");
       } else {
         const res = await fetch("/api/v1/admin/banners", {
           method: "POST",
           headers: authHeaders,
           body: JSON.stringify(payload),
         });
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error?.message || errData?.message || "Server rejected banner creation");
+        }
         const json = await res.json();
         if (json.success && json.data) {
           setBanners((prev) => [...prev, json.data]);
@@ -1266,13 +1391,15 @@ export function App() {
           setBanners((prev) => [...prev, newBanner]);
         }
         addAuditLog("BANNER_CREATED", `${payload.slot} banner published`);
-        addToast("order", "Banner Published", "New promotional banner published to storefront.");
+        addToast("system", "Banner Published", "New promotional banner published to storefront.");
       }
-    } catch (e) {
+      resetBannerForm();
+    } catch (e: any) {
       console.error("Error saving banner:", e);
-      addToast("order", "Save Error", "Failed to communicate with banner service.");
+      addToast("cancel", "Save Error", e?.message || "Failed to communicate with banner service.");
+    } finally {
+      setIsSavingBanner(false);
     }
-    resetBannerForm();
   };
 
   const toggleBannerActive = async (id: string) => {
@@ -1289,29 +1416,11 @@ export function App() {
         method: "POST",
         headers: authHeaders,
       });
-      addToast("order", "Banner Updated", "Banner status updated in live database.");
+      addToast("system", "Banner Updated", "Banner status updated in live database.");
     } catch (e) {
       console.error("Error toggling banner:", e);
     }
     addAuditLog("BANNER_TOGGLE", `Banner ${id}`);
-  };
-
-  const deleteBanner = async (id: string) => {
-    setBanners((prev) => prev.filter((b) => b.id !== id));
-    try {
-      const token = authSession?.token;
-      const authHeaders: Record<string, string> = {
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      };
-      await fetch(`/api/v1/admin/banners/${id}`, {
-        method: "DELETE",
-        headers: authHeaders,
-      });
-      addToast("cancel", "Banner Removed", "Banner removed from database.");
-    } catch (e) {
-      console.error("Error deleting banner:", e);
-    }
-    addAuditLog("BANNER_DELETED", `Banner ${id}`);
   };
 
   // Section ordering with non-undefined array items and API persistence
@@ -1728,36 +1837,79 @@ export function App() {
       variants: activeVariants,
     };
     // Persist directly to Neon PostgreSQL database via API
+    setIsSavingProduct(true);
+    let savedDbProduct: any = null;
+    let saveErrorMessage = "";
+
     try {
       const token = authSession?.token;
-      await fetch("/api/v1/admin/products", {
+      const payload = {
+        ...productForm,
+        sku: primarySku,
+        price: defaultVariant.price,
+        volumeMl: primaryVolumeMl,
+        stock: primaryStock,
+        variants: activeVariants,
+        id: editingProductId || undefined,
+        scentFamily: productForm.scentFamily || "Woody Amber",
+        perfumer: productForm.perfumer.trim() || undefined,
+        perfumers: perfumerArray,
+        perfumerBio: productForm.perfumerBio.trim() || undefined,
+        images: productImages,
+        imageUrl: productImages[0] || productForm.imageUrl,
+        descriptionEn: finalDescEn,
+        descriptionAr: finalDescAr,
+        metaTitle: finalMetaTitle,
+        metaDescription: finalMetaDesc,
+      };
+
+      const res = await fetch("/api/products", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({
-          ...productForm,
-          sku: primarySku,
-          price: defaultVariant.price,
-          volumeMl: primaryVolumeMl,
-          stock: primaryStock,
-          variants: activeVariants,
-          id: editingProductId || undefined,
-          scentFamily: productForm.scentFamily || "Woody Amber",
-          perfumer: productForm.perfumer.trim() || undefined,
-          perfumers: perfumerArray,
-          perfumerBio: productForm.perfumerBio.trim() || undefined,
-          images: productImages,
-          imageUrl: productImages[0] || productForm.imageUrl,
-          descriptionEn: finalDescEn,
-          descriptionAr: finalDescAr,
-          metaTitle: finalMetaTitle,
-          metaDescription: finalMetaDesc,
-        }),
+        body: JSON.stringify(payload),
       });
-    } catch (err) {
-      console.warn("DB product creation failed, saved to local state:", err);
+
+      if (res.ok) {
+        const resJson = await res.json();
+        savedDbProduct = resJson.product || resJson.data;
+      } else {
+        const errJson = await res.json().catch(() => null);
+        saveErrorMessage = errJson?.error?.message || errJson?.message || errJson?.error || "Error inserting product into PostgreSQL";
+
+        // Try admin fallback endpoint
+        const fallbackRes = await fetch("/api/v1/admin/products", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(payload),
+        });
+        if (fallbackRes.ok) {
+          const fallbackJson = await fallbackRes.json();
+          savedDbProduct = fallbackJson.product || fallbackJson.data;
+          saveErrorMessage = "";
+        } else {
+          const fallbackErr = await fallbackRes.json().catch(() => null);
+          saveErrorMessage = fallbackErr?.error?.message || fallbackErr?.message || saveErrorMessage;
+        }
+      }
+    } catch (err: any) {
+      console.warn("DB product creation network/server error:", err);
+      saveErrorMessage = err?.message || "Failed to reach database server.";
+    }
+
+    if (saveErrorMessage && !savedDbProduct) {
+      setIsSavingProduct(false);
+      addToast("cancel", "Product Save Failed", saveErrorMessage);
+      return; // Keep modal open so entered data is not lost!
+    }
+
+    if (savedDbProduct?.id) {
+      newP.id = savedDbProduct.id;
     }
 
     if (editingProductId) {
@@ -1767,10 +1919,62 @@ export function App() {
         )
       );
       addAuditLog("PRODUCT_UPDATED", `${newP.sku} (${newP.name})`);
+      addToast("system", "Product Updated", `"${newP.name}" updated successfully in database.`);
     } else {
       setProducts((prev) => [newP, ...prev]);
       addAuditLog("PRODUCT_CREATED", `${newP.sku} (${newP.name}) [SEO: /product/${newP.slug}]`);
+      addToast("system", "Product Created", `"${newP.name}" created and synced to Neon PostgreSQL.`);
     }
+
+    // Immediately trigger a re-fetch of live products from Neon PostgreSQL
+    try {
+      const refreshRes = await fetch("/api/products?limit=100", { cache: "no-store" });
+      if (refreshRes.ok) {
+        const freshData = await refreshRes.json();
+        const freshProducts = freshData.products || freshData.data?.products;
+        if (Array.isArray(freshProducts) && freshProducts.length > 0) {
+          const mappedDbProducts: ProductItem[] = freshProducts.map((p: any) => ({
+            id: p.id,
+            sku: p.variants?.[0]?.sku || p.sku || "SKU",
+            name: p.nameEn || p.name,
+            nameAr: p.nameAr || p.name,
+            slug: p.slug,
+            brand: p.brandName || p.brand?.name || (typeof p.brand === "string" ? p.brand : "Haute Niche"),
+            brandSlug: p.brandSlug || p.brand?.slug || "haute-niche",
+            scentFamily: p.scentFamily?.nameEn || p.scentFamily?.slug || "Woody Amber",
+            concentration: p.concentration || "EXTRAIT_DE_PARFUM",
+            gender: p.gender || "UNISEX",
+            volumeMl: p.variants?.[0]?.volumeMl || 100,
+            price: `${p.price || p.variants?.[0]?.price || 0} AED`,
+            costPrice: "0 AED",
+            stock: p.variants?.[0]?.stock || 20,
+            testerStock: 2,
+            reserved: 0,
+            warehouse: p.variants?.[0]?.warehouse || "DXB-MAIN",
+            topNotes: [],
+            heartNotes: [],
+            baseNotes: [],
+            descriptionEn: p.descriptionEn || "",
+            descriptionAr: p.descriptionAr || "",
+            metaTitle: p.metaTitle || p.nameEn,
+            metaDescription: p.metaDescription || "",
+            imageUrl: p.images?.[0] || "/product-placeholder.svg",
+            images: p.images || [],
+            imageAlt: `${p.nameEn || p.name} flacon`,
+            status: p.isPublished ? "PUBLISHED" : "DRAFT",
+            tags: p.tags || [],
+            tagIds: p.tags?.map((t: any) => t.id) || [],
+            variants: p.variants || [],
+          }));
+          setProducts(mappedDbProducts);
+        }
+      }
+    } catch (refreshErr) {
+      console.warn("Immediate product refetch error:", refreshErr);
+    } finally {
+      setIsSavingProduct(false);
+    }
+
     setShowProductModal(false);
     setEditingProductId(null);
     setProductForm({
@@ -1813,20 +2017,43 @@ export function App() {
     });
   };
 
+  const promptDeleteProduct = (id: string, name: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Product",
+      itemId: id,
+      itemName: name,
+      warning: "This fragrance product and all associated variants will be permanently deleted or unpublished from the live database.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/products/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Server rejected product deletion");
+          }
+          setProducts((prev) => prev.filter((p) => p.id !== id));
+          addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
+          addToast("system", "Product Deleted", `"${name}" was successfully removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("DB product deletion failed:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete product from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
+    });
+  };
+
   const handleDeleteProduct = async (id: string, name: string) => {
-    try {
-      const token = authSession?.token;
-      await fetch(`/api/v1/admin/products/${encodeURIComponent(id)}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-    } catch (err) {
-      console.warn("DB product deletion failed:", err);
-    }
-    setProducts((prev) => prev.filter((p) => p.id !== id));
-    addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
+    promptDeleteProduct(id, name);
   };
 
   // Tag Actions (CRUD & Inline Searchable Selector)
@@ -1853,49 +2080,64 @@ export function App() {
         }),
       });
 
-      if (res.ok) {
-        const json = await res.json();
-        const savedTag: TagItem = json.data || tagData;
-        setTags((prev) => {
-          const exists = prev.some((t) => t.id === savedTag.id);
-          if (exists) {
-            return prev.map((t) => (t.id === savedTag.id ? { ...t, ...savedTag } : t));
-          }
-          return [savedTag, ...prev];
-        });
-        addAuditLog(isEditing ? "TAG_UPDATED" : "TAG_CREATED", `${savedTag.nameEn} (${savedTag.slug})`);
-        addToast("settings", isEditing ? "Tag Updated" : "Tag Created", `Tag "${savedTag.nameEn}" successfully saved to database.`);
-      } else {
-        throw new Error("Failed to save tag");
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || errJson?.message || "Failed to persist tag to database");
       }
-    } catch (err) {
-      console.warn("API tag save failed, updating local state:", err);
+
+      const json = await res.json();
+      const savedTag: TagItem = json.data || tagData;
       setTags((prev) => {
-        const exists = prev.some((t) => t.id === tagData.id);
-        if (exists) return prev.map((t) => (t.id === tagData.id ? tagData : t));
-        return [tagData, ...prev];
+        const exists = prev.some((t) => t.id === savedTag.id);
+        if (exists) {
+          return prev.map((t) => (t.id === savedTag.id ? { ...t, ...savedTag } : t));
+        }
+        return [savedTag, ...prev];
       });
-      addToast("settings", "Tag Saved Locally", `Tag "${tagData.nameEn}" saved in administrative state.`);
+      addAuditLog(isEditing ? "TAG_UPDATED" : "TAG_CREATED", `${savedTag.nameEn} (${savedTag.slug})`);
+      addToast("system", isEditing ? "Tag Updated" : "Tag Created", `Tag "${savedTag.nameEn}" successfully saved to database.`);
+    } catch (err: any) {
+      console.error("API tag save failed:", err);
+      addToast("cancel", "Tag Save Error", err?.message || "Failed to communicate with tag service.");
+      throw err;
     }
   };
 
+  const promptDeleteTag = (tagId: string, tagName: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Tag",
+      itemId: tagId,
+      itemName: tagName,
+      warning: "This tag will be unlinked from all associated fragrance products across the database.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/tags/${tagId}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Failed to delete tag from server");
+          }
+          setTags((prev) => prev.filter((t) => t.id !== tagId));
+          addAuditLog("TAG_DELETED", `Tag ${tagName} (${tagId}) deleted`);
+          addToast("system", "Tag Deleted", `Tag "${tagName}" has been removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("Failed to delete tag:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete tag from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
+    });
+  };
+
   const handleDeleteTag = async (tagId: string, tagName: string) => {
-    if (!confirm(`Are you sure you want to delete tag "${tagName}"? This will unlink it from all products.`)) {
-      return;
-    }
-    try {
-      const token = authSession?.token;
-      await fetch(`/api/v1/admin/tags/${tagId}`, {
-        method: "DELETE",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-      });
-      setTags((prev) => prev.filter((t) => t.id !== tagId));
-      addAuditLog("TAG_DELETED", `Tag ${tagName} (${tagId}) deleted`);
-      addToast("settings", "Tag Deleted", `Tag "${tagName}" has been removed from database.`);
-    } catch (err) {
-      console.warn("Failed to delete tag:", err);
-      setTags((prev) => prev.filter((t) => t.id !== tagId));
-    }
+    promptDeleteTag(tagId, tagName);
   };
 
   const handleInlineCreateTag = async (nameEn: string): Promise<TagItem | null> => {
@@ -1921,7 +2163,7 @@ export function App() {
         const created: TagItem = json.data;
         setTags((prev) => [created, ...prev]);
         addAuditLog("TAG_CREATED", `Inline tag created: ${created.nameEn}`);
-        addToast("settings", "Tag Created", `Tag "${created.nameEn}" created and selected.`);
+        addToast("system", "Tag Created", `Tag "${created.nameEn}" created and selected.`);
         return created;
       }
     } catch (err) {
@@ -1955,7 +2197,7 @@ export function App() {
 
       if (!res.ok) {
         const errJson = await res.json().catch(() => null);
-        throw new Error(errJson?.error?.message || `Failed to save collection (status ${res.status})`);
+        throw new Error(errJson?.error?.message || errJson?.message || `Failed to save collection (status ${res.status})`);
       }
 
       const json = await res.json();
@@ -2003,28 +2245,53 @@ export function App() {
         setShowCollectionModal(false);
         setCollectionToEdit(null);
         addAuditLog("COLLECTION_SAVED", `Collection "${saved.nameEn}" [${saved.isFeatured ? "Featured" : "Standard"}]`);
+        addToast("system", "Collection Saved", `Collection "${saved.nameEn}" saved to database.`);
         return;
       }
     } catch (err: any) {
       console.error("DB collection save failed:", err);
+      addToast("cancel", "Collection Save Error", err?.message || "Failed to save collection.");
       throw err;
     }
   };
 
+  const promptDeleteCollection = (id: string, name: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Collection",
+      itemId: id,
+      itemName: name,
+      warning: "All fragrance links to this collection will be severed. The associated products will remain safe in your catalog.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/collections/${id}`, {
+            method: "DELETE",
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Failed to delete collection from server");
+          }
+          setCollections((prev) => prev.filter((c) => c.id !== id && c.slug !== id));
+          addAuditLog("COLLECTION_DELETED", `Collection ${id} (${name})`);
+          addToast("system", "Collection Deleted", `"${name}" removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("DB collection delete failed:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete collection from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
+    });
+  };
+
   const handleDeleteCollection = async (id: string, name: string) => {
-    try {
-      const token = authSession?.token;
-      await fetch(`/api/v1/admin/collections/${id}`, {
-        method: "DELETE",
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-      });
-    } catch (err) {
-      console.warn("DB collection delete failed:", err);
-    }
-    setCollections((prev) => prev.filter((c) => c.id !== id && c.slug !== id));
-    addAuditLog("COLLECTION_DELETED", `Collection ${id} (${name})`);
+    promptDeleteCollection(id, name);
   };
 
   const handleToggleFeaturedCollection = async (collection: CollectionItem) => {
@@ -2049,7 +2316,7 @@ export function App() {
   const handleSaveBrand = async (brand: BrandItem) => {
     try {
       const token = authSession?.token;
-      await fetch("/api/v1/admin/brands", {
+      const res = await fetch("/api/v1/admin/brands", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -2057,37 +2324,79 @@ export function App() {
         },
         body: JSON.stringify(brand),
       });
-    } catch (err) {
-      console.warn("DB brand creation failed:", err);
-    }
-    setBrands((prev) => {
-      const idx = prev.findIndex((b) => b.id === brand.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = brand;
-        return next;
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || errJson?.message || "Failed to persist Maison to database");
       }
-      return [brand, ...prev];
+      const json = await res.json();
+      const savedBrand = json.data || brand;
+      setBrands((prev) => {
+        const idx = prev.findIndex((b) => b.id === savedBrand.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = savedBrand;
+          return next;
+        }
+        return [savedBrand, ...prev];
+      });
+      addAuditLog("BRAND_SAVED", `Maison ${savedBrand.name} [SEO: /brands/${savedBrand.slug}]`);
+      addToast("system", "Maison Saved", `Brand "${savedBrand.name}" successfully saved to database.`);
+    } catch (err: any) {
+      console.error("DB brand creation failed:", err);
+      addToast("cancel", "Maison Save Error", err?.message || "Could not save brand to database.");
+      throw err;
+    }
+  };
+
+  const promptDeleteBrand = (id: string, name: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Maison",
+      itemId: id,
+      itemName: name,
+      warning: "Any products currently associated with this Maison will have their brand relation cleared.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/brands/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Failed to delete brand from server");
+          }
+          setBrands((prev) => prev.filter((b) => b.id !== id));
+          addAuditLog("BRAND_DELETED", `Maison ${id} (${name})`);
+          addToast("system", "Maison Deleted", `Brand "${name}" removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("Failed to delete brand:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete brand from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
     });
-    addAuditLog("BRAND_SAVED", `Maison ${brand.name} [SEO: /brands/${brand.slug}]`);
   };
 
   const handleDeleteBrand = (id: string, name: string) => {
-    setBrands((prev) => prev.filter((b) => b.id !== id));
-    addAuditLog("BRAND_DELETED", `Maison ${id} (${name})`);
+    promptDeleteBrand(id, name);
   };
 
   // Note Actions
   const handleSaveNoteModal = async (note: NoteItem) => {
     try {
       const token = authSession?.token;
-      await fetch("/api/v1/admin/notes", {
+      const res = await fetch("/api/v1/admin/notes", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify({
+          id: note.id,
           name: note.nameEn,
           nameAr: note.nameAr,
           categoryEn: note.family || "General",
@@ -2095,26 +2404,68 @@ export function App() {
           descriptionEn: note.descriptionEn,
           descriptionAr: note.descriptionAr,
           heroImageUrl: note.heroImageUrl,
+          slug: note.slug,
         }),
       });
-    } catch (err) {
-      console.warn("DB note creation failed:", err);
-    }
-    setNotes((prev) => {
-      const idx = prev.findIndex((n) => n.id === note.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = note;
-        return next;
+      if (!res.ok) {
+        const errJson = await res.json().catch(() => null);
+        throw new Error(errJson?.error?.message || errJson?.message || "Failed to persist note to database");
       }
-      return [note, ...prev];
+      const json = await res.json();
+      const savedNote = json.data || note;
+      setNotes((prev) => {
+        const idx = prev.findIndex((n) => n.id === savedNote.id);
+        if (idx >= 0) {
+          const next = [...prev];
+          next[idx] = savedNote;
+          return next;
+        }
+        return [savedNote, ...prev];
+      });
+      addAuditLog("NOTE_SAVED", `Note ${savedNote.nameEn || note.nameEn} [SEO: /notes/${savedNote.slug || note.slug}]`);
+      addToast("system", "Note Saved", `Scent note "${note.nameEn}" successfully saved to database.`);
+    } catch (err: any) {
+      console.error("DB note creation failed:", err);
+      addToast("cancel", "Note Save Error", err?.message || "Could not save note to database.");
+      throw err;
+    }
+  };
+
+  const promptDeleteNote = (id: string, name: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Scent Note",
+      itemId: id,
+      itemName: name,
+      warning: "This scent note will be removed from all fragrance olfactory pyramids in the database.",
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/notes/${encodeURIComponent(id)}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Failed to delete note from server");
+          }
+          setNotes((prev) => prev.filter((n) => n.id !== id));
+          addAuditLog("NOTE_DELETED", `Note ${id} (${name})`);
+          addToast("system", "Note Deleted", `Scent note "${name}" removed from database.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("Failed to delete note:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete note from database. Record preserved.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
     });
-    addAuditLog("NOTE_SAVED", `Note ${note.nameEn} [SEO: /notes/${note.slug}]`);
   };
 
   const handleDeleteNote = (id: string, name: string) => {
-    setNotes((prev) => prev.filter((n) => n.id !== id));
-    addAuditLog("NOTE_DELETED", `Note ${id} (${name})`);
+    promptDeleteNote(id, name);
   };
 
   // Bulk CSV Import Action
@@ -2352,6 +2703,7 @@ export function App() {
   // Settings Save
   const handleSaveSettings = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSavingSettings(true);
     setSettingsFeedback("Persisting configuration to Neon PostgreSQL...");
     try {
       const token = authSession?.token;
@@ -2366,15 +2718,21 @@ export function App() {
       if (res.ok) {
         addAuditLog("STORE_SETTINGS_SAVED", "Social handles and Concierge info persisted to DB");
         setSettingsFeedback("Settings and Social Links saved successfully to PostgreSQL! Sync active.");
-        addToast("settings", "Store Settings Saved", "All store configuration active on storefront");
+        addToast("system", "Store Settings Saved", "All store configuration active on storefront");
       } else {
-        setSettingsFeedback("Settings updated locally, but server returned an error.");
+        const errJson = await res.json().catch(() => null);
+        const errMsg = errJson?.error?.message || errJson?.message || "Server returned an error";
+        setSettingsFeedback(`Error: ${errMsg}`);
+        addToast("cancel", "Settings Save Failed", errMsg);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Could not persist settings to server:", err);
-      setSettingsFeedback("Network issue: settings saved locally.");
+      setSettingsFeedback("Network issue: could not reach server.");
+      addToast("cancel", "Network Error", "Could not reach database server to persist settings.");
+    } finally {
+      setIsSavingSettings(false);
+      setTimeout(() => setSettingsFeedback(""), 4500);
     }
-    setTimeout(() => setSettingsFeedback(""), 4500);
   };
 
   // Dynamic Dashboard Metrics
@@ -2466,28 +2824,28 @@ export function App() {
       <aside
         className={`fixed inset-y-0 start-0 z-50 ${
           isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col justify-between overflow-y-auto ${
-          isSidebarCollapsed ? "p-3" : "p-4"
-        } transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
+        } w-72 max-w-[85vw] h-screen md:sticky md:top-0 bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col transform transition-all duration-300 ease-in-out md:translate-x-0 md:shrink-0 ${
           isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="space-y-6 flex-1 min-h-0 flex flex-col">
-          <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between px-2"}`}>
+        {/* 1. Header (Brand Logo & Collapse/Close Controls) - Fixed at top, never scrolls */}
+        <div className={`shrink-0 border-b border-neutral-200 dark:border-neutral-800 ${isSidebarCollapsed ? "p-3" : "px-4 py-3.5"}`}>
+          <div className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "justify-between"}`}>
             <div className="flex items-center gap-3 overflow-hidden">
               <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black border border-neutral-300 dark:border-neutral-700 flex items-center justify-center font-serif font-bold text-sm shrink-0">
                 M
               </div>
-              {!isSidebarCollapsed && (
+              {(!isSidebarCollapsed || isMobileNavOpen) && (
                 <div className="transition-opacity duration-200 overflow-hidden">
-                  <span className="font-serif tracking-widest text-lg font-bold text-neutral-900 dark:text-white block whitespace-nowrap">MUSCHIO</span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Panel</span>
+                  <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white block whitespace-nowrap">MUSCHIO</span>
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Console</span>
                 </div>
               )}
             </div>
 
             {/* Mobile Close Button */}
             <button
+              type="button"
               onClick={() => setIsMobileNavOpen(false)}
               className="md:hidden p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
               aria-label="Close Navigation"
@@ -2511,11 +2869,11 @@ export function App() {
 
           {/* Desktop Expand Icon Button when collapsed */}
           {isSidebarCollapsed && (
-            <div className="hidden md:flex justify-center -mt-2">
+            <div className="hidden md:flex justify-center mt-2 pt-2 border-t border-neutral-100 dark:border-neutral-900">
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(false)}
-                className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                className="p-1 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 title="Expand Sidebar (Ctrl+B)"
                 aria-label="Expand Sidebar"
               >
@@ -2523,7 +2881,10 @@ export function App() {
               </button>
             </div>
           )}
+        </div>
 
+        {/* 2. Scrollable Navigation List - Isolated Scroll Container (never collides with footer) */}
+        <div className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-1">
           <nav className="space-y-1 text-xs font-sans">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -2545,6 +2906,7 @@ export function App() {
             ].map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
+              const showText = !isSidebarCollapsed || isMobileNavOpen;
               return (
                 <button
                   key={item.id}
@@ -2554,25 +2916,25 @@ export function App() {
                   }}
                   title={`${item.label}${item.count !== undefined ? ` (${item.count})` : ""}`}
                   className={`w-full flex items-center ${
-                    isSidebarCollapsed ? "justify-center px-2 py-2.5" : "justify-between px-3 py-2.5"
+                    showText ? "justify-between px-3 py-2.5" : "justify-center px-2 py-2.5"
                   } rounded-md text-xs font-medium transition-colors ${
                     isActive
                       ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
                       : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
                   }`}
                 >
-                  <span className={`flex items-center ${isSidebarCollapsed ? "justify-center" : "gap-3"}`}>
+                  <span className={`flex items-center ${showText ? "gap-3" : "justify-center"}`}>
                     <div className="relative flex items-center justify-center">
                       <Icon size={16} />
-                      {isSidebarCollapsed && item.count !== undefined && (
+                      {!showText && item.count !== undefined && (
                         <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
                           {item.count > 99 ? "99+" : item.count}
                         </span>
                       )}
                     </div>
-                    {!isSidebarCollapsed && <span>{item.label}</span>}
+                    {showText && <span>{item.label}</span>}
                   </span>
-                  {!isSidebarCollapsed && item.count !== undefined && (
+                  {showText && item.count !== undefined && (
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                         isActive
@@ -2589,63 +2951,65 @@ export function App() {
           </nav>
         </div>
 
-        {/* User Session Footer */}
-        {isSidebarCollapsed ? (
-          <div className="shrink-0 mt-auto p-2 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] rounded-xl flex flex-col items-center gap-2">
-            <div
-              className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default"
-              title={`${authSession.user.name} (${authSession.user.role})`}
-            >
-              {authSession.user.name.charAt(0) || "A"}
+        {/* 3. User Session Footer - Anchored cleanly at the bottom, never covered */}
+        <div className={`shrink-0 border-t border-neutral-200 dark:border-neutral-800 bg-neutral-50/70 dark:bg-neutral-900/60 ${isSidebarCollapsed && !isMobileNavOpen ? "p-2" : "p-3"}`}>
+          {isSidebarCollapsed && !isMobileNavOpen ? (
+            <div className="flex flex-col items-center gap-2">
+              <div
+                className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0 cursor-default"
+                title={`${authSession.user.name} (${authSession.user.role})`}
+              >
+                {authSession.user.name.charAt(0) || "A"}
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleLogout();
+                }}
+                className="p-1.5 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
+                title="Sign Out Session"
+                aria-label="Sign Out Session"
+              >
+                <LogOut size={12} />
+              </button>
             </div>
-            <button
-              onClick={() => {
-                setIsMobileNavOpen(false);
-                handleLogout();
-              }}
-              className="p-1.5 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 transition-colors"
-              title="Sign Out Session"
-              aria-label="Sign Out Session"
-            >
-              <LogOut size={12} />
-            </button>
-          </div>
-        ) : (
-          <div className="shrink-0 mt-auto p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] space-y-2 rounded-xl">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 min-w-0">
+          ) : (
+            <div className="space-y-2 text-[11px]">
+              <div className="flex items-center gap-2.5 min-w-0">
                 <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shrink-0">
                   {authSession.user.name.charAt(0) || "A"}
                 </div>
-                <div className="min-w-0">
+                <div className="min-w-0 flex-1">
                   <div className="font-medium text-neutral-900 dark:text-white truncate">{authSession.user.name}</div>
                   <div className="text-neutral-500 font-mono text-[9px] truncate">{authSession.user.email}</div>
                 </div>
               </div>
-            </div>
 
-            <div className="flex items-center justify-between pt-1.5 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
-              <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
-                {authSession.user.role.replace("_", " ")}
-              </span>
-              <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
-                <span className="w-1.5 h-1.5 rounded-full bg-black dark:bg-white" />
-                <span>Active</span>
+              <div className="flex items-center justify-between pt-1 border-t border-neutral-200 dark:border-neutral-800 text-[10px]">
+                <span className="font-mono px-1.5 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700">
+                  {authSession.user.role.replace("_", " ")}
+                </span>
+                <div className="text-neutral-900 dark:text-white flex items-center gap-1 font-mono">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  <span>Active</span>
+                </div>
               </div>
-            </div>
 
-            <button
-              onClick={() => {
-                setIsMobileNavOpen(false);
-                handleLogout();
-              }}
-              className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
-            >
-              <LogOut size={12} />
-              <span>Sign Out Session</span>
-            </button>
-          </div>
-        )}
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen(false);
+                  handleLogout();
+                }}
+                className="w-full py-1.5 px-2 rounded-lg bg-white dark:bg-black hover:bg-neutral-100 dark:hover:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-[10px] flex items-center justify-center gap-1.5 transition-colors"
+              >
+                <LogOut size={12} />
+                <span>Sign Out Session</span>
+              </button>
+            </div>
+          )}
+        </div>
       </aside>
 
       {/* MAIN VIEWPORT */}
@@ -3546,9 +3910,13 @@ export function App() {
                           className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white"
                         >
                           <option value="EXTRAIT_DE_PARFUM">Extrait de Parfum (30-53%)</option>
-                          <option value="PARFUM">Parfum Pure (20-30%)</option>
+                          <option value="EXTRAIT_DE_PARFUM">Parfum Pure (20-30%)</option>
                           <option value="EAU_DE_PARFUM">Eau de Parfum (15-20%)</option>
+                          <option value="EAU_DE_TOILETTE">Eau de Toilette (5-15%)</option>
+                          <option value="EAU_DE_COLOGNE">Eau de Cologne (2-4%)</option>
                           <option value="PARFUM_OIL">Pure Attar / Perfume Oil</option>
+                          <option value="ATTAR">Artisanal Attar</option>
+                          <option value="DISCOVERY_SET">Discovery Set</option>
                         </select>
                       </div>
                     </div>
@@ -4237,20 +4605,33 @@ export function App() {
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
                     <button
+                      type="button"
                       onClick={() => {
                         setShowProductModal(false);
                         setEditingProductId(null);
                       }}
-                      className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors"
+                      disabled={isSavingProduct}
+                      className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors disabled:opacity-50"
                     >
                       Cancel
                     </button>
                     <button
+                      type="button"
                       onClick={handleSaveProduct}
-                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5 transition-colors"
+                      disabled={isSavingProduct}
+                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-md shadow-black/10"
                     >
-                      <CheckCircle2 size={14} />
-                      <span>{editingProductId ? "Update Product" : "Save Product"}</span>
+                      {isSavingProduct ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>{editingProductId ? "Updating Product..." : "Saving Product..."}</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 size={14} />
+                          <span>{editingProductId ? "Update Product" : "Save Product"}</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -4520,11 +4901,8 @@ export function App() {
                             </button>
 
                             <button
-                              onClick={() => {
-                                if (confirm(`Are you sure you want to delete collection "${col.nameEn}"?`)) {
-                                  handleDeleteCollection(col.id, col.nameEn);
-                                }
-                              }}
+                              type="button"
+                              onClick={() => handleDeleteCollection(col.id, col.nameEn)}
                               title="Delete collection"
                               className="p-1.5 text-neutral-400 hover:text-rose-600 dark:hover:text-rose-400 rounded hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
                             >
@@ -6271,11 +6649,28 @@ export function App() {
                     </div>
                   </div>
                   <div className="flex justify-end gap-2 pt-3 border-t border-neutral-200 dark:border-neutral-800">
-                    <button onClick={resetBannerForm} className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors">
+                    <button
+                      type="button"
+                      onClick={resetBannerForm}
+                      disabled={isSavingBanner}
+                      className="px-4 py-2 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors disabled:opacity-50"
+                    >
                       Cancel
                     </button>
-                    <button onClick={handleSaveBanner} className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded transition-colors">
-                      {editingBanner ? "Update Banner" : "Save Banner"}
+                    <button
+                      type="button"
+                      onClick={handleSaveBanner}
+                      disabled={isSavingBanner}
+                      className="px-4 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white font-medium rounded transition-colors flex items-center gap-1.5 disabled:opacity-50 shadow-md shadow-black/10"
+                    >
+                      {isSavingBanner ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>{editingBanner ? "Updating Banner..." : "Saving Banner..."}</span>
+                        </>
+                      ) : (
+                        <span>{editingBanner ? "Update Banner" : "Save Banner"}</span>
+                      )}
                     </button>
                   </div>
                 </div>
@@ -6619,10 +7014,20 @@ export function App() {
               <span className="text-xs text-neutral-500 dark:text-neutral-400">Updates are saved to persistent local state and syncable across sessions.</span>
               <button
                 type="submit"
-                className="px-6 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg"
+                disabled={isSavingSettings}
+                className="px-6 py-2.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded flex items-center gap-2 transition-colors shadow-lg disabled:opacity-50"
               >
-                <Save size={16} />
-                <span>Save & Sync All Settings</span>
+                {isSavingSettings ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" />
+                    <span>Syncing All Settings...</span>
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} />
+                    <span>Save & Sync All Settings</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -6677,6 +7082,8 @@ export function App() {
                 <AlertTriangle size={15} className="text-rose-500" />
               ) : t.type === "enquiry" ? (
                 <MessageSquare size={15} className="text-blue-500" />
+              ) : t.type === "system" ? (
+                <CheckCircle2 size={15} className="text-emerald-500" />
               ) : (
                 <ShoppingBag size={15} className="text-emerald-500" />
               )}
@@ -6758,6 +7165,64 @@ export function App() {
         onUpdateStatus={updateOrderStatus}
         onResendNotification={handleResendNotification}
       />
+
+      {/* GLOBAL DELETE CONFIRMATION DIALOG MODAL (SAFETY & ERROR FALLBACK) */}
+      {deleteConfirm.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-md bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-2xl p-6 space-y-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-3.5">
+              <div className="p-2.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 shrink-0">
+                <AlertTriangle size={20} />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
+                  Confirm {deleteConfirm.itemType} Deletion
+                </h3>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 leading-relaxed">
+                  Are you sure you want to delete <span className="font-semibold text-neutral-900 dark:text-white">"{deleteConfirm.itemName}"</span>? This will permanently delete the record from the database.
+                </p>
+                {deleteConfirm.warning && (
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-2">
+                    {deleteConfirm.warning}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-neutral-200 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setDeleteConfirm((prev) => ({ ...prev, isOpen: false }))}
+                disabled={deleteConfirm.isDeleting}
+                className="px-4 py-2 text-xs font-medium border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-800 rounded transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={deleteConfirm.onConfirm}
+                disabled={deleteConfirm.isDeleting}
+                className="px-4 py-2 text-xs font-medium bg-rose-600 hover:bg-rose-700 text-white rounded flex items-center gap-1.5 transition-colors disabled:opacity-50 shadow-md shadow-rose-600/20"
+              >
+                {deleteConfirm.isDeleting ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Deleting from Database...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 size={13} />
+                    <span>Delete Permanently</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
