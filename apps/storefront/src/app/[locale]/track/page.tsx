@@ -23,6 +23,9 @@ import {
   HelpCircle,
   Activity,
   Printer,
+  RotateCcw,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 
 export default function OrderTrackingPage({
@@ -47,6 +50,61 @@ export default function OrderTrackingPage({
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const [recentOrderRef, setRecentOrderRef] = useState<string | null>(null);
+
+  // 7-Day Guarantee RMA Return Modal State
+  const [showReturnModal, setShowReturnModal] = useState(false);
+  const [returnReason, setReturnReason] = useState("Pristine Sealed Flacon (Changed Mind)");
+  const [returnAction, setReturnAction] = useState<"REFUND" | "STORE_CREDIT" | "REPLACEMENT">("REFUND");
+  const [returnNotes, setReturnNotes] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnSuccessData, setReturnSuccessData] = useState<any | null>(null);
+  const [returnError, setReturnError] = useState("");
+
+  const handleRequestReturn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!orderData?.id || returnSubmitting) return;
+    setReturnSubmitting(true);
+    setReturnError("");
+
+    try {
+      const itemsPayload = Array.isArray(orderData.items)
+        ? orderData.items.map((it: any) => ({
+            orderItemId: it.id,
+            quantity: it.quantity || 1,
+          }))
+        : [];
+
+      const res = await fetch("/api/v1/returns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          orderId: orderData.id,
+          customerId: orderData.customerId || "guest",
+          reason: returnReason,
+          requestedAction: returnAction,
+          items: itemsPayload,
+          notes: returnNotes.trim() || undefined,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success && json.data) {
+        setReturnSuccessData(json.data);
+      } else {
+        throw new Error(json.error?.message || "Failed to register return request");
+      }
+    } catch (err: any) {
+      setReturnError(
+        err?.message ||
+          c(
+            "Unable to submit return request. Please contact our concierge.",
+            "تعذر تسجيل طلب الاسترجاع. يرجى التواصل مع خدمة العملاء.",
+          ),
+      );
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
 
   // Check localStorage for recent order reference
   useEffect(() => {
@@ -764,7 +822,20 @@ export default function OrderTrackingPage({
               </p>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex flex-wrap items-center gap-3 shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowReturnModal(true);
+                  setReturnSuccessData(null);
+                  setReturnError("");
+                }}
+                className="py-2.5 px-4 border border-neutral-300 dark:border-neutral-700 hover:border-neutral-900 dark:hover:border-white text-neutral-800 dark:text-neutral-200 text-xs font-medium rounded-sm flex items-center gap-2 transition-colors"
+              >
+                <RotateCcw size={13} />
+                <span>{c("Request Return (RMA)", "طلب استرجاع")}</span>
+              </button>
+
               <button
                 type="button"
                 onClick={() => window.print()}
@@ -784,6 +855,168 @@ export default function OrderTrackingPage({
                 <span>{c("WhatsApp Concierge", "محادثة المستشار")}</span>
               </a>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 8. 7-Day Guarantee Return Request Modal */}
+      {showReturnModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div
+            className="w-full max-w-lg bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-2xl p-6 sm:p-7 space-y-5 text-start"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
+              <div className="space-y-1">
+                <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                  {c("WHITE-GLOVE GUARANTEE POLICY", "سياسة الاسترجاع الفاخرة")}
+                </span>
+                <h3 className="font-serif text-xl text-neutral-900 dark:text-white">
+                  {c("Request Order Return (RMA)", "طلب استرجاع عطر")}
+                </h3>
+                <p className="text-xs text-neutral-500 font-mono">
+                  {c("Order:", "رقم الطلب:")} {orderData?.orderNumber}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowReturnModal(false)}
+                className="p-1 text-neutral-400 hover:text-neutral-900 dark:hover:text-white rounded-md"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {returnSuccessData ? (
+              <div className="py-6 text-center space-y-4">
+                <div className="w-12 h-12 mx-auto rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center">
+                  <CheckCircle2 size={24} />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="font-serif text-lg text-neutral-900 dark:text-white">
+                    {c("Return Request Registered", "تم تسجيل طلب الاسترجاع بنجاح")}
+                  </h4>
+                  <p className="font-mono text-xs text-emerald-600 dark:text-emerald-400">
+                    {c("RMA Tracking:", "رمز المتابعة:")} {returnSuccessData.returnNumber || "RET-PENDING"}
+                  </p>
+                </div>
+                <p className="text-xs text-neutral-600 dark:text-neutral-400 max-w-md mx-auto leading-relaxed">
+                  {c(
+                    "Our Dubai Atelier team has received your request. A temperature-regulated courier will contact you within 24 hours to schedule the collection of your sealed creation.",
+                    "تلقى فريقنا الفني طلبك بنجاح. سيقوم مندوب التوصيل المعتمد بالتواصل معكم خلال 24 ساعة لتنسيق استلام العطر في عبوته الأصلية المختومة.",
+                  )}
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setShowReturnModal(false)}
+                  className="py-2 px-6 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs uppercase tracking-wider font-medium rounded-sm"
+                >
+                  {c("Close Window", "إغلاق")}
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleRequestReturn} className="space-y-4">
+                {returnError && (
+                  <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs rounded">
+                    {returnError}
+                  </div>
+                )}
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-200">
+                    {c("Return Reason", "سبب الاسترجاع")}
+                  </label>
+                  <select
+                    value={returnReason}
+                    onChange={(e) => setReturnReason(e.target.value)}
+                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white rounded focus:outline-none"
+                  >
+                    <option value="Pristine Sealed Flacon (Changed Mind)">
+                      {c("Pristine Sealed Flacon (Changed Mind)", "العبوة أصلية ومختومة (تغيير الرأي)")}
+                    </option>
+                    <option value="Defective Atomizer or Leakage">
+                      {c("Defective Atomizer or Flacon Leakage", "خلل في الرشاش أو تسريب في الزجاجة")}
+                    </option>
+                    <option value="Incorrect Fragrance Received">
+                      {c("Incorrect Fragrance Received", "استلام عطر مختلف عن الطلب")}
+                    </option>
+                    <option value="Olfactory Sensitivity or Gift Exchange">
+                      {c("Olfactory Sensitivity / Gift Exchange", "حساسية عطرية / استبدال هدية")}
+                    </option>
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-200">
+                    {c("Preferred Action", "الإجراء المطلوب")}
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {[
+                      { id: "REFUND", labelEn: "Refund to Card", labelAr: "استرداد للبطاقة" },
+                      { id: "STORE_CREDIT", labelEn: "Store Credit", labelAr: "رصيد متجر" },
+                      { id: "REPLACEMENT", labelEn: "Flacon Exchange", labelAr: "استبدال العطر" },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        type="button"
+                        onClick={() => setReturnAction(opt.id as any)}
+                        className={`p-2 text-xs rounded border text-center transition-colors ${
+                          returnAction === opt.id
+                            ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black font-semibold"
+                            : "border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                        }`}
+                      >
+                        {c(opt.labelEn, opt.labelAr)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-neutral-200">
+                    {c("Additional Notes (Optional)", "ملاحظات إضافية (اختياري)")}
+                  </label>
+                  <textarea
+                    rows={3}
+                    value={returnNotes}
+                    onChange={(e) => setReturnNotes(e.target.value)}
+                    placeholder={c(
+                      "Details for our warehouse inspection station...",
+                      "أي تفاصيل تود إضافتها لفريق الفحص في المستودع...",
+                    )}
+                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white rounded focus:outline-none"
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-neutral-100 dark:border-neutral-800">
+                  <button
+                    type="button"
+                    onClick={() => setShowReturnModal(false)}
+                    disabled={returnSubmitting}
+                    className="py-2 px-4 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs rounded hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                  >
+                    {c("Cancel", "إلغاء")}
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={returnSubmitting}
+                    className="py-2 px-6 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 text-xs font-medium uppercase tracking-wider rounded flex items-center gap-2 hover:bg-neutral-800 dark:hover:bg-neutral-100 disabled:opacity-50"
+                  >
+                    {returnSubmitting ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>{c("Submitting RMA…", "جاري الإرسال…")}</span>
+                      </>
+                    ) : (
+                      <>
+                        <ShieldCheck size={13} />
+                        <span>{c("Submit Return Request", "تأكيد طلب الاسترجاع")}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
           </div>
         </div>
       )}
