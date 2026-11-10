@@ -14,13 +14,20 @@ import { CompareProvider } from "../../context/compare-context";
 import { CurrencyProvider } from "../../context/currency-context";
 import { CompareBar } from "../../components/compare-bar";
 import { generateOrganizationJsonLd } from "../../lib/seo";
-import { Figtree } from "next/font/google";
+import { Figtree, Cairo } from "next/font/google";
 import "../globals.css";
 
 const figtree = Figtree({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800", "900"],
   variable: "--font-figtree",
+  display: "swap",
+});
+
+const cairo = Cairo({
+  subsets: ["arabic", "latin"],
+  weight: ["300", "400", "500", "600", "700"],
+  variable: "--font-arabic",
   display: "swap",
 });
 
@@ -92,21 +99,15 @@ export default async function RootLayout({
   const orgJsonLd = generateOrganizationJsonLd();
 
   return (
-    <html lang={locale} dir={isRtl ? "rtl" : "ltr"} className={`${figtree.variable} font-sans`} suppressHydrationWarning>
+    <html lang={locale} dir={isRtl ? "rtl" : "ltr"} className={`${figtree.variable} ${cairo.variable} font-sans`} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&family=Figtree:ital,wght@0,300..900;1,300..900&display=swap"
-          rel="stylesheet"
-        />
         {/* Organization Structured Data for Google GCC Crawlers */}
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
         />
       </head>
-      <body className={`${figtree.className} ${figtree.variable} font-sans min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300 w-full max-w-full overflow-x-hidden`}>
+      <body className={`${figtree.className} ${figtree.variable} ${cairo.variable} font-sans min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300 w-full max-w-full overflow-x-hidden`}>
         <NextIntlClientProvider locale={locale} messages={messages}>
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AuthProvider>

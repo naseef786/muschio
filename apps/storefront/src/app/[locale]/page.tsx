@@ -368,27 +368,29 @@ export default async function HomePage({
         </Link>
       </div>
 
-      <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
-        {prestigeHouses.map((house: any) => (
-          <Link
-            key={house.slug}
-            href={`/brands/${house.slug}`}
-            className="w-[260px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
-          >
-            <div>
-              <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted block">
-                {house.origin}
-              </span>
-              <h3 className="font-serif text-xl text-luxury-text font-medium mt-2 group-hover:text-accent transition-colors">
-                {house.name}
-              </h3>
-            </div>
-            <div className="flex items-center justify-between text-xs text-luxury-muted pt-4 border-t border-luxury-border">
-              <span>{c(house.descEn, house.descAr)}</span>
-              <ArrowUpRight size={14} className="text-luxury-text group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-            </div>
-          </Link>
-        ))}
+      <div className="relative">
+        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
+          {prestigeHouses.map((house: any) => (
+            <Link
+              key={house.slug}
+              href={`/brands/${house.slug}`}
+              className="w-[260px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
+            >
+              <div>
+                <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted block">
+                  {house.origin}
+                </span>
+                <h3 className="font-serif text-xl text-luxury-text font-medium mt-2 group-hover:text-accent transition-colors">
+                  {house.name}
+                </h3>
+              </div>
+              <div className="flex items-center justify-between text-xs text-luxury-muted pt-4 border-t border-luxury-border">
+                <span>{c(house.descEn, house.descAr)}</span>
+                <ArrowUpRight size={14} className="text-luxury-text group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -409,29 +411,31 @@ export default async function HomePage({
         </Link>
       </div>
 
-      <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 gap-4 pb-2">
-        {rawNotes.map((n: any) => (
-          <Link
-            key={n.slug}
-            href={`/notes/${n.slug}`}
-            className="w-[240px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
-          >
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-accent font-medium">
-                {c(n.familyEn, n.familyAr)}
-              </span>
-              <ArrowUpRight size={14} className="text-luxury-muted group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-            </div>
-            <div>
-              <h3 className="font-serif text-lg text-luxury-text font-medium group-hover:text-accent transition-colors">
-                {c(n.nameEn, n.nameAr)}
-              </h3>
-              <span className="text-xs text-luxury-muted mt-1 block">
-                {c("View Perfumes", "عرض العطور")} →
-              </span>
-            </div>
-          </Link>
-        ))}
+      <div className="relative">
+        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 gap-4 pb-2">
+          {rawNotes.map((n: any) => (
+            <Link
+              key={n.slug}
+              href={`/notes/${n.slug}`}
+              className="w-[240px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
+            >
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-accent font-medium">
+                  {c(n.familyEn, n.familyAr)}
+                </span>
+                <ArrowUpRight size={14} className="text-luxury-muted group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              </div>
+              <div>
+                <h3 className="font-serif text-lg text-luxury-text font-medium group-hover:text-accent transition-colors">
+                  {c(n.nameEn, n.nameAr)}
+                </h3>
+                <span className="text-xs text-luxury-muted mt-1 block">
+                  {c("View Perfumes", "عرض العطور")} →
+                </span>
+              </div>
+            </Link>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -708,7 +712,7 @@ export default async function HomePage({
             href={promoStrip.ctaUrl || "/shop"}
             className="inline-flex items-center gap-2 text-xs font-sans text-luxury-text hover:text-accent transition-colors"
           >
-            <span className="bg-accent/20 text-accent px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider rounded">
+            <span className="bg-accent/20 text-accent px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded">
               {c(promoStrip.eyebrowEn || "OFFER", promoStrip.eyebrowAr || "عرض")}
             </span>
             <span className="font-medium">{c(promoStrip.titleEn, promoStrip.titleAr)}</span>
@@ -717,29 +721,34 @@ export default async function HomePage({
         </div>
       )}
 
-      {/* Dynamic Sections (rendered in exact sortOrder from Neon DB) */}
+      {/* Dynamic Sections (rendered defensively in exact sortOrder from Neon DB) */}
       {visibleSections.map((sec: any) => {
-        switch (sec.sectionType) {
-          case "HERO_BANNER":
-            return renderHeroBanner();
-          case "DISCOVERY_STRIP":
-            return renderDiscoveryStrip();
-          case "FEATURED_PRODUCTS":
-            return renderFeaturedProducts(sec);
-          case "HOUSES_GRID":
-            return renderHousesGrid(sec);
-          case "NOTES_GRID":
-            return renderNotesGrid(sec);
-          case "CUSTOM_BANNER":
-            return renderCustomBanner();
-          case "DISCOVERY_SETS":
-            return renderDiscoverySets(sec);
-          case "JOURNAL_FEATURE":
-            return renderJournalFeature(sec);
-          case "TRUST_INDICATORS":
-            return renderTrustIndicators(sec);
-          default:
-            return null;
+        try {
+          switch (sec.sectionType) {
+            case "HERO_BANNER":
+              return renderHeroBanner();
+            case "DISCOVERY_STRIP":
+              return renderDiscoveryStrip();
+            case "FEATURED_PRODUCTS":
+              return renderFeaturedProducts(sec);
+            case "HOUSES_GRID":
+              return renderHousesGrid(sec);
+            case "NOTES_GRID":
+              return renderNotesGrid(sec);
+            case "CUSTOM_BANNER":
+              return renderCustomBanner();
+            case "DISCOVERY_SETS":
+              return renderDiscoverySets(sec);
+            case "JOURNAL_FEATURE":
+              return renderJournalFeature(sec);
+            case "TRUST_INDICATORS":
+              return renderTrustIndicators(sec);
+            default:
+              return null;
+          }
+        } catch (secError) {
+          console.warn(`[Muschio Storefront] Section rendering failed for ${sec?.sectionType}:`, secError);
+          return null;
         }
       })}
     </div>
