@@ -231,6 +231,11 @@ export function Footer({
               </Link>
             </li>
             <li>
+              <Link href="/orders" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
+                {c("My Orders & Receipts", "طلباتي وإيصالات الشراء")}
+              </Link>
+            </li>
+            <li>
               <Link href="/account" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
                 {c("Client Vault & Account", "حساب العميل والمساعد")}
               </Link>

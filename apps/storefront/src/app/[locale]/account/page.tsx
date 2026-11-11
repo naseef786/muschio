@@ -755,7 +755,27 @@ export default function AccountPage({
       </div>
 
       {/* 4. Quick Vault Navigation Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <Link
+          href="/orders"
+          className="border border-luxury-border bg-luxury-surface p-5 flex flex-col justify-between hover:border-luxury-borderBold transition-all group min-h-[110px]"
+        >
+          <div className="flex items-center justify-between">
+            <span className="eyebrow text-[10px]">
+              {c("ORDER ARCHIVE", "الطلبات")}
+            </span>
+            <Package size={16} className="text-luxury-muted group-hover:text-accent transition-colors" />
+          </div>
+          <div>
+            <span className="font-serif text-lg text-luxury-text font-normal block">
+              {c("My Orders", "طلباتي")}
+            </span>
+            <span className="text-[11px] text-accent font-medium">
+              {orders ? orders.length : 0} {c("Acquisitions", "مقتنيات")} →
+            </span>
+          </div>
+        </Link>
+
         <Link
           href="/wishlist"
           className="border border-luxury-border bg-luxury-surface p-5 flex flex-col justify-between hover:border-luxury-borderBold transition-all group min-h-[110px]"
@@ -850,6 +870,13 @@ export default function AccountPage({
           </div>
 
           <div className="flex items-center gap-3">
+            <Link
+              href="/orders"
+              className="editorial-button-secondary text-xs inline-flex items-center gap-1.5 py-1.5 px-3"
+            >
+              <Package size={13} />
+              <span>{c("All Orders Page", "صفحة كافة الطلبات")}</span>
+            </Link>
             <Link
               href="/track"
               className="text-xs font-sans text-accent hover:underline flex items-center gap-1 font-medium"

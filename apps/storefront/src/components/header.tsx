@@ -23,6 +23,7 @@ import {
   Loader2,
   Clock,
   MessageSquare,
+  Package,
 } from "lucide-react";
 import { useCart } from "../context/cart-context";
 import { useWishlist } from "../context/wishlist-context";
@@ -371,6 +372,14 @@ export function Header({
             </Link>
             <Link
               className="desktop-utility text-xs tracking-wider uppercase text-luxury-text hover:text-accent font-medium transition-colors hidden lg:flex items-center gap-1.5"
+              href="/orders"
+              title={c("My Orders & Receipts", "طلباتي وإيصالات الشراء")}
+            >
+              <Package size={15} className="opacity-75" />
+              <span>{c("My Orders", "طلباتي")}</span>
+            </Link>
+            <Link
+              className="desktop-utility text-xs tracking-wider uppercase text-luxury-text hover:text-accent font-medium transition-colors hidden xl:flex items-center gap-1.5"
               href="/track"
               title={c("Track Order & Dispatch", "تتبع الطلب والشحنة")}
             >
@@ -811,6 +820,17 @@ export function Header({
                       {user?.tier === "GOLD_SILLAGE" ? "Gold Sillage" : "Privilege"}
                     </span>
                   )}
+                </Link>
+                <Link
+                  href="/orders"
+                  onClick={() => setMenu(false)}
+                  className="flex items-center justify-between p-2.5 rounded-sm border border-luxury-border bg-luxury-surface text-xs text-luxury-text hover:text-accent font-medium transition-colors"
+                >
+                  <span className="flex items-center gap-2">
+                    <Package size={15} className="text-accent" />
+                    <span>{c("My Orders & Receipts", "طلباتي وإيصالات الشراء")}</span>
+                  </span>
+                  <ArrowRight size={13} className="opacity-50 rtl:rotate-180" />
                 </Link>
                 <Link
                   href="/wishlist"

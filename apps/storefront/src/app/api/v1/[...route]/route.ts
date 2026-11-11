@@ -357,13 +357,29 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       return success(cart);
     }
 
-    // 11. Orders
+    // 11. Orders (Customer Order History)
     if (path === "orders") {
       const { customerId } = getAuth(req);
       if (!customerId) return error("UNAUTHORIZED", "Client session required", 401);
+
+      const customer = await prisma.customer.findUnique({ where: { id: customerId } });
+      const customerEmail = customer?.email?.toLowerCase()?.trim();
+
       const orders = await prisma.order.findMany({
-        where: { customerId },
-        include: { items: true, payments: true },
+        where: {
+          OR: [
+            { customerId },
+            ...(customerEmail ? [{ guestEmail: { equals: customerEmail, mode: "insensitive" as const } }] : []),
+          ],
+        },
+        include: {
+          items: true,
+          payments: true,
+          shippingAddress: true,
+          fulfillments: {
+            include: { shipments: true },
+          },
+        },
         orderBy: { createdAt: "desc" },
       });
       return success(orders.map(storefrontOrder));
