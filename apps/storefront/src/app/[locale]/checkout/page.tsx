@@ -40,39 +40,11 @@ export default function CheckoutPage({
     "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY" | "TABBY" | "TAMARA"
   >("CREDIT_CARD");
 
-  // Direct Card Payment Input States
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
-  const [useStripeHosted, setUseStripeHosted] = useState(false);
-
-  const fillTestCard = () => {
-    setCardNumber("4242 4242 4242 4242");
-    setCardExp("12/28");
-    setCardCvc("123");
-    setCardHolder(form.fullName || "Private Client");
-  };
-
-  const handleCardNumberChange = (val: string) => {
-    const raw = val.replace(/\D/g, "").slice(0, 16);
-    const formatted = raw.match(/.{1,4}/g)?.join(" ") || raw;
-    setCardNumber(formatted);
-  };
-
-  const handleCardExpChange = (val: string) => {
-    const raw = val.replace(/\D/g, "").slice(0, 4);
-    if (raw.length >= 3) {
-      setCardExp(`${raw.slice(0, 2)}/${raw.slice(2)}`);
-    } else {
-      setCardExp(raw);
-    }
-  };
-
-  const handleCardCvcChange = (val: string) => {
-    const raw = val.replace(/\D/g, "").slice(0, 4);
-    setCardCvc(raw);
-  };
+  // Voucher / Promotion State
+  const [promoCode, setPromoCode] = useState("");
+  const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
+  const [promoError, setPromoError] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
 
   const handleExpressCheckout = (method: "APPLE_PAY" | "GOOGLE_PAY") => {
     setPaymentMethod(method);
@@ -179,14 +151,17 @@ export default function CheckoutPage({
   const isGoldSillage = user?.tier === "GOLD_SILLAGE" || user?.tier === "ROYAL_AMBASSADOR";
   const shipping = isGoldSillage ? 0 : (delivery.fee ?? baseShipping);
 
-  // Loyalty calculations
+  // Loyalty & Promotion calculations
   const maxAvailableCredits = user?.loyaltyCreditsAed || 0;
   const activeLoyaltyDiscount = applyCredits && isLoggedIn ? Math.min(subtotal, maxAvailableCredits) : 0;
-  const estimatedTotal = Math.max(0, subtotal + shipping - activeLoyaltyDiscount);
+  const promoDiscount = appliedPromo?.discount || 0;
+  const totalDiscount = Math.min(subtotal, activeLoyaltyDiscount + promoDiscount);
+  const estimatedTotal = Math.max(0, subtotal + shipping - totalDiscount);
 
-  // Expected reward points to earn on this purchase (5% for standard/guest, 8% for Gold Sillage)
-  const loyaltyRate = isGoldSillage ? 0.08 : 0.05;
-  const earnedCredits = Math.round(subtotal * loyaltyRate);
+  // Expected reward points to earn on this purchase based on active tier multiplier (1 pt per 10 AED spent)
+  const tierMultiplier = user?.tierMultiplier || (isGoldSillage ? 1.5 : 1.0);
+  const earnedPoints = Math.floor((subtotal / 10) * tierMultiplier);
+  const earnedCredits = Math.floor(earnedPoints * 0.5);
 
   const fields = [
     ["fullName", c("Full Name", "الاسم الكامل"), "text", "name"],
@@ -254,23 +229,6 @@ export default function CheckoutPage({
     if (!cleanCity) {
       setError(c("Please select or enter your city or emirate.", "يرجى تحديد المدينة أو الإمارة."));
       return;
-    }
-
-    // Direct Card Field Validation (Prevent order creation before payment details are verified)
-    if (paymentMethod === "CREDIT_CARD" && !useStripeHosted) {
-      const cleanCard = cardNumber.replace(/\s+/g, "");
-      if (!cleanCard || cleanCard.length < 15) {
-        setError(c("Please enter a valid 15 or 16-digit card number.", "يرجى إدخال رقم بطاقة مصرفية صحيح (15 أو 16 رقماً)."));
-        return;
-      }
-      if (!cardExp || !cardExp.includes("/") || cardExp.length < 5) {
-        setError(c("Please enter a valid card expiration date (MM/YY).", "يرجى إدخال تاريخ انتهاء البطاقة بصيغة (شهر/سنة)."));
-        return;
-      }
-      if (!cardCvc || cardCvc.length < 3) {
-        setError(c("Please enter a valid 3 or 4-digit security CVC code.", "يرجى إدخال رمز الأمان (CVC) المكون من 3 أو 4 أرقام."));
-        return;
-      }
     }
 
     setLoading(true);
@@ -382,6 +340,7 @@ export default function CheckoutPage({
           customerId: user?.id,
           saveAddressToProfile: saveToProfile && isEnteringNewAddress,
           loyaltyCreditsRedeemed: redeemedLoyaltyCredits,
+          couponCode: appliedPromo?.code || undefined,
         });
 
         if (!result) {
@@ -445,56 +404,21 @@ export default function CheckoutPage({
 
       persistOrderLocally(order.orderNumber, order);
 
-      // 1. Cash on Delivery & BNPL (Tabby/Tamara) Instant Order Confirmation
-      if (paymentMethod === "CASH_ON_DELIVERY" || paymentMethod === "TABBY" || paymentMethod === "TAMARA") {
+      // 1. VIP Cash on Delivery (Available in UAE with Courier Inspection)
+      if (paymentMethod === "CASH_ON_DELIVERY") {
         clearCart();
         localStorage.removeItem("muschio_pending_order");
         window.location.assign(confirmationUrl);
         return;
       }
 
-      // 2. Direct In-Checkout Credit Card Payment (Card charged BEFORE order is marked paid or emails sent)
-      if (paymentMethod === "CREDIT_CARD" && !useStripeHosted) {
-        try {
-          const chargeResult = await muschioApi.chargeCardPayment({
-            orderId: order.id,
-            orderNumber: order.orderNumber,
-            cardNumber: cardNumber.replace(/\s+/g, ""),
-            cardExp,
-            cardCvc,
-            cardHolder: cardHolder.trim() || form.fullName.trim() || "Private Client",
-          });
-
-          if (chargeResult && (chargeResult.success || chargeResult.paymentId)) {
-            clearCart();
-            localStorage.removeItem("muschio_pending_order");
-            persistOrderLocally(order.orderNumber, { ...order, status: "PAID" });
-            window.location.assign(confirmationUrl);
-            return;
-          }
-
-          throw new Error(chargeResult?.error || "Card payment charge could not be authorized");
-        } catch (cardErr: any) {
-          console.error("Direct card charge failed:", cardErr);
-          setError(
-            cardErr?.message ||
-              c(
-                "Card payment authorization declined. Please verify your card details or select another payment method.",
-                "تم رفض تفويض الدفع بالبطاقة. يرجى التحقق من بيانات البطاقة أو اختيار طريقة دفع أخرى.",
-              ),
-          );
-          setLoading(false);
-          return;
-        }
-      }
-
-      // 3. Card (Stripe Hosted) / Apple Pay / Google Pay: Standard Stripe Checkout
+      // 2. Stripe Checkout (Credit/Debit Card, Apple Pay, Google Pay)
       try {
         const session = await muschioApi.initiatePaymentSession({
           orderId: order.id,
           amount: Number(order.totalAmount),
           currency: "AED",
-          method: "CREDIT_CARD",
+          method: paymentMethod,
           returnUrl: `${origin}/${locale}/order-confirmation/${encodeURIComponent(order.orderNumber)}?session_id={CHECKOUT_SESSION_ID}`,
           cancelUrl: `${origin}/${locale}/checkout?cancelled=true`,
           customerEmail: cleanEmail,
@@ -1109,145 +1033,22 @@ export default function CheckoutPage({
                 </div>
 
                 {paymentMethod === "CREDIT_CARD" && (
-                  <div className="mt-3 pt-3 border-t border-luxury-border space-y-3">
-                    {/* Mode Selector & Quick Fill Banner */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 pb-1">
-                      <div className="flex items-center gap-1.5 text-[11px] font-sans font-medium text-luxury-text uppercase tracking-wider">
-                        <Lock size={12} className="text-accent" />
-                        <span>
-                          {useStripeHosted
-                            ? c("Stripe Hosted Checkout", "بوابة Stripe الرسمية")
-                            : c("Direct Card Payment", "الدفع المباشر بالبطاقة")}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        {!useStripeHosted && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              fillTestCard();
-                            }}
-                            className="text-[10px] font-mono px-2 py-0.5 rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:border-black dark:hover:border-white transition-colors"
-                            title="Fill standard test card credentials"
-                          >
-                            ⚡ {c("Test Card (4242...)", "بطاقة تجريبية")}
-                          </button>
+                  <div className="mt-3 pt-3 border-t border-luxury-border space-y-2.5">
+                    <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-2.5">
+                      <p className="text-[11px] text-luxury-muted leading-relaxed">
+                        {c(
+                          "When you proceed, you will be securely redirected to the official Stripe payment gateway to complete your card transaction with 3D Secure bank OTP verification and 256-bit encryption.",
+                          "عند المتابعة، سيتم توجيهك بأمان إلى بوابة Stripe الرسمية لإتمام الدفع ببطاقتك مع التحقق المصرفي المعتمد (OTP) وحماية مشفرة 256-بت.",
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setUseStripeHosted(!useStripeHosted);
-                          }}
-                          className="text-[10px] font-sans text-neutral-500 hover:text-black dark:hover:text-white underline underline-offset-2 transition-colors"
-                        >
-                          {useStripeHosted
-                            ? c("Switch to In-Checkout Card", "الدفع داخل الصفحة")
-                            : c("Switch to Stripe Hosted", "التحويل لبوابة Stripe")}
-                        </button>
+                      </p>
+                      <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
+                        <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                          <ShieldCheck size={13} />
+                          {c("Zero Card Data Stored on Server", "لا يتم حفظ أي بيانات مصرفية على الخادم")}
+                        </span>
+                        <span className="font-mono opacity-75">3D Secure 2.0 · PCI-DSS</span>
                       </div>
                     </div>
-
-                    {!useStripeHosted ? (
-                      <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-3" onClick={(e) => e.stopPropagation()}>
-                        {/* Cardholder Name */}
-                        <div>
-                          <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
-                            {c("Cardholder Name", "اسم حامل البطاقة")}
-                          </label>
-                          <input
-                            type="text"
-                            value={cardHolder}
-                            onChange={(e) => setCardHolder(e.target.value)}
-                            placeholder={form.fullName || c("Full name on card", "الاسم كما هو مدون على البطاقة")}
-                            className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-sans text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
-                          />
-                        </div>
-
-                        {/* Card Number */}
-                        <div>
-                          <div className="flex items-center justify-between mb-1">
-                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium">
-                              {c("Card Number", "رقم البطاقة")}
-                            </label>
-                            <div className="flex items-center gap-1">
-                              <span className="text-[9px] font-mono px-1 py-0.2 bg-blue-600 text-white rounded font-bold">VISA</span>
-                              <span className="text-[9px] font-mono px-1 py-0.2 bg-red-600 text-white rounded font-bold">MC</span>
-                              <span className="text-[9px] font-mono px-1 py-0.2 bg-emerald-600 text-white rounded font-bold">AMEX</span>
-                            </div>
-                          </div>
-                          <div className="relative">
-                            <input
-                              type="text"
-                              value={cardNumber}
-                              onChange={(e) => handleCardNumberChange(e.target.value)}
-                              placeholder="4242 4242 4242 4242"
-                              maxLength={19}
-                              className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono tracking-wider text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
-                            />
-                            <CreditCard size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-luxury-muted pointer-events-none" />
-                          </div>
-                        </div>
-
-                        {/* Expiry & CVC Grid */}
-                        <div className="grid grid-cols-2 gap-3">
-                          <div>
-                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
-                              {c("Expiration Date", "تاريخ الانتهاء")}
-                            </label>
-                            <input
-                              type="text"
-                              value={cardExp}
-                              onChange={(e) => handleCardExpChange(e.target.value)}
-                              placeholder="MM/YY"
-                              maxLength={5}
-                              className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[10px] uppercase tracking-wider text-luxury-muted font-sans font-medium mb-1">
-                              {c("Security Code (CVC)", "رمز الأمان (CVC)")}
-                            </label>
-                            <div className="relative">
-                              <input
-                                type="text"
-                                value={cardCvc}
-                                onChange={(e) => handleCardCvcChange(e.target.value)}
-                                placeholder="123"
-                                maxLength={4}
-                                className="w-full bg-white dark:bg-black border border-luxury-border focus:border-luxury-text rounded-sm px-3 py-2 text-xs font-mono text-luxury-text placeholder:text-luxury-muted/50 outline-none transition-colors"
-                              />
-                              <Lock size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-luxury-muted pointer-events-none" />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
-                          <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck size={12} />
-                            {c("Pre-authorized & Verified before confirmation", "يتم التحقق واقتطاع المبلغ قبل تأكيد الطلب")}
-                          </span>
-                          <span className="font-mono text-[9px] opacity-75">3D Secure 2.0</span>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="p-3 bg-neutral-900/5 dark:bg-white/5 border border-luxury-border/60 rounded-sm space-y-2.5" onClick={(e) => e.stopPropagation()}>
-                        <p className="text-[11px] text-luxury-muted leading-relaxed">
-                          {c(
-                            "When you proceed, you will be securely redirected to the official Stripe payment gateway to complete your card transaction with 3D Secure bank OTP verification and 256-bit encryption.",
-                            "عند المتابعة، سيتم توجيهك بأمان إلى بوابة Stripe الرسمية لإتمام الدفع ببطاقتك مع التحقق المصرفي المعتمد (OTP) وحماية مشفرة 256-بت.",
-                          )}
-                        </p>
-                        <div className="pt-2 border-t border-luxury-border/40 text-[10px] text-luxury-muted flex items-center justify-between">
-                          <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
-                            <ShieldCheck size={13} />
-                            {c("Zero Card Data Stored on Server", "لا يتم حفظ أي بيانات مصرفية على الخادم")}
-                          </span>
-                          <span className="font-mono opacity-75">3D Secure 2.0</span>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 )}
               </div>
@@ -1324,23 +1125,18 @@ export default function CheckoutPage({
                 </div>
               </div>
 
-              {/* Option D: Tabby (4 Interest-Free Installments) */}
+              {/* Option D: Tabby (Coming Soon) */}
               <div
-                onClick={() => setPaymentMethod("TABBY")}
-                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
-                  paymentMethod === "TABBY"
-                    ? "border-emerald-600 bg-emerald-50/20 dark:bg-emerald-950/20 shadow-sm"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                }`}
+                className="p-3.5 sm:p-4 border rounded-sm opacity-60 cursor-not-allowed border-luxury-border bg-luxury-surface/50 relative"
+                title={c("Tabby installments coming soon to UAE", "أقساط تابي تتوفر قريباً")}
               >
                 <div className="flex items-start gap-3">
                   <input
                     type="radio"
                     name="paymentMethodRadio"
                     value="TABBY"
-                    checked={paymentMethod === "TABBY"}
-                    onChange={() => setPaymentMethod("TABBY")}
-                    className="mt-1 accent-emerald-600 shrink-0"
+                    disabled
+                    className="mt-1 accent-emerald-600 shrink-0 cursor-not-allowed"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -1352,37 +1148,32 @@ export default function CheckoutPage({
                           tabby
                         </span>
                       </div>
-                      <span className="font-mono text-xs font-semibold text-emerald-700 dark:text-emerald-300">
-                        AED {(estimatedTotal / 4).toFixed(0)} / mo
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded">
+                        {c("Coming Soon", "قريباً")}
                       </span>
                     </div>
                     <p className="text-[11px] text-luxury-muted mt-0.5">
                       {c(
-                        `Pay 25% today (AED ${(estimatedTotal / 4).toFixed(0)}) and split the remainder over 3 monthly installments. No interest, no fees.`,
-                        `ادفع 25% اليوم (${(estimatedTotal / 4).toFixed(0)} د.إ) وقسّم الباقي على 3 أشهر. بدون أي فوائد أو رسوم خفية.`,
+                        "Split your purchase into 4 monthly payments without interest. Merchant onboarding in progress.",
+                        "قسّم مشترياتك على 4 أقساط شهرية بدون فوائد. يجري استكمال الربط المصرفي.",
                       )}
                     </p>
                   </div>
                 </div>
               </div>
 
-              {/* Option E: Tamara (4 Interest-Free Installments) */}
+              {/* Option E: Tamara (Coming Soon) */}
               <div
-                onClick={() => setPaymentMethod("TAMARA")}
-                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
-                  paymentMethod === "TAMARA"
-                    ? "border-amber-600 bg-amber-50/20 dark:bg-amber-950/20 shadow-sm"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                }`}
+                className="p-3.5 sm:p-4 border rounded-sm opacity-60 cursor-not-allowed border-luxury-border bg-luxury-surface/50 relative"
+                title={c("Tamara installments coming soon to UAE", "أقساط تمارا تتوفر قريباً")}
               >
                 <div className="flex items-start gap-3">
                   <input
                     type="radio"
                     name="paymentMethodRadio"
                     value="TAMARA"
-                    checked={paymentMethod === "TAMARA"}
-                    onChange={() => setPaymentMethod("TAMARA")}
-                    className="mt-1 accent-amber-600 shrink-0"
+                    disabled
+                    className="mt-1 accent-amber-600 shrink-0 cursor-not-allowed"
                   />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -1394,14 +1185,14 @@ export default function CheckoutPage({
                           tamara
                         </span>
                       </div>
-                      <span className="font-mono text-xs font-semibold text-amber-700 dark:text-amber-300">
-                        AED {(estimatedTotal / 4).toFixed(0)} / mo
+                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded">
+                        {c("Coming Soon", "قريباً")}
                       </span>
                     </div>
                     <p className="text-[11px] text-luxury-muted mt-0.5">
                       {c(
-                        `Sharia-compliant installments. Split AED ${estimatedTotal} into 4 equal payments without interest or late fees.`,
-                        `دفعات متوافقة مع أحكام الشريعة الإسلامية. قسّم ${estimatedTotal} د.إ على 4 دفعات مريحة بدون فوائد.`,
+                        "Sharia-compliant installments. Split into 4 equal payments without interest. Merchant onboarding in progress.",
+                        "دفعات متوافقة مع أحكام الشريعة الإسلامية بدون فوائد. يجري استكمال الربط المصرفي.",
                       )}
                     </p>
                   </div>
@@ -1521,6 +1312,96 @@ export default function CheckoutPage({
                 <span>{c("Olfactory Loyalty Credit", "خصم رصيد الولاء")}</span>
                 <span className="font-mono">-AED {activeLoyaltyDiscount}</span>
               </div>
+            )}
+
+            {appliedPromo && (
+              <div className="flex justify-between items-center text-emerald-600 dark:text-emerald-400 font-medium">
+                <span>{c(`Voucher (${appliedPromo.code})`, `قسيمة خصم (${appliedPromo.code})`)}</span>
+                <span className="font-mono">-AED {appliedPromo.discount}</span>
+              </div>
+            )}
+          </div>
+
+          {/* Discovery Set Voucher / Promotion Code */}
+          <div className="pt-3 border-t border-luxury-border">
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="text-xs font-medium text-luxury-text block">
+                {c("Discovery Voucher or Promo Code", "قسيمة استكشاف أو رمز ترويجي")}
+              </label>
+              {appliedPromo && (
+                <button
+                  type="button"
+                  onClick={() => setAppliedPromo(null)}
+                  className="text-[10px] text-rose-500 hover:underline cursor-pointer"
+                >
+                  {c("Remove", "إزالة")}
+                </button>
+              )}
+            </div>
+            {appliedPromo ? (
+              <div className="p-2.5 rounded-sm bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400">
+                <span className="font-mono font-semibold">{appliedPromo.code}</span>
+                <span>-AED {appliedPromo.discount}</span>
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  placeholder="e.g. MSC-DISC-..."
+                  value={promoCode}
+                  onChange={(e) => {
+                    setPromoCode(e.target.value);
+                    setPromoError("");
+                  }}
+                  className="flex-1 h-9 px-3 text-xs uppercase font-mono rounded-sm border border-luxury-border bg-luxury-surface text-luxury-text focus:border-luxury-text focus:outline-none"
+                />
+                <button
+                  type="button"
+                  disabled={promoLoading || !promoCode.trim()}
+                  onClick={async () => {
+                    if (!promoCode.trim()) return;
+                    setPromoLoading(true);
+                    setPromoError("");
+                    try {
+                      const codeClean = promoCode.trim().toUpperCase();
+                      const verifyRes = await muschioApi.verifyVoucher(codeClean, subtotal, user?.id);
+                      if (verifyRes && verifyRes.valid) {
+                        let discount = 0;
+                        if (verifyRes.discountAmount) {
+                          discount = Number(verifyRes.discountAmount);
+                        } else if (verifyRes.discountPercent) {
+                          discount = Math.round((subtotal * Number(verifyRes.discountPercent)) / 100);
+                        }
+                        if (discount <= 0) {
+                          setPromoError(c("Code applied but yielded 0 AED discount", "تم التحقق من الرمز ولكن لم ينتج عنه خصم"));
+                          return;
+                        }
+                        setAppliedPromo({
+                          code: codeClean,
+                          discount,
+                        });
+                        setPromoCode("");
+                      } else {
+                        setPromoError(
+                          verifyRes?.message ||
+                          verifyRes?.reason ||
+                          c("Invalid, expired, or non-eligible coupon or voucher code", "رمز القسيمة أو الخصم غير صالح أو منتهي الصلاحية")
+                        );
+                      }
+                    } catch {
+                      setPromoError(c("Failed to verify voucher", "تعذر التحقق من القسيمة"));
+                    } finally {
+                      setPromoLoading(false);
+                    }
+                  }}
+                  className="px-3 h-9 bg-neutral-900 text-white dark:bg-white dark:text-neutral-900 text-xs rounded-sm hover:opacity-90 disabled:opacity-40 transition-opacity cursor-pointer font-medium"
+                >
+                  {promoLoading ? "..." : c("Apply", "تطبيق")}
+                </button>
+              </div>
+            )}
+            {promoError && (
+              <p className="text-[11px] text-rose-500 mt-1">{promoError}</p>
             )}
           </div>
 

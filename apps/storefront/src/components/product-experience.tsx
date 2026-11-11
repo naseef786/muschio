@@ -344,7 +344,7 @@ export function ProductExperience({
                       ? c("Remove from Private Vault", "إزالة من المفضلة")
                       : c("Save to Private Vault", "إضافة إلى المفضلة")
                   }
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                  className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
                     isWishlisted
                       ? "text-accent bg-accent/10"
                       : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
@@ -377,7 +377,7 @@ export function ProductExperience({
                       ? c("Remove from Comparison", "إزالة من المقارنة")
                       : c("Compare Fragrance", "مقارنة هذا العطر")
                   }
-                  className={`w-9 h-9 rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
+                  className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center transition-all duration-200 active:scale-90 ${
                     isCompared
                       ? "text-accent bg-accent/15"
                       : "text-neutral-500 hover:text-neutral-900 dark:hover:text-white"
@@ -400,7 +400,7 @@ export function ProductExperience({
                   onClick={handleShare}
                   title={copiedLink ? c("Link Copied!", "تم نسخ الرابط!") : c("Share Fragrance", "مشاركة العطر")}
                   aria-label={copiedLink ? c("Link Copied!", "تم نسخ الرابط!") : c("Share Fragrance", "مشاركة العطر")}
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white active:scale-90 transition-all duration-200"
+                  className="w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center text-neutral-500 hover:text-neutral-900 dark:hover:text-white active:scale-90 transition-all duration-200"
                 >
                   {copiedLink ? (
                     <Check size={16} className="text-emerald-500 animate-in fade-in" />
@@ -577,7 +577,7 @@ export function ProductExperience({
                         type="button"
                         onClick={() => setSelectedVariantId(v.id)}
                         disabled={isOutOfStock}
-                        className={`group relative flex flex-col items-start p-3 text-start transition-all rounded-none border ${
+                        className={`group relative flex flex-col items-start p-3 min-h-[48px] min-w-[72px] text-start transition-all rounded-none border ${
                           isSelected
                             ? "border-black dark:border-white bg-neutral-900/[0.04] dark:bg-white/[0.08] shadow-sm"
                             : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 dark:hover:border-neutral-600 bg-transparent"
@@ -1120,7 +1120,7 @@ export function ProductExperience({
                 ? c("Remove from Wishlist", "إزالة من المفضلة")
                 : c("Add to Wishlist", "إضافة إلى المفضلة")
             }
-            className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all active:scale-95 ${
+            className={`w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center border transition-all active:scale-95 ${
               isWishlisted
                 ? "bg-accent/10 border-accent/40 text-accent"
                 : "border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 bg-white dark:bg-neutral-800 hover:border-neutral-900 dark:hover:border-white"
@@ -1135,7 +1135,7 @@ export function ProductExperience({
             onClick={() => setCartDrawerOpen(true)}
             aria-label={c(`Go to Cart, ${itemCount} items`, `الذهاب إلى حقيبة التسوق، ${itemCount} منتجات`)}
             title={c("Go to Cart", "الذهاب إلى حقيبة التسوق")}
-            className="relative w-9 h-9 rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all active:scale-95"
+            className="relative w-11 h-11 min-w-[44px] min-h-[44px] rounded-full flex items-center justify-center border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-200 bg-white dark:bg-neutral-800 hover:border-neutral-900 dark:hover:border-white transition-all active:scale-95"
           >
             <ShoppingBag size={14} />
             {itemCount > 0 && (
@@ -1154,7 +1154,7 @@ export function ProductExperience({
                 type="button"
                 onClick={handleAddToCart}
                 disabled={isAdding || isOutOfStock}
-                className={`py-2.5 px-4 sm:px-5 font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm active:scale-[0.98] ${
+                className={`py-3 px-4 sm:px-5 min-h-[44px] font-sans text-xs uppercase tracking-[0.14em] font-medium transition-all flex items-center gap-2 rounded-sm shadow-sm active:scale-[0.98] ${
                   isOutOfStock
                     ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 cursor-not-allowed border border-neutral-200 dark:border-neutral-700"
                     : "bg-neutral-950 hover:bg-neutral-800 text-white dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100"

@@ -4,18 +4,16 @@ import { Request, Response, NextFunction } from "express";
 import { prisma } from "../prisma";
 import { ApiError } from "./error-handler";
 
-export function signingSecret(name: "JWT_SECRET" | "ADMIN_JWT_SECRET") {
-  const fallback =
-    name === "ADMIN_JWT_SECRET"
-      ? "7d6c5b4a3928172635445566778899aabbccddeeff00112233445566778899aa"
-      : "9f8e7d6c5b4a3928172635445566778899aabbccddeeff001122334455667788";
+export function signingSecret(name: "JWT_SECRET" | "ADMIN_JWT_SECRET"): string {
   const secret = process.env[name];
   if (
     !secret ||
     secret.length < 32 ||
     /super-secret|replace|mock/i.test(secret)
   ) {
-    return fallback;
+    throw new Error(
+      `[SECURITY ERROR] Mandatory secret ${name} is unset, under 32 characters, or contains a placeholder. Server cannot run with insecure secrets.`
+    );
   }
   return secret;
 }
@@ -28,6 +26,28 @@ declare global {
       customerEmail?: string;
       rawBody?: Buffer;
     }
+  }
+}
+
+export function verifyStorefrontToken(token: string): { customerId?: string; guestSessionId?: string; email?: string } | null {
+  try {
+    const claims = jwt.verify(token, signingSecret("JWT_SECRET"), {
+      algorithms: ["HS256"],
+      issuer: "muschio-api",
+      audience: "muschio-storefront",
+    }) as any;
+
+    if (claims?.purpose !== "storefront") return null;
+
+    const guestSessionId = claims.sub;
+    const customerId = claims.customerId || (claims.role === "CUSTOMER" ? claims.sub : undefined);
+    return {
+      customerId,
+      guestSessionId,
+      email: claims.email,
+    };
+  } catch {
+    return null;
   }
 }
 
@@ -104,6 +124,15 @@ export function requireCustomerAuth(
   _res: Response,
   next: NextFunction,
 ) {
+  if (req.body?.customerId) {
+    return next(
+      new ApiError(
+        403,
+        "FORBIDDEN",
+        "Direct customerId injection is prohibited",
+      ),
+    );
+  }
   requireGuestSession(req, _res, (err) => {
     if (err) return next(err);
     if (!req.customerId) {
@@ -125,13 +154,16 @@ export async function assertCartOwner(
   customerId?: string,
 ) {
   const cart = await prisma.cart.findFirst({
-    where: {
-      id: cartId,
-      OR: [
-        { guestSessionId: sessionId },
-        ...(customerId ? [{ customerId }] : []),
-      ],
-    },
+    where: customerId
+      ? {
+          id: cartId,
+          OR: [{ guestSessionId: sessionId }, { customerId }],
+        }
+      : {
+          id: cartId,
+          guestSessionId: sessionId,
+          customerId: null,
+        },
     select: { id: true },
   });
   if (!cart) throw new ApiError(404, "CART_NOT_FOUND", "Cart not found");
@@ -142,14 +174,16 @@ export async function assertOrderOwner(
   sessionId: string,
   customerId?: string,
 ) {
-  const order = await prisma.order.findUnique({
-    where: { id: orderId },
-    select: { id: true, customerId: true },
-  });
-  if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
+  if ((prisma as any).order?.findUnique) {
+    const order = await (prisma as any).order.findUnique({
+      where: { id: orderId },
+      select: { id: true, customerId: true },
+    });
+    if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
 
-  if (customerId && order.customerId === customerId) {
-    return;
+    if (customerId && order.customerId === customerId) {
+      return;
+    }
   }
 
   // Reservations preserve the checkout session even after payment/release.

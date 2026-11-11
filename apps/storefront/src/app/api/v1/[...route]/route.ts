@@ -23,6 +23,10 @@ import {
   AuditService,
   TagService,
   InventoryService,
+  LoyaltyService,
+  PromotionService,
+  GiftCardService,
+  verifyStorefrontToken,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
@@ -34,19 +38,6 @@ async function verifyAdminAuth(req: NextRequest) {
   if (!authHeader || !authHeader.startsWith("Bearer ")) return null;
   const token = authHeader.slice(7).trim();
   if (!token) return null;
-  if (token.startsWith("muschio_sec_token_")) {
-    const superAdmin = await prisma.adminUser.findFirst({
-      where: { role: "SUPER_ADMIN", isActive: true },
-      select: { id: true, email: true, role: true, name: true },
-    }).catch(() => null);
-    if (superAdmin) return superAdmin;
-    return {
-      id: "admin-super-001",
-      email: "superadmin@muschio.luxury",
-      name: "Director of Haute Parfumerie",
-      role: "SUPER_ADMIN",
-    };
-  }
   return await AdminService.verifyToken(token);
 }
 
@@ -70,50 +61,23 @@ function error(code: string, message: string, status = 400) {
   return NextResponse.json({ success: false, error: { code, message } }, { status });
 }
 
-function decodeJwtPayload(token: string): any {
-  try {
-    const parts = token.split(".");
-    const part = parts[1];
-    if (!part) return null;
-    const base64 = part.replace(/-/g, "+").replace(/_/g, "/");
-    const json = Buffer.from(base64, "base64").toString("utf8");
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
 function getAuth(req: NextRequest) {
   const authHeader = req.headers.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+  const sessionHeader = req.headers.get("x-storefront-session");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : sessionHeader?.trim() || null;
+
   let customerId: string | undefined = undefined;
   let guestSessionId: string | undefined = undefined;
 
   if (token) {
-    const decoded = decodeJwtPayload(token);
-    const sub = decoded?.sub ? String(decoded.sub) : "";
-    const cid = decoded?.customerId ? String(decoded.customerId) : "";
-
-    if (cid && !cid.startsWith("guest-")) {
-      customerId = cid;
-    } else if (sub && !sub.startsWith("guest-")) {
-      customerId = sub;
-    }
-
-    if (sub && sub.startsWith("guest-")) {
-      guestSessionId = sub;
-    } else if (cid && cid.startsWith("guest-")) {
-      guestSessionId = cid;
+    const verified = verifyStorefrontToken(token);
+    if (verified) {
+      customerId = verified.customerId;
+      guestSessionId = verified.guestSessionId;
     }
   }
-
-  const url = new URL(req.url);
-  const qCustomerId = url.searchParams.get("customerId");
-  const qGuestSessionId = url.searchParams.get("guestSessionId");
-
-  if (qCustomerId && !qCustomerId.startsWith("guest-")) customerId = qCustomerId;
-  if (qCustomerId && qCustomerId.startsWith("guest-") && !guestSessionId) guestSessionId = qCustomerId;
-  if (qGuestSessionId) guestSessionId = qGuestSessionId;
 
   return { customerId, guestSessionId, token };
 }
@@ -448,6 +412,32 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
       });
       if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
 
+      // Verify access authorization (BOLA / IDOR protection)
+      const admin = await verifyAdminAuth(req);
+      const auth = getAuth(req);
+      const url = new URL(req.url);
+      const queryEmail = (url.searchParams.get("email") || "").trim().toLowerCase();
+      const queryPhone = (url.searchParams.get("phone") || "").replace(/[^0-9]/g, "");
+
+      let isAuthorized = false;
+      if (admin) {
+        isAuthorized = true;
+      } else if (order.customerId && auth.customerId && order.customerId === auth.customerId) {
+        isAuthorized = true;
+      } else {
+        const orderEmail = (order.guestEmail || order.customer?.email || "").trim().toLowerCase();
+        const rawPhone = (order.shippingAddress?.phone || order.customer?.phone || "").replace(/[^0-9]/g, "");
+        if (queryEmail && orderEmail && queryEmail === orderEmail) {
+          isAuthorized = true;
+        } else if (queryPhone && rawPhone && (rawPhone.endsWith(queryPhone) || queryPhone.endsWith(rawPhone))) {
+          isAuthorized = true;
+        }
+      }
+
+      if (!isAuthorized) {
+        return error("ORDER_NOT_FOUND", "Order not found", 404);
+      }
+
       // Fetch all real-time business events logged for this order
       const businessEvents = await prisma.businessEvent.findMany({
         where: {
@@ -557,6 +547,25 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         }
       }
 
+      const maskPhone = (phone: string | null) => {
+        if (!phone) return null;
+        if (admin) return phone;
+        const digits = phone.replace(/[^0-9]/g, "");
+        if (digits.length <= 4) return "****";
+        return phone.slice(0, 4) + " ••• ••" + digits.slice(-2);
+      };
+
+      const maskAddress = (addr: any) => {
+        if (!addr) return null;
+        if (admin) return addr;
+        return {
+          ...addr,
+          streetAddress: "Private Client Address (Verified)",
+          apartment: null,
+          phone: maskPhone(addr.phone),
+        };
+      };
+
       return success({
         ...base,
         payments: order.payments,
@@ -574,10 +583,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           image: item.variant?.product?.images?.[0] || "/product-placeholder.svg",
           slug: item.variant?.product?.slug || null,
         })),
-        shippingAddress: order.shippingAddress,
+        shippingAddress: maskAddress(order.shippingAddress),
         customerName: order.shippingAddress?.fullName || order.customer?.firstName || "Client",
-        customerEmail: order.guestEmail || order.customer?.email || null,
-        customerPhone: order.shippingAddress?.phone || order.customer?.phone || null,
+        customerEmail: admin ? (order.guestEmail || order.customer?.email || null) : undefined,
+        customerPhone: maskPhone(order.shippingAddress?.phone || order.customer?.phone || null),
         trackingNumber,
         carrier: shipment?.carrier ? String(shipment.carrier).replace("_", " ") : "Muschio GCC Climate Courier",
         estimatedDelivery:
@@ -599,6 +608,132 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         methods.push("CASH_ON_DELIVERY" as any);
       }
       return success({ methods });
+    }
+
+    // 12b. Voucher & Coupon Verification
+    if (path === "vouchers/verify" || path === "coupons/verify") {
+      const code = (req.nextUrl.searchParams.get("code") || "").trim().toUpperCase();
+      if (!code) return error("INVALID_INPUT", "Voucher or coupon code required", 400);
+
+      // Check modern Coupon
+      const coupon = await prisma.coupon.findUnique({
+        where: { code },
+        include: { promotion: true },
+      });
+
+      if (coupon) {
+        const now = new Date();
+        if (!coupon.isActive || !coupon.promotion.isActive) {
+          return error("INACTIVE", "Coupon is inactive", 400);
+        }
+        if (coupon.expiresAt && coupon.expiresAt < now) {
+          return error("EXPIRED", "Coupon has expired", 400);
+        }
+        if (coupon.maxUses && coupon.usedCount >= coupon.maxUses) {
+          return error("DEPLETED", "Coupon usage limit reached", 400);
+        }
+        return success({
+          code: coupon.code,
+          discountAmount: coupon.promotion.type === "FIXED_AMOUNT" ? Number(coupon.promotion.value) : null,
+          discountPercent: coupon.promotion.type === "PERCENTAGE" ? Number(coupon.promotion.value) : null,
+          minOrderAmount: coupon.promotion.minOrderAmount ? Number(coupon.promotion.minOrderAmount) : null,
+          maxDiscountAmount: coupon.promotion.maxDiscountAmount ? Number(coupon.promotion.maxDiscountAmount) : null,
+          nameEn: coupon.promotion.nameEn,
+          nameAr: coupon.promotion.nameAr,
+          isDiscoveryVoucher: false,
+        });
+      }
+
+      // Check legacy Voucher
+      const voucher = await prisma.voucher.findUnique({
+        where: { code },
+        include: { redemptions: true },
+      });
+
+      if (!voucher) return error("NOT_FOUND", "Voucher code not found", 404);
+      if (voucher.expiresAt && voucher.expiresAt < new Date()) {
+        return error("EXPIRED", "Voucher code has expired", 400);
+      }
+      if (voucher.redemptions && voucher.redemptions.length > 0) {
+        return error("ALREADY_USED", "Voucher code has already been redeemed", 400);
+      }
+
+      return success({
+        code: voucher.code,
+        discountAmount: voucher.discountAmount ? Number(voucher.discountAmount) : 0,
+        discountPercent: voucher.discountPercent ? Number(voucher.discountPercent) : null,
+        isDiscoveryVoucher: voucher.isDiscoveryVoucher,
+      });
+    }
+
+    // 12c. Gift Card Verification
+    if (path === "gift-cards/verify") {
+      const code = (req.nextUrl.searchParams.get("code") || "").trim().toUpperCase();
+      if (!code) return error("INVALID_INPUT", "Gift card code required", 400);
+      const giftCard = await GiftCardService.getGiftCardByCode(code);
+      return success(giftCard);
+    }
+
+    // 12d. Public Loyalty Tiers
+    if (path === "loyalty/tiers") {
+      const tiers = await LoyaltyService.getTiers();
+      const config = await LoyaltyService.getProgramConfig();
+      return success({ tiers, config });
+    }
+
+    // 12e. Customer Loyalty Ledger
+    if (path === "loyalty/history") {
+      const auth = getAuth(req);
+      if (!auth.customerId) return error("UNAUTHORIZED", "Client sign-in required", 401);
+      const history = await LoyaltyService.getCustomerLedger(auth.customerId);
+      return success(history);
+    }
+
+    // 12f. Admin Marketing & Rewards GET Endpoints
+    if (path === "admin/promotions/dashboard") {
+      const metrics = await PromotionService.getPromotionsDashboardMetrics();
+      return success(metrics);
+    }
+
+    if (path === "admin/promotions") {
+      const promotions = await PromotionService.listPromotions();
+      return success(promotions);
+    }
+
+    if (path === "admin/coupons") {
+      const coupons = await PromotionService.listCoupons();
+      return success(coupons);
+    }
+
+    if (path === "admin/vouchers") {
+      const vouchers = await prisma.voucher.findMany({
+        include: {
+          redemptions: true,
+          _count: { select: { redemptions: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+      return success(vouchers);
+    }
+
+    if (path === "admin/gift-cards") {
+      const cards = await GiftCardService.listGiftCards();
+      return success(cards);
+    }
+
+    if (path === "admin/loyalty/config") {
+      const config = await LoyaltyService.getProgramConfig();
+      const tiers = await LoyaltyService.getTiers();
+      return success({ config, tiers });
+    }
+
+    if (path === "admin/loyalty/ledger") {
+      const transactions = await prisma.loyaltyTransaction.findMany({
+        take: 50,
+        orderBy: { createdAt: "desc" },
+        include: { customer: { select: { email: true, firstName: true, lastName: true } } },
+      });
+      return success(transactions);
     }
 
     // 13. Admin Dashboard
@@ -851,8 +986,10 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
 
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
-    console.error("Storefront API Route Error:", err);
-    return error("INTERNAL_ERROR", err?.message || "Internal server error", 500);
+    console.error("Storefront API Route GET Error:", err);
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    const code = err?.code || (status === 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED");
+    return error(code, err?.message || "Internal server error", status);
   }
 }
 
@@ -892,12 +1029,20 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(result);
     }
     if (path === "auth/login") {
-      const result = await CustomerService.login(body);
-      return success(result);
+      try {
+        const result = await CustomerService.login(body);
+        return success(result);
+      } catch (err: any) {
+        return error(err?.code || "AUTH_FAILED", err?.message || "Invalid credentials", err?.statusCode || 401);
+      }
     }
     if (path === "auth/register") {
-      const result = await CustomerService.register(body);
-      return success(result, 201);
+      try {
+        const result = await CustomerService.register(body);
+        return success(result, 201);
+      } catch (err: any) {
+        return error(err?.code || "REGISTRATION_FAILED", err?.message || "Registration failed", err?.statusCode || 400);
+      }
     }
 
     // 3. AI Scent Discovery
@@ -930,6 +1075,19 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         estimatedDaysMax: country === "AE" ? 2 : 4,
         services: quote.services,
       });
+    }
+
+    // 5b. Centralized Promotions Quote (Public Storefront & Cart)
+    if (path === "promotions/quote") {
+      const { items, subtotal, couponCode } = body || {};
+      const { customerId } = getAuth(req);
+      const quote = await PromotionService.evaluateCartPromotions(
+        items || [],
+        Number(subtotal || 0),
+        customerId || undefined,
+        couponCode,
+      );
+      return success(quote);
     }
 
     // 6. Cart Items Add
@@ -976,51 +1134,59 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
     // 7. Checkout Process
     if (path === "checkout") {
-      const { customerId, guestSessionId } = getAuth(req);
-      const session = body.guestSessionId || guestSessionId || "guest";
-      const customer = body.customerId || customerId;
-      const order = await CheckoutService.processCheckout(body, session, customer);
+      try {
+        const { customerId, guestSessionId } = getAuth(req);
+        const session = guestSessionId || body.guestSessionId || "guest";
+        const customer = customerId;
+        const order = await CheckoutService.processCheckout(body, session, customer);
 
-      // Fetch full order to guarantee addresses and items for logging & emails
-      const fullOrder = await CheckoutService.getOrderById(order.id).catch(() => null);
-      const orderToLog = fullOrder || order;
+        // Fetch full order to guarantee addresses and items for logging & emails
+        const fullOrder = await CheckoutService.getOrderById(order.id).catch(() => null);
+        const orderToLog = fullOrder || order;
 
-      await prisma.businessEvent.create({
-        data: {
-          eventName: "ORDER_CREATED",
-          aggregateType: "ORDER",
-          aggregateId: order.id,
-          payload: {
-            orderNumber: order.orderNumber,
-            customerName: (orderToLog as any).shippingAddress?.fullName || (orderToLog as any).customer?.name || "Client",
-            totalAmount: Number(order.totalAmount),
-            currency: order.currency || "AED",
-            status: order.status,
-            itemCount: (orderToLog as any).items?.length || 1,
-            createdAt: new Date().toISOString(),
+        await prisma.businessEvent.create({
+          data: {
+            eventName: "ORDER_CREATED",
+            aggregateType: "ORDER",
+            aggregateId: order.id,
+            payload: {
+              orderNumber: order.orderNumber,
+              customerName: (orderToLog as any).shippingAddress?.fullName || (orderToLog as any).customer?.name || "Client",
+              totalAmount: Number(order.totalAmount),
+              currency: order.currency || "AED",
+              status: order.status,
+              itemCount: (orderToLog as any).items?.length || 1,
+              createdAt: new Date().toISOString(),
+            },
           },
-        },
-      }).catch((err) => console.error("Failed to log ORDER_CREATED event:", err));
+        }).catch((err) => console.error("Failed to log ORDER_CREATED event:", err));
 
-      // Dispatch transactional confirmations to customer and admin ONLY for orders that do not require online upfront payment (e.g. CASH_ON_DELIVERY)!
-      // For CREDIT_CARD, APPLE_PAY, and GOOGLE_PAY, confirmations are deferred until payment is authorized & captured in /payments/card-charge or /payments/verify-session!
-      const paymentMethodUpper = String(body.paymentMethod || "").toUpperCase();
-      const isOnlinePrepayment = ["CREDIT_CARD", "APPLE_PAY", "GOOGLE_PAY", "STRIPE"].includes(paymentMethodUpper);
+        // Dispatch transactional confirmations to customer and admin ONLY for orders that do not require online upfront payment (e.g. CASH_ON_DELIVERY)!
+        // For CREDIT_CARD, APPLE_PAY, and GOOGLE_PAY, confirmations are deferred until payment is authorized & captured in /payments/card-charge or /payments/verify-session!
+        const paymentMethodUpper = String(body.paymentMethod || "").toUpperCase();
+        const isOnlinePrepayment = ["CREDIT_CARD", "APPLE_PAY", "GOOGLE_PAY", "STRIPE"].includes(paymentMethodUpper);
 
-      if (!isOnlinePrepayment) {
-        try {
-          await Promise.allSettled([
-            EmailService.sendOrderConfirmation(orderToLog),
-            EmailService.sendAdminOrderAlert(orderToLog),
-            WhatsAppService.sendOrderConfirmation(orderToLog),
-            WhatsAppService.sendAdminOrderAlert(orderToLog),
-          ]);
-        } catch (notifyErr) {
-          console.error("Order notification dispatch error:", notifyErr);
+        if (!isOnlinePrepayment) {
+          try {
+            await Promise.allSettled([
+              EmailService.sendOrderConfirmation(orderToLog),
+              EmailService.sendAdminOrderAlert(orderToLog),
+              WhatsAppService.sendOrderConfirmation(orderToLog),
+              WhatsAppService.sendAdminOrderAlert(orderToLog),
+            ]);
+          } catch (notifyErr) {
+            console.error("Order notification dispatch error:", notifyErr);
+          }
         }
-      }
 
-      return success(storefrontOrder(orderToLog), 201);
+        return success(storefrontOrder(orderToLog), 201);
+      } catch (err: any) {
+        return error(
+          err?.code || "CHECKOUT_FAILED",
+          err?.message || "Checkout failed",
+          typeof err?.statusCode === "number" ? err.statusCode : 400
+        );
+      }
     }
 
     // 7b. Payment Session Initiation (Stripe Hosted Checkout / Apple Pay / Google Pay)
@@ -1131,145 +1297,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
     }
 
-    // 7c. Direct Card Payment Authorization & Settlement
+    // 7c. Direct Card Payment: Disabled in production (Use secure Stripe Checkout)
     if (path === "payments/card-charge") {
-      const { orderId, orderNumber, cardNumber, cardHolder } = body || {};
-      if (!orderId && !orderNumber) {
-        return error("INVALID_INPUT", "orderId or orderNumber is required", 400);
-      }
-
-      const order = await prisma.order.findFirst({
-        where: {
-          OR: [
-            ...(orderId ? [{ id: orderId }] : []),
-            ...(orderNumber ? [{ orderNumber }] : []),
-          ],
-        },
-        include: { items: true, payments: { include: { events: true }, orderBy: { createdAt: "desc" } }, shippingAddress: true, customer: true },
-      });
-
-      if (!order) return error("NOT_FOUND", "Order not found", 404);
-
-      // Sanitize card number & verify luxury payment clearance
-      const cleanNum = String(cardNumber || "").replace(/\s+/g, "");
-      const last4 = cleanNum.slice(-4) || "4242";
-      const brand = cleanNum.startsWith("3")
-        ? "AMEX"
-        : cleanNum.startsWith("5")
-          ? "MASTERCARD"
-          : "VISA";
-
-      // Idempotency: Return immediately if already paid & captured
-      const existingCaptured = order.payments?.find((p) => p.status === "CAPTURED");
-      if (order.status === "PAID" && existingCaptured) {
-        return success({
-          success: true,
-          paymentId: existingCaptured.id,
-          order: storefrontOrder(order),
-          transaction: {
-            brand,
-            last4,
-            gatewayReference: existingCaptured.gatewayReference,
-            status: "CAPTURED",
-          },
-        });
-      }
-
-      // Update existing initiated payment or create captured payment record
-      const existingInitiated = order.payments?.find((p) => p.status === "INITIATED" || (p.status as any) === "PENDING");
-      let payment;
-      if (existingInitiated) {
-        payment = await prisma.payment.update({
-          where: { id: existingInitiated.id },
-          data: {
-            status: "CAPTURED",
-            provider: "CREDIT_CARD",
-            gatewayReference: `card_${brand.toLowerCase()}_${last4}_${Date.now()}`,
-          },
-        });
-      } else {
-        payment = await prisma.payment.create({
-          data: {
-            orderId: order.id,
-            provider: "CREDIT_CARD",
-            status: "CAPTURED",
-            amount: order.totalAmount,
-            currency: order.currency,
-            gatewayReference: `card_${brand.toLowerCase()}_${last4}_${Date.now()}`,
-          },
-        });
-      }
-
-      // Commit stock in inventory ledger
-      await InventoryService.commitOrderInventory(order.id).catch((err: any) =>
-        console.warn("Stock commitment notice:", err)
+      return error(
+        "METHOD_NOT_ALLOWED",
+        "Direct unverified card charging is disabled. Use secure Stripe Checkout.",
+        405,
       );
-
-      // Persist rich card payment event dossier
-      await prisma.paymentEvent.create({
-        data: {
-          paymentId: payment.id,
-          eventType: "CARD_CHARGE_SUCCESS",
-          payload: {
-            gateway: "DIRECT_CARD",
-            cardBrand: brand,
-            cardLast4: last4,
-            cardHolder: cardHolder || order.shippingAddress?.fullName || "Private Client",
-            paidAt: new Date().toISOString(),
-          },
-        },
-      });
-
-      // Advance order status to PAID
-      const updatedOrder = await prisma.order.update({
-        where: { id: order.id },
-        data: { status: "PAID" },
-        include: {
-          items: true,
-          payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
-          shippingAddress: true,
-          customer: true,
-        },
-      });
-
-      // Emit business event for real-time live feed and tracking
-      await prisma.businessEvent.create({
-        data: {
-          eventName: "ORDER_PAID",
-          aggregateType: "ORDER",
-          aggregateId: order.id,
-          payload: {
-            orderNumber: order.orderNumber,
-            totalAmount: Number(order.totalAmount),
-            currency: order.currency,
-            paymentMethod: "CREDIT_CARD",
-            cardBrand: brand,
-            cardLast4: last4,
-            cardHolder: cardHolder || order.shippingAddress?.fullName || "Client",
-            paidAt: new Date().toISOString(),
-          },
-        },
-      });
-
-      // Dispatch confirmation alerts
-      EmailService.sendOrderConfirmation(updatedOrder).catch((err) =>
-        console.error("Failed to send order email:", err)
-      );
-      WhatsAppService.sendOrderConfirmation(updatedOrder).catch((err) =>
-        console.error("Failed to send order WhatsApp:", err)
-      );
-
-      return success({
-        success: true,
-        paymentId: payment.id,
-        order: storefrontOrder(updatedOrder),
-        transaction: {
-          brand,
-          last4,
-          gatewayReference: payment.gatewayReference,
-          status: "CAPTURED",
-        },
-      });
     }
 
     // 8. Saved Addresses: Create
@@ -2520,10 +2554,68 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       return success(updated);
     }
 
+    // 23b. Admin Promotions & Marketing Controls
+    if (path === "admin/promotions") {
+      const admin = await verifyAdminAuth(req);
+      const created = await PromotionService.createPromotion(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (route[0] === "admin" && route[1] === "promotions" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      const updated = await PromotionService.updatePromotion(route[2], body, admin?.id);
+      return success(updated);
+    }
+
+    if (path === "admin/coupons") {
+      const admin = await verifyAdminAuth(req);
+      const created = await PromotionService.createCoupon(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (path === "admin/vouchers") {
+      const { code, discountAmount, discountPercent, isDiscoveryVoucher, expiresDays } = body || {};
+      const { randomUUID } = await import("node:crypto");
+      const voucherCode = (code || `MSC-VCH-${randomUUID().slice(0, 8)}`).trim().toUpperCase();
+      const expiresAt = expiresDays ? new Date(Date.now() + Number(expiresDays) * 24 * 60 * 60 * 1000) : null;
+      const voucher = await prisma.voucher.create({
+        data: {
+          code: voucherCode,
+          discountAmount: discountAmount ? Number(discountAmount) : null,
+          discountPercent: discountPercent ? Number(discountPercent) : null,
+          isDiscoveryVoucher: Boolean(isDiscoveryVoucher),
+          expiresAt,
+        },
+      });
+      return success(voucher, 201);
+    }
+
+    if (path === "admin/gift-cards") {
+      const admin = await verifyAdminAuth(req);
+      const created = await GiftCardService.createGiftCard(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (path === "admin/loyalty/adjust") {
+      const admin = await verifyAdminAuth(req);
+      const { customerId, pointsDelta, reason } = body || {};
+      if (!customerId || pointsDelta === undefined || !reason) {
+        return error("INVALID_INPUT", "customerId, pointsDelta, and mandatory reason required", 400);
+      }
+      const adjusted = await LoyaltyService.manualAdjustment(customerId, Number(pointsDelta), reason, admin?.id || "admin");
+      return success(adjusted);
+    }
+
+    if (path === "admin/loyalty/config") {
+      const admin = await verifyAdminAuth(req);
+      const updated = await LoyaltyService.updateProgramConfig(body, admin?.id);
+      return success(updated);
+    }
+
     // 24. Public Customer Review Submission
     if (path === "reviews") {
       const auth = getAuth(req);
-      let customerId = auth.customerId || body.customerId;
+      let customerId = auth.customerId;
       if (!customerId) {
         if (body.email) {
           let cust = await prisma.customer.findUnique({ where: { email: body.email } });
@@ -2623,7 +2715,9 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route POST Error:", err);
-    return error("INTERNAL_ERROR", err?.message || "Internal server error", 500);
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    const code = err?.code || (status === 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED");
+    return error(code, err?.message || "Internal server error", status);
   }
 }
 
@@ -2741,10 +2835,68 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
       return success(updated);
     }
 
+    // 23b. Admin Promotions & Marketing Controls
+    if (path === "admin/promotions") {
+      const admin = await verifyAdminAuth(req);
+      const created = await PromotionService.createPromotion(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (route[0] === "admin" && route[1] === "promotions" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      const updated = await PromotionService.updatePromotion(route[2], body, admin?.id);
+      return success(updated);
+    }
+
+    if (path === "admin/coupons") {
+      const admin = await verifyAdminAuth(req);
+      const created = await PromotionService.createCoupon(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (path === "admin/vouchers") {
+      const { code, discountAmount, discountPercent, isDiscoveryVoucher, expiresDays } = body || {};
+      const { randomUUID } = await import("node:crypto");
+      const voucherCode = (code || `MSC-VCH-${randomUUID().slice(0, 8)}`).trim().toUpperCase();
+      const expiresAt = expiresDays ? new Date(Date.now() + Number(expiresDays) * 24 * 60 * 60 * 1000) : null;
+      const voucher = await prisma.voucher.create({
+        data: {
+          code: voucherCode,
+          discountAmount: discountAmount ? Number(discountAmount) : null,
+          discountPercent: discountPercent ? Number(discountPercent) : null,
+          isDiscoveryVoucher: Boolean(isDiscoveryVoucher),
+          expiresAt,
+        },
+      });
+      return success(voucher, 201);
+    }
+
+    if (path === "admin/gift-cards") {
+      const admin = await verifyAdminAuth(req);
+      const created = await GiftCardService.createGiftCard(body, admin?.id);
+      return success(created, 201);
+    }
+
+    if (path === "admin/loyalty/adjust") {
+      const admin = await verifyAdminAuth(req);
+      const { customerId, pointsDelta, reason } = body || {};
+      if (!customerId || pointsDelta === undefined || !reason) {
+        return error("INVALID_INPUT", "customerId, pointsDelta, and mandatory reason required", 400);
+      }
+      const adjusted = await LoyaltyService.manualAdjustment(customerId, Number(pointsDelta), reason, admin?.id || "admin");
+      return success(adjusted);
+    }
+
+    if (path === "admin/loyalty/config") {
+      const admin = await verifyAdminAuth(req);
+      const updated = await LoyaltyService.updateProgramConfig(body, admin?.id);
+      return success(updated);
+    }
+
     // 24. Public Customer Review Submission
     if (path === "reviews") {
       const auth = getAuth(req);
-      let customerId = auth.customerId || body.customerId;
+      let customerId = auth.customerId;
       if (!customerId) {
         if (body.email) {
           let cust = await prisma.customer.findUnique({ where: { email: body.email } });
@@ -2843,7 +2995,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
     return error("NOT_FOUND", `Endpoint /api/v1/${path} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route PATCH Error:", err);
-    return error("INTERNAL_ERROR", err?.message || "Internal server error", 500);
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    const code = err?.code || (status === 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED");
+    return error(code, err?.message || "Internal server error", status);
   }
 }
 
@@ -3020,9 +3174,32 @@ export async function DELETE(req: NextRequest, { params }: { params: { route: st
       return success({ success: true, deleted: reviewId });
     }
 
+    // 12. Admin Delete Promotion
+    if (route[0] === "admin" && route[1] === "promotions" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      const deleted = await PromotionService.deletePromotion(route[2], admin?.id);
+      return success(deleted);
+    }
+
+    // 13. Admin Delete Coupon
+    if (route[0] === "admin" && route[1] === "coupons" && route[2]) {
+      const admin = await verifyAdminAuth(req);
+      const deleted = await PromotionService.deleteCoupon(route[2], admin?.id);
+      return success(deleted);
+    }
+
+    // 14. Admin Delete Voucher
+    if (route[0] === "admin" && route[1] === "vouchers" && route[2]) {
+      await prisma.voucherRedemption.deleteMany({ where: { voucherId: route[2] } }).catch(() => null);
+      await prisma.voucher.delete({ where: { id: route[2] } });
+      return success({ success: true, deleted: route[2] });
+    }
+
     return error("NOT_FOUND", `Endpoint /api/v1/${route.join("/")} not found`, 404);
   } catch (err: any) {
     console.error("Storefront API Route DELETE Error:", err);
-    return error("INTERNAL_ERROR", err?.message || "Internal server error", 500);
+    const status = typeof err?.statusCode === "number" ? err.statusCode : 500;
+    const code = err?.code || (status === 500 ? "INTERNAL_ERROR" : "REQUEST_FAILED");
+    return error(code, err?.message || "Internal server error", status);
   }
 }

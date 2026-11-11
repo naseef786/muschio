@@ -24,6 +24,18 @@ export interface ClientProfile {
   email: string;
   phone: string;
   tier: LoyaltyTier;
+  tierNameEn?: string;
+  tierNameAr?: string;
+  tierMultiplier?: number;
+  tierBenefitsEn?: string[];
+  tierBenefitsAr?: string[];
+  nextTier?: {
+    tierKey: string;
+    tierNameEn: string;
+    tierNameAr: string;
+    pointsThreshold: number;
+    pointsNeeded: number;
+  } | null;
   loyaltyPoints: number;
   loyaltyCreditsAed: number;
   joinedDate: string;
@@ -109,6 +121,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: res.customer.email,
           phone: res.customer.phone || currentUser.phone,
           tier: res.customer.tier,
+          tierNameEn: res.customer.tierNameEn,
+          tierNameAr: res.customer.tierNameAr,
+          tierMultiplier: res.customer.tierMultiplier,
+          tierBenefitsEn: res.customer.tierBenefitsEn,
+          tierBenefitsAr: res.customer.tierBenefitsAr,
+          nextTier: res.customer.nextTier,
           loyaltyPoints: res.customer.loyaltyPoints,
           loyaltyCreditsAed: res.customer.loyaltyCreditsAed,
           joinedDate: res.customer.joinedDate,
@@ -166,6 +184,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           email: backendRes.customer.email,
           phone: backendRes.customer.phone || "+971 50 123 4567",
           tier: backendRes.customer.tier,
+          tierNameEn: backendRes.customer.tierNameEn,
+          tierNameAr: backendRes.customer.tierNameAr,
+          tierMultiplier: backendRes.customer.tierMultiplier,
+          tierBenefitsEn: backendRes.customer.tierBenefitsEn,
+          tierBenefitsAr: backendRes.customer.tierBenefitsAr,
+          nextTier: backendRes.customer.nextTier,
           loyaltyPoints: backendRes.customer.loyaltyPoints,
           loyaltyCreditsAed: backendRes.customer.loyaltyCreditsAed,
           joinedDate: backendRes.customer.joinedDate,
@@ -206,6 +230,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             email: backendRes.customer.email,
             phone: backendRes.customer.phone || data.phone || "+971 50 000 0000",
             tier: backendRes.customer.tier,
+            tierNameEn: backendRes.customer.tierNameEn,
+            tierNameAr: backendRes.customer.tierNameAr,
+            tierMultiplier: backendRes.customer.tierMultiplier,
+            tierBenefitsEn: backendRes.customer.tierBenefitsEn,
+            tierBenefitsAr: backendRes.customer.tierBenefitsAr,
+            nextTier: backendRes.customer.nextTier,
             loyaltyPoints: backendRes.customer.loyaltyPoints,
             loyaltyCreditsAed: backendRes.customer.loyaltyCreditsAed,
             joinedDate: backendRes.customer.joinedDate,

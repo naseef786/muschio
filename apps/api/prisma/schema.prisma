@@ -192,6 +192,39 @@ enum AdminRole {
   EDITOR
 }
 
+enum PromotionType {
+  PERCENTAGE
+  FIXED_AMOUNT
+  BUY_X_GET_Y
+  BUNDLE
+  TIERED_SPEND
+  FREE_SHIPPING
+}
+
+enum GiftCardStatus {
+  ACTIVE
+  REDEEMED
+  EXPIRED
+  CANCELLED
+}
+
+enum GiftCardTxType {
+  ISSUANCE
+  REDEMPTION
+  REFUND
+  ADJUSTMENT
+  EXPIRATION
+}
+
+enum LoyaltyTxType {
+  EARN
+  REDEEM
+  REFUND
+  WELCOME_BONUS
+  MANUAL_ADJUSTMENT
+  EXPIRE
+}
+
 // -------------------------------------------------------------
 // 1. RICH CATALOG & TAXONOMY ENTITIES
 // -------------------------------------------------------------
@@ -719,6 +752,8 @@ model MarketPrice {
 model Customer {
   id               String            @id @default(uuid())
   email            String            @unique
+  passwordHash     String?
+  emailVerified    Boolean           @default(false)
   firstName        String?
   lastName         String?
   phone            String?
@@ -732,6 +767,8 @@ model Customer {
   reviews          Review[]
   returnRequests   ReturnRequest[]
   recentlyViewed   RecentlyViewed[]
+  coupons          Coupon[]
+  loyaltyTransactions LoyaltyTransaction[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -1139,6 +1176,161 @@ model VoucherRedemption {
   orderId   String
   voucher   Voucher  @relation(fields: [voucherId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+}
+
+model Promotion {
+  id                   String                @id @default(uuid())
+  nameEn               String
+  nameAr               String?
+  descriptionEn        String?               @db.Text
+  descriptionAr        String?               @db.Text
+  type                 PromotionType         @default(PERCENTAGE)
+  value                Decimal               @default(0) @db.Decimal(10, 2)
+  isAutomatic          Boolean               @default(false)
+  priority             Int                   @default(0)
+  stackable            Boolean               @default(false)
+  startsAt             DateTime?
+  endsAt               DateTime?
+  isActive             Boolean               @default(true)
+  minOrderAmount       Decimal?              @db.Decimal(10, 2)
+  maxDiscountAmount    Decimal?              @db.Decimal(10, 2)
+  customerUsageLimit   Int?
+  totalUsageLimit      Int?
+  usageCount           Int                   @default(0)
+  applicableProductIds String[]              @default([])
+  applicableBrandIds   String[]              @default([])
+  applicableCategories String[]              @default([])
+  excludedProductIds   String[]              @default([])
+  firstOrderOnly       Boolean               @default(false)
+  targetTier           String?
+  coupons              Coupon[]
+  redemptions          PromotionRedemption[]
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  @@index([isActive, isAutomatic])
+  @@index([startsAt, endsAt])
+}
+
+model Coupon {
+  id                 String                @id @default(uuid())
+  code               String                @unique
+  promotionId        String
+  promotion          Promotion             @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  assignedCustomerId String?
+  customer           Customer?             @relation(fields: [assignedCustomerId], references: [id], onDelete: SetNull)
+  maxUses            Int?
+  usedCount          Int                   @default(0)
+  isActive           Boolean               @default(true)
+  expiresAt          DateTime?
+  redemptions        PromotionRedemption[]
+  createdAt          DateTime              @default(now())
+
+  @@index([code, isActive])
+  @@index([assignedCustomerId])
+}
+
+model PromotionRedemption {
+  id             String     @id @default(uuid())
+  promotionId    String
+  couponId       String?
+  orderId        String
+  customerId     String?
+  discountAmount Decimal    @db.Decimal(10, 2)
+  promotion      Promotion  @relation(fields: [promotionId], references: [id], onDelete: Cascade)
+  coupon         Coupon?    @relation(fields: [couponId], references: [id], onDelete: SetNull)
+  createdAt      DateTime   @default(now())
+
+  @@index([promotionId])
+  @@index([couponId])
+  @@index([orderId])
+  @@index([customerId])
+}
+
+model GiftCard {
+  id               String                @id @default(uuid())
+  code             String                @unique
+  initialBalance   Decimal               @db.Decimal(10, 2)
+  remainingBalance Decimal               @db.Decimal(10, 2)
+  currency         String                @default("AED")
+  recipientEmail   String?
+  recipientName    String?
+  senderName       String?
+  personalMessage  String?               @db.Text
+  status           GiftCardStatus        @default(ACTIVE)
+  expiresAt        DateTime?
+  issuedByAdminId  String?
+  transactions     GiftCardTransaction[]
+  createdAt        DateTime              @default(now())
+  updatedAt        DateTime              @updatedAt
+
+  @@index([code, status])
+  @@index([recipientEmail])
+}
+
+model GiftCardTransaction {
+  id           String         @id @default(uuid())
+  giftCardId   String
+  orderId      String?
+  type         GiftCardTxType
+  amount       Decimal        @db.Decimal(10, 2)
+  balanceAfter Decimal        @db.Decimal(10, 2)
+  notes        String?
+  giftCard     GiftCard       @relation(fields: [giftCardId], references: [id], onDelete: Cascade)
+  createdAt    DateTime       @default(now())
+
+  @@index([giftCardId])
+  @@index([orderId])
+}
+
+model LoyaltyProgramConfig {
+  id                       String   @id @default(uuid())
+  isEnabled                Boolean  @default(true)
+  programNameEn            String   @default("Muschio Privilege")
+  programNameAr            String   @default("مسكيو بريفيلج")
+  pointsPerAedSpent        Decimal  @default(1.0) @db.Decimal(6, 2)
+  pointsRedemptionRate     Int      @default(10)
+  welcomeBonusPoints       Int      @default(100)
+  minRedemptionPoints      Int      @default(100)
+  maxRedemptionAedPerOrder Decimal? @db.Decimal(10, 2)
+  pointsExpiryDays         Int?     @default(365)
+  awardOnPaymentCapture    Boolean  @default(true)
+  updatedAt                DateTime @updatedAt
+}
+
+model LoyaltyTier {
+  id                String   @id @default(uuid())
+  key               String   @unique
+  nameEn            String
+  nameAr            String
+  minSpendAed       Decimal  @default(0) @db.Decimal(10, 2)
+  minPoints         Int      @default(0)
+  earningMultiplier Decimal  @default(1.0) @db.Decimal(4, 2)
+  benefitsEn        String[] @default([])
+  benefitsAr        String[] @default([])
+  sortOrder         Int      @default(0)
+  isActive          Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([key, isActive])
+  @@index([minPoints, sortOrder])
+}
+
+model LoyaltyTransaction {
+  id           String        @id @default(uuid())
+  customerId   String
+  customer     Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  type         LoyaltyTxType
+  points       Int
+  balanceAfter Int
+  orderId      String?
+  reason       String
+  adminUserId  String?
+  createdAt    DateTime      @default(now())
+
+  @@index([customerId, createdAt])
+  @@index([orderId])
 }
 
 model BusinessEvent {

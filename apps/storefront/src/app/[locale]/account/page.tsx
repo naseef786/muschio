@@ -294,26 +294,52 @@ export default function AccountPage({
               </p>
             </div>
 
-            {/* Loyalty Tier Progress Bar */}
+            {/* Loyalty Tier Progress Bar (Fully Dynamic Server-Calculated) */}
             <div className="space-y-2 pt-4 border-t border-luxury-border">
-              <div className="flex items-center justify-between text-xs">
-                <span className="text-luxury-text font-medium">
-                  {c("Tier Progress: Gold Sillage", "التقدم نحو فئة السيلّاج الذهبي")}
-                </span>
-                <span className="font-mono text-accent">1,450 / 3,000 Points</span>
-              </div>
-              <div className="w-full h-1.5 bg-luxury-surface2 border border-luxury-border rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-accent transition-all duration-500"
-                  style={{ width: "48%" }}
-                />
-              </div>
-              <span className="text-[10px] text-luxury-muted block">
-                {c(
-                  "Accumulate 1,550 more points to upgrade to Royal Ambassador Tier.",
-                  "اجمع ١,٥٥٠ نقطة إضافية للترقية إلى فئة السفير الملكي.",
-                )}
-              </span>
+              {user.nextTier ? (
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-luxury-text font-medium">
+                      {c(`Tier Progress: ${user.nextTier.tierNameEn}`, `التقدم نحو فئة ${user.nextTier.tierNameAr}`)}
+                    </span>
+                    <span className="font-mono text-accent">
+                      {user.loyaltyPoints.toLocaleString()} / {user.nextTier.pointsThreshold.toLocaleString()} Points
+                    </span>
+                  </div>
+                  <div className="w-full h-1.5 bg-luxury-surface2 border border-luxury-border rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-accent transition-all duration-500"
+                      style={{
+                        width: `${Math.min(
+                          100,
+                          Math.max(5, Math.round((user.loyaltyPoints / user.nextTier.pointsThreshold) * 100))
+                        )}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-luxury-muted block">
+                    {c(
+                      `Accumulate ${user.nextTier.pointsNeeded.toLocaleString()} more points to upgrade to ${user.nextTier.tierNameEn}.`,
+                      `اجمع ${user.nextTier.pointsNeeded.toLocaleString()} نقطة إضافية للترقية إلى فئة ${user.nextTier.tierNameAr}.`,
+                    )}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-luxury-text font-medium">
+                      {c("Highest Tier Achieved: Royal Ambassador", "تم بلوغ أعلى فئة: السفير الملكي")}
+                    </span>
+                    <span className="font-mono text-accent">{user.loyaltyPoints.toLocaleString()} Points</span>
+                  </div>
+                  <div className="w-full h-1.5 bg-luxury-surface2 border border-luxury-border rounded-full overflow-hidden">
+                    <div className="h-full bg-accent w-full" />
+                  </div>
+                  <span className="text-[10px] text-luxury-muted block">
+                    {c("You enjoy maximum privileges and highest points multiplier.", "تتمتع بأقصى درجات المزايا ومضاعف النقاط الأعلى.")}
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>

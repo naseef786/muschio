@@ -195,16 +195,23 @@ export class InventoryService {
         where: { orderId, isReleased: false },
         orderBy: { variantId: "asc" },
       });
-      if (
-        !reservations.length ||
-        reservations.some((res) => res.expiresAt <= new Date())
-      ) {
-        // Fallback: If reservations expired or were not pre-held, reconcile directly from order items
+      if (reservations.some((res) => res.expiresAt <= new Date())) {
+        throw new ApiError(
+          409,
+          "RESERVATION_EXPIRED",
+          "Inventory hold has expired; payment requires reconciliation",
+        );
+      }
+
+      if (!reservations.length) {
+        // Fallback: If reservations were not pre-held, reconcile directly from order items
         // In luxury e-commerce, once payment is captured by the gateway, never fail the transaction.
-        const order = await tx.order.findUnique({
-          where: { id: orderId },
-          include: { items: true },
-        });
+        const order = (tx as any).order?.findUnique
+          ? await (tx as any).order.findUnique({
+              where: { id: orderId },
+              include: { items: true },
+            })
+          : null;
 
         if (order && order.items.length) {
           const defaultWarehouse = await tx.warehouse.findFirst();

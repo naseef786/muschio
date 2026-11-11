@@ -1,5 +1,6 @@
 import { prisma } from "../prisma";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 import { signingSecret } from "../middleware/storefront-auth";
 import { ApiError } from "../middleware/error-handler";
 import {
@@ -8,18 +9,14 @@ import {
   CreateSavedAddress,
   LoyaltyTier,
 } from "@muschio/types";
+import { LoyaltyService } from "./loyalty.service";
 
-function calculateLoyaltyTier(points: number): LoyaltyTier {
-  if (points >= 3000) return "ROYAL_AMBASSADOR";
-  if (points >= 1000) return "GOLD_SILLAGE";
-  return "PRIVILEGE";
-}
-
-function formatClientProfile(customer: any) {
+async function formatClientProfile(customer: any) {
   const points = customer.loyaltyPoints || 0;
-  const tier = calculateLoyaltyTier(points);
-  // 10 loyalty points = 1 AED credit voucher
-  const loyaltyCreditsAed = Math.floor(points / 10);
+  const tierInfo = await LoyaltyService.calculateTierForCustomer(points);
+  const config = await LoyaltyService.getProgramConfig();
+  const rate = config.pointsRedemptionRate || 10;
+  const loyaltyCreditsAed = Math.floor(points / rate);
   const fullName = [customer.firstName, customer.lastName].filter(Boolean).join(" ");
 
   return {
@@ -29,10 +26,16 @@ function formatClientProfile(customer: any) {
     lastName: customer.lastName || null,
     name: fullName || customer.email.split("@")[0],
     phone: customer.phone || null,
-    tier,
+    tier: tierInfo.tierKey as LoyaltyTier,
+    tierNameEn: tierInfo.tierNameEn,
+    tierNameAr: tierInfo.tierNameAr,
+    tierMultiplier: tierInfo.earningMultiplier,
+    tierBenefitsEn: tierInfo.benefitsEn,
+    tierBenefitsAr: tierInfo.benefitsAr,
+    nextTier: tierInfo.nextTier,
     loyaltyPoints: points,
     loyaltyCreditsAed,
-    isVip: customer.isVip || tier !== "PRIVILEGE",
+    isVip: customer.isVip || tierInfo.tierKey !== "PRIVILEGE",
     joinedDate: customer.createdAt
       ? new Date(customer.createdAt).toLocaleDateString("en-US", {
           month: "long",
@@ -106,7 +109,7 @@ export class CustomerService {
   static async login(input: CustomerLoginInput) {
     const email = input.email.trim().toLowerCase();
 
-    let customer = await prisma.customer.findUnique({
+    const customer = await prisma.customer.findUnique({
       where: { email },
       include: {
         fragranceProfile: true,
@@ -114,28 +117,96 @@ export class CustomerService {
       },
     });
 
-    // If customer doesn't exist, create an authentic private client record
     if (!customer) {
-      const rawName = email.split("@")[0] || "client";
-      const nameParts = rawName.replace(/[._-]/g, " ").split(" ");
-      const firstName = nameParts[0]
-        ? nameParts[0].charAt(0).toUpperCase() + nameParts[0].slice(1)
-        : "Private";
-      const lastName = nameParts[1]
-        ? nameParts[1].charAt(0).toUpperCase() + nameParts[1].slice(1)
-        : "Client";
+      throw new ApiError(
+        401,
+        "INVALID_CREDENTIALS",
+        "Invalid email or password. Access denied.",
+      );
+    }
 
-      // New customer standard welcome tier
-      const initialPoints = 100;
+    if (customer.passwordHash) {
+      if (!input.password) {
+        throw new ApiError(
+          400,
+          "PASSWORD_REQUIRED",
+          "Password is required to access your account.",
+        );
+      }
+      const isValid = await bcrypt.compare(input.password, customer.passwordHash);
+      if (!isValid) {
+        throw new ApiError(
+          401,
+          "INVALID_CREDENTIALS",
+          "Invalid email or password. Access denied.",
+        );
+      }
+    } else if (input.password) {
+      // First-time password set for client with existing guest orders
+      const hash = await bcrypt.hash(input.password, 10);
+      await prisma.customer.update({
+        where: { id: customer.id },
+        data: { passwordHash: hash },
+      });
+    }
 
+    const token = this.createToken(customer.id, customer.email);
+    return {
+      customer: await formatClientProfile(customer),
+      addresses: deduplicateAddresses(customer.addresses),
+      token,
+    };
+  }
+
+  static async register(input: CustomerRegisterInput) {
+    const email = input.email.trim().toLowerCase();
+    const parts = (input.name || "Client").trim().split(" ");
+    const firstName = parts[0] || "Client";
+    const lastName = parts.slice(1).join(" ") || "";
+
+    const existing = await prisma.customer.findUnique({
+      where: { email },
+      include: { fragranceProfile: true, addresses: true },
+    });
+
+    let passwordHash: string | null = null;
+    if (input.password) {
+      if (input.password.length < 6) {
+        throw new ApiError(400, "WEAK_PASSWORD", "Password must be at least 6 characters.");
+      }
+      passwordHash = await bcrypt.hash(input.password, 10);
+    }
+
+    let customer;
+    let isNewCustomer = false;
+    if (existing) {
+      if (existing.passwordHash) {
+        throw new ApiError(
+          409,
+          "ACCOUNT_EXISTS",
+          "An account with this email address already exists. Please sign in.",
+        );
+      }
+      customer = await prisma.customer.update({
+        where: { id: existing.id },
+        data: {
+          firstName: existing.firstName || firstName,
+          lastName: existing.lastName || lastName,
+          phone: existing.phone || input.phone || null,
+          passwordHash: passwordHash || existing.passwordHash,
+        },
+        include: { fragranceProfile: true, addresses: true },
+      });
+    } else {
+      isNewCustomer = true;
       customer = await prisma.customer.create({
         data: {
           email,
           firstName,
           lastName,
-          phone: null,
-          isVip: false,
-          loyaltyPoints: initialPoints,
+          phone: input.phone || null,
+          passwordHash,
+          loyaltyPoints: 0,
           fragranceProfile: {
             create: {
               preferredFamilies: [],
@@ -146,66 +217,23 @@ export class CustomerService {
             },
           },
         },
-        include: {
-          fragranceProfile: true,
-          addresses: true,
-        },
+        include: { fragranceProfile: true, addresses: true },
       });
     }
 
-    const token = this.createToken(customer.id, customer.email);
-    return {
-      customer: formatClientProfile(customer),
-      addresses: deduplicateAddresses(customer.addresses),
-      token,
-    };
-  }
-
-  static async register(input: CustomerRegisterInput) {
-    const email = input.email.trim().toLowerCase();
-    const parts = input.name.trim().split(" ");
-    const firstName = parts[0] || "Client";
-    const lastName = parts.slice(1).join(" ") || "";
-
-    let customer = await prisma.customer.findUnique({
-      where: { email },
-      include: { fragranceProfile: true, addresses: true },
-    });
-
-    if (customer) {
-      // Update phone/name if missing
-      customer = await prisma.customer.update({
+    // Award welcome bonus points with ledger transaction if new
+    if (isNewCustomer) {
+      await LoyaltyService.awardWelcomeBonus(customer.id);
+      const refreshed = await prisma.customer.findUnique({
         where: { id: customer.id },
-        data: {
-          firstName: customer.firstName || firstName,
-          lastName: customer.lastName || lastName,
-          phone: customer.phone || input.phone || null,
-        },
         include: { fragranceProfile: true, addresses: true },
       });
-    } else {
-      customer = await prisma.customer.create({
-        data: {
-          email,
-          firstName,
-          lastName,
-          phone: input.phone || null,
-          loyaltyPoints: 100, // Welcome gift of 100 points
-          fragranceProfile: {
-            create: {
-              preferredFamilies: [],
-              favoriteNotes: [],
-              dislikedNotes: [],
-            },
-          },
-        },
-        include: { fragranceProfile: true, addresses: true },
-      });
+      if (refreshed) customer = refreshed;
     }
 
     const token = this.createToken(customer.id, customer.email);
     return {
-      customer: formatClientProfile(customer),
+      customer: await formatClientProfile(customer),
       addresses: deduplicateAddresses(customer.addresses),
       token,
     };
@@ -225,7 +253,7 @@ export class CustomerService {
     }
 
     return {
-      customer: formatClientProfile(customer),
+      customer: await formatClientProfile(customer),
       addresses: deduplicateAddresses(customer.addresses),
     };
   }
@@ -265,7 +293,7 @@ export class CustomerService {
       include: { fragranceProfile: true, addresses: true },
     });
 
-    return formatClientProfile(customer);
+    return await formatClientProfile(customer);
   }
 
   // -------------------------------------------------------------

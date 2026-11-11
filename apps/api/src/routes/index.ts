@@ -392,10 +392,12 @@ router.post("/markets/calculate", async (req, res, next) => {
 
 router.get("/cart", requireGuestSession, async (req, res, next) => {
   try {
-    const cart = await CartService.getOrCreateCart(
-      req.guestSessionId!,
-      req.customerId,
-    );
+    const cart = req.customerId
+      ? await CartService.getOrCreateCart(
+          req.guestSessionId!,
+          req.customerId,
+        )
+      : await CartService.getOrCreateCart(req.guestSessionId!);
     res.setHeader("Cache-Control", "no-store");
     res.json({ success: true, data: cart, meta: { requestId: req.id } });
   } catch (err) {

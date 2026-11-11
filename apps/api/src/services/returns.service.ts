@@ -1,6 +1,7 @@
 import { prisma } from "../prisma";
 import { ApiError } from "../middleware/error-handler";
 import { ReturnCondition, ReturnDisposition, ReturnAction } from "@prisma/client";
+import { LoyaltyService } from "./loyalty.service";
 
 export class ReturnsService {
   /**
@@ -205,6 +206,13 @@ export class ReturnsService {
         items: { include: { orderItem: { include: { variant: { include: { product: true } } } }, inspection: true } },
       },
     });
+
+    // Reverse loyalty points associated with returned order
+    if (updated.orderId) {
+      await LoyaltyService.reverseOrderPoints(updated.orderId, "Return request completed").catch((err) =>
+        console.error("Failed to reverse loyalty points on return completion:", err)
+      );
+    }
 
     if (params.adminUserId) {
       await prisma.auditLog.create({

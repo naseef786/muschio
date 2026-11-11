@@ -32,19 +32,19 @@ const DEFAULT_HERO = {
   overlayLabelAr: "مختارات موسكيو / ٢٠٢٦",
 };
 
-// Default offer / deal banner fallback
+// Default editorial campaign banner fallback (pure brand storytelling, zero unvalidated discount codes)
 const DEFAULT_OFFER_BANNER = {
-  eyebrowEn: "LIMITED PROMOTIONAL OFFER · EXCLUSIVE DEALS",
-  eyebrowAr: "عرض ترويجي حصري · صفقات خاصة",
-  titleEn: "Private Client Reserve | Up to 20% Off",
-  titleAr: "مختارات كبار الشخصيات | خصم حتى ٢٠٪",
-  subtitleEn: "Acquire rare artisanal extraits and pure parfums with complimentary white-glove courier delivery across the GCC.",
-  subtitleAr: "اقتنِ أنقى خلاصات العطور النيش النادرة مع توصيل مبرد مجاني لكافة مدن الخليج العربي.",
-  ctaTextEn: "Explore Privé Deals",
-  ctaTextAr: "استكشف العروض الحصرية",
-  ctaUrl: "/shop?deal=true",
-  overlayLabelEn: "VIP DEAL CODE: MUSCHIO20",
-  overlayLabelAr: "رمز العرض: MUSCHIO20",
+  eyebrowEn: "BESPOKE SERVICE · HAUTE PARFUMERIE",
+  eyebrowAr: "خدمة كبار الشخصيات · العطور الفاخرة",
+  titleEn: "Private Client Reserve & Bespoke Curation",
+  titleAr: "مختارات كبار الشخصيات والاستشارات الخاصة",
+  subtitleEn: "Discover rare artisanal extraits and pure parfums with personalized guidance from our master olfactory curators.",
+  subtitleAr: "اكتشف أنقى خلاصات العطور النيش النادرة بإشراف نخبة من خبراء العطور في الخليج العربي.",
+  ctaTextEn: "Consult Scent Concierge",
+  ctaTextAr: "استشر خبير العطور",
+  ctaUrl: "/contact",
+  overlayLabelEn: "MUSCHIO PRIVÉ",
+  overlayLabelAr: "موسكيو الخاص",
   imageUrl: photo("photo-1592945403244-b3fbafd7f539", 1400),
 };
 

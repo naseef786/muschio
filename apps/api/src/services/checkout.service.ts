@@ -6,6 +6,8 @@ import { CheckoutPayload } from "@muschio/types";
 import { OrderStatus, PaymentMethodType, PaymentStatus, Prisma } from "@prisma/client";
 import { randomUUID } from "node:crypto";
 import { InventoryService } from "./inventory.service";
+import { LoyaltyService } from "./loyalty.service";
+import { PromotionService } from "./promotion.service";
 
 export class CheckoutService {
   static async processCheckout(
@@ -19,6 +21,7 @@ export class CheckoutService {
       currency = "AED",
       customerNotes,
       loyaltyCreditsRedeemed = 0,
+      couponCode,
     } = payload;
 
     const effectiveCustomerId = customerId || payload.customerId;
@@ -28,6 +31,22 @@ export class CheckoutService {
         400,
         "UNSUPPORTED_CURRENCY",
         "Checkout currently supports AED only",
+      );
+    }
+
+    if (loyaltyCreditsRedeemed > 0 && !effectiveCustomerId) {
+      throw new ApiError(
+        401,
+        "UNAUTHORIZED",
+        "Muschio Privilege sign-in is required to redeem loyalty credits",
+      );
+    }
+
+    if (!shippingAddress) {
+      throw new ApiError(
+        400,
+        "INVALID_SHIPPING_ADDRESS",
+        "Shipping address is required for checkout",
       );
     }
 
@@ -132,24 +151,90 @@ export class CheckoutService {
         }
       }
 
-      // Loyalty credit deduction
+      // Loyalty credit deduction (Must be authenticated and verified in DB)
       let discountAmount = new Prisma.Decimal(0);
       if (loyaltyCreditsRedeemed > 0) {
-        const maxApplicableDiscount = Math.min(
+        if (!verifiedCustomerId) {
+          throw new ApiError(
+            401,
+            "UNAUTHORIZED",
+            "Muschio Privilege sign-in is required to redeem loyalty credits",
+          );
+        }
+
+        const customer = await tx.customer.findUnique({
+          where: { id: verifiedCustomerId },
+          select: { loyaltyPoints: true },
+        });
+
+        if (!customer) {
+          throw new ApiError(404, "CUSTOMER_NOT_FOUND", "Customer not found");
+        }
+
+        const config = await LoyaltyService.getProgramConfig();
+        const rate = config.pointsRedemptionRate || 10;
+        const availableCredits = Math.floor(customer.loyaltyPoints / rate);
+        if (availableCredits <= 0) {
+          throw new ApiError(
+            400,
+            "INSUFFICIENT_LOYALTY_POINTS",
+            "No loyalty credits available to redeem",
+          );
+        }
+
+        let maxApplicableDiscount = Math.min(
           loyaltyCreditsRedeemed,
+          availableCredits,
           subtotal.toNumber(),
         );
+
+        if (config.maxRedemptionAedPerOrder) {
+          maxApplicableDiscount = Math.min(maxApplicableDiscount, Number(config.maxRedemptionAedPerOrder));
+        }
+
         discountAmount = new Prisma.Decimal(maxApplicableDiscount);
 
-        if (verifiedCustomerId) {
-          const pointsToDeduct = Math.round(maxApplicableDiscount * 10);
+        const pointsToDeduct = Math.round(maxApplicableDiscount * rate);
+        if (pointsToDeduct > 0) {
+          const newBalance = customer.loyaltyPoints - pointsToDeduct;
           await tx.customer.update({
             where: { id: verifiedCustomerId },
+            data: { loyaltyPoints: newBalance },
+          });
+
+          await tx.loyaltyTransaction.create({
             data: {
-              loyaltyPoints: { decrement: pointsToDeduct },
+              customerId: verifiedCustomerId,
+              type: "REDEEM",
+              points: -pointsToDeduct,
+              balanceAfter: newBalance,
+              orderId: null,
+              reason: "Order checkout redemption",
             },
           });
         }
+      }
+
+      // Centralized Promotion Engine Evaluation
+      const cartItemsForPromo = cart.items.map((it) => ({
+        variantId: it.variantId,
+        productId: it.variant.productId,
+        brandId: (it.variant.product as any).brandId,
+        price: Number(it.variant.price),
+        quantity: it.quantity,
+      }));
+
+      const promoEval = await PromotionService.evaluateCartPromotions(
+        cartItemsForPromo,
+        subtotal.minus(discountAmount).toNumber(),
+        verifiedCustomerId || undefined,
+        couponCode,
+      );
+
+      let appliedPromotionsToRecord: any[] = [];
+      if (promoEval.totalDiscount > 0) {
+        discountAmount = discountAmount.plus(promoEval.totalDiscount);
+        appliedPromotionsToRecord = promoEval.appliedDiscounts;
       }
 
       // Dynamic GCC Country VAT: 15% for Saudi Arabia (ZATCA), 5% for UAE/BH/OM, 0% for KW/QA
@@ -284,6 +369,63 @@ export class CheckoutService {
 
       (order as any).payments = [payment];
 
+      // 3c. Record Promotion & Coupon Redemptions if applied
+      if (appliedPromotionsToRecord && appliedPromotionsToRecord.length > 0) {
+        await PromotionService.recordRedemptions(
+          order.id,
+          verifiedCustomerId || null,
+          appliedPromotionsToRecord,
+          tx,
+        );
+      }
+
+      // 3d. Dynamic Discovery Set Voucher Creation (configurable via Promotion Engine)
+      const hasDiscoverySet = cart.items.some(
+        (item) =>
+          item.variant.product.nameEn.toLowerCase().includes("discovery") ||
+          item.variant.product.nameAr.includes("استكشاف") ||
+          item.variant.product.slug?.toLowerCase().includes("discovery"),
+      );
+
+      if (hasDiscoverySet) {
+        // Query if an active discovery promotion campaign overrides the voucher value
+        const discPromo = await tx.promotion.findFirst({
+          where: {
+            isActive: true,
+            OR: [
+              { nameEn: { contains: "Discovery", mode: "insensitive" } },
+              { descriptionEn: { contains: "Discovery", mode: "insensitive" } },
+            ],
+          },
+        });
+        const discValue = discPromo ? Number(discPromo.value) : 280;
+        const discCode = `MSC-DISC-${randomUUID().slice(0, 8).toUpperCase()}`;
+
+        await tx.voucher.create({
+          data: {
+            code: discCode,
+            discountAmount: new Prisma.Decimal(discValue),
+            currency: "AED",
+            isDiscoveryVoucher: true,
+            expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
+          },
+        });
+
+        await tx.businessEvent.create({
+          data: {
+            eventName: "DISCOVERY_VOUCHER_ISSUED",
+            aggregateType: "Order",
+            aggregateId: order.id,
+            payload: {
+              voucherCode: discCode,
+              discountAmount: discValue,
+              customerEmail: shippingAddress.email,
+              orderNumber,
+            },
+          },
+        });
+      }
+
       // 4. Reserve inventory for 35 minutes
       await InventoryService.reserveInventory(
         {
@@ -295,16 +437,36 @@ export class CheckoutService {
         tx,
       );
 
-      // 5. Award loyalty points to customer (1 point per AED spent)
+      // 5. Award loyalty points to customer (calculated via LoyaltyService & config)
       if (verifiedCustomerId) {
-        const pointsEarned = Math.floor(totalAmount.toNumber());
-        if (pointsEarned > 0) {
-          await tx.customer.update({
+        const config = await LoyaltyService.getProgramConfig();
+        if (config.isEnabled) {
+          const cust = await tx.customer.findUnique({
             where: { id: verifiedCustomerId },
-            data: {
-              loyaltyPoints: { increment: pointsEarned },
-            },
+            select: { loyaltyPoints: true },
           });
+          const tierInfo = await LoyaltyService.calculateTierForCustomer(cust?.loyaltyPoints || 0);
+          const multiplier = tierInfo.earningMultiplier || 1.0;
+          const pointsEarned = Math.floor(totalAmount.toNumber() * Number(config.pointsPerAedSpent) * multiplier);
+
+          if (pointsEarned > 0) {
+            const newBal = (cust?.loyaltyPoints || 0) + pointsEarned;
+            await tx.customer.update({
+              where: { id: verifiedCustomerId },
+              data: { loyaltyPoints: newBal },
+            });
+
+            await tx.loyaltyTransaction.create({
+              data: {
+                customerId: verifiedCustomerId,
+                type: "EARN",
+                points: pointsEarned,
+                balanceAfter: newBal,
+                orderId: order.id,
+                reason: `Acquisition reward (${multiplier}x tier rate)`,
+              },
+            });
+          }
         }
       }
 

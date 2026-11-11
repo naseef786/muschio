@@ -61,24 +61,6 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
       onLoginSuccess(session);
     } catch (err: any) {
       console.error("Admin login error:", err);
-      // Check fallback
-      if (
-        email.trim().toLowerCase() === "superadmin@muschio.luxury" &&
-        password === "MuschioAdmin2026!"
-      ) {
-        const fallbackSession: AdminAuthSession = {
-          token: "muschio_sec_token_" + Date.now(),
-          user: {
-            id: "admin-super-001",
-            email: "superadmin@muschio.luxury",
-            name: "Director of Haute Parfumerie",
-            role: "SUPER_ADMIN",
-          },
-        };
-        persistSession(fallbackSession);
-        onLoginSuccess(fallbackSession);
-        return;
-      }
       setErrorMsg(err.message || "Invalid credentials. Please verify your access authorization.");
     } finally {
       setIsLoading(false);

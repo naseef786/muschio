@@ -82,10 +82,19 @@ export function quoteDelivery(
   if (!enabled) return { enabled: false, currency: "AED", services: [] };
 
   const parsed = z.array(DeliveryRuleSchema).safeParse(rules);
-  const activeRules =
-    parsed.success && parsed.data.length > 0
-      ? parsed.data
-      : DEFAULT_GCC_DELIVERY_RULES;
+  if (!parsed.success) {
+    return { enabled: false, currency: "AED", services: [] };
+  }
+
+  const ids = new Set<string>();
+  for (const rule of parsed.data) {
+    if (ids.has(rule.id)) {
+      return { enabled: false, currency: "AED", services: [] };
+    }
+    ids.add(rule.id);
+  }
+
+  const activeRules = parsed.data;
 
   const subtotalFils = Math.round(input.subtotal * 100);
   const matchedServices = activeRules

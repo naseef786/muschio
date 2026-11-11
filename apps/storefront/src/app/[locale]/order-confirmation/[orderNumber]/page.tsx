@@ -15,7 +15,6 @@ import {
   Truck,
   ShieldCheck,
   RefreshCw,
-  CreditCard,
   ArrowRight,
   Sparkles,
   Copy,
@@ -23,7 +22,6 @@ import {
   Mail,
   MessageSquare,
   Lock,
-  X,
   AlertCircle,
   ExternalLink,
   Printer,
@@ -48,12 +46,6 @@ export default function OrderStatusPage({
   const [copied, setCopied] = useState(false);
   const cart = useCart();
 
-  // In-Place Card Payment Modal State
-  const [showCardModal, setShowCardModal] = useState(false);
-  const [cardNumber, setCardNumber] = useState("");
-  const [cardExp, setCardExp] = useState("");
-  const [cardCvc, setCardCvc] = useState("");
-  const [cardHolder, setCardHolder] = useState("");
   const [processingCard, setProcessingCard] = useState(false);
 
   // Automatic Stripe Checkout Session Verification
@@ -69,7 +61,7 @@ export default function OrderStatusPage({
           try {
             cart.clearCart();
             localStorage.removeItem("muschio_pending_order");
-          } catch {}
+          } catch { }
           setPaymentSuccess(
             c(
               "Payment successfully confirmed via Stripe! Your acquisition is now in Atelier preparation.",
@@ -138,7 +130,7 @@ export default function OrderStatusPage({
     if (orderNumber) {
       try {
         localStorage.setItem("muschio_last_order", orderNumber);
-      } catch {}
+      } catch { }
     }
     void refresh(false);
   }, [orderNumber, refresh]);
@@ -171,73 +163,20 @@ export default function OrderStatusPage({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Direct In-Place Card Payment Execution
-  const handleCardCharge = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!order || processingCard) return;
-    setProcessingCard(true);
-    setPaymentError("");
-
-    try {
-      const result = await muschioApi.chargeCardPayment({
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        cardNumber,
-        cardExp,
-        cardCvc,
-        cardHolder: cardHolder || order.shippingAddress?.fullName || "Cardholder",
-      });
-
-      if (result && result.success && result.order) {
-        setOrder(result.order);
-        setShowCardModal(false);
-        setPaymentSuccess(
-          c(
-            "Payment of AED " +
-              Number(order.totalAmount).toLocaleString() +
-              " successfully captured! Your acquisition is now in Atelier preparation.",
-            "تم تأكيد وسحب مبلغ " +
-              Number(order.totalAmount).toLocaleString() +
-              " درهم بنجاح! طلبك الآن قيد الفحص والتجهيز الملكي.",
-          ),
-        );
-      } else {
-        throw new Error(result?.error || "Card payment could not be authorized");
-      }
-    } catch (err: any) {
-      setPaymentError(
-        err?.message ||
-          c(
-            "Payment could not be completed. Please check your card numbers or try the instant test card.",
-            "تعذر إتمام عملية الدفع. يرجى التحقق من بيانات البطاقة أو استخدام البطاقة الاختبارية.",
-          ),
-      );
-    } finally {
-      setProcessingCard(false);
-    }
-  };
-
-  const fillTestCard = () => {
-    setCardNumber("4242 4242 4242 4242");
-    setCardExp("12/28");
-    setCardCvc("123");
-    setCardHolder(order?.shippingAddress?.fullName || "Private Client");
-  };
-
   useEffect(() => {
     if (!isPaid || !order) return;
     try {
       cart.clearCart();
       localStorage.removeItem("muschio_pending_order");
       localStorage.setItem("muschio_last_order", order.orderNumber);
-    } catch {}
+    } catch { }
   }, [isPaid, order, cart]);
 
   useEffect(() => {
     if (!cancelled || !order) return;
     try {
       localStorage.removeItem("muschio_pending_order");
-    } catch {}
+    } catch { }
   }, [cancelled, order]);
 
   // Dynamic delivery progression step derived directly from order status
@@ -403,13 +342,13 @@ export default function OrderStatusPage({
             <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
               {isPaid
                 ? c(
-                    "We have received your payment and our master perfumers are packaging your flacons for temperature-regulated delivery.",
-                    "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز وفحص عطورك للتوصيل المبرد.",
-                  )
+                  "We have received your payment and our master perfumers are packaging your flacons for temperature-regulated delivery.",
+                  "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز وفحص عطورك للتوصيل المبرد.",
+                )
                 : c(
-                    "We have received your order details and will notify you at every milestone of dispatch.",
-                    "تم تسجيل طلبك بنجاح وسنوافيك بالتحديثات المباشرة عند كل مرحلة.",
-                  )}
+                  "We have received your order details and will notify you at every milestone of dispatch.",
+                  "تم تسجيل طلبك بنجاح وسنوافيك بالتحديثات المباشرة عند كل مرحلة.",
+                )}
             </p>
           </div>
         </div>
@@ -502,22 +441,20 @@ export default function OrderStatusPage({
               return (
                 <div
                   key={step.num}
-                  className={`flex flex-col sm:items-center text-start sm:text-center p-3 sm:p-2 rounded-sm sm:rounded-none border sm:border-0 ${
-                    isCurrent
+                  className={`flex flex-col sm:items-center text-start sm:text-center p-3 sm:p-2 rounded-sm sm:rounded-none border sm:border-0 ${isCurrent
                       ? "border-neutral-950 dark:border-white bg-neutral-50 dark:bg-neutral-900/50"
                       : isCompleted
                         ? "border-neutral-200 dark:border-neutral-800 bg-transparent"
                         : "border-neutral-100 dark:border-neutral-900 opacity-40 bg-transparent"
-                  }`}
+                    }`}
                 >
                   <div
-                    className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-semibold mb-2.5 transition-all ${
-                      isCompleted
+                    className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-semibold mb-2.5 transition-all ${isCompleted
                         ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
                         : isCurrent
                           ? "bg-white text-neutral-950 border-2 border-neutral-950 dark:bg-neutral-900 dark:text-white dark:border-white ring-2 ring-neutral-300 dark:ring-neutral-700"
                           : "bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-500 border border-neutral-200 dark:border-neutral-700"
-                    }`}
+                      }`}
                   >
                     {isCompleted ? "✓" : step.num}
                   </div>
@@ -663,11 +600,11 @@ export default function OrderStatusPage({
                 <div className="font-semibold text-xs text-neutral-900 dark:text-white pt-1">
                   {order.estimatedDelivery
                     ? new Date(order.estimatedDelivery).toLocaleDateString(isAr ? "ar-AE" : "en-GB", {
-                        weekday: "short",
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })
+                      weekday: "short",
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })
                     : c("Next 24–48 Hours", "خلال ٢٤ إلى ٤٨ ساعة")}
                 </div>
                 <div className="text-[10px] text-neutral-400 pt-0.5">
@@ -743,11 +680,10 @@ export default function OrderStatusPage({
               <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
                 <span className="text-neutral-400">{c("Payment Status", "حالة الدفع")}:</span>
                 <span
-                  className={`px-2.5 py-1 text-[11px] font-sans uppercase tracking-wider font-semibold rounded-none border ${
-                    isPaid
+                  className={`px-2.5 py-1 text-[11px] font-sans uppercase tracking-wider font-semibold rounded-none border ${isPaid
                       ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                       : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
-                  }`}
+                    }`}
                 >
                   {isPaid
                     ? c("Captured & Verified", "مؤكد ومسجل")
@@ -788,9 +724,8 @@ export default function OrderStatusPage({
                         <span className="text-neutral-500 font-sans">{c("Card Acquired", "البطاقة المستخدمة")}:</span>
                         <div className="flex items-center gap-1.5 font-mono">
                           {cardBrand && (
-                            <span className={`text-[9px] px-1 py-0.2 rounded text-white font-bold ${
-                              cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : "bg-neutral-700"
-                            }`}>
+                            <span className={`text-[9px] px-1 py-0.2 rounded text-white font-bold ${cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : "bg-neutral-700"
+                              }`}>
                               {cardBrand}
                             </span>
                           )}
@@ -939,151 +874,6 @@ export default function OrderStatusPage({
           <span>↗</span>
         </Link>
       </div>
-
-      {/* Interactive Luxury Card Payment Modal */}
-      {showCardModal && order && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 w-full max-w-md p-6 sm:p-8 rounded-sm space-y-6 shadow-2xl relative">
-            <button
-              type="button"
-              onClick={() => setShowCardModal(false)}
-              className="absolute top-4 end-4 text-neutral-400 hover:text-neutral-900 dark:hover:text-white p-1"
-            >
-              <X size={18} />
-            </button>
-
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
-                {c("SECURE 256-BIT ENCRYPTED ACQUISITION", "إتمام الدفع المشفر والآمن")}
-              </span>
-              <h3 className="font-serif text-xl sm:text-2xl text-neutral-900 dark:text-white">
-                {c("Card Payment Authorization", "تفويض الدفع بالبطاقة")}
-              </h3>
-              <p className="text-xs text-neutral-500">
-                {c("Order Ref: ", "رقم الطلب: ")}
-                <span className="font-mono text-neutral-900 dark:text-white font-semibold">
-                  {order.orderNumber}
-                </span>{" "}
-                ·{" "}
-                <span className="font-semibold text-neutral-900 dark:text-white">
-                  <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
-                </span>
-              </p>
-            </div>
-
-            <form onSubmit={handleCardCharge} className="space-y-4">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
-                  {c("Cardholder Name", "الاسم على البطاقة")}
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={cardHolder}
-                  onChange={(e) => setCardHolder(e.target.value)}
-                  placeholder={c("e.g. Abdullah Al-Falasi", "مثال: عبد الله الفلاسي")}
-                  className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
-                  {c("Card Number", "رقم البطاقة")}
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    required
-                    maxLength={19}
-                    value={cardNumber}
-                    onChange={(e) => setCardNumber(e.target.value)}
-                    placeholder="4242 •••• •••• 4242"
-                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 ps-10 text-xs font-mono tracking-wider text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
-                  />
-                  <CreditCard size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-neutral-400" />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
-                    {c("Expiry (MM/YY)", "تاريخ الانتهاء")}
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={5}
-                    value={cardExp}
-                    onChange={(e) => setCardExp(e.target.value)}
-                    placeholder="12/28"
-                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs font-mono text-center text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white mb-1.5">
-                    {c("CVC / CVV", "رمز الأمان")}
-                  </label>
-                  <input
-                    type="password"
-                    required
-                    maxLength={4}
-                    value={cardCvc}
-                    onChange={(e) => setCardCvc(e.target.value)}
-                    placeholder="•••"
-                    className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 p-2.5 text-xs font-mono text-center text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white transition-colors rounded-sm"
-                  />
-                </div>
-              </div>
-
-              {/* 1-Click Test Card Button */}
-              <div className="pt-1">
-                <button
-                  type="button"
-                  onClick={fillTestCard}
-                  className="w-full text-xs py-2 px-3 border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-100 rounded-sm font-mono flex items-center justify-center gap-1.5 transition-colors"
-                >
-                  <Sparkles size={13} />
-                  <span>{c("1-Click Auto-Fill Test Visa Card", "تعبئة سريعة ببطاقة فيزا تجريبية")}</span>
-                </button>
-              </div>
-
-              {paymentError && (
-                <p className="text-xs text-rose-700 dark:text-rose-300 bg-rose-50 dark:bg-rose-950/30 p-2 rounded-sm border border-rose-200 dark:border-rose-900">
-                  {paymentError}
-                </p>
-              )}
-
-              <div className="pt-2 space-y-2">
-                <button
-                  type="submit"
-                  disabled={processingCard}
-                  className="w-full py-3 px-4 bg-neutral-950 dark:bg-white text-white dark:text-neutral-950 hover:bg-neutral-800 dark:hover:bg-neutral-100 text-xs uppercase tracking-[0.16em] font-medium transition-all flex items-center justify-center gap-2 rounded-sm shadow-sm disabled:opacity-50"
-                >
-                  {processingCard ? (
-                    <>
-                      <RefreshCw size={13} className="animate-spin" />
-                      <span>{c("Authorizing with Bank…", "جارٍ الاتصال بالبنك…")}</span>
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={13} />
-                      <span>
-                        {c("Authorize & Pay ", "سداد فوري ")}
-                        <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
-                      </span>
-                    </>
-                  )}
-                </button>
-
-                <p className="text-[10px] text-center text-neutral-400 flex items-center justify-center gap-1">
-                  <ShieldCheck size={12} className="text-emerald-500" />
-                  <span>{c("PCI-DSS Level 1 Encrypted Payment Clearance", "دفع آمن ومعتمد بمعايير PCI-DSS")}</span>
-                </p>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

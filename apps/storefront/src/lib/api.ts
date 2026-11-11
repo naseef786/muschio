@@ -427,19 +427,6 @@ export const muschioApi = {
       body: JSON.stringify({ sessionId }),
     });
   },
-  async chargeCardPayment(payload: {
-    orderId?: string;
-    orderNumber?: string;
-    cardNumber: string;
-    cardExp: string;
-    cardCvc: string;
-    cardHolder?: string;
-  }): Promise<any | null> {
-    return apiRequest<any>("/payments/card-charge", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-  },
   async getOrderTracking(
     orderNumber: string,
     options?: { email?: string; phone?: string },
@@ -734,5 +721,101 @@ export const muschioApi = {
 
     return `https://res.cloudinary.com/${cloudName}/image/upload/${transforms}/${publicIdOrUrl}`;
   },
+
+  // --- Dynamic Centralized Promotions & Loyalty Engine ---
+  async getActivePromotions(): Promise<any[] | null> {
+    return apiRequest<any[]>("/promotions/active");
+  },
+
+  async quotePromotions(payload: {
+    items: Array<{ productId: string; variantId?: string; quantity: number; price: number; brandId?: string; categoryId?: string }>;
+    couponCode?: string;
+    giftCardCode?: string;
+    customerId?: string;
+    customerEmail?: string;
+  }): Promise<{
+    originalSubtotal: number;
+    subtotal: number;
+    automaticDiscountTotal: number;
+    couponDiscountTotal: number;
+    giftCardDeduction: number;
+    totalDiscount: number;
+    finalTotal: number;
+    appliedPromotions: Array<{ id: string; name: string; discountAmount: number; type: string }>;
+    appliedCoupon?: { code: string; discountAmount: number; type: string } | null;
+    appliedGiftCard?: { code: string; appliedAmount: number; remainingBalance: number } | null;
+    freeShippingQualified: boolean;
+    freeGifts: Array<{ productId: string; title: string; quantity: number }>;
+  } | null> {
+    return apiRequest("/promotions/quote", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+  },
+
+  async verifyVoucher(
+    code: string,
+    cartTotal?: number,
+    customerId?: string,
+  ): Promise<{
+    valid: boolean;
+    code: string;
+    type?: string;
+    discountAmount?: number;
+    discountPercent?: number;
+    minSpend?: number;
+    message?: string;
+    reason?: string;
+  } | null> {
+    const params = new URLSearchParams({ code });
+    if (cartTotal !== undefined) params.append("cartTotal", String(cartTotal));
+    if (customerId) params.append("customerId", customerId);
+    return apiRequest(`/coupons/verify?${params.toString()}`);
+  },
+
+  async verifyGiftCard(code: string): Promise<{
+    valid: boolean;
+    code: string;
+    balance: number;
+    currency: string;
+    status: string;
+    expiresAt?: string | null;
+  } | null> {
+    return apiRequest(`/gift-cards/verify?code=${encodeURIComponent(code)}`);
+  },
+
+  async getLoyaltyTiers(): Promise<{
+    config: any;
+    tiers: Array<{
+      id: string;
+      tier: string;
+      nameEn: string;
+      nameAr: string;
+      thresholdSpend: number;
+      multiplier: number;
+      benefitsEn: string[];
+      benefitsAr: string[];
+    }>;
+  } | null> {
+    return apiRequest("/loyalty/tiers");
+  },
+
+  async getLoyaltyHistory(customerId?: string): Promise<{
+    points: number;
+    tier: string;
+    history: Array<{
+      id: string;
+      type: string;
+      points: number;
+      balanceAfter: number;
+      referenceId?: string;
+      note?: string;
+      createdAt: string;
+    }>;
+  } | null> {
+    const query = customerId ? `?customerId=${encodeURIComponent(customerId)}` : "";
+    return apiRequest(`/loyalty/history${query}`);
+  },
 };
+
 

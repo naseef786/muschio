@@ -45,6 +45,7 @@ import {
   Tag,
   ArrowRight,
   Loader2,
+  Gift,
 } from "lucide-react";
 import {
   BrandItem,
@@ -68,6 +69,7 @@ import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
 import { OrderDetailModal } from "./components/OrderDetailModal";
+import { MarketingPromotionsTab } from "./components/MarketingPromotionsTab";
 
 type AdminTab =
   | "dashboard"
@@ -80,6 +82,7 @@ type AdminTab =
   | "purchasing"
   | "returns"
   | "reviews"
+  | "marketing"
   | "markets"
   | "orders"
   | "enquiries"
@@ -100,6 +103,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
   orders: "Orders & Real-Time Tracking",
   enquiries: "VIP Enquiries & Concierge",
   reviews: "Reviews",
+  marketing: "Promotions & Loyalty",
   markets: "Markets",
   banners: "Banners",
   settings: "Settings",
@@ -119,6 +123,7 @@ const TAB_SUBTITLES: Record<AdminTab, string> = {
   orders: "Live customer orders, real-time cancellations, and dispatch workflow",
   enquiries: "Live concierge consultations, bespoke inquiries, and VIP messages",
   reviews: "Moderate customer product ratings and reviews",
+  marketing: "Automatic promotions, coupons, VIP discovery vouchers, gift cards, and rewards",
   markets: "GCC countries, currencies, and VAT rates",
   banners: "Homepage hero sliders, promos, and announcements",
   settings: "Social media links, contact info, and store settings",
@@ -3013,6 +3018,7 @@ export function App() {
               { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
               { id: "enquiries", label: "Messages & Inquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
               { id: "reviews", label: "Reviews", icon: Star, count: pendingReviewsCount > 0 ? pendingReviewsCount : undefined },
+              { id: "marketing", label: "Promotions & Rewards", icon: Gift },
               { id: "markets", label: "Markets", icon: Globe },
               { id: "banners", label: "Banners", icon: ImageIcon, count: banners.length },
               { id: "settings", label: "Settings", icon: Share2 },
@@ -7268,6 +7274,22 @@ export function App() {
               </button>
             </div>
           </form>
+        )}
+
+        {/* 11.5 MARKETING, PROMOTIONS & LOYALTY REWARDS */}
+        {activeTab === "marketing" && (
+          <MarketingPromotionsTab
+            authHeaders={{
+              ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {}),
+            }}
+            onNotification={(msg, type) => {
+              addToast(
+                type === "error" ? "system" : "order",
+                type === "error" ? "Marketing Alert" : "Marketing Action",
+                msg
+              );
+            }}
+          />
         )}
 
         {/* 12. SECURITY & AUDIT */}

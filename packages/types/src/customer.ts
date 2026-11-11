@@ -96,6 +96,21 @@ export const ClientProfileSchema = z.object({
   lastName: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
   tier: LoyaltyTierSchema.default("PRIVILEGE"),
+  tierNameEn: z.string().optional(),
+  tierNameAr: z.string().optional(),
+  tierMultiplier: z.number().optional(),
+  tierBenefitsEn: z.array(z.string()).optional(),
+  tierBenefitsAr: z.array(z.string()).optional(),
+  nextTier: z
+    .object({
+      tierKey: z.string(),
+      tierNameEn: z.string(),
+      tierNameAr: z.string(),
+      pointsThreshold: z.number(),
+      pointsNeeded: z.number(),
+    })
+    .nullable()
+    .optional(),
   loyaltyPoints: z.number().int().default(0),
   loyaltyCreditsAed: z.number().default(0),
   isVip: z.boolean().default(false),

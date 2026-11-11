@@ -305,6 +305,9 @@ export function Header({
     en: initialSettings?.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
     ar: initialSettings?.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
   });
+  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(
+    initialSettings?.freeShippingThreshold || 500
+  );
 
   useEffect(() => {
     fetch("/api/v1/settings")
@@ -316,6 +319,9 @@ export function Header({
               en: data.data.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
               ar: data.data.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
             });
+          }
+          if (typeof data.data.freeShippingThreshold === "number" && data.data.freeShippingThreshold > 0) {
+            setFreeShippingThreshold(data.data.freeShippingThreshold);
           }
         }
       })
@@ -685,7 +691,7 @@ export function Header({
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
                     <span>{c("Shop All Fragrances", "جميع العطور")}</span>
-                    <ArrowRight size={14} className="opacity-50" />
+                    <ArrowRight size={14} className="opacity-50 rtl:rotate-180" />
                   </Link>
                   <Link
                     href="/shop?brandType=NICHE"
@@ -701,7 +707,7 @@ export function Header({
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
                     <span>{c("Designer Privé", "ديزاينر برايفيت")}</span>
-                    <ArrowRight size={14} className="opacity-50" />
+                    <ArrowRight size={14} className="opacity-50 rtl:rotate-180" />
                   </Link>
                   <Link
                     href="/discover/sets"
@@ -709,7 +715,7 @@ export function Header({
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
                     <span>{c("5 x 2ml Discovery Sets", "مجموعات العينات")}</span>
-                    <ArrowRight size={14} className="opacity-50" />
+                    <ArrowRight size={14} className="opacity-50 rtl:rotate-180" />
                   </Link>
                 </nav>
               </div>
@@ -740,7 +746,7 @@ export function Header({
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
                     <span>{c("The Fragrance Compendium", "دليل وخفايا العطور")}</span>
-                    <ArrowRight size={14} className="opacity-50" />
+                    <ArrowRight size={14} className="opacity-50 rtl:rotate-180" />
                   </Link>
                   <Link
                     href="/journal"
@@ -748,7 +754,7 @@ export function Header({
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
                     <span>{c("Muschio Journal", "مجلة موسكيو")}</span>
-                    <ArrowRight size={14} className="opacity-50" />
+                    <ArrowRight size={14} className="opacity-50 rtl:rotate-180" />
                   </Link>
                   <Link
                     href="/about"
@@ -1123,7 +1129,7 @@ export function Header({
                           )}
                         </div>
                       </div>
-                      <ArrowRight size={14} className="text-luxury-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 transition-all" />
+                      <ArrowRight size={14} className="text-luxury-muted opacity-0 group-hover:opacity-100 group-hover:translate-x-1 rtl:group-hover:-translate-x-1 rtl:rotate-180 transition-all" />
                     </Link>
                   ))}
                 </div>
@@ -1168,21 +1174,23 @@ export function Header({
               <div className="p-3.5 sm:p-4 bg-luxury-surface2 border-b border-luxury-border">
                 <div className="flex items-center justify-between text-xs mb-1.5">
                   <span className="text-luxury-text font-medium text-[11px] sm:text-xs">
-                    {cart.subtotal >= 500
+                    {cart.subtotal >= freeShippingThreshold
                       ? c("Complimentary GCC White-Glove Delivery Unlocked", "الشحن السريع المبرد المجاني مفعل لطلبك")
                       : c(
-                          `Add AED ${Math.max(0, 500 - cart.subtotal)} for Complimentary Delivery`,
-                          `أضف ${Math.max(0, 500 - cart.subtotal)} درهم للحصول على شحن مجاني`,
+                          `Add AED ${Math.max(0, freeShippingThreshold - cart.subtotal)} for Complimentary Delivery`,
+                          `أضف ${Math.max(0, freeShippingThreshold - cart.subtotal)} درهم للحصول على شحن مجاني`,
                         )}
                   </span>
                   <span className="text-[10px] font-mono font-semibold text-accent">
-                    {Math.min(100, Math.round((cart.subtotal / 500) * 100))}%
+                    {Math.min(100, Math.round((cart.subtotal / freeShippingThreshold) * 100))}%
                   </span>
                 </div>
                 <div className="w-full h-1 bg-luxury-border overflow-hidden rounded-full">
                   <div
                     className="h-full bg-accent transition-all duration-300"
-                    style={{ width: `${Math.min(100, Math.round((cart.subtotal / 500) * 100))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.round((cart.subtotal / freeShippingThreshold) * 100))}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -1241,7 +1249,7 @@ export function Header({
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, -1)}
                             aria-label={c("Decrease quantity", "تقليل الكمية")}
-                            className="w-9 h-9 min-w-[36px] min-h-[36px] sm:w-10 sm:h-10 sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
                           >
                             <Minus size={13} />
                           </button>
@@ -1250,13 +1258,13 @@ export function Header({
                             type="button"
                             onClick={() => cart.updateQuantity(item.id, 1)}
                             aria-label={c("Increase quantity", "زيادة الكمية")}
-                            className="w-9 h-9 min-w-[36px] min-h-[36px] sm:w-10 sm:h-10 sm:min-w-[40px] sm:min-h-[40px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
+                            className="w-11 h-11 min-w-[44px] min-h-[44px] flex items-center justify-center border border-luxury-border bg-luxury-surface hover:border-luxury-text hover:bg-luxury-surface2 transition-all active:scale-95"
                           >
                             <Plus size={13} />
                           </button>
                           <button
                             type="button"
-                            className="text-xs text-luxury-muted hover:text-[#d2042d] ms-auto underline p-1.5 transition-colors"
+                            className="text-xs text-luxury-muted hover:text-[#d2042d] ms-auto underline min-h-[44px] px-2 flex items-center transition-colors"
                             onClick={() => cart.removeItem(item.id)}
                           >
                             {c("Remove", "حذف")}
