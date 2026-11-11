@@ -88,11 +88,8 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
   const persistSession = (session: AdminAuthSession) => {
     try {
       const payload = JSON.stringify(session);
-      if (rememberMe) {
-        localStorage.setItem("muschio_admin_auth", payload);
-      } else {
-        sessionStorage.setItem("muschio_admin_auth", payload);
-      }
+      localStorage.setItem("muschio_admin_auth", payload);
+      sessionStorage.setItem("muschio_admin_auth", payload);
     } catch (err) {
       console.warn("Could not save session to storage", err);
     }

@@ -354,7 +354,22 @@ export function App() {
     }
   });
 
+  const authSessionRef = useRef<AdminAuthSession | null>(authSession);
+  const sessionLoginTimeRef = useRef<number>(Date.now());
+
+  useEffect(() => {
+    authSessionRef.current = authSession;
+    if (authSession?.token) {
+      sessionLoginTimeRef.current = Date.now();
+    }
+  }, [authSession]);
+
   const handleUnauthorized = useCallback(() => {
+    // 3-second grace period after logging in: ignore any old in-flight 401s from before session establishment
+    if (Date.now() - sessionLoginTimeRef.current < 3000) {
+      console.log("[Admin Security] Ignoring 401 during initial session establishment grace window.");
+      return;
+    }
     try {
       localStorage.removeItem("muschio_admin_auth");
       sessionStorage.removeItem("muschio_admin_auth");
@@ -363,7 +378,12 @@ export function App() {
   }, []);
 
   const handleLogout = () => {
-    handleUnauthorized();
+    sessionLoginTimeRef.current = 0; // Force immediate logout
+    try {
+      localStorage.removeItem("muschio_admin_auth");
+      sessionStorage.removeItem("muschio_admin_auth");
+    } catch {}
+    setAuthSession(null);
   };
 
   // Intercept any 401 Unauthorized response across the admin dashboard and redirect immediately to login
@@ -375,10 +395,29 @@ export function App() {
       const response = await originalFetch(...args);
       if (response.status === 401) {
         const url = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
-        // Avoid intercepting the login endpoint itself so invalid credentials error can be displayed
-        if (!url.includes("/admin/auth/login") && !url.includes("/admin/login")) {
-          console.warn(`[Admin Security] 401 Unauthorized received from ${url}. Switching immediately to login page.`);
-          handleUnauthorized();
+        // Only inspect authenticated admin routes (never storefront or login endpoints)
+        if (url.includes("/admin/") && !url.includes("/admin/auth/login") && !url.includes("/admin/login")) {
+          const init = args[1] as RequestInit | undefined;
+          let hasAuthHeader = false;
+          if (init?.headers) {
+            if (init.headers instanceof Headers) {
+              hasAuthHeader = init.headers.has("Authorization");
+            } else if (Array.isArray(init.headers)) {
+              hasAuthHeader = init.headers.some(([k]) => k.toLowerCase() === "authorization");
+            } else if (typeof init.headers === "object") {
+              hasAuthHeader = Boolean(
+                (init.headers as any).Authorization ||
+                (init.headers as any).authorization
+              );
+            }
+          } else if (args[0] instanceof Request) {
+            hasAuthHeader = args[0].headers.has("Authorization");
+          }
+
+          if (hasAuthHeader && authSessionRef.current) {
+            console.warn(`[Admin Security] 401 Unauthorized received from ${url}. Switching immediately to login page.`);
+            handleUnauthorized();
+          }
         }
       }
       return response;
@@ -388,28 +427,6 @@ export function App() {
       window.fetch = originalFetch;
     };
   }, [handleUnauthorized]);
-
-  // Proactively verify token validity against Neon DB on initial mount
-  useEffect(() => {
-    if (!authSession?.token) return;
-    let active = true;
-
-    fetch("/api/v1/admin/dashboard", {
-      headers: { Authorization: `Bearer ${authSession.token}` },
-    })
-      .then((res) => {
-        if (!active) return;
-        if (res.status === 401) {
-          console.warn("[Admin Security] Active token rejected with 401. Clearing session.");
-          handleUnauthorized();
-        }
-      })
-      .catch(() => {});
-
-    return () => {
-      active = false;
-    };
-  }, [authSession?.token, handleUnauthorized]);
 
   // 1. PRODUCTS (PRO SEO ENHANCED)
   const [products, setProducts] = usePersistentState<ProductItem[]>("products", []);
@@ -604,9 +621,10 @@ export function App() {
 
   // Sync live products, brands, notes, and collections from Neon PostgreSQL database
   useEffect(() => {
+    if (!authSession?.token) return;
     let active = true;
-    const token = authSession?.token;
-    const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+    const token = authSession.token;
+    const authHeaders: Record<string, string> = { Authorization: `Bearer ${token}` };
 
     Promise.all([
       fetch("/api/v1/admin/products", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
@@ -919,11 +937,12 @@ export function App() {
 
   // Load initial orders and enquiries from live database
   useEffect(() => {
+    if (!authSession?.token) return;
     let active = true;
     const fetchLiveDbData = async () => {
       try {
-        const token = authSession?.token;
-        const authHeaders: Record<string, string> = token ? { Authorization: `Bearer ${token}` } : {};
+        const token = authSession.token;
+        const authHeaders: Record<string, string> = { Authorization: `Bearer ${token}` };
         const [ordersRes, enquiriesRes, bannersRes, sectionsRes, settingsRes, reviewsRes, returnsRes, auditRes] = await Promise.all([
           fetch("/api/v1/admin/orders", { headers: authHeaders }).catch(() => null),
           fetch("/api/v1/admin/enquiries", { headers: authHeaders }).catch(() => null),

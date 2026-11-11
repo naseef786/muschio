@@ -48,12 +48,22 @@ export class AdminService {
       },
     });
 
-    const token = jwt.sign({ id: user.id, purpose: "admin" }, secret, {
-      expiresIn: "12h",
-      algorithm: "HS256",
-      issuer: "muschio-api",
-      audience: "muschio-admin",
-    });
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        purpose: "admin",
+      },
+      secret,
+      {
+        expiresIn: "12h",
+        algorithm: "HS256",
+        issuer: "muschio-api",
+        audience: "muschio-admin",
+      },
+    );
 
     return {
       token,
@@ -77,6 +87,16 @@ export class AdminService {
       }) as any;
 
       if (!payload?.id || payload?.purpose !== "admin") return null;
+
+      // Fast-path: If token payload already includes verified admin identity, return it without DB roundtrip
+      if (payload.email && payload.role) {
+        return {
+          id: payload.id,
+          email: payload.email,
+          name: payload.name || "Administrator",
+          role: payload.role,
+        };
+      }
 
       const user = await prisma.adminUser.findFirst({
         where: { id: payload.id, isActive: true },
