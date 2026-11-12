@@ -74,12 +74,17 @@ describe("Stripe payment boundary", () => {
     ).rejects.toMatchObject({ code: "INVALID_SIGNATURE" });
     expect(db.transaction).not.toHaveBeenCalled();
   });
-  it("disables unconfigured providers, COD, and fake automatic card captures", () => {
-    expect(PaymentService.availableMethods()).toEqual(["CREDIT_CARD"]);
-    expect(() => PaymentService.assertAvailable("CASH_ON_DELIVERY")).toThrow();
+  it("allows configured Stripe methods and explicit COD, while rejecting BNPL", () => {
+    expect(PaymentService.availableMethods()).toEqual([
+      "CREDIT_CARD",
+      "APPLE_PAY",
+      "GOOGLE_PAY",
+      "CASH_ON_DELIVERY",
+    ]);
+    expect(() => PaymentService.assertAvailable("CASH_ON_DELIVERY")).not.toThrow();
     expect(() => PaymentService.assertAvailable("TABBY")).toThrow();
     vi.stubEnv("PAYMENTS_ENABLED", "false");
-    expect(PaymentService.availableMethods()).toEqual([]);
+    expect(PaymentService.availableMethods()).toEqual(["CASH_ON_DELIVERY"]);
   });
   it("rejects captured amount tampering before payment or inventory updates", async () => {
     const tx = {

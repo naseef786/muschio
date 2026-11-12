@@ -225,6 +225,12 @@ enum LoyaltyTxType {
   EXPIRE
 }
 
+enum LoyaltyReservationStatus {
+  HELD
+  COMMITTED
+  RELEASED
+}
+
 // -------------------------------------------------------------
 // 1. RICH CATALOG & TAXONOMY ENTITIES
 // -------------------------------------------------------------
@@ -769,6 +775,7 @@ model Customer {
   recentlyViewed   RecentlyViewed[]
   coupons          Coupon[]
   loyaltyTransactions LoyaltyTransaction[]
+  loyaltyReservations LoyaltyReservation[]
   createdAt        DateTime          @default(now())
   updatedAt        DateTime          @updatedAt
 
@@ -909,6 +916,7 @@ model Order {
   payments          Payment[]
   fulfillments      Fulfillment[]
   returnRequests    ReturnRequest[]
+  loyaltyReservation LoyaltyReservation?
   market            Market?         @relation(fields: [marketId], references: [id], onDelete: SetNull)
   customer          Customer?       @relation(fields: [customerId], references: [id], onDelete: SetNull)
   customerNotes     String?         @db.Text
@@ -1331,6 +1339,22 @@ model LoyaltyTransaction {
 
   @@index([customerId, createdAt])
   @@index([orderId])
+}
+
+model LoyaltyReservation {
+  id          String                   @id @default(uuid())
+  customerId  String
+  orderId     String                   @unique
+  points      Int
+  status      LoyaltyReservationStatus @default(HELD)
+  expiresAt   DateTime
+  customer    Customer                 @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  order       Order                    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  createdAt   DateTime                 @default(now())
+  updatedAt   DateTime                 @updatedAt
+
+  @@index([customerId, status])
+  @@index([expiresAt, status])
 }
 
 model BusinessEvent {

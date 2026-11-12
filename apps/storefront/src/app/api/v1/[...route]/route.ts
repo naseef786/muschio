@@ -582,9 +582,18 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
         };
       };
 
+      const safePayments = admin
+        ? order.payments
+        : order.payments.map((payment) => ({
+            provider: payment.provider,
+            status: payment.status,
+            amount: Number(payment.amount),
+            currency: payment.currency,
+          }));
+
       return success({
         ...base,
-        payments: order.payments,
+        payments: safePayments,
         paymentDetails: base.paymentDetails,
         paymentMethod: base.paymentMethod,
         items: order.items.map((item: any) => ({
@@ -600,7 +609,7 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
           slug: item.variant?.product?.slug || null,
         })),
         shippingAddress: maskAddress(order.shippingAddress),
-        customerName: order.shippingAddress?.fullName || order.customer?.firstName || "Client",
+        customerName: admin ? (order.shippingAddress?.fullName || order.customer?.firstName || "Client") : "Private Client",
         customerEmail: admin ? (order.guestEmail || order.customer?.email || null) : undefined,
         customerPhone: maskPhone(order.shippingAddress?.phone || order.customer?.phone || null),
         trackingNumber,
@@ -1150,7 +1159,28 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
     // 7. Checkout Process
     if (path === "checkout") {
+      const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey : null;
+      let ownsIdempotencyKey = false;
       try {
+        if (idempotencyKey) {
+          const existing = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
+          if (existing) {
+            const prior = existing.response as { orderId?: string; status?: string };
+            if (prior.orderId) {
+              const priorOrder = await CheckoutService.getOrderById(prior.orderId);
+              if (priorOrder) return success(storefrontOrder(priorOrder), 200);
+            }
+            return error("CHECKOUT_IN_PROGRESS", "This checkout is already being processed. Please wait for its status to update.", 409);
+          }
+          await prisma.idempotencyKey.create({
+            data: {
+              key: idempotencyKey,
+              response: { status: "PROCESSING" },
+              expiresAt: new Date(Date.now() + 30 * 60 * 1000),
+            },
+          });
+          ownsIdempotencyKey = true;
+        }
         const { customerId, guestSessionId } = getAuth(req);
         const session = guestSessionId || body.guestSessionId || "guest";
         const customer = customerId;
@@ -1195,8 +1225,26 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
           }
         }
 
+        if (idempotencyKey) {
+          await prisma.idempotencyKey.update({
+            where: { key: idempotencyKey },
+            data: { response: { orderId: order.id, orderNumber: order.orderNumber } },
+          });
+        }
         return success(storefrontOrder(orderToLog), 201);
       } catch (err: any) {
+        if (idempotencyKey && err?.code === "P2002") {
+          const existing = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
+          const prior = existing?.response as { orderId?: string } | undefined;
+          if (prior?.orderId) {
+            const priorOrder = await CheckoutService.getOrderById(prior.orderId);
+            if (priorOrder) return success(storefrontOrder(priorOrder), 200);
+          }
+          return error("CHECKOUT_IN_PROGRESS", "This checkout is already being processed. Please wait for its status to update.", 409);
+        }
+        if (idempotencyKey && ownsIdempotencyKey) {
+          await prisma.idempotencyKey.delete({ where: { key: idempotencyKey } }).catch(() => null);
+        }
         return error(
           err?.code || "CHECKOUT_FAILED",
           err?.message || "Checkout failed",
@@ -2198,24 +2246,11 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       if (["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(status)) {
         const hasCaptured = order.payments.some((p) => p.status === "CAPTURED");
         if (!hasCaptured) {
-          const firstPayment = order.payments[0];
-          if (firstPayment) {
-            await prisma.payment.update({
-              where: { id: firstPayment.id },
-              data: { status: "CAPTURED" },
-            });
-          } else {
-            await prisma.payment.create({
-              data: {
-                orderId: order.id,
-                provider: "CREDIT_CARD",
-                status: "CAPTURED",
-                amount: order.totalAmount,
-                currency: order.currency,
-                gatewayReference: `settled_${Date.now()}`,
-              },
-            });
-          }
+          return error(
+            "PAYMENT_REQUIRED",
+            "This order cannot advance until the payment provider confirms capture.",
+            409,
+          );
         }
         await InventoryService.commitOrderInventory(order.id).catch(() => null);
       }
@@ -2223,6 +2258,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       // When cancelling, release reserved stock and update payment record
       if (status === "CANCELLED") {
         await InventoryService.releaseOrderReservations(order.id).catch(() => null);
+        await LoyaltyService.refundOrderRedemption(order.id).catch(() => null);
         const primaryPayment = order.payments[0];
         if (primaryPayment) {
           const nextPaymentStatus = primaryPayment.status === "CAPTURED" ? "REFUNDED" : "CANCELLED";
@@ -2322,12 +2358,18 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         }).catch((e) => console.warn("WhatsApp delivery error:", e));
       }
 
+      if (status === "DELIVERED") {
+        await LoyaltyService.awardOrderPoints(updatedOrder.id).catch((err) =>
+          console.error("Failed to award delivery loyalty points:", err),
+        );
+      }
+
       return success({ success: true, order: updatedOrder });
     }
 
     // 17. Customer Order Cancellation
     if (path === "orders/cancel") {
-      const { orderNumber, reason } = body || {};
+      const { orderNumber, reason, email, phone } = body || {};
       if (!orderNumber) return error("INVALID_INPUT", "Order number is required", 400);
 
       const order = await prisma.order.findUnique({
@@ -2336,6 +2378,20 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       });
 
       if (!order) return error("NOT_FOUND", "Order not found", 404);
+
+      const auth = getAuth(req);
+      const normalizedEmail = String(email || "").trim().toLowerCase();
+      const normalizedPhone = String(phone || "").replace(/[^0-9]/g, "");
+      const orderEmail = String(order.guestEmail || order.customer?.email || "").trim().toLowerCase();
+      const orderPhone = String(order.shippingAddress?.phone || order.customer?.phone || "").replace(/[^0-9]/g, "");
+      const ownsOrder = Boolean(
+        auth.customerId && order.customerId === auth.customerId,
+      ) || Boolean(
+        !order.customerId &&
+        ((normalizedEmail && normalizedEmail === orderEmail) ||
+          (normalizedPhone && (orderPhone.endsWith(normalizedPhone) || normalizedPhone.endsWith(orderPhone)))),
+      );
+      if (!ownsOrder) return error("NOT_FOUND", "Order not found", 404);
 
       if (order.status !== "PENDING" && order.status !== "PAYMENT_PENDING") {
         return error(
@@ -2353,6 +2409,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
       // Release inventory hold
       await InventoryService.releaseOrderReservations(order.id).catch(() => null);
+      await LoyaltyService.refundOrderRedemption(order.id).catch(() => null);
 
       // Cancel payment if pending
       if (order.payments && order.payments[0]) {

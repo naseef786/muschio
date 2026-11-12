@@ -246,6 +246,162 @@ export class LoyaltyService {
   }
 
   /**
+   * A checkout hold is deliberately separate from the ledger. The points are
+   * not deducted until payment is verified, which keeps abandoned Stripe
+   * sessions from consuming customer credit.
+   */
+  static async commitOrderRedemption(orderId: string, tx?: Prisma.TransactionClient) {
+    const run = async (client: Prisma.TransactionClient) => {
+      if (!client.loyaltyReservation) return null;
+      const reservation = await client.loyaltyReservation.findUnique({
+        where: { orderId },
+      });
+      if (!reservation || reservation.status === "COMMITTED") return reservation;
+      if (reservation.status === "RELEASED") {
+        throw new ApiError(409, "LOYALTY_RESERVATION_RELEASED", "The loyalty redemption is no longer valid");
+      }
+
+      await client.$queryRaw`SELECT id FROM "Customer" WHERE id = ${reservation.customerId} FOR UPDATE`;
+      const customer = await client.customer.findUnique({
+        where: { id: reservation.customerId },
+        select: { id: true, loyaltyPoints: true },
+      });
+      if (!customer || customer.loyaltyPoints < reservation.points) {
+        throw new ApiError(409, "INSUFFICIENT_LOYALTY_POINTS", "The customer's loyalty balance changed before payment completed");
+      }
+
+      const newBalance = customer.loyaltyPoints - reservation.points;
+      await client.customer.update({
+        where: { id: customer.id },
+        data: { loyaltyPoints: newBalance },
+      });
+      await client.loyaltyTransaction.create({
+        data: {
+          customerId: customer.id,
+          type: "REDEEM",
+          points: -reservation.points,
+          balanceAfter: newBalance,
+          orderId,
+          reason: "Verified checkout loyalty redemption",
+        },
+      });
+      return client.loyaltyReservation.update({
+        where: { id: reservation.id },
+        data: { status: "COMMITTED" },
+      });
+    };
+
+    return tx ? run(tx) : prisma.$transaction(run);
+  }
+
+  /** Release an uncommitted hold after payment failure, expiry, or cancellation. */
+  static async releaseOrderRedemption(orderId: string, tx?: Prisma.TransactionClient) {
+    const run = async (client: Prisma.TransactionClient) => {
+      if (!client.loyaltyReservation) return null;
+      const reservation = await client.loyaltyReservation.findUnique({ where: { orderId } });
+      if (!reservation || reservation.status !== "HELD") return reservation;
+      return client.loyaltyReservation.update({
+        where: { id: reservation.id },
+        data: { status: "RELEASED" },
+      });
+    };
+
+    return tx ? run(tx) : prisma.$transaction(run);
+  }
+
+  /** Refund a committed redemption, or release an outstanding hold. */
+  static async refundOrderRedemption(orderId: string, tx?: Prisma.TransactionClient) {
+    const run = async (client: Prisma.TransactionClient) => {
+      if (!client.loyaltyReservation) return null;
+      const reservation = await client.loyaltyReservation.findUnique({ where: { orderId } });
+      if (!reservation || reservation.status === "RELEASED") return reservation;
+      if (reservation.status === "HELD") {
+        return client.loyaltyReservation.update({ where: { id: reservation.id }, data: { status: "RELEASED" } });
+      }
+
+      const priorRefund = await client.loyaltyTransaction.findFirst({
+        where: { orderId, type: "REFUND", points: reservation.points },
+      });
+      if (priorRefund) {
+        return client.loyaltyReservation.update({ where: { id: reservation.id }, data: { status: "RELEASED" } });
+      }
+
+      await client.$queryRaw`SELECT id FROM "Customer" WHERE id = ${reservation.customerId} FOR UPDATE`;
+      const customer = await client.customer.findUnique({
+        where: { id: reservation.customerId },
+        select: { id: true, loyaltyPoints: true },
+      });
+      if (!customer) throw new ApiError(404, "CUSTOMER_NOT_FOUND", "Customer not found");
+      const newBalance = customer.loyaltyPoints + reservation.points;
+      await client.customer.update({ where: { id: customer.id }, data: { loyaltyPoints: newBalance } });
+      await client.loyaltyTransaction.create({
+        data: {
+          customerId: customer.id,
+          type: "REFUND",
+          points: reservation.points,
+          balanceAfter: newBalance,
+          orderId,
+          reason: "Restored redeemed points after order cancellation/refund",
+        },
+      });
+      return client.loyaltyReservation.update({ where: { id: reservation.id }, data: { status: "RELEASED" } });
+    };
+
+    return tx ? run(tx) : prisma.$transaction(run);
+  }
+
+  static async releaseExpiredReservations(tx: Prisma.TransactionClient) {
+    if (!tx.loyaltyReservation) return;
+    await tx.loyaltyReservation.updateMany({
+      where: { status: "HELD", expiresAt: { lte: new Date() } },
+      data: { status: "RELEASED" },
+    });
+  }
+
+  /** Award purchase points exactly once, after the order reaches a paid state. */
+  static async awardOrderPoints(orderId: string, tx?: Prisma.TransactionClient) {
+    const run = async (client: Prisma.TransactionClient) => {
+      if (!client.order?.findUnique || !client.loyaltyTransaction?.findFirst) return null;
+      const order = await client.order.findUnique({
+        where: { id: orderId },
+        select: { id: true, customerId: true, totalAmount: true, status: true },
+      });
+      if (!order?.customerId) return null;
+      const config = await this.getProgramConfig();
+      if (!config.isEnabled || !config.awardOnPaymentCapture || !["PAID", "DELIVERED"].includes(order.status)) return null;
+
+      const existing = await client.loyaltyTransaction.findFirst({
+        where: { orderId, type: "EARN" },
+      });
+      if (existing) return existing;
+
+      await client.$queryRaw`SELECT id FROM "Customer" WHERE id = ${order.customerId} FOR UPDATE`;
+      const customer = await client.customer.findUnique({
+        where: { id: order.customerId },
+        select: { id: true, loyaltyPoints: true },
+      });
+      if (!customer) return null;
+      const tier = await this.calculateTierForCustomer(customer.loyaltyPoints);
+      const points = Math.floor(Number(order.totalAmount) * Number(config.pointsPerAedSpent) * tier.earningMultiplier);
+      if (points <= 0) return null;
+      const newBalance = customer.loyaltyPoints + points;
+      await client.customer.update({ where: { id: customer.id }, data: { loyaltyPoints: newBalance } });
+      return client.loyaltyTransaction.create({
+        data: {
+          customerId: customer.id,
+          type: "EARN",
+          points,
+          balanceAfter: newBalance,
+          orderId,
+          reason: `Verified payment reward (${tier.earningMultiplier}x tier rate)`,
+        },
+      });
+    };
+
+    return tx ? run(tx) : prisma.$transaction(run);
+  }
+
+  /**
    * Reverse points when an order is cancelled or refunded
    */
   static async reverseOrderPoints(orderId: string, reason = "Order cancelled / refunded") {

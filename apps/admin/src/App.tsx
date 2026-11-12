@@ -7046,7 +7046,7 @@ export function App() {
                       rel="noreferrer"
                       className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
                     >
-                      <span>Test Profile</span>
+                      <span>Open profile</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
@@ -7083,7 +7083,7 @@ export function App() {
                       rel="noreferrer"
                       className="text-emerald-400 hover:underline flex items-center gap-1 font-mono text-[10px]"
                     >
-                      <span>Test Chat Link</span>
+                      <span>Open chat</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
@@ -7126,7 +7126,7 @@ export function App() {
                       rel="noreferrer"
                       className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
                     >
-                      <span>Test</span>
+                      <span>Open channel</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
@@ -7160,7 +7160,7 @@ export function App() {
                       rel="noreferrer"
                       className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
                     >
-                      <span>Test</span>
+                      <span>Open profile</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
@@ -7194,7 +7194,7 @@ export function App() {
                       rel="noreferrer"
                       className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
                     >
-                      <span>Test</span>
+                      <span>Open channel</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>

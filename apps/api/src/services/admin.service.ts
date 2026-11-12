@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { ApiError } from "../middleware/error-handler";
 import { signingSecret } from "../middleware/storefront-auth";
 import { InventoryService } from "./inventory.service";
+import { LoyaltyService } from "./loyalty.service";
 
 export class AdminService {
   static async login(
@@ -189,8 +190,13 @@ export class AdminService {
         data: { status },
       });
 
-      if (status === "CANCELLED")
+      if (status === "CANCELLED") {
         await InventoryService.releaseOrderReservations(orderId, tx);
+        await LoyaltyService.refundOrderRedemption(orderId, tx);
+      }
+      if (status === "DELIVERED") {
+        await LoyaltyService.awardOrderPoints(orderId, tx);
+      }
       await tx.auditLog.create({
         data: {
           adminUserId,

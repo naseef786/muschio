@@ -386,7 +386,7 @@ export function ProductCard({
                 type="button"
                 onClick={prevImage}
                 aria-label={isAr ? "الصورة السابقة" : "Previous image"}
-                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
               >
                 <ChevronLeft size={16} strokeWidth={1.5} />
               </button>
@@ -397,7 +397,7 @@ export function ProductCard({
                 type="button"
                 onClick={nextImage}
                 aria-label={isAr ? "الصورة التالية" : "Next image"}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 z-20 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-white/90 dark:bg-black/90 backdrop-blur-md text-neutral-800 dark:text-neutral-200 border border-neutral-200/60 dark:border-neutral-700/60 shadow-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200 hover:scale-105 active:scale-95 hover:bg-white dark:hover:bg-black hover:text-black dark:hover:text-white"
               >
                 <ChevronRight size={16} strokeWidth={1.5} />
               </button>

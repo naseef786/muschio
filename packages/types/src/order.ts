@@ -79,6 +79,7 @@ export const CheckoutPayloadSchema = z.object({
   customerId: z.string().optional(),
   saveAddressToProfile: z.boolean().optional(),
   loyaltyCreditsRedeemed: z.number().nonnegative().optional(),
+  idempotencyKey: z.string().uuid().optional(),
 });
 export type CheckoutPayload = z.infer<typeof CheckoutPayloadSchema>;
 

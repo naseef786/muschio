@@ -125,7 +125,7 @@ export default function WishlistPage({
                 </div>
                 <button
                   onClick={() => removeItem(item.slug)}
-                  className="absolute top-2.5 end-2.5 right-2.5 rtl:right-auto rtl:left-2.5 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-luxury-surface/90 backdrop-blur-md border border-luxury-border text-luxury-muted hover:text-rose-500 flex items-center justify-center transition-all duration-200 active:scale-90 shadow-sm"
+                      className="absolute top-2.5 end-2.5 right-2.5 rtl:right-auto rtl:left-2.5 w-11 h-11 min-w-[44px] min-h-[44px] rounded-full bg-luxury-surface/90 backdrop-blur-md border border-luxury-border text-luxury-muted hover:text-rose-500 flex items-center justify-center transition-all duration-200 active:scale-90 shadow-sm"
                   aria-label={isAr ? "إزالة من المفضلة" : "Remove item"}
                   title={isAr ? "إزالة من المفضلة" : "Remove from Private Vault"}
                 >

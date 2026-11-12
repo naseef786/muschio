@@ -153,7 +153,7 @@ export type CreateSavedAddress = z.infer<typeof CreateSavedAddressSchema>;
 
 export const CustomerLoginSchema = z.object({
   email: z.string().email(),
-  password: z.string().optional(),
+  password: z.string().min(8),
 });
 export type CustomerLoginInput = z.infer<typeof CustomerLoginSchema>;
 
@@ -161,7 +161,7 @@ export const CustomerRegisterSchema = z.object({
   email: z.string().email(),
   name: z.string().min(2),
   phone: z.string().optional(),
-  password: z.string().optional(),
+  password: z.string().min(8).regex(/[A-Z]/, "Password must include an uppercase letter").regex(/[0-9]/, "Password must include a number"),
 });
 export type CustomerRegisterInput = z.infer<typeof CustomerRegisterSchema>;
 

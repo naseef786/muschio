@@ -9,6 +9,7 @@ import {
 import { prisma } from "../prisma";
 import { ApiError } from "../middleware/error-handler";
 import { InventoryService } from "./inventory.service";
+import { LoyaltyService } from "./loyalty.service";
 
 const SessionSchema = z.object({
   id: z.string().startsWith("cs_"),
@@ -121,7 +122,9 @@ function redirectFor(session: z.infer<typeof SessionSchema>) {
 }
 export class PaymentService {
   static availableMethods(): PaymentMethodType[] {
-    return configured() ? ["CREDIT_CARD"] : [];
+    return configured()
+      ? ["CREDIT_CARD", "APPLE_PAY", "GOOGLE_PAY", "CASH_ON_DELIVERY"]
+      : ["CASH_ON_DELIVERY"];
   }
   static assertAvailable(method: PaymentMethodType) {
     if (!this.availableMethods().includes(method))
@@ -241,7 +244,7 @@ export class PaymentService {
       let payment = await tx.payment.findFirst({
         where: {
           orderId: order.id,
-          provider: "CREDIT_CARD",
+          provider: { in: ["CREDIT_CARD", "APPLE_PAY", "GOOGLE_PAY"] },
           status: {
             in: [PaymentStatus.INITIATED, PaymentStatus.REQUIRES_ACTION],
           },
@@ -294,7 +297,7 @@ export class PaymentService {
       );
       await prisma.payment.update({
         where: { id: payment.id },
-        data: { gatewayReference: session.id, status: "REQUIRES_ACTION" },
+        data: { provider: "CREDIT_CARD", gatewayReference: session.id, status: "REQUIRES_ACTION" },
       });
       await prisma.order.updateMany({
         where: { id: order.id, status: "PENDING" },
@@ -366,6 +369,19 @@ export class PaymentService {
         throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
       }
 
+      const payment = order.payments.find(
+        (candidate) => candidate.gatewayReference === sessionId,
+      );
+      if (!payment || payment.provider !== "CREDIT_CARD") {
+        throw new ApiError(400, "PAYMENT_REFERENCE_MISMATCH", "This Stripe session is not associated with the order");
+      }
+      if (
+        sessionData.currency?.toUpperCase() !== payment.currency ||
+        !payment.amount.times(100).equals(new Prisma.Decimal(sessionData.amount_total ?? -1))
+      ) {
+        throw new ApiError(400, "AMOUNT_MISMATCH", "Captured amount does not match the order");
+      }
+
       if (sessionData.payment_status === "paid") {
         let isNewlyPaid = false;
         if (order.status !== "PAID") {
@@ -376,32 +392,15 @@ export class PaymentService {
             data: { status: "PAID" },
           });
 
-          const existingPayment = await tx.payment.findFirst({
-            where: { orderId: order.id },
-            orderBy: { createdAt: "desc" },
+          const paymentRecord = await tx.payment.update({
+            where: { id: payment.id },
+            data: {
+              status: "CAPTURED",
+              // Keep the Checkout Session ID as the stable reconciliation key.
+              // The PaymentIntent ID is stored in the payment event dossier.
+              gatewayReference: sessionId,
+            },
           });
-
-          let paymentRecord = existingPayment;
-          if (existingPayment) {
-            paymentRecord = await tx.payment.update({
-              where: { id: existingPayment.id },
-              data: {
-                status: "CAPTURED",
-                gatewayReference: transactionId,
-              },
-            });
-          } else {
-            paymentRecord = await tx.payment.create({
-              data: {
-                orderId: order.id,
-                provider: "CREDIT_CARD",
-                status: "CAPTURED",
-                amount: order.totalAmount,
-                currency: order.currency,
-                gatewayReference: transactionId,
-              },
-            });
-          }
 
           // Persist granular payment event dossier
           await tx.paymentEvent.create({
@@ -442,6 +441,8 @@ export class PaymentService {
               },
             },
           });
+          await LoyaltyService.commitOrderRedemption(order.id, tx);
+          await LoyaltyService.awardOrderPoints(order.id, tx);
         }
 
         const freshOrder = await tx.order.findUnique({
@@ -459,6 +460,19 @@ export class PaymentService {
           isNewlyPaid,
           order: freshOrder,
         };
+      }
+
+      if (sessionData.status === "expired" && payment.status !== "CANCELLED") {
+        await tx.payment.update({
+          where: { id: payment.id },
+          data: { status: "CANCELLED" },
+        });
+        await tx.order.updateMany({
+          where: { id: order.id, status: { in: ["PENDING", "PAYMENT_PENDING"] } },
+          data: { status: "CANCELLED" },
+        });
+        await InventoryService.releaseOrderReservations(order.id, tx);
+        await LoyaltyService.releaseOrderRedemption(order.id, tx);
       }
 
       return {
@@ -551,9 +565,12 @@ export class PaymentService {
             where: { id: payment.orderId },
             data: { status: "PAID" },
           });
+          await LoyaltyService.commitOrderRedemption(payment.orderId, tx);
+          await LoyaltyService.awardOrderPoints(payment.orderId, tx);
         }
       } else if (payment.status !== "CAPTURED") {
         await InventoryService.releaseOrderReservations(payment.orderId, tx);
+        await LoyaltyService.releaseOrderRedemption(payment.orderId, tx);
         await tx.payment.update({
           where: { id: payment.id },
           data: { status: "CANCELLED" },

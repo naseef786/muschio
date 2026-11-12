@@ -24,7 +24,9 @@ export class CheckoutService {
       couponCode,
     } = payload;
 
-    const effectiveCustomerId = customerId || payload.customerId;
+    // The authenticated identity is authoritative. Never trust a customerId
+    // supplied by a guest request body.
+    const effectiveCustomerId = customerId;
 
     if (currency !== "AED") {
       throw new ApiError(
@@ -59,6 +61,7 @@ export class CheckoutService {
     }
 
     return prisma.$transaction(async (tx) => {
+      await LoyaltyService.releaseExpiredReservations(tx);
       // 0. Verify and sanitize customer ID (never accept guest-* session as a database foreign key)
       let verifiedCustomerId: string | null = null;
       if (effectiveCustomerId && !effectiveCustomerId.startsWith("guest-")) {
@@ -151,8 +154,11 @@ export class CheckoutService {
         }
       }
 
-      // Loyalty credit deduction (Must be authenticated and verified in DB)
+      // Loyalty redemption is held against the order and only deducted after
+      // verified payment. Active holds are included to prevent concurrent
+      // checkouts from spending the same balance twice.
       let discountAmount = new Prisma.Decimal(0);
+      let loyaltyReservationPoints = 0;
       if (loyaltyCreditsRedeemed > 0) {
         if (!verifiedCustomerId) {
           throw new ApiError(
@@ -162,6 +168,7 @@ export class CheckoutService {
           );
         }
 
+        await tx.$queryRaw`SELECT id FROM "Customer" WHERE id = ${verifiedCustomerId} FOR UPDATE`;
         const customer = await tx.customer.findUnique({
           where: { id: verifiedCustomerId },
           select: { loyaltyPoints: true },
@@ -172,8 +179,20 @@ export class CheckoutService {
         }
 
         const config = await LoyaltyService.getProgramConfig();
-        const rate = config.pointsRedemptionRate || 10;
-        const availableCredits = Math.floor(customer.loyaltyPoints / rate);
+        if (!config.isEnabled) {
+          throw new ApiError(409, "LOYALTY_DISABLED", "Loyalty redemption is currently unavailable");
+        }
+        const rate = Math.max(1, config.pointsRedemptionRate || 10);
+        const activeHolds = await tx.loyaltyReservation.aggregate({
+          where: {
+            customerId: verifiedCustomerId,
+            status: "HELD",
+            expiresAt: { gt: new Date() },
+          },
+          _sum: { points: true },
+        });
+        const heldPoints = activeHolds._sum.points || 0;
+        const availableCredits = Math.floor(Math.max(0, customer.loyaltyPoints - heldPoints) / rate);
         if (availableCredits <= 0) {
           throw new ApiError(
             400,
@@ -192,27 +211,13 @@ export class CheckoutService {
           maxApplicableDiscount = Math.min(maxApplicableDiscount, Number(config.maxRedemptionAedPerOrder));
         }
 
-        discountAmount = new Prisma.Decimal(maxApplicableDiscount);
-
-        const pointsToDeduct = Math.round(maxApplicableDiscount * rate);
-        if (pointsToDeduct > 0) {
-          const newBalance = customer.loyaltyPoints - pointsToDeduct;
-          await tx.customer.update({
-            where: { id: verifiedCustomerId },
-            data: { loyaltyPoints: newBalance },
-          });
-
-          await tx.loyaltyTransaction.create({
-            data: {
-              customerId: verifiedCustomerId,
-              type: "REDEEM",
-              points: -pointsToDeduct,
-              balanceAfter: newBalance,
-              orderId: null,
-              reason: "Order checkout redemption",
-            },
-          });
+        loyaltyReservationPoints = Math.floor(maxApplicableDiscount * rate);
+        if (loyaltyReservationPoints < Math.max(1, config.minRedemptionPoints || 0)) {
+          throw new ApiError(400, "MINIMUM_LOYALTY_REDEMPTION", "The requested loyalty redemption is below the configured minimum");
         }
+        discountAmount = new Prisma.Decimal(loyaltyReservationPoints)
+          .dividedBy(rate)
+          .toDecimalPlaces(2);
       }
 
       // Centralized Promotion Engine Evaluation
@@ -336,6 +341,17 @@ export class CheckoutService {
         },
       });
 
+      if (loyaltyReservationPoints > 0 && verifiedCustomerId) {
+        await tx.loyaltyReservation.create({
+          data: {
+            customerId: verifiedCustomerId,
+            orderId: order.id,
+            points: loyaltyReservationPoints,
+            expiresAt: new Date(Date.now() + 35 * 60 * 1000),
+          },
+        });
+      }
+
       // 3b. Create initial Payment record in DB (Guarantees every order has an immutable payment ledger entry)
       const isTabby = payload.paymentMethod === "TABBY";
       const isTamara = payload.paymentMethod === "TAMARA";
@@ -369,6 +385,13 @@ export class CheckoutService {
 
       (order as any).payments = [payment];
 
+      // A COD order is an accepted commercial order, so its held loyalty
+      // redemption can be committed immediately. Prepaid orders remain held
+      // until Stripe confirms capture.
+      if (isCod && loyaltyReservationPoints > 0) {
+        await LoyaltyService.commitOrderRedemption(order.id, tx);
+      }
+
       // 3c. Record Promotion & Coupon Redemptions if applied
       if (appliedPromotionsToRecord && appliedPromotionsToRecord.length > 0) {
         await PromotionService.recordRedemptions(
@@ -398,10 +421,16 @@ export class CheckoutService {
             ],
           },
         });
-        const discValue = discPromo ? Number(discPromo.value) : 280;
-        const discCode = `MSC-DISC-${randomUUID().slice(0, 8).toUpperCase()}`;
+        // A voucher is issued only when an administrator has configured an
+        // active Discovery promotion. There is intentionally no storefront
+        // fallback amount for this business-controlled benefit.
+        if (!discPromo) {
+          console.info("No active Discovery promotion configured; no voucher issued");
+        } else {
+          const discValue = Number(discPromo.value);
+          const discCode = `MSC-DISC-${randomUUID().slice(0, 8).toUpperCase()}`;
 
-        await tx.voucher.create({
+          await tx.voucher.create({
           data: {
             code: discCode,
             discountAmount: new Prisma.Decimal(discValue),
@@ -409,9 +438,9 @@ export class CheckoutService {
             isDiscoveryVoucher: true,
             expiresAt: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000), // 60 days
           },
-        });
+          });
 
-        await tx.businessEvent.create({
+          await tx.businessEvent.create({
           data: {
             eventName: "DISCOVERY_VOUCHER_ISSUED",
             aggregateType: "Order",
@@ -423,7 +452,8 @@ export class CheckoutService {
               orderNumber,
             },
           },
-        });
+          });
+        }
       }
 
       // 4. Reserve inventory for 35 minutes
@@ -436,39 +466,6 @@ export class CheckoutService {
         },
         tx,
       );
-
-      // 5. Award loyalty points to customer (calculated via LoyaltyService & config)
-      if (verifiedCustomerId) {
-        const config = await LoyaltyService.getProgramConfig();
-        if (config.isEnabled) {
-          const cust = await tx.customer.findUnique({
-            where: { id: verifiedCustomerId },
-            select: { loyaltyPoints: true },
-          });
-          const tierInfo = await LoyaltyService.calculateTierForCustomer(cust?.loyaltyPoints || 0);
-          const multiplier = tierInfo.earningMultiplier || 1.0;
-          const pointsEarned = Math.floor(totalAmount.toNumber() * Number(config.pointsPerAedSpent) * multiplier);
-
-          if (pointsEarned > 0) {
-            const newBal = (cust?.loyaltyPoints || 0) + pointsEarned;
-            await tx.customer.update({
-              where: { id: verifiedCustomerId },
-              data: { loyaltyPoints: newBal },
-            });
-
-            await tx.loyaltyTransaction.create({
-              data: {
-                customerId: verifiedCustomerId,
-                type: "EARN",
-                points: pointsEarned,
-                balanceAfter: newBal,
-                orderId: order.id,
-                reason: `Acquisition reward (${multiplier}x tier rate)`,
-              },
-            });
-          }
-        }
-      }
 
       // 6. Clear cart items
       await tx.cartItem.deleteMany({

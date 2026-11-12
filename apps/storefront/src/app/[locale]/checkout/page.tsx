@@ -69,7 +69,6 @@ export default function CheckoutPage({
     deleteAddress,
     login,
     signup,
-    redeemedLoyaltyCredits,
   } = useAuth();
 
   // Mobile Order Summary Accordion
@@ -112,6 +111,7 @@ export default function CheckoutPage({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [delivery, setDelivery] = useState<{ id?: string; fee?: number }>({});
+  const [checkoutIdempotencyKey] = useState(() => crypto.randomUUID());
 
   const selectDelivery = useCallback(
     (id?: string, fee?: number) => setDelivery({ id, fee }),
@@ -234,6 +234,9 @@ export default function CheckoutPage({
     setLoading(true);
 
     try {
+      const requestedLoyaltyCredits = applyCredits && isLoggedIn
+        ? Math.min(subtotal, maxAvailableCredits)
+        : 0;
       if (saveToProfile && isEnteringNewAddress && cleanName && cleanAddress) {
         saveAddress({
           fullName: cleanName,
@@ -249,11 +252,17 @@ export default function CheckoutPage({
       }
 
       if (!isLoggedIn && createAccountOnCheckout && cleanEmail) {
+        if (!/^(?=.*[A-Z])(?=.*\d).{8,}$/.test(newPassword)) {
+          throw new Error(c(
+            "Choose a password with at least 8 characters, one uppercase letter, and one number.",
+            "يرجى اختيار كلمة مرور من ٨ أحرف على الأقل تتضمن حرفاً كبيراً ورقماً.",
+          ));
+        }
         await signup({
           name: cleanName || "Private Client",
           email: cleanEmail,
           phone: cleanPhone,
-          password: newPassword || undefined,
+          password: newPassword,
         });
       }
 
@@ -339,8 +348,9 @@ export default function CheckoutPage({
           currency: "AED",
           customerId: user?.id,
           saveAddressToProfile: saveToProfile && isEnteringNewAddress,
-          loyaltyCreditsRedeemed: redeemedLoyaltyCredits,
+          loyaltyCreditsRedeemed: requestedLoyaltyCredits,
           couponCode: appliedPromo?.code || undefined,
+          idempotencyKey: checkoutIdempotencyKey,
         });
 
         if (!result) {
@@ -348,16 +358,14 @@ export default function CheckoutPage({
         }
 
         const parsed = StorefrontOrderSchema.safeParse(result);
-        order = parsed.success
-          ? parsed.data
-          : {
-              id: result.id || `ord_${Date.now()}`,
-              orderNumber: result.orderNumber || `MSC-${Date.now()}`,
-              status: result.status || "PENDING",
-              currency: (result.currency as "AED") || "AED",
-              totalAmount: Number(result.totalAmount) || estimatedTotal,
-              items: result.items || items,
-            };
+        if (!parsed.success) {
+          console.error("Checkout returned an invalid order response", parsed.error.flatten());
+          throw new Error(c(
+            "We could not verify your order. Your bag is unchanged; please try again.",
+            "تعذر التحقق من طلبك. لم تتغير حقيبتك، يرجى المحاولة مرة أخرى.",
+          ));
+        }
+        order = parsed.data;
 
         localStorage.setItem(
           "muschio_pending_order",
@@ -383,7 +391,7 @@ export default function CheckoutPage({
             createdAt: new Date().toISOString(),
             totalAmount: ord?.totalAmount ? Number(ord.totalAmount) : estimatedTotal,
             currency: "AED",
-            status: paymentMethod === "CASH_ON_DELIVERY" ? "PENDING" : "PAID",
+            status: ord?.status || "PENDING",
             items: items.map((i) => ({
               id: i.id || i.variantId,
               title: i.title,
@@ -1125,81 +1133,7 @@ export default function CheckoutPage({
                 </div>
               </div>
 
-              {/* Option D: Tabby (Coming Soon) */}
-              <div
-                className="p-3.5 sm:p-4 border rounded-sm opacity-60 cursor-not-allowed border-luxury-border bg-luxury-surface/50 relative"
-                title={c("Tabby installments coming soon to UAE", "أقساط تابي تتوفر قريباً")}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethodRadio"
-                    value="TABBY"
-                    disabled
-                    className="mt-1 accent-emerald-600 shrink-0 cursor-not-allowed"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-luxury-text">
-                          {c("Tabby · 4 Interest-Free Payments", "تابي · قسمها على ٤ دفعات شهرية")}
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-mono font-bold">
-                          tabby
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded">
-                        {c("Coming Soon", "قريباً")}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-luxury-muted mt-0.5">
-                      {c(
-                        "Split your purchase into 4 monthly payments without interest. Merchant onboarding in progress.",
-                        "قسّم مشترياتك على 4 أقساط شهرية بدون فوائد. يجري استكمال الربط المصرفي.",
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Option E: Tamara (Coming Soon) */}
-              <div
-                className="p-3.5 sm:p-4 border rounded-sm opacity-60 cursor-not-allowed border-luxury-border bg-luxury-surface/50 relative"
-                title={c("Tamara installments coming soon to UAE", "أقساط تمارا تتوفر قريباً")}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethodRadio"
-                    value="TAMARA"
-                    disabled
-                    className="mt-1 accent-amber-600 shrink-0 cursor-not-allowed"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-luxury-text">
-                          {c("Tamara · Split in 4 Payments", "تمارا · قسّم فاتورتك على ٤ دفعات")}
-                        </span>
-                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 font-mono font-bold">
-                          tamara
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-mono uppercase px-2 py-0.5 bg-neutral-200 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded">
-                        {c("Coming Soon", "قريباً")}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-luxury-muted mt-0.5">
-                      {c(
-                        "Sharia-compliant installments. Split into 4 equal payments without interest. Merchant onboarding in progress.",
-                        "دفعات متوافقة مع أحكام الشريعة الإسلامية بدون فوائد. يجري استكمال الربط المصرفي.",
-                      )}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Option F: Cash on Delivery / VIP Concierge */}
+              {/* Cash on Delivery / VIP Concierge */}
               <div
                 onClick={() => setPaymentMethod("CASH_ON_DELIVERY")}
                 className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${

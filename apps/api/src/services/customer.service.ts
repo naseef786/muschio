@@ -108,6 +108,10 @@ export class CustomerService {
 
   static async login(input: CustomerLoginInput) {
     const email = input.email.trim().toLowerCase();
+    const password = input.password;
+    if (!password) {
+      throw new ApiError(400, "PASSWORD_REQUIRED", "Password is required to access your account.");
+    }
 
     const customer = await prisma.customer.findUnique({
       where: { email },
@@ -125,29 +129,20 @@ export class CustomerService {
       );
     }
 
-    if (customer.passwordHash) {
-      if (!input.password) {
-        throw new ApiError(
-          400,
-          "PASSWORD_REQUIRED",
-          "Password is required to access your account.",
-        );
-      }
-      const isValid = await bcrypt.compare(input.password, customer.passwordHash);
-      if (!isValid) {
-        throw new ApiError(
-          401,
-          "INVALID_CREDENTIALS",
-          "Invalid email or password. Access denied.",
-        );
-      }
-    } else if (input.password) {
-      // First-time password set for client with existing guest orders
-      const hash = await bcrypt.hash(input.password, 10);
-      await prisma.customer.update({
-        where: { id: customer.id },
-        data: { passwordHash: hash },
-      });
+    if (!customer.passwordHash) {
+      throw new ApiError(
+        401,
+        "ACCOUNT_SETUP_REQUIRED",
+        "Please create a password before accessing this account.",
+      );
+    }
+    const isValid = await bcrypt.compare(password, customer.passwordHash);
+    if (!isValid) {
+      throw new ApiError(
+        401,
+        "INVALID_CREDENTIALS",
+        "Invalid email or password. Access denied.",
+      );
     }
 
     const token = this.createToken(customer.id, customer.email);
@@ -170,12 +165,7 @@ export class CustomerService {
     });
 
     let passwordHash: string | null = null;
-    if (input.password) {
-      if (input.password.length < 6) {
-        throw new ApiError(400, "WEAK_PASSWORD", "Password must be at least 6 characters.");
-      }
-      passwordHash = await bcrypt.hash(input.password, 10);
-    }
+    passwordHash = await bcrypt.hash(input.password!, 12);
 
     let customer;
     let isNewCustomer = false;
