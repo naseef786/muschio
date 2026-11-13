@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { muschioApi } from "../../../lib/api";
+import { subscribeCatalogUpdates } from "../../../lib/catalog-updates";
 import { ProductCard } from "../../../components/product-card";
 import { ProductGridSkeleton } from "../../../components/skeletons";
 import { SlidersHorizontal, ArrowUpDown, X, Check } from "lucide-react";
@@ -68,7 +69,7 @@ export function ShopClient({
   useEffect(() => {
     let active = true;
 
-    const loadLiveProducts = async () => {
+    const loadLiveProducts = async (allowFallback = true) => {
       try {
         const res = await fetch("/api/products?limit=100", { cache: "no-store" });
         if (res.ok) {
@@ -76,7 +77,7 @@ export function ShopClient({
           const items = Array.isArray(json)
             ? json
             : (json.products || json.data?.products || json.data || []);
-          if (active && Array.isArray(items) && items.length > 0) {
+          if (active && Array.isArray(items)) {
             setLive(items);
             return;
           }
@@ -85,6 +86,7 @@ export function ShopClient({
         console.warn("Direct /api/products fetch failed, attempting client fallback:", e);
       }
 
+      if (!allowFallback) return;
       const products = await muschioApi.getProducts({ limit: 100 });
       if (active && products) {
         setLive(products);
@@ -111,8 +113,10 @@ export function ShopClient({
       if (active) setLoading(false);
     });
 
+    const unsubscribe = subscribeCatalogUpdates(() => loadLiveProducts(false));
     return () => {
       active = false;
+      unsubscribe();
     };
   }, [initialProducts, initialFamilies, initialTags]);
 

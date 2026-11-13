@@ -378,45 +378,66 @@ export default async function HomePage({
   );
 
   const renderHousesGrid = (sec?: any) => (
-    <section key="HOUSES_GRID" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-      <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
-        <div>
-          <span className="eyebrow mb-1">
+    <section
+      key="HOUSES_GRID"
+      aria-labelledby="fragrance-houses-heading"
+      className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10"
+    >
+      <div className="mb-7 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+        <div className="min-w-0">
+          <span className="eyebrow mb-2">
             {c((sec?.config as any)?.eyebrowEn || "THE HOUSES", (sec?.config as any)?.eyebrowAr || "دور العطور")}
           </span>
-          <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
+          <h2 id="fragrance-houses-heading" className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal leading-tight text-balance">
             {c(sec?.titleEn || "Shop by Fragrance House", sec?.titleAr || "تسوق حسب الدار")}
           </h2>
         </div>
-        <Link href="/brands" className="editorial-text-link">
-          {c("View All Houses", "عرض جميع الدور")} ↗
+        <Link
+          href="/brands"
+          className="inline-flex min-h-11 w-fit shrink-0 items-center gap-3 border-b border-luxury-text py-2 text-xs font-medium tracking-wide text-luxury-text transition-colors hover:text-accent hover:border-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-accent"
+        >
+          {c("View all houses", "عرض جميع الدور")}
+          <ArrowUpRight size={16} aria-hidden="true" className="shrink-0 rtl:-scale-x-100" />
         </Link>
       </div>
 
-      <div className="relative">
-        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 lg:grid-cols-5 gap-4 pb-2">
-          {prestigeHouses.map((house: any) => (
+      <ul
+        aria-label={c("Fragrance houses", "دور العطور")}
+        className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pt-1 pb-5 sm:-mx-6 sm:px-6 lg:-mx-10 lg:px-10 xl:mx-0 xl:grid xl:grid-cols-5 xl:overflow-visible xl:px-0 xl:pb-1"
+      >
+        {prestigeHouses.map((house: any) => (
+          <li key={house.slug} className="flex w-[82%] max-w-[320px] shrink-0 snap-start sm:w-[42%] xl:w-auto xl:max-w-none">
             <Link
-              key={house.slug}
               href={`/brands/${house.slug}`}
-              className="w-[260px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-6 flex flex-col justify-between group h-44 transition-all duration-300 rounded-sm"
+              aria-label={c(`Explore ${house.name}`, `اكتشف ${house.name}`)}
+              className="group flex min-h-[320px] w-full min-w-0 flex-col rounded-sm border border-luxury-border bg-luxury-surface2 p-6 text-start transition-colors duration-200 hover:border-accent hover:bg-luxury-surface focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent motion-reduce:transition-none"
             >
               <div>
-                <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-luxury-muted block">
+                <span className="mb-5 block h-px w-8 bg-accent opacity-60" aria-hidden="true" />
+                <span className="block min-h-[2.5rem] text-[10px] font-medium uppercase leading-5 tracking-[0.12em] text-luxury-muted break-words">
                   {house.origin}
                 </span>
-                <h3 className="font-serif text-xl text-luxury-text font-medium mt-2 group-hover:text-accent transition-colors">
+                <h3 className="mt-2 min-h-[3.5rem] font-serif text-[22px] font-medium leading-7 tracking-tight text-luxury-text break-words">
                   {house.name}
                 </h3>
               </div>
-              <div className="flex items-center justify-between text-xs text-luxury-muted pt-4 border-t border-luxury-border">
-                <span>{c(house.descEn, house.descAr)}</span>
-                <ArrowUpRight size={14} className="text-luxury-text group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+              <div className="mt-3 mb-7 flex-1">
+                <p className="line-clamp-3 text-[13px] leading-[1.7] text-luxury-muted break-words">
+                  {c(house.descEn, house.descAr)}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center justify-between gap-3 border-t border-luxury-border pt-4">
+                <span className="text-xs font-medium text-luxury-text transition-colors group-hover:text-accent">
+                  {c("Explore house", "اكتشف الدار")}
+                </span>
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-luxury-border bg-luxury-surface text-luxury-text transition-colors group-hover:border-accent group-hover:bg-accent group-hover:text-white motion-reduce:transition-none">
+                  <ArrowUpRight size={16} aria-hidden="true" className="rtl:-scale-x-100" />
+                </span>
               </div>
             </Link>
-          ))}
-        </div>
-      </div>
+          </li>
+        ))}
+      </ul>
     </section>
   );
 

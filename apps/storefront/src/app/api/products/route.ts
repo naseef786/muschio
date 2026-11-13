@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@muschio/api";
+import { prisma, syncProductVariants, ApiError } from "@muschio/api";
 
 export const dynamic = "force-dynamic";
 
@@ -321,7 +321,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const rawVariants = Array.isArray(body.variants) ? body.variants : [];
+    const rawVariants: any[] = Array.isArray(body.variants) ? body.variants : [];
+    if (Array.isArray(body.variants) && rawVariants.length === 0) {
+      return NextResponse.json({ success: false, error: "At least one volume variant is required." }, { status: 400 });
+    }
     if (!body.sku && rawVariants.length === 0) {
       return NextResponse.json(
         { success: false, error: "Validation Error: 'sku' or at least one variant is required" },
@@ -466,6 +469,7 @@ export async function POST(req: NextRequest) {
           const vSku = String(v.sku || `${primarySku}-${vVolNum}`).trim();
 
           return {
+            id: v.id ? String(v.id) : undefined,
             sku: vSku,
             volume: vVol,
             volumeMl: vVolNum,
@@ -507,91 +511,37 @@ export async function POST(req: NextRequest) {
 
     // If updating an existing product:
     if (targetProduct) {
-      for (const iv of variantsData) {
-        const existingVar = await prisma.productVariant.findFirst({
-          where: {
-            OR: [
-              { sku: iv.sku },
-              { productId: targetProduct.id, volumeMl: iv.volumeMl },
-            ],
+      const updatedProduct = await prisma.$transaction(async (tx) => {
+        await syncProductVariants(tx, targetProduct.id, variantsData.map((iv, index) => ({
+          ...iv,
+          id: rawVariants[index]?.id,
+          stockQuantity: iv.inventory.create.sealedQuantity,
+        })), Array.isArray(body.variants));
+        return tx.product.update({
+          where: { id: targetProduct.id },
+          data: {
+            nameEn: resolvedName,
+            nameAr: resolvedNameAr,
+            descriptionEn: String(body.descriptionEn || resolvedName).trim(),
+            descriptionAr: String(body.descriptionAr || resolvedNameAr || resolvedName).trim(),
+            brandId: brand.id,
+            scentFamilyId: scentFamily?.id,
+            concentration: validConcentration,
+            gender: validGender,
+            images: productImages,
+            isPublished: body.status !== "DRAFT",
+            isFeatured: true,
+            updatedAt: new Date(),
+          },
+          include: {
+            brand: true,
+            scentFamily: true,
+            variants: { include: { inventory: true } },
+            notes: { include: { note: true } },
+            tags: { include: { tag: true } },
           },
         });
-
-        if (existingVar) {
-          await prisma.productVariant.update({
-            where: { id: existingVar.id },
-            data: {
-              sku: iv.sku,
-              volume: iv.volume,
-              volumeMl: iv.volumeMl,
-              sizeLabelEn: iv.sizeLabelEn,
-              sizeLabelAr: iv.sizeLabelAr,
-              price: iv.price,
-              compareAtPrice: iv.compareAtPrice,
-              discountPrice: iv.discountPrice,
-              warehouse: iv.warehouse,
-              isDefault: iv.isDefault,
-            },
-          });
-          await prisma.inventory.upsert({
-            where: { variantId: existingVar.id },
-            create: {
-              variantId: existingVar.id,
-              sealedQuantity: iv.inventory.create.sealedQuantity,
-              testerQuantity: 2,
-            },
-            update: {
-              sealedQuantity: iv.inventory.create.sealedQuantity,
-            },
-          });
-        } else {
-          // Check for SKU conflict with other products
-          const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
-          const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
-
-          await prisma.productVariant.create({
-            data: {
-              productId: targetProduct.id,
-              sku: safeSku,
-              volume: iv.volume,
-              volumeMl: iv.volumeMl,
-              sizeLabelEn: iv.sizeLabelEn,
-              sizeLabelAr: iv.sizeLabelAr,
-              price: iv.price,
-              compareAtPrice: iv.compareAtPrice,
-              discountPrice: iv.discountPrice,
-              warehouse: iv.warehouse,
-              isDefault: iv.isDefault,
-              inventory: iv.inventory,
-            },
-          });
-        }
-      }
-
-      const updatedProduct = await prisma.product.update({
-        where: { id: targetProduct.id },
-        data: {
-          nameEn: resolvedName,
-          nameAr: resolvedNameAr,
-          descriptionEn: String(body.descriptionEn || resolvedName).trim(),
-          descriptionAr: String(body.descriptionAr || resolvedNameAr || resolvedName).trim(),
-          brandId: brand.id,
-          scentFamilyId: scentFamily?.id,
-          concentration: validConcentration,
-          gender: validGender,
-          images: productImages,
-          isPublished: body.status !== "DRAFT",
-          isFeatured: true,
-          updatedAt: new Date(),
-        },
-        include: {
-          brand: true,
-          scentFamily: true,
-          variants: { include: { inventory: true } },
-          notes: { include: { note: true } },
-          tags: { include: { tag: true } },
-        },
-      });
+      }, { timeout: 15000 });
 
       const serialized = serializeProduct(updatedProduct);
       return NextResponse.json(
@@ -615,10 +565,11 @@ export async function POST(req: NextRequest) {
     const uniqueVariantsData = [];
     for (const iv of variantsData) {
       const existingSku = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
-      const safeSku = existingSku ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+      if (existingSku) throw new ApiError(409, "SKU_CONFLICT", "This SKU is already in use. Choose a unique SKU for each variant.");
+      const { id: _id, ...variantData } = iv as typeof iv & { id?: string };
       uniqueVariantsData.push({
-        ...iv,
-        sku: safeSku,
+        ...variantData,
+        sku: iv.sku,
       });
     }
 
@@ -675,7 +626,7 @@ export async function POST(req: NextRequest) {
         error: "Failed to persist product into Neon PostgreSQL database",
         message: err?.message || String(err),
       },
-      { status: 500 }
+      { status: err?.statusCode || 500 }
     );
   }
 }

@@ -1,3 +1,4 @@
+import { syncProductVariants } from "@muschio/api";
 import { NextRequest, NextResponse } from "next/server";
 import {
   CatalogService,
@@ -1441,6 +1442,9 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       const resolvedName = String(name || nameEn || "").trim();
       const resolvedNameAr = String(nameAr || body.nameArabic || resolvedName).trim();
       const rawVariants = Array.isArray(body?.variants) ? body.variants : [];
+      if (Array.isArray(body?.variants) && rawVariants.length === 0) {
+        return error("INVALID_VARIANTS", "At least one volume variant is required.", 400);
+      }
 
       if (!resolvedName || (!sku && rawVariants.length === 0)) {
         return error("INVALID_INPUT", "Product name and SKU or variants are required", 400);
@@ -1557,6 +1561,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
       // Parse incoming multi-volume variants or fallback to single variant
       const incomingVariants: Array<{
+        id?: string;
         volume: string;
         volumeMl: number;
         sizeLabelEn: string;
@@ -1586,6 +1591,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
             const vSku = String(v.sku || `${sku || baseSlug}-${vVolNum}`).trim();
             const vIsDefault = Boolean(v.isDefault ?? index === 0);
             return {
+              id: v.id ? String(v.id) : undefined,
               volume: vVol,
               volumeMl: vVolNum,
               sizeLabelEn: `${vVol} Flacon`,
@@ -1659,105 +1665,39 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       let savedProduct;
 
       if (targetProduct) {
-        // Update existing product
-        await prisma.productPerfumer.deleteMany({
-          where: { productId: targetProduct.id },
-        });
-
-        // Upsert / sync variants
-        for (const iv of incomingVariants) {
-          const existingVariant = await prisma.productVariant.findFirst({
-            where: {
-              OR: [
-                { sku: iv.sku },
-                { productId: targetProduct.id, volumeMl: iv.volumeMl },
-              ],
+        savedProduct = await prisma.$transaction(async (tx) => {
+          await syncProductVariants(tx, targetProduct.id, incomingVariants, Array.isArray(body.variants), numTesterStock);
+          await tx.productPerfumer.deleteMany({ where: { productId: targetProduct.id } });
+          return tx.product.update({
+            where: { id: targetProduct.id },
+            data: {
+              nameEn: resolvedName,
+              nameAr: resolvedNameAr,
+              descriptionEn: String(descriptionEn || resolvedName).trim(),
+              descriptionAr: String(descriptionAr || resolvedNameAr || resolvedName).trim(),
+              brandId: brand.id,
+              scentFamilyId: scentFamily?.id,
+              concentration: resolveConcentration(concentration),
+              gender: resolveGender(gender),
+              images: productImages,
+              isPublished: status !== "DRAFT",
+              perfumers: resolvedPerfumerIds.length > 0
+                ? {
+                    create: resolvedPerfumerIds.map((id, index) => ({
+                      perfumerId: id,
+                      isLead: index === 0,
+                    })),
+                  }
+                : undefined,
+            },
+            include: {
+              brand: true,
+              scentFamily: true,
+              perfumers: { include: { perfumer: true } },
+              variants: { include: { inventory: true } },
             },
           });
-          if (existingVariant) {
-            await prisma.productVariant.update({
-              where: { id: existingVariant.id },
-              data: {
-                sku: iv.sku,
-                volume: iv.volume,
-                volumeMl: iv.volumeMl,
-                sizeLabelEn: iv.sizeLabelEn,
-                sizeLabelAr: iv.sizeLabelAr,
-                price: iv.price,
-                compareAtPrice: iv.compareAtPrice,
-                discountPrice: iv.discountPrice,
-                warehouse: iv.warehouse,
-                isDefault: iv.isDefault,
-              },
-            });
-            await prisma.inventory.upsert({
-              where: { variantId: existingVariant.id },
-              create: {
-                variantId: existingVariant.id,
-                sealedQuantity: iv.stockQuantity,
-                testerQuantity: numTesterStock,
-              },
-              update: {
-                sealedQuantity: iv.stockQuantity,
-              },
-            });
-          } else {
-            const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
-            const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
-
-            await prisma.productVariant.create({
-              data: {
-                productId: targetProduct.id,
-                sku: safeSku,
-                volume: iv.volume,
-                volumeMl: iv.volumeMl,
-                sizeLabelEn: iv.sizeLabelEn,
-                sizeLabelAr: iv.sizeLabelAr,
-                price: iv.price,
-                compareAtPrice: iv.compareAtPrice,
-                discountPrice: iv.discountPrice,
-                warehouse: iv.warehouse,
-                isDefault: iv.isDefault,
-                inventory: {
-                  create: {
-                    sealedQuantity: iv.stockQuantity,
-                    testerQuantity: numTesterStock,
-                  },
-                },
-              },
-            });
-          }
-        }
-
-        savedProduct = await prisma.product.update({
-          where: { id: targetProduct.id },
-          data: {
-            nameEn: resolvedName,
-            nameAr: resolvedNameAr,
-            descriptionEn: String(descriptionEn || resolvedName).trim(),
-            descriptionAr: String(descriptionAr || resolvedNameAr || resolvedName).trim(),
-            brandId: brand.id,
-            scentFamilyId: scentFamily?.id,
-            concentration: resolveConcentration(concentration),
-            gender: resolveGender(gender),
-            images: productImages,
-            isPublished: status !== "DRAFT",
-            perfumers: resolvedPerfumerIds.length > 0
-              ? {
-                  create: resolvedPerfumerIds.map((id, index) => ({
-                    perfumerId: id,
-                    isLead: index === 0,
-                  })),
-                }
-              : undefined,
-          },
-          include: {
-            brand: true,
-            scentFamily: true,
-            perfumers: { include: { perfumer: true } },
-            variants: { include: { inventory: true } },
-          },
-        });
+        }, { timeout: 15000 });
       } else {
         // Create new product
         const existing = await prisma.product.findUnique({ where: { slug } });
@@ -1768,9 +1708,9 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
         const safeVariantsData = [];
         for (const iv of incomingVariants) {
           const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
-          const safeSku = conflicting ? `${iv.sku}-${Date.now().toString().slice(-4)}` : iv.sku;
+          if (conflicting) return error("SKU_CONFLICT", "This SKU is already in use. Choose a unique SKU for each variant.", 409);
           safeVariantsData.push({
-            sku: safeSku,
+            sku: iv.sku,
             volume: iv.volume,
             volumeMl: iv.volumeMl,
             sizeLabelEn: iv.sizeLabelEn,

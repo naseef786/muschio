@@ -238,6 +238,7 @@ export const muschioApi = {
       const query = params ? new URLSearchParams(params).toString() : "";
       const result = await apiRequest<unknown>(
         `/products${query ? `?${query}` : ""}`,
+        { cache: "no-store" },
       );
       const rawList = Array.isArray(result)
         ? result
@@ -304,6 +305,7 @@ export const muschioApi = {
     try {
       const result = await apiRequest<{ product?: unknown } | unknown>(
         `/products/${encodeURIComponent(slug)}`,
+        { cache: "no-store" },
       );
       const rawProduct = (result as any)?.product ?? result;
       if (rawProduct && rawProduct.slug) {

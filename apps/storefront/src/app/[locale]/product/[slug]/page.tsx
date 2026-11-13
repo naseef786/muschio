@@ -3,6 +3,8 @@ import { CatalogService, storefrontProduct } from "@muschio/api";
 import { ProductExperience } from "../../../../components/product-experience";
 import { resolveProductSlug } from "../../../../lib/seo-redirects";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProductPage({
   params: { locale, slug },
 }: {

@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
+import { muschioApi } from "../lib/api";
+import { subscribeCatalogUpdates } from "../lib/catalog-updates";
 import Image from "next/image";
 import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight, Star } from "lucide-react";
@@ -131,11 +133,33 @@ export function getProductCardPricing(p: any) {
 }
 
 export function ProductExperience({
-  product,
+  product: initialProduct,
   relatedProducts = [],
   houseProducts = [],
   locale,
 }: ProductDetailProps) {
+  const [variants, setVariants] = useState(initialProduct.variants);
+  const product = { ...initialProduct, variants };
+  useEffect(() => {
+    setVariants(initialProduct.variants);
+    let active = true;
+    const refresh = async () => {
+      const latest = await muschioApi.getProductBySlug(initialProduct.slug);
+      if (active && latest?.id === initialProduct.id) {
+        setVariants(latest.variants.map((v) => ({
+          ...v,
+          sizeLabelEn: v.sizeLabelEn || `${v.volumeMl || 100}ml Flacon`,
+          sizeLabelAr: v.sizeLabelAr || `${v.volumeMl || 100} مل`,
+        })));
+      }
+    };
+    void refresh();
+    const unsubscribe = subscribeCatalogUpdates(refresh);
+    return () => {
+      active = false;
+      unsubscribe();
+    };
+  }, [initialProduct.id, initialProduct.slug, initialProduct.variants]);
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 
@@ -163,6 +187,11 @@ export function ProductExperience({
   }, [commercialVariants, product.variants]);
 
   const [selectedVariantId, setSelectedVariantId] = useState(initialVariant?.id);
+  useEffect(() => {
+    if (!commercialVariants.some((v) => v.id === selectedVariantId)) {
+      setSelectedVariantId(initialVariant?.id);
+    }
+  }, [commercialVariants, initialVariant, selectedVariantId]);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const { isInWishlist, toggleWishlist } = useWishlist();
   const isWishlisted = isInWishlist(product.slug);

@@ -447,9 +447,9 @@ export function getLegacyRedirect(pathname: string, search = "", cookieLocale?: 
     const match = subpath.match(/^\/(?:pages|page|policies|policy)\/(.+)$/i);
     const slug = match && match[1] ? match[1].toLowerCase() : "";
     if (slug.includes("about") || slug.includes("story")) {
-      targetSubpath = "/guide";
+      targetSubpath = "/about";
     } else if (slug.includes("contact") || slug.includes("concierge")) {
-      targetSubpath = "/guide#concierge";
+      targetSubpath = "/contact";
     } else if (slug.includes("shipping") || slug.includes("delivery") || slug.includes("return") || slug.includes("refund")) {
       targetSubpath = "/delivery";
     } else if (slug.includes("terms")) {
@@ -469,9 +469,9 @@ export function getLegacyRedirect(pathname: string, search = "", cookieLocale?: 
 
   // I. Static direct aliases (e.g. /about, /contact, /shipping, etc.)
   else if (/^\/(about|about-us|our-story)$/i.test(subpath)) {
-    targetSubpath = "/guide";
+    targetSubpath = "/about";
   } else if (/^\/(contact|contact-us|concierge)$/i.test(subpath)) {
-    targetSubpath = "/guide#concierge";
+    targetSubpath = "/contact";
   } else if (/^\/(shipping|delivery|shipping-policy|returns)$/i.test(subpath)) {
     targetSubpath = "/delivery";
   } else if (/^\/(terms|terms-and-conditions|terms-of-service)$/i.test(subpath)) {

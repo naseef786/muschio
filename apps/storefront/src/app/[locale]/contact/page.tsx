@@ -1,4 +1,5 @@
 import React from "react";
+import { SettingsService } from "@muschio/api";
 import { ContactClient } from "./ContactClient";
 
 export async function generateMetadata({
@@ -9,18 +10,46 @@ export async function generateMetadata({
   const isAr = locale === "ar";
   return {
     title: isAr
-      ? "تواصل مع كونسيرج دار موسكيو — استشارات عطرية خاصة | دبي والخليج العربي"
-      : "Contact VIP Fragrance Concierge & Inquiries | Muschio Haute Parfumerie",
+      ? "تواصل مع موسكيو | نصائح عطرية ومساعدة في الطلبات"
+      : "Contact Muschio | Fragrance Advice & Order Support",
     description: isAr
-      ? "تواصل مع مستشاري وخبراء دار موسكيو للعطور الفاخرة في دبي والرياض. استشارات خاصة، تتبع الطلبات، وتنسيق هدايا كبار الشخصيات."
-      : "Connect with Muschio Haute Parfumerie VIP Concierge. Dedicated fragrance advisors for bespoke scent recommendations, white-glove orders, and private atelier visits.",
+      ? "احصل على نصيحة عطرية أو مساعدة في طلبك أو تنسيق هدية. تواصل مع موسكيو عبر البريد أو الهاتف أو واتساب أو نموذج الاستفسار."
+      : "Get fragrance advice, ask about an order, or discuss a gift. Contact Muschio by email, phone, WhatsApp, or our enquiry form.",
+    alternates: {
+      canonical: `/${locale}/contact`,
+      languages: { "en-AE": "/en/contact", "ar-AE": "/ar/contact" },
+    },
+    openGraph: {
+      title: isAr ? "تواصل مع موسكيو" : "Contact Muschio",
+      description: isAr
+        ? "استشارات عطرية ومساعدة في الطلبات والهدايا."
+        : "Fragrance advice, order support, and gifting enquiries.",
+      url: `/${locale}/contact`,
+    },
   };
 }
 
-export default function ContactPage({
+export default async function ContactPage({
   params: { locale },
 }: {
   params: { locale: "en" | "ar" };
 }) {
-  return <ContactClient locale={locale} />;
+  const settings = await SettingsService.getSettings();
+  const whatsappNumber = settings.whatsappNumber.replace(/\D/g, "");
+  // Retain the existing dialable number when the display setting uses a vanity name.
+  const phone = settings.conciergePhone;
+  const dialablePhone = /[a-z]/i.test(phone)
+    ? "+97148006872"
+    : phone.replace(/[^+\d]/g, "");
+  return (
+    <ContactClient
+      locale={locale}
+      contact={{
+        email: settings.conciergeEmail,
+        phone,
+        phoneHref: `tel:${dialablePhone}`,
+        whatsappUrl: `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(settings.whatsappDefaultMsg)}`,
+      }}
+    />
+  );
 }

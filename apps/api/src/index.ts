@@ -4,6 +4,7 @@
 
 export { prisma } from "./prisma";
 export { CatalogService } from "./services/catalog.service";
+export { syncProductVariants } from "./services/product-variants";
 export { NotesService } from "./services/notes.service";
 export { DiscoverySetService } from "./services/discovery-set.service";
 export { CustomerService } from "./services/customer.service";

@@ -1,567 +1,597 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Link } from "../../../navigation";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
-  Phone,
+  ArrowRight,
+  CheckCircle2,
   Mail,
   MessageSquare,
-  MapPin,
-  Clock,
-  ShieldCheck,
-  Send,
+  Package,
+  Phone,
+  Plus,
   Loader2,
-  CheckCircle2,
-  Sparkles,
-  AlertCircle,
-  ChevronDown,
-  ExternalLink,
 } from "lucide-react";
+import { Link } from "../../../navigation";
+import { EditorialReveal } from "../../../components/editorial-reveal";
+import styles from "../../../components/editorial-pages.module.css";
 
-export function ContactClient({ locale }: { locale: "en" | "ar" }) {
-  const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+export interface ContactDetails {
+  email: string;
+  phone: string;
+  phoneHref: string;
+  whatsappUrl: string;
+}
 
-  // Form Fields
+export function ContactClient({
+  locale,
+  contact,
+}: {
+  locale: "en" | "ar";
+  contact: ContactDetails;
+}) {
+  const c = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [subject, setSubject] = useState("Fragrance Recommendation");
+  const [orderReference, setOrderReference] = useState("");
   const [message, setMessage] = useState("");
-
-  // Bot Protection & Spam Traps
   const [honeypot, setHoneypot] = useState("");
-  const [renderedAt, setRenderedAt] = useState<number>(0);
-
-  // Status & Loaders
+  const [renderedAt, setRenderedAt] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submittedSuccess, setSubmittedSuccess] = useState(false);
   const [submittedEnquiryId, setSubmittedEnquiryId] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
-
-  // FAQ Accordion State
-  const [openFaq, setOpenFaq] = useState<number | null>(0);
-
+  const feedbackRef = useRef<HTMLDivElement>(null);
+  const submittingRef = useRef(false);
+  const orderTopic = subject === "Order Tracking & Logistics";
   useEffect(() => {
     setRenderedAt(Date.now());
   }, []);
+  useEffect(() => {
+    if (submittedSuccess || errorMessage) feedbackRef.current?.focus();
+  }, [submittedSuccess, errorMessage]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const topics = [
+    {
+      value: "Fragrance Recommendation",
+      label: c("Fragrance advice", "نصيحة عطرية"),
+      hint: c(
+        "Tell us about scents you enjoy, the occasion, and your preferred budget.",
+        "أخبرنا بالعطور التي تحبها والمناسبة والميزانية المناسبة لك.",
+      ),
+    },
+    {
+      value: "Order Tracking & Logistics",
+      label: c("My order", "طلبي"),
+      hint: c(
+        "Include what you need help with. Your order reference helps us find the details.",
+        "وضح ما تحتاج إليه. يساعدنا رقم الطلب في الوصول إلى التفاصيل.",
+      ),
+    },
+    {
+      value: "Corporate & VIP Gifting",
+      label: c("Gifting", "الهدايا"),
+      hint: c(
+        "Share the occasion, quantity, budget, and any date you have in mind.",
+        "أخبرنا بالمناسبة والكمية والميزانية والتاريخ الذي تفكر فيه.",
+      ),
+    },
+    {
+      value: "General Inquiry",
+      label: c("Something else", "استفسار آخر"),
+      hint: c(
+        "Tell us how we can help. Please do not include passwords or payment details.",
+        "أخبرنا كيف يمكننا مساعدتك. يرجى عدم مشاركة كلمات المرور أو بيانات الدفع.",
+      ),
+    },
+  ];
+  const selectedTopic = topics.find((topic) => topic.value === subject)!;
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (submittingRef.current) return;
     setErrorMessage("");
-
-    // 1. Bot Honeypot Check: If hidden field is filled, silently discard without error
     if (honeypot) {
-      console.warn("[Bot Protection] Honeypot field filled by automated bot.");
       setSubmittedSuccess(true);
       return;
     }
-
-    // 2. Bot Time-to-Submit Check: Human cannot fill contact form in under 2 seconds
     const timeElapsed = Date.now() - renderedAt;
     if (timeElapsed < 2000) {
-      console.warn("[Bot Protection] Submission arrived too quickly (< 2s).");
-      setErrorMessage(c("Verification notice: Please take a moment before submitting.", "تنبيه التحقق: يرجى الانتظار لحظة قبل إرسال النموذج."));
+      setErrorMessage(
+        c(
+          "Please take a moment before sending your message.",
+          "يرجى الانتظار لحظة قبل إرسال رسالتك.",
+        ),
+      );
       return;
     }
-
-    // 3. Spam Check: Basic URL and character checks
-    const urlMatches = (message.match(/https?:\/\//g) || []).length;
-    if (urlMatches > 2) {
-      setErrorMessage(c("Spam protection: Messages cannot contain excessive web links.", "حماية المحتوى: لا يُسمح بإرفاق روابط إلكترونية متعددة في الرسالة."));
-      return;
-    }
-
     if (!name.trim() || !email.trim() || !message.trim()) {
-      setErrorMessage(c("Please complete all required fields.", "يرجى ملء جميع الحقول الإلزامية."));
+      setErrorMessage(
+        c(
+          "Please complete your name, email, and message.",
+          "يرجى إدخال اسمك وبريدك الإلكتروني ورسالتك.",
+        ),
+      );
       return;
     }
-
+    if ((message.match(/https?:\/\//gi) || []).length > 2) {
+      setErrorMessage(
+        c(
+          "Please include no more than two web links.",
+          "يرجى إرفاق رابطين على الأكثر.",
+        ),
+      );
+      return;
+    }
+    submittingRef.current = true;
+    setIsSubmitting(true);
     try {
-      setIsSubmitting(true);
-      const res = await fetch("/api/v1/enquiries", {
+      const response = await fetch("/api/v1/enquiries", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           name: name.trim(),
           email: email.trim(),
           phone: phone.trim() || undefined,
-          subject: subject.trim(),
-          message: message.trim(),
-          fragranceInterest: subject.trim(),
+          subject,
+          message:
+            orderTopic && orderReference.trim()
+              ? `Order reference: ${orderReference.trim()}\n\n${message.trim()}`
+              : message.trim(),
+          fragranceInterest: subject,
           _honeypot: honeypot,
           _timeElapsed: timeElapsed,
         }),
       });
-
-      const data = await res.json();
-      if (res.ok && data?.success) {
-        setSubmittedSuccess(true);
-        setSubmittedEnquiryId(data?.data?.enquiryId || "");
-        setName("");
-        setEmail("");
-        setPhone("");
-        setMessage("");
-      } else {
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
         setErrorMessage(
-          data?.error?.message ||
-            c("Unable to deliver message at this time. Please contact us directly via WhatsApp.", "تعذر إرسال الرسالة، يرجى التواصل معنا مباشرة عبر واتساب.")
+          locale === "en" && typeof data?.error?.message === "string"
+            ? data.error.message
+            : c(
+                "Your message could not be sent. Please try again or contact us directly.",
+                "تعذر إرسال رسالتك. يرجى المحاولة مجدداً أو التواصل معنا مباشرة.",
+              ),
         );
+        return;
       }
+      setSubmittedEnquiryId(data.data?.enquiryId || "");
+      setSubmittedSuccess(true);
+      setName("");
+      setEmail("");
+      setPhone("");
+      setMessage("");
+      setOrderReference("");
     } catch {
       setErrorMessage(
-        c("A network error occurred. Please try again or reach our WhatsApp Concierge.", "حدث خطأ في الاتصال، يرجى إعادة المحاولة أو مراسلتنا عبر واتساب.")
+        c(
+          "We could not confirm receipt. Your message is still here; please check your connection and try again, or contact us directly.",
+          "لم نتمكن من تأكيد الاستلام. رسالتك ما زالت محفوظة هنا؛ تحقق من الاتصال وحاول مجدداً أو تواصل معنا مباشرة.",
+        ),
       );
     } finally {
+      submittingRef.current = false;
       setIsSubmitting(false);
     }
-  };
+  }
 
   const faqs = [
     {
-      q: c("How does temperature-controlled courier delivery work across the GCC?", "كيف يعمل الشحن المبرد المحمي بدرجة حرارة ثابتة في الخليج؟"),
+      q: c("Where can I check my order?", "أين أتابع طلبي؟"),
       a: c(
-        "Every Muschio shipment is placed inside an insulated thermal carton maintaining a steady 18°C–21°C environment during transit. This preserves the delicate top notes and pure essential oil extraits against extreme Middle Eastern heat.",
-        "يتم تغليف كل شحنة في صناديق حرارية معزولة ومبردة تحافظ على حرارة مستقرة بين ١٨ إلى ٢١ مئوية، لحماية خلاصات الزيوت العطرية والنوتات النادرة من درجات الحرارة المرتفعة."
+        "Use Track an order above, or open My Orders in your account. If you need further help, choose My order in the form and include your order reference.",
+        "استخدم رابط تتبع الطلب أعلاه، أو افتح طلباتي في حسابك. لمزيد من المساعدة، اختر طلبي في النموذج وأرفق رقم الطلب.",
       ),
     },
     {
-      q: c("Are all flacons 100% authentic with verifiable batch codes?", "هل جميع العطور أصلية ١٠٠٪ مع أرقام تشغيلية معتمدة؟"),
+      q: c(
+        "Can you help me choose a fragrance?",
+        "هل يمكنكم مساعدتي في اختيار عطر؟",
+      ),
       a: c(
-        "Yes, unconditionally. We import directly from authorized European and regional luxury perfume houses. Each bottle arrives with official batch serial numbers matching the manufacturer's registry, guaranteed against grey-market dilutions.",
-        "نعم بكل تأكيد وبضمان كامل. نستورد مباشرة من كبرى الدور الأوروبية والعربية المعتمدة مع أرقام تشغيلية مطابقة لسجلات الصانع."
+        "Yes. Tell us a few scents you enjoy, when you plan to wear the fragrance, and your budget. You can also explore our scent notes and discovery sets to narrow down your preferences.",
+        "نعم. أخبرنا ببعض الروائح التي تحبها ومتى ترغب في استخدام العطر وميزانيتك. يمكنك أيضاً استكشاف النوتات ومجموعات العينات لتحديد تفضيلاتك.",
       ),
     },
     {
-      q: c("Can I schedule a private sampling session at the Dubai Mall salon?", "هل يمكنني حجز جلسة تذوق واستشارة خاصة في صالون دبي مول؟"),
+      q: c(
+        "How do I ask about a return or delivery?",
+        "كيف أستفسر عن الإرجاع أو التوصيل؟",
+      ),
       a: c(
-        "Private consultations are available daily by appointment at our Downtown Dubai and Riyadh Olaya salons. A master fragrance sommelier will guide you through our private collection, note layering, and bespoke attar formulations.",
-        "نعم، تتوفر جلسات التذوق الخاصة يومياً بموعد مسبق في صالوناتنا في وسط مدينة دبي وحي العليا بالرياض، حيث يرافقكم خبير عطور معتمد."
+        "Choose My order and describe the issue, including your order reference if available. For delivery destinations and options, visit our Delivery page. Our team can clarify the options that apply to your order.",
+        "اختر طلبي واشرح المشكلة مع رقم الطلب إن توفر. لمعرفة وجهات وخيارات التوصيل، زر صفحة التوصيل. يمكن لفريقنا توضيح الخيارات المتاحة لطلبك.",
       ),
     },
     {
-      q: c("What is your 7-Day Olfactory Satisfaction Guarantee?", "ما هي سياسة ضمان الرضا والتجربة لمدة ٧ أيام؟"),
+      q: c(
+        "Can I arrange a gift or a larger order?",
+        "هل يمكنني تنسيق هدية أو طلب بكمية أكبر؟",
+      ),
       a: c(
-        "Eligible orders arrive with a complimentary 2ml matching sample vial. You may experience the sample first; if the sillage does not meet your discerning expectations, the sealed full flacon may be returned within 7 days for a full refund or exchange.",
-        "ترفق معظم العطور بعينة تجريبية مجانية ٢ مل. يمكنكم تجربة العينة أولاً، وإذا لم تنل إعجابكم، يمكنكم إرجاع الزجاجة الأصلية المختومة مجاناً خلال ٧ أيام."
+        "Select Gifting and share your requirements, quantity, and preferred date. Our team can discuss availability and the next steps with you.",
+        "اختر الهدايا وأخبرنا بمتطلباتك والكمية والتاريخ المفضل. سيتواصل فريقنا معك لمناقشة التوفر والخطوات التالية.",
       ),
     },
   ];
 
   return (
-    <div className="bg-luxury-canvas text-luxury-text min-h-screen selection:bg-accent selection:text-white font-sans">
-      {/* 1. Header Banner */}
-      <section className="border-b border-luxury-border/60 py-12 sm:py-20 bg-luxury-surface/40">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center space-y-4">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full border border-luxury-border bg-luxury-surface text-[10px] sm:text-xs font-mono uppercase tracking-[0.25em] text-accent">
-            <Sparkles size={13} />
-            <span>{c("VIP Concierge & Client Services", "خدمة كبار الشخصيات والاستشارات العطرية")}</span>
-          </div>
-
-          <h1 className="font-serif text-3xl sm:text-5xl font-light text-luxury-text tracking-tight">
-            {c("We Welcome Your Inquiry", "يسعدنا تواصلكم واستقبال استفساراتكم")}
-          </h1>
-
-          <p className="text-xs sm:text-sm text-neutral-600 dark:text-neutral-400 max-w-xl mx-auto leading-relaxed">
-            {c(
-              "Whether seeking personal fragrance curation, order assistance, or booking a private atelier session, our master concierges are at your service.",
-              "سواء كنتم تبحثون عن استشارة عطرية مخصصة، أو استفسار عن طلبكم، أو حجز موعد خاص في صالوناتنا، خبراؤنا في خدمتكم على مدار الساعة."
-            )}
-          </p>
-        </div>
-      </section>
-
-      {/* 2. Main Grid: Contact Channels + Submission Form */}
-      <section className="py-12 sm:py-20 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
-          {/* Left Column (5 cols): Direct Lines & Atelier Locations */}
-          <div className="lg:col-span-5 space-y-6">
-            <div className="space-y-3">
-              <span className="text-[11px] font-mono uppercase tracking-[0.2em] text-accent block font-semibold">
-                {c("DIRECT CLIENT CHANNELS", "قنوات التواصل المباشرة")}
-              </span>
-              <h2 className="font-serif text-2xl text-luxury-text">
-                {c("Instant Assistance & Concierge", "تواصل مباشر وفوري")}
-              </h2>
-            </div>
-
-            <div className="space-y-3 text-xs">
-              {/* WhatsApp VIP */}
-              <a
-                href="https://wa.me/97148006872?text=Hello%20Muschio%20Concierge,%20I%20would%20like%20assistance."
-                target="_blank"
-                rel="noopener noreferrer"
-                className="p-4 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-300 dark:border-emerald-800/60 rounded-sm flex items-center justify-between group hover:border-emerald-500 transition-all shadow-sm"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <MessageSquare size={18} />
-                  </div>
-                  <div>
-                    <span className="font-medium text-xs text-neutral-900 dark:text-white block">
-                      {c("WhatsApp VIP Concierge", "واتساب الاستشارات المباشرة")}
-                    </span>
-                    <span className="text-[11px] text-emerald-700 dark:text-emerald-300 font-mono">
-                      +971 4 800 MUSCHIO
-                    </span>
-                  </div>
-                </div>
-                <span className="text-[10px] uppercase font-mono px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold">
-                  {c("Active Now", "متاح الآن")}
-                </span>
-              </a>
-
-              {/* Direct Telephone */}
-              <a
-                href="tel:+97148006872"
-                className="p-4 bg-luxury-surface border border-luxury-border rounded-sm flex items-center gap-3.5 group hover:border-luxury-borderBold transition-all shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-full bg-luxury-surface2 text-luxury-text flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Phone size={18} />
-                </div>
-                <div>
-                  <span className="font-medium text-xs text-neutral-900 dark:text-white block">
-                    {c("Atelier Telephone Line", "هاتف الدار الرسمي")}
-                  </span>
-                  <span className="text-[11px] text-neutral-500 font-mono">
-                    +971 4 800 6872 (800-MUSCHIO)
-                  </span>
-                </div>
-              </a>
-
-              {/* Official Email */}
-              <a
-                href="mailto:concierge@muschio.luxury"
-                className="p-4 bg-luxury-surface border border-luxury-border rounded-sm flex items-center gap-3.5 group hover:border-luxury-borderBold transition-all shadow-sm"
-              >
-                <div className="w-10 h-10 rounded-full bg-luxury-surface2 text-luxury-text flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Mail size={18} />
-                </div>
-                <div>
-                  <span className="font-medium text-xs text-neutral-900 dark:text-white block">
-                    {c("Client Care Email", "البريد الإلكتروني للعملاء")}
-                  </span>
-                  <span className="text-[11px] text-neutral-500 font-mono">
-                    concierge@muschio.luxury
-                  </span>
-                </div>
-              </a>
-            </div>
-
-            {/* Physical Ateliers */}
-            <div className="p-5 bg-luxury-surface border border-luxury-border rounded-sm space-y-4">
-              <div className="flex items-center gap-2 text-xs font-mono uppercase tracking-wider text-accent font-semibold">
-                <MapPin size={14} />
-                <span>{c("Flagship Salons & Private Suites", "الصالونات الحصرية")}</span>
-              </div>
-
-              <div className="space-y-4 text-xs">
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-neutral-900 dark:text-white">
-                      {c("Dubai Flagship Atelier", "صالون دبي الرئيسي")}
-                    </span>
-                    <a
-                      href="https://maps.google.com/?q=The+Dubai+Mall+Fashion+Avenue"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-accent hover:underline flex items-center gap-1 font-mono"
-                    >
-                      <span>{c("Directions", "الاتجاهات")}</span>
-                      <ExternalLink size={10} />
-                    </a>
-                  </div>
-                  <p className="text-[11px] text-neutral-500">
-                    {c("Fashion Avenue, The Dubai Mall (Level 1) · Downtown Dubai", "جناح الأزياء (فاشن أفينيو)، دبي مول · وسط مدينة دبي")}
-                  </p>
-                </div>
-
-                <div className="pt-3 border-t border-luxury-border/60 space-y-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-neutral-900 dark:text-white">
-                      {c("Riyadh Salon Privé", "صالون الرياض برايفيت")}
-                    </span>
-                    <a
-                      href="https://maps.google.com/?q=Centria+Mall+Riyadh"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-[10px] text-accent hover:underline flex items-center gap-1 font-mono"
-                    >
-                      <span>{c("Directions", "الاتجاهات")}</span>
-                      <ExternalLink size={10} />
-                    </a>
-                  </div>
-                  <p className="text-[11px] text-neutral-500">
-                    {c("Centria Mall & Olaya Luxury District · Riyadh, Saudi Arabia", "سنتريا مول وحي العليا الراقي · الرياض، المملكة العربية السعودية")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="pt-3 border-t border-luxury-border/60 flex items-center gap-2 text-[11px] text-neutral-500">
-                <Clock size={13} className="text-accent shrink-0" />
-                <span>{c("Daily 10:00 AM – 11:00 PM (GST / AST)", "يومياً من ١٠ صباحاً حتى ١١ مساءً بتوقيت الخليج")}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column (7 cols): Easy Luxury Contact Form */}
-          <div className="lg:col-span-7 bg-luxury-surface border border-luxury-border rounded-sm p-6 sm:p-10 shadow-sm space-y-6">
+    <div className={styles.page}>
+      <div className={styles.container}>
+        <nav
+          aria-label={c("Breadcrumb", "مسار التصفح")}
+          className={styles.crumb}
+        >
+          <Link href="/">{c("Home", "الرئيسية")}</Link>
+          <span aria-hidden="true">/</span>
+          <span aria-current="page">{c("Contact us", "تواصل معنا")}</span>
+        </nav>
+        <EditorialReveal>
+          <header className={styles.contactHero}>
+            <span className={styles.eyebrow}>
+              {c("Client care · Muschio", "خدمة العملاء · موسكيو")}
+            </span>
+            <h1 className={styles.title}>
+              {c("A good conversation.", "حوار جميل.")}
+              <em>{c("A more personal experience.", "وتجربة أقرب إليك.")}</em>
+            </h1>
+            <p className={styles.intro}>
+              {c(
+                "Choosing a fragrance, finding a gift, or checking an order? Start here. We’ll help you take the next step.",
+                "تختار عطراً أو تبحث عن هدية أو تتابع طلباً؟ ابدأ من هنا. سنساعدك في الخطوة التالية.",
+              )}
+            </p>
+          </header>
+        </EditorialReveal>
+        <nav
+          className={styles.quickLinks}
+          aria-label={c("Quick assistance", "مساعدة سريعة")}
+        >
+          <Link href="/track" className={styles.quickLink}>
+            <Package size={22} strokeWidth={1.4} aria-hidden="true" />
             <div>
-              <span className="text-[10px] uppercase font-mono tracking-widest text-accent font-semibold block mb-1">
-                {c("SEND A DISPATCH", "إرسال استشارة للدار")}
+              <strong>{c("Track an order", "تتبع طلباً")}</strong>
+              <span>{c("Check its latest status", "اطلع على آخر تحديث")}</span>
+            </div>
+            <ArrowRight size={17} className={styles.arrow} aria-hidden="true" />
+          </Link>
+          <a
+            href={contact.whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.quickLink}
+          >
+            <MessageSquare size={22} strokeWidth={1.4} aria-hidden="true" />
+            <div>
+              <strong>{c("Talk on WhatsApp", "تحدث عبر واتساب")}</strong>
+              <span>{c("Opens in a new tab", "يفتح في نافذة جديدة")}</span>
+            </div>
+            <ArrowRight size={17} className={styles.arrow} aria-hidden="true" />
+          </a>
+          <a href="#contact-form" className={styles.quickLink}>
+            <Mail size={22} strokeWidth={1.4} aria-hidden="true" />
+            <div>
+              <strong>{c("Send a message", "أرسل رسالة")}</strong>
+              <span>{c("Tell us what you need", "أخبرنا بما تحتاج إليه")}</span>
+            </div>
+            <ArrowRight size={17} className={styles.arrow} aria-hidden="true" />
+          </a>
+        </nav>
+        <div className={styles.contactGrid}>
+          <EditorialReveal>
+            <aside className={styles.contactAside}>
+              <span className={styles.eyebrow}>
+                {c("Here to help", "هنا لمساعدتك")}
               </span>
-              <h3 className="font-serif text-2xl text-luxury-text">
-                {c("Message Our Master Perfumery Team", "راسل خبراء دار موسكيو")}
-              </h3>
-              <p className="text-xs text-neutral-500 mt-1">
+              <h2 className={styles.heading}>
                 {c(
-                  "We typically respond within 2 to 4 business hours via your preferred channel.",
-                  "يقوم فريقنا بالرد خلال ٢ إلى ٤ ساعات عمل عبر وسيلتكم المفضلة."
+                  "The right help,\nfor your next step.",
+                  "المساعدة المناسبة لخطوتك القادمة.",
+                )}
+              </h2>
+              <p className={styles.body}>
+                {c(
+                  "Share a little about what you need. Whether it is a first discovery or a question about an order, our team is here to guide you.",
+                  "شاركنا ما تحتاج إليه. سواء كان اكتشافك الأول أو سؤالاً عن طلب، فريقنا هنا لإرشادك.",
                 )}
               </p>
-            </div>
-
+              <div className={styles.channel}>
+                <Mail size={19} aria-hidden="true" />
+                <div>
+                  <strong>{c("Email us", "راسلنا بالبريد")}</strong>
+                  <a href={`mailto:${contact.email}`} dir="ltr">
+                    {contact.email}
+                  </a>
+                </div>
+              </div>
+              <div className={styles.channel}>
+                <Phone size={19} aria-hidden="true" />
+                <div>
+                  <strong>{c("Call us", "اتصل بنا")}</strong>
+                  <a href={contact.phoneHref} dir="ltr">
+                    {contact.phone}
+                  </a>
+                </div>
+              </div>
+              <div className={styles.note}>
+                {c(
+                  "For an existing order, include the order reference and use the email you checked out with. Please keep payment details and passwords out of your message.",
+                  "إذا كان استفسارك عن طلب قائم، أرفق رقمه واستخدم بريد الشراء نفسه. يرجى عدم إدراج بيانات الدفع أو كلمات المرور في رسالتك.",
+                )}
+              </div>
+              <div className={styles.actions}>
+                <Link href="/delivery" className={styles.textLink}>
+                  {c("Delivery information", "معلومات التوصيل")}
+                  <ArrowRight
+                    size={16}
+                    className={styles.arrow}
+                    aria-hidden="true"
+                  />
+                </Link>
+              </div>
+            </aside>
+          </EditorialReveal>
+          <section
+            id="contact-form"
+            className={styles.formPanel}
+            aria-labelledby="message-heading"
+          >
             {submittedSuccess ? (
-              <div className="p-8 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-sm text-center space-y-4 animate-in fade-in duration-300">
-                <div className="w-12 h-12 rounded-full bg-emerald-500 text-white flex items-center justify-center mx-auto shadow-sm">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div className="space-y-1">
-                  <h4 className="font-serif text-xl text-emerald-950 dark:text-emerald-100">
-                    {c("Your Message Has Been Received", "تم استلام رسالتكم بنجاح")}
-                  </h4>
-                  {submittedEnquiryId && (
-                    <p className="font-mono text-xs text-emerald-700 dark:text-emerald-300">
-                      {c("Reference ID:", "الرقم المرجعي:")} {submittedEnquiryId}
-                    </p>
+              <div
+                ref={feedbackRef}
+                tabIndex={-1}
+                role="status"
+                className={styles.success}
+              >
+                <CheckCircle2 size={42} strokeWidth={1.3} aria-hidden="true" />
+                <h2 id="message-heading">
+                  {c("Your message is with us.", "رسالتك وصلت إلينا.")}
+                </h2>
+                <p>
+                  {c(
+                    "Thank you for getting in touch. Our team will review your enquiry and reply using the contact details you shared.",
+                    "شكراً لتواصلك. سيراجع فريقنا استفسارك ويرد عبر بيانات التواصل التي شاركتها.",
                   )}
-                  <p className="text-xs text-emerald-800 dark:text-emerald-200 leading-relaxed max-w-md mx-auto pt-1">
-                    {c(
-                      "Our master fragrance sommelier will review your request and get in touch with you promptly.",
-                      "سيقوم مستشار العطور بمراجعة طلبكم والتواصل معكم في أقرب وقت ممكن."
-                    )}
-                  </p>
-                </div>
-
-                <div className="pt-2 flex flex-wrap items-center justify-center gap-3">
+                </p>
+                {submittedEnquiryId && (
+                  <div className={styles.reference}>
+                    {c("Your reference", "رقمك المرجعي")}:{" "}
+                    <bdi>{submittedEnquiryId}</bdi>
+                  </div>
+                )}
+                <div className={styles.actions}>
                   <button
                     type="button"
-                    onClick={() => setSubmittedSuccess(false)}
-                    className="px-5 py-2.5 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-100 text-white text-xs font-semibold uppercase tracking-wider rounded-sm transition-colors"
+                    className={styles.button}
+                    onClick={() => {
+                      setSubmittedSuccess(false);
+                      setSubmittedEnquiryId("");
+                      setRenderedAt(Date.now());
+                    }}
                   >
-                    {c("Send Another Message", "إرسال استفسار آخر")}
+                    {c("Send another message", "أرسل رسالة أخرى")}
                   </button>
-                  <Link
-                    href="/shop"
-                    className="px-5 py-2.5 border border-neutral-300 dark:border-neutral-700 text-xs font-semibold uppercase tracking-wider rounded-sm hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors inline-block"
-                  >
-                    {c("Explore Fragrances", "تصفح العطور")}
+                  <Link href="/shop" className={styles.textLink}>
+                    {c("Explore fragrances", "استكشف العطور")}
                   </Link>
                 </div>
               </div>
             ) : (
-              <form onSubmit={handleSubmit} className="space-y-4 text-xs font-sans">
-                {/* Honeypot Field (Invisible to Humans, Caught by Automated Bots) */}
-                <div
-                  aria-hidden="true"
-                  style={{
-                    opacity: 0,
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    height: 0,
-                    width: 0,
-                    zIndex: -1,
-                    overflow: "hidden",
-                  }}
+              <>
+                <h2 id="message-heading">
+                  {c("How can we help?", "كيف نساعدك؟")}
+                </h2>
+                <p className={styles.formIntro}>
+                  {c(
+                    "Choose a topic and leave us a message. Fields marked * are required.",
+                    "اختر موضوعاً واترك لنا رسالة. الحقول المميزة بعلامة * مطلوبة.",
+                  )}
+                </p>
+                <form
+                  onSubmit={handleSubmit}
+                  className={styles.form}
+                  aria-busy={isSubmitting}
                 >
-                  <label htmlFor="_muschio_hp_check">Leave this field blank</label>
-                  <input
-                    type="text"
-                    id="_muschio_hp_check"
-                    name="_muschio_hp_check"
-                    tabIndex={-1}
-                    value={honeypot}
-                    onChange={(e) => setHoneypot(e.target.value)}
-                    autoComplete="off"
-                  />
-                </div>
-
-                {errorMessage && (
-                  <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-300 dark:border-rose-800 text-rose-700 dark:text-rose-300 rounded text-xs flex items-center gap-2">
-                    <AlertCircle size={15} className="shrink-0" />
-                    <span>{errorMessage}</span>
-                  </div>
-                )}
-
-                {/* Name & Email */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="font-medium text-neutral-800 dark:text-neutral-200 block">
-                      {c("Full Name", "الاسم الكامل")} *
-                    </label>
+                  <div className="sr-only" aria-hidden="true">
+                    <label htmlFor="contact-website">Leave this blank</label>
                     <input
-                      type="text"
-                      required
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder={c("e.g. Sultan Al-Qasimi", "مثال: سلطان القاسمي")}
-                      className="w-full h-11 px-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-sm text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white transition-colors"
+                      id="contact-website"
+                      name="_muschio_hp_check"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      value={honeypot}
+                      onChange={(e) => setHoneypot(e.target.value)}
                     />
                   </div>
-
-                  <div className="space-y-1.5">
-                    <label className="font-medium text-neutral-800 dark:text-neutral-200 block">
-                      {c("Email Address", "البريد الإلكتروني")} *
-                    </label>
-                    <input
-                      type="email"
-                      required
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="client@muschio.ae"
-                      className="w-full h-11 px-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-sm text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white transition-colors"
-                    />
-                  </div>
-                </div>
-
-                {/* Phone & Subject */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="font-medium text-neutral-800 dark:text-neutral-200 block">
-                      {c("Contact Telephone / WhatsApp", "رقم الهاتف / واتساب")}
-                    </label>
-                    <input
-                      type="tel"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+971 50 123 4567"
-                      className="w-full h-11 px-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-sm text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white transition-colors"
-                    />
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <label className="font-medium text-neutral-800 dark:text-neutral-200 block">
-                      {c("Purpose of Consultation", "موضوع الاستشارة")}
-                    </label>
-                    <select
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      className="w-full h-11 px-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-sm text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white transition-colors"
+                  {errorMessage && (
+                    <div
+                      ref={feedbackRef}
+                      tabIndex={-1}
+                      role="alert"
+                      className={styles.feedback}
                     >
-                      <option value="Fragrance Recommendation">
-                        {c("Bespoke Fragrance Recommendation", "استشارة وتوصية عطرية مخصصة")}
-                      </option>
-                      <option value="Order Tracking & Logistics">
-                        {c("Order Tracking & White-Glove Logistics", "استفسار عن طلب وتوصيل")}
-                      </option>
-                      <option value="Private Atelier Appointment">
-                        {c("Private Atelier Salon Appointment", "حجز موعد خاص في الصالون")}
-                      </option>
-                      <option value="Corporate & VIP Gifting">
-                        {c("Corporate & VIP Gifting Curation", "هدايا الشركات وكبار الشخصيات")}
-                      </option>
-                      <option value="General Inquiry">
-                        {c("General Inquiry", "استفسار عام")}
-                      </option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Message */}
-                <div className="space-y-1.5">
-                  <label className="font-medium text-neutral-800 dark:text-neutral-200 block">
-                    {c("Your Message or Consultation Details", "نص الرسالة أو تفاصيل الاستشارة")} *
-                  </label>
-                  <textarea
-                    required
-                    rows={5}
-                    value={message}
-                    onChange={(e) => setMessage(e.target.value)}
-                    placeholder={c(
-                      "Please describe your olfactory preferences, occasion, or any specific maison you wish to explore...",
-                      "يرجى توضيح ذوقكم العطري، المناسبة، أو أي دار ترغبون في استكشاف إبداعاتها..."
-                    )}
-                    className="w-full p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-sm text-xs text-neutral-900 dark:text-white focus:outline-none focus:border-neutral-900 dark:focus:border-white focus:ring-1 focus:ring-neutral-900 dark:focus:ring-white transition-colors resize-none leading-relaxed"
-                  />
-                </div>
-
-                {/* Submit Button with High-End Loader */}
-                <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-1.5 text-[11px] text-neutral-400">
-                    <ShieldCheck size={14} className="text-emerald-500 shrink-0" />
-                    <span>{c("Encrypted dispatch · Privacy assured", "إرسال مشفر ومحمي بخصوصية تامة")}</span>
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full sm:w-auto px-8 py-3.5 bg-neutral-950 hover:bg-neutral-800 dark:bg-white dark:text-neutral-950 dark:hover:bg-neutral-100 text-white text-xs font-semibold uppercase tracking-[0.15em] transition-all rounded-sm shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
-                  >
-                    {isSubmitting ? (
-                      <>
-                        <Loader2 size={15} className="animate-spin" />
-                        <span>{c("Transmitting to Concierge…", "جارٍ الإرسال إلى الدار…")}</span>
-                      </>
-                    ) : (
-                      <>
-                        <Send size={14} className="rtl:rotate-180" />
-                        <span>{c("Transmit Inquiry", "إرسال الاستشارة")}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            )}
-          </div>
-        </div>
-      </section>
-
-      {/* 3. Luxury Client FAQ Section */}
-      <section className="py-16 border-t border-luxury-border/60 bg-luxury-surface/30">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
-          <div className="text-center space-y-2">
-            <span className="text-[10px] uppercase font-mono tracking-widest text-accent font-semibold block">
-              {c("FREQUENTLY INQUIRED", "الأسئلة الشائعة")}
-            </span>
-            <h3 className="font-serif text-2xl sm:text-3xl text-luxury-text">
-              {c("Concierge Guidance & Polices", "إجابات وتفاصيل سريعة")}
-            </h3>
-          </div>
-
-          <div className="space-y-3">
-            {faqs.map((faq, idx) => {
-              const isOpen = openFaq === idx;
-              return (
-                <div
-                  key={idx}
-                  className="border border-luxury-border bg-luxury-surface rounded-sm overflow-hidden transition-colors"
-                >
-                  <button
-                    type="button"
-                    onClick={() => setOpenFaq(isOpen ? null : idx)}
-                    className="w-full p-4 sm:p-5 flex items-center justify-between gap-4 text-start hover:bg-luxury-surface2/50 transition-colors"
-                  >
-                    <span className="font-serif text-sm sm:text-base text-luxury-text font-normal">
-                      {faq.q}
-                    </span>
-                    <ChevronDown
-                      size={16}
-                      className={`text-neutral-400 shrink-0 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
-                    />
-                  </button>
-                  {isOpen && (
-                    <div className="px-4 pb-5 pt-1 text-xs text-neutral-600 dark:text-neutral-300 leading-relaxed border-t border-luxury-border/40 animate-in fade-in duration-200">
-                      {faq.a}
+                      {errorMessage}
                     </div>
                   )}
-                </div>
-              );
-            })}
-          </div>
+                  <fieldset className={styles.fieldset} disabled={isSubmitting}>
+                    <legend>
+                      {c("I’d like help with", "أحتاج مساعدة في")}
+                    </legend>
+                    <div className={styles.topics}>
+                      {topics.map((topic) => (
+                        <label key={topic.value} className={styles.topic}>
+                          <input
+                            type="radio"
+                            name="subject"
+                            value={topic.value}
+                            checked={subject === topic.value}
+                            onChange={() => setSubject(topic.value)}
+                          />
+                          <span>{topic.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <div className={styles.formRow}>
+                      <div className={styles.field}>
+                        <label htmlFor="contact-name">
+                          {c("Your name", "اسمك")} *
+                        </label>
+                        <input
+                          id="contact-name"
+                          name="name"
+                          autoComplete="name"
+                          maxLength={120}
+                          required
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                        />
+                      </div>
+                      <div className={styles.field}>
+                        <label htmlFor="contact-email">
+                          {c("Email address", "البريد الإلكتروني")} *
+                        </label>
+                        <input
+                          id="contact-email"
+                          name="email"
+                          type="email"
+                          dir="ltr"
+                          autoComplete="email"
+                          maxLength={254}
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                    <div className={orderTopic ? styles.formRow : undefined}>
+                      <div className={styles.field}>
+                        <label htmlFor="contact-phone">
+                          {c("Phone · optional", "الهاتف · اختياري")}
+                        </label>
+                        <input
+                          id="contact-phone"
+                          name="phone"
+                          type="tel"
+                          dir="ltr"
+                          autoComplete="tel"
+                          maxLength={40}
+                          placeholder="+971"
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                        />
+                      </div>
+                      {orderTopic && (
+                        <div className={styles.field}>
+                          <label htmlFor="contact-order">
+                            {c(
+                              "Order reference · optional",
+                              "رقم الطلب · اختياري",
+                            )}
+                          </label>
+                          <input
+                            id="contact-order"
+                            name="orderReference"
+                            dir="ltr"
+                            maxLength={100}
+                            value={orderReference}
+                            onChange={(e) => setOrderReference(e.target.value)}
+                          />
+                          <Link href="/track" className={styles.textLink}>
+                            {c("Track your order", "تتبع طلبك")}
+                          </Link>
+                        </div>
+                      )}
+                    </div>
+                    <div className={styles.field}>
+                      <label htmlFor="contact-message">
+                        {c("Your message", "رسالتك")} *
+                      </label>
+                      <textarea
+                        id="contact-message"
+                        name="message"
+                        rows={5}
+                        required
+                        maxLength={4000}
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                        aria-describedby="message-hint"
+                      />
+                      <div className={styles.hint}>
+                        <span id="message-hint">{selectedTopic.hint}</span>
+                        <span dir="ltr" className="shrink-0">
+                          {message.length}/4000
+                        </span>
+                      </div>
+                    </div>
+                    <div className={styles.submitRow}>
+                      <p>
+                        {c(
+                          "We’ll use these details to respond to your enquiry.",
+                          "سنستخدم هذه البيانات للرد على استفسارك.",
+                        )}
+                      </p>
+                      <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className={styles.button}
+                      >
+                        {isSubmitting ? (
+                          <Loader2
+                            size={17}
+                            className={styles.spin}
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <ArrowRight
+                            size={17}
+                            className={styles.arrow}
+                            aria-hidden="true"
+                          />
+                        )}
+                        {isSubmitting
+                          ? c("Sending…", "جارٍ الإرسال…")
+                          : c("Send message", "إرسال الرسالة")}
+                      </button>
+                    </div>
+                  </fieldset>
+                </form>
+              </>
+            )}
+          </section>
         </div>
-      </section>
+        <section className={styles.section} aria-labelledby="faq-heading">
+          <EditorialReveal>
+            <div className={styles.faqGrid}>
+              <div>
+                <span className={styles.eyebrow}>
+                  {c("A few helpful answers", "إجابات قد تساعدك")}
+                </span>
+                <h2 id="faq-heading" className={styles.heading}>
+                  {c("Before you ask.", "قبل أن تسأل.")}
+                </h2>
+                <p className={`${styles.body} mt-5`}>
+                  {c(
+                    "A starting point for the questions we can help with.",
+                    "نقطة بداية للأسئلة التي يمكننا مساعدتك فيها.",
+                  )}
+                </p>
+              </div>
+              <div className={styles.faqList}>
+                {faqs.map((faq) => (
+                  <details key={faq.q} className={styles.faq}>
+                    <summary>
+                      {faq.q}
+                      <Plus size={19} aria-hidden="true" />
+                    </summary>
+                    <p>{faq.a}</p>
+                  </details>
+                ))}
+              </div>
+            </div>
+          </EditorialReveal>
+        </section>
+      </div>
     </div>
   );
 }
-
