@@ -3,9 +3,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { Prisma } from "@prisma/client";
 const db = vi.hoisted(() => ({ transaction: vi.fn() }));
 vi.mock("../src/prisma", () => ({ prisma: { $transaction: db.transaction } }));
-const inventory = vi.hoisted(() => ({ commit: vi.fn() }));
+const inventory = vi.hoisted(() => ({ commit: vi.fn(), release: vi.fn() }));
 vi.mock("../src/services/inventory.service", () => ({
-  InventoryService: { commitOrderInventory: inventory.commit },
+  InventoryService: {
+    commitOrderInventory: inventory.commit,
+    releaseOrderReservations: inventory.release,
+  },
 }));
 import {
   PaymentService,
@@ -17,11 +20,11 @@ const orderId = "11111111-1111-4111-8111-111111111111";
 function sign(body: Buffer, time = timestamp) {
   return `t=${time},v1=${createHmac("sha256", secret).update(`${time}.`).update(body).digest("hex")}`;
 }
-function event(amount = 185000) {
+function event(amount = 185000, type = "checkout.session.completed") {
   return Buffer.from(
     JSON.stringify({
       id: "evt_test",
-      type: "checkout.session.completed",
+      type,
       livemode: false,
       data: {
         object: {
@@ -151,5 +154,41 @@ describe("Stripe payment boundary", () => {
       PaymentService.handleStripeWebhook(body, sign(body)),
     ).resolves.toEqual({ status: "ALREADY_PROCESSED" });
     expect(inventory.commit).toHaveBeenCalledTimes(1);
+  });
+  it("keeps failed asynchronous payments unpaid and releases their hold", async () => {
+    const tx = {
+      $queryRaw: vi.fn(),
+      webhookEvent: {
+        findUnique: vi.fn().mockResolvedValue(null),
+        upsert: vi.fn(),
+      },
+      payment: {
+        findUnique: vi.fn().mockResolvedValue({
+          id: "pay",
+          orderId,
+          provider: "CREDIT_CARD",
+          currency: "AED",
+          amount: new Prisma.Decimal(1850),
+          status: "REQUIRES_ACTION",
+          order: { status: "PAYMENT_PENDING" },
+        }),
+        update: vi.fn(),
+      },
+      order: { updateMany: vi.fn() },
+    };
+    db.transaction.mockImplementation((fn: any) => fn(tx));
+    const body = event(185000, "checkout.session.async_payment_failed");
+    await expect(
+      PaymentService.handleStripeWebhook(body, sign(body)),
+    ).resolves.toEqual({ status: "PROCESSED" });
+    expect(tx.payment.update).toHaveBeenCalledWith({
+      where: { id: "pay" },
+      data: { status: "CANCELLED" },
+    });
+    expect(tx.order.updateMany).toHaveBeenCalledWith({
+      where: { id: orderId, status: { in: ["PENDING", "PAYMENT_PENDING"] } },
+      data: { status: "CANCELLED" },
+    });
+    expect(inventory.commit).not.toHaveBeenCalled();
   });
 });

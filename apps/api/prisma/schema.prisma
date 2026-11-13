@@ -1049,6 +1049,7 @@ model Payment {
   amount            Decimal           @db.Decimal(10, 2)
   currency          String            @default("AED")
   gatewayReference  String?           @unique
+  gatewayPaymentIntentId String?      @unique
   installmentsCount Int?              @default(1)
   events            PaymentEvent[]
   order             Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)

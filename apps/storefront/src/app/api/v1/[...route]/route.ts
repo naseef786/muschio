@@ -2220,7 +2220,8 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
     if (path === "admin/orders/status") {
       const { orderId, orderNumber, status: rawStatus, reason, trackingNumber, carrier } = body || {};
       if (!rawStatus) return error("INVALID_INPUT", "Status is required", 400);
-      const status = String(rawStatus).toUpperCase().trim();
+      let status = String(rawStatus).toUpperCase().trim();
+      const requestedCancellation = status === "CANCELLED";
 
       const order = await prisma.order.findFirst({
         where: {
@@ -2256,15 +2257,23 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
 
       // When cancelling, release reserved stock and update payment record
-      if (status === "CANCELLED") {
-        await InventoryService.releaseOrderReservations(order.id).catch(() => null);
-        await LoyaltyService.refundOrderRedemption(order.id).catch(() => null);
+      if (requestedCancellation) {
         const primaryPayment = order.payments[0];
-        if (primaryPayment) {
-          const nextPaymentStatus = primaryPayment.status === "CAPTURED" ? "REFUNDED" : "CANCELLED";
+        if (primaryPayment?.status === "CAPTURED") {
+          if (primaryPayment.provider !== "CREDIT_CARD") {
+            return error("REFUND_UNAVAILABLE", "This captured payment requires provider reconciliation before cancellation.", 409);
+          }
+          await PaymentService.refundOrder(order.id, reason || "Admin cancellation");
+          status = "REFUNDED";
+        }
+        await InventoryService.releaseOrderReservations(order.id).catch(() => null);
+        if (primaryPayment?.status !== "CAPTURED") {
+          await LoyaltyService.refundOrderRedemption(order.id).catch(() => null);
+        }
+        if (primaryPayment && primaryPayment.status !== "CAPTURED") {
           await prisma.payment.update({
             where: { id: primaryPayment.id },
-            data: { status: nextPaymentStatus as any },
+            data: { status: "CANCELLED" },
           });
         }
       }
@@ -2339,7 +2348,7 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
 
       // Customer transactional alerts
       const customerPhone = order.shippingAddress?.phone || order.customer?.phone;
-      if (status === "CANCELLED") {
+      if (requestedCancellation) {
         EmailService.sendOrderCancellation(order, reason).catch((err) =>
           console.error("Failed to send order cancellation email:", err)
         );

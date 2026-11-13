@@ -25,6 +25,7 @@ const EventSchema = z.object({
     object: z.object({
       id: z.string().startsWith("cs_"),
       payment_status: z.string().optional(),
+      payment_intent: z.string().startsWith("pi_").nullable().optional(),
       amount_total: z.number().int().nonnegative().nullable().optional(),
       currency: z.string().nullable().optional(),
       metadata: z.object({ orderId: z.string().uuid() }),
@@ -81,6 +82,14 @@ async function stripeRequest(
   body?: URLSearchParams,
   idempotencyKey?: string,
 ) {
+  const payload = await stripeJsonRequest(path, body, idempotencyKey);
+  return SessionSchema.parse(payload);
+}
+async function stripeJsonRequest(
+  path: string,
+  body?: URLSearchParams,
+  idempotencyKey?: string,
+) {
   const response = await fetch(`https://api.stripe.com/v1/${path}`, {
     method: body ? "POST" : "GET",
     headers: {
@@ -97,7 +106,7 @@ async function stripeRequest(
       "PAYMENT_PROVIDER_UNAVAILABLE",
       "Payment could not be started; please retry",
     );
-  return SessionSchema.parse(await response.json());
+  return response.json() as Promise<Record<string, unknown>>;
 }
 function redirectFor(session: z.infer<typeof SessionSchema>) {
   if (!session.url || session.status !== "open")
@@ -280,6 +289,7 @@ export class PaymentService {
         customer_email: order.guestEmail!,
         client_reference_id: order.id,
         "metadata[orderId]": order.id,
+        "payment_intent_data[metadata][orderId]": order.id,
         "line_items[0][price_data][currency]": order.currency.toLowerCase(),
         "line_items[0][price_data][unit_amount]": order.totalAmount
           .times(100)
@@ -399,6 +409,7 @@ export class PaymentService {
               // Keep the Checkout Session ID as the stable reconciliation key.
               // The PaymentIntent ID is stored in the payment event dossier.
               gatewayReference: sessionId,
+              gatewayPaymentIntentId: pi?.id || undefined,
             },
           });
 
@@ -505,9 +516,12 @@ export class PaymentService {
     const json: unknown = JSON.parse(rawBody.toString("utf8"));
     const envelope = z.object({ id: z.string(), type: z.string() }).parse(json);
     if (
-      !["checkout.session.completed", "checkout.session.expired"].includes(
-        envelope.type,
-      )
+      ![
+        "checkout.session.completed",
+        "checkout.session.expired",
+        "checkout.session.async_payment_failed",
+        "checkout.session.async_payment_succeeded",
+      ].includes(envelope.type)
     )
       return { status: "IGNORED" };
     const event = EventSchema.parse(json);
@@ -536,7 +550,10 @@ export class PaymentService {
           "PAYMENT_REFERENCE_MISMATCH",
           "Payment reference mismatch",
         );
-      if (event.type === "checkout.session.completed") {
+      if (
+        event.type === "checkout.session.completed" ||
+        event.type === "checkout.session.async_payment_succeeded"
+      ) {
         if (session.payment_status !== "paid") return { status: "IGNORED" };
         if (
           session.currency?.toUpperCase() !== payment.currency ||
@@ -559,7 +576,10 @@ export class PaymentService {
           await InventoryService.commitOrderInventory(payment.orderId, tx);
           await tx.payment.update({
             where: { id: payment.id },
-            data: { status: "CAPTURED" },
+            data: {
+              status: "CAPTURED",
+              gatewayPaymentIntentId: session.payment_intent || undefined,
+            },
           });
           await tx.order.update({
             where: { id: payment.orderId },
@@ -595,5 +615,57 @@ export class PaymentService {
       });
       return { status: "PROCESSED" };
     });
+  }
+
+  /** Issue a provider-backed, idempotent refund and reconcile internal state. */
+  static async refundOrder(orderId: string, reason = "Order refund") {
+    if (!configured()) throw new ApiError(503, "PAYMENTS_UNAVAILABLE", "Stripe is not configured");
+
+    const payment = await prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "Order" WHERE id = ${orderId} FOR UPDATE`;
+      const order = await tx.order.findUnique({ where: { id: orderId } });
+      if (!order) throw new ApiError(404, "ORDER_NOT_FOUND", "Order not found");
+      const captured = await tx.payment.findFirst({
+        where: { orderId, status: "CAPTURED", gatewayPaymentIntentId: { not: null } },
+        orderBy: { createdAt: "desc" },
+      });
+      if (!captured?.gatewayPaymentIntentId) {
+        throw new ApiError(409, "REFUND_REFERENCE_MISSING", "The captured payment cannot be reconciled for refund");
+      }
+      return captured;
+    });
+
+    const refund = await stripeJsonRequest(
+      "refunds",
+      new URLSearchParams({ payment_intent: payment.gatewayPaymentIntentId! }),
+      `muschio-refund-${payment.id}`,
+    );
+    if (refund.status !== "succeeded") {
+      throw new ApiError(409, "REFUND_PENDING", "Stripe has not completed the refund yet");
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedPayment = await tx.payment.update({
+        where: { id: payment.id },
+        data: { status: "REFUNDED" },
+      });
+      const updatedOrder = await tx.order.update({
+        where: { id: orderId },
+        data: { status: "REFUNDED" },
+      });
+      await tx.paymentEvent.create({
+        data: {
+          paymentId: payment.id,
+          eventType: "REFUND_SUCCEEDED",
+          payload: { refundId: typeof refund.id === "string" ? refund.id : null, reason },
+        },
+      });
+      await LoyaltyService.refundOrderRedemption(orderId, tx);
+      return { payment: updatedPayment, order: updatedOrder };
+    });
+    await LoyaltyService.reverseOrderPoints(orderId, reason).catch((err) =>
+      console.error("Failed to reverse earned loyalty points after refund:", err),
+    );
+    return result;
   }
 }
