@@ -2,11 +2,17 @@ import React from "react";
 import { SettingsService } from "@muschio/api";
 import { ContactClient } from "./ContactClient";
 
-export async function generateMetadata({
-  params: { locale },
-}: {
-  params: { locale: string };
-}) {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ locale: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   return {
     title: isAr
@@ -29,11 +35,17 @@ export async function generateMetadata({
   };
 }
 
-export default async function ContactPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default async function ContactPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const settings = await SettingsService.getSettings();
   const whatsappNumber = settings.whatsappNumber.replace(/\D/g, "");
   // Retain the existing dialable number when the display setting uses a vanity name.

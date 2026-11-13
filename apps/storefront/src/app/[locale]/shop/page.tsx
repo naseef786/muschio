@@ -4,22 +4,28 @@ import { ShopClient } from "./ShopClient";
 
 export const dynamic = "force-dynamic";
 
-export default async function ShopCatalogPage({
-  params: { locale },
-  searchParams,
-}: {
-  params: { locale: "en" | "ar" };
-  searchParams: {
-    search?: string;
-    brandType?: string;
-    family?: string;
-    brand?: string;
-    tag?: string;
-    tagSlug?: string;
-    page?: string;
-    deal?: string;
-  };
-}) {
+export default async function ShopCatalogPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+    searchParams: Promise<{
+      search?: string;
+      brandType?: string;
+      family?: string;
+      brand?: string;
+      tag?: string;
+      tagSlug?: string;
+      page?: string;
+      deal?: string;
+    }>;
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   let initialProducts: any[] = [];
   let initialFamilies: any[] = [];
   let initialTags: any[] = [];

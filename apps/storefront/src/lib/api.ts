@@ -9,7 +9,7 @@ import {
   SavedAddress,
   CreateSavedAddress,
 } from "@muschio/types";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { StorefrontProductSchema, StorefrontProduct } from "@muschio/types";
 import { StorefrontOrderSchema, StorefrontOrder } from "@muschio/types";
 

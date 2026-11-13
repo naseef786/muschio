@@ -5,11 +5,18 @@ import { resolveProductSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
-export default async function ProductPage({
-  params: { locale, slug },
-}: {
-  params: { locale: "en" | "ar"; slug: string };
-}) {
+export default async function ProductPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar"; slug: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale,
+    slug
+  } = params;
+
   // Directly query the catalog in-process for instant, 100% live database data
   let result = await CatalogService.getProductBySlug(slug);
 

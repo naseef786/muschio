@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
 import { Button, Badge, PriceDisplay } from "@muschio/ui";
@@ -8,11 +8,17 @@ import { useCart } from "../../../context/cart-context";
 import { useWishlist, WishlistItem } from "../../../context/wishlist-context";
 import { Heart, ShoppingBag, Trash2, ArrowLeft, Sparkles } from "lucide-react";
 
-export default function WishlistPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function WishlistPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const { addItem } = useCart();
   const { items, removeItem, clearWishlist } = useWishlist();

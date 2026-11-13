@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Link } from "../../../navigation";
@@ -26,11 +26,17 @@ import {
   Trash2,
 } from "lucide-react";
 
-export default function CheckoutPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function CheckoutPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
   const searchParams = useSearchParams();

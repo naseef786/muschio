@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { ProductSchema } from "./catalog";
 
 export const AIScentConsultationInputSchema = z.object({

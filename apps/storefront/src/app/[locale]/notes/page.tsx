@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, use } from "react";
 import Image from "next/image";
 import { Link } from "../../../navigation";
 import { Search, ArrowUpRight, Loader2 } from "lucide-react";
@@ -20,11 +20,17 @@ interface LiveNote {
   featuredProductCount?: number;
 }
 
-export default function NotesIndexPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function NotesIndexPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import { Link } from "../../../navigation";
 import { DeliveryPanel } from "../../../components/delivery-panel";
 import {
@@ -11,11 +11,17 @@ import {
   ArrowRight,
 } from "lucide-react";
 
-export default function DeliveryPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function DeliveryPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const [country, setCountry] = useState("AE");
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);

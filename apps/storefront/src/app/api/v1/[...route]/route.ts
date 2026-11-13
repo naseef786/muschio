@@ -31,6 +31,7 @@ import {
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
+import { getRequiredAdminRoles } from "@/lib/admin-rbac";
 
 export const dynamic = "force-dynamic";
 
@@ -40,6 +41,26 @@ async function verifyAdminAuth(req: NextRequest) {
   const token = authHeader.slice(7).trim();
   if (!token) return null;
   return await AdminService.verifyToken(token);
+}
+
+async function authorizeAdminRequest(req: NextRequest, route: string[]) {
+  const requiredRoles = getRequiredAdminRoles(req.method, route);
+  if (requiredRoles === null) return null;
+
+  const admin = await verifyAdminAuth(req);
+  if (!admin) {
+    return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+  }
+
+  if (
+    admin.role !== "SUPER_ADMIN" &&
+    requiredRoles.length > 0 &&
+    !requiredRoles.includes(admin.role)
+  ) {
+    return error("FORBIDDEN", "Your administrator role cannot perform this action", 403);
+  }
+
+  return null;
 }
 
 
@@ -118,19 +139,15 @@ function resolveGender(val: any): "UNISEX" | "MEN" | "WOMEN" {
   return "UNISEX";
 }
 
-export async function GET(req: NextRequest, { params }: { params: { route: string[] } }) {
+export async function GET(req: NextRequest, props: { params: Promise<{ route: string[] }> }) {
+  const params = await props.params;
   try {
     const route = params.route || [];
     const path = route.join("/");
     const url = new URL(req.url);
 
-    // Require administrator authorization for all admin endpoints
-    if (route[0] === "admin") {
-      const admin = await verifyAdminAuth(req);
-      if (!admin) {
-        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
-      }
-    }
+    const adminAuthError = await authorizeAdminRequest(req, route);
+    if (adminAuthError) return adminAuthError;
 
     // 1. Brands
     if (path === "brands") {
@@ -1019,7 +1036,8 @@ export async function GET(req: NextRequest, { params }: { params: { route: strin
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: { route: string[] } }) {
+export async function POST(req: NextRequest, props: { params: Promise<{ route: string[] }> }) {
+  const params = await props.params;
   try {
     const route = params.route || [];
     const path = route.join("/");
@@ -1032,13 +1050,8 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
       }
     } catch {}
 
-    // Require administrator authorization for all admin endpoints (except login)
-    if (route[0] === "admin" && path !== "admin/auth/login" && path !== "admin/login") {
-      const admin = await verifyAdminAuth(req);
-      if (!admin) {
-        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
-      }
-    }
+    const adminAuthError = await authorizeAdminRequest(req, route);
+    if (adminAuthError) return adminAuthError;
 
     // 1. Guest Session
     if (path === "sessions/guest") {
@@ -2743,12 +2756,13 @@ export async function POST(req: NextRequest, { params }: { params: { route: stri
   }
 }
 
-export async function PUT(req: NextRequest, { params }: { params: { route: string[] } }) {
+export async function PUT(req: NextRequest, props: { params: Promise<{ route: string[] }> }) {
   // Delegate PUT requests directly to POST handler
-  return POST(req, { params });
+  return POST(req, props);
 }
 
-export async function PATCH(req: NextRequest, { params }: { params: { route: string[] } }) {
+export async function PATCH(req: NextRequest, props: { params: Promise<{ route: string[] }> }) {
+  const params = await props.params;
   try {
     const route = params.route || [];
     const path = route.join("/");
@@ -2756,6 +2770,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
     try {
       body = await req.json();
     } catch {}
+
+    const adminAuthError = await authorizeAdminRequest(req, route);
+    if (adminAuthError) return adminAuthError;
 
     // 1. Client Profile
     if (path === "auth/profile") {
@@ -3023,17 +3040,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { route: str
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { route: string[] } }) {
+export async function DELETE(req: NextRequest, props: { params: Promise<{ route: string[] }> }) {
+  const params = await props.params;
   try {
     const route = params.route || [];
 
-    // Require administrator authorization for all admin delete endpoints
-    if (route[0] === "admin") {
-      const admin = await verifyAdminAuth(req);
-      if (!admin) {
-        return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
-      }
-    }
+    const adminAuthError = await authorizeAdminRequest(req, route);
+    if (adminAuthError) return adminAuthError;
 
     // 1. Cart Items: Remove
     if (route[0] === "cart" && route[1] === "items" && route[2]) {

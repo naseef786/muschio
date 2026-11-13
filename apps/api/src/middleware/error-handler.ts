@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { ZodError } from "zod";
+import { ZodError } from "zod/v3";
 import { ApiResponse } from "@muschio/types";
 
 export class ApiError extends Error {

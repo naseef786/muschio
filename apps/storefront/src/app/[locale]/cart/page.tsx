@@ -1,17 +1,23 @@
 "use client";
 
-import React from "react";
+import React, { use } from "react";
 import Image from "next/image";
 import { Link, useRouter } from "../../../navigation";
 import { Button, PriceDisplay, InstallmentBadge } from "@muschio/ui";
 import { Trash2, ArrowRight, ShoppingBag, Minus, Plus } from "lucide-react";
 import { useCart } from "../../../context/cart-context";
 
-export default function CartPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function CartPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const router = useRouter();
 

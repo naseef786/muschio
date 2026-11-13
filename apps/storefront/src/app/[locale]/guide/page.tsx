@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import { Link } from "../../../navigation";
 import { Badge, Button } from "@muschio/ui";
 import {
@@ -13,11 +13,17 @@ import {
   Compass,
 } from "lucide-react";
 
-export default function FragranceGuidePage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function FragranceGuidePage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const [activeTab, setActiveTab] = useState<string>("pyramid");
 

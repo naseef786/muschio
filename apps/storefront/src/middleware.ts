@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import createIntlMiddleware from "next-intl/middleware";
-import { locales } from "./i18n";
 import { getLegacyRedirect } from "./lib/seo-redirects";
+import { routing } from "./routing";
 
-const intlMiddleware = createIntlMiddleware({
-  locales,
-  defaultLocale: "en",
-  localePrefix: "always",
-});
+const intlMiddleware = createIntlMiddleware(routing);
 
 interface RateLimitRecord {
   timestamps: number[];

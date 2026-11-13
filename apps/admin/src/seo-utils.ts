@@ -1,5 +1,4 @@
 // Pro SEO Utility functions, CSV Parser, Excel Parser/Exporter, and Meta Generators for Muschio Admin
-import * as XLSX from "xlsx";
 
 export interface BrandItem {
   id: string;
@@ -280,66 +279,40 @@ XER-ALEX2-100,"Alexandria II Eau de Parfum","ألكسندريا 2 أو دي با
 /**
  * Downloads a pre-formatted Excel (.xlsx) template for bulk product import.
  */
-export function downloadExcelTemplate(filename = "muschio_luxury_catalog_template.xlsx"): void {
+export async function downloadExcelTemplate(filename = "muschio_luxury_catalog_template.xlsx"): Promise<void> {
+  const XLSX = await import("xlsx");
   const { headers, rows } = parseCsvContent(PRO_SEO_CSV_TEMPLATE);
-  const ws = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
 
-  // Format generous column widths so all fragrance data and Arabic titles are comfortable to read
-  ws["!cols"] = [
-    { wch: 18 }, // sku
-    { wch: 30 }, // nameEn
-    { wch: 32 }, // nameAr
-    { wch: 34 }, // slug
-    { wch: 22 }, // brand
-    { wch: 20 }, // scentFamily
-    { wch: 22 }, // perfumer
-    { wch: 35 }, // perfumerBio
-    { wch: 22 }, // concentration
-    { wch: 12 }, // gender
-    { wch: 12 }, // volumeMl
-    { wch: 12 }, // priceAed
-    { wch: 14 }, // costPriceAed
-    { wch: 14 }, // sealedStock
-    { wch: 14 }, // testerStock
-    { wch: 16 }, // warehouseCode
-    { wch: 35 }, // topNotes
-    { wch: 35 }, // heartNotes
-    { wch: 35 }, // baseNotes
-    { wch: 40 }, // taglineEn
-    { wch: 40 }, // taglineAr
-    { wch: 55 }, // descriptionEn
-    { wch: 55 }, // descriptionAr
-    { wch: 45 }, // metaTitle
-    { wch: 55 }, // metaDescription
-    { wch: 40 }, // imageUrl
-    { wch: 35 }, // imageAlt
-    { wch: 14 }, // status
+  worksheet["!cols"] = [
+    { wch: 18 }, { wch: 30 }, { wch: 32 }, { wch: 34 }, { wch: 22 }, { wch: 20 }, { wch: 22 },
+    { wch: 35 }, { wch: 22 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 },
+    { wch: 14 }, { wch: 16 }, { wch: 35 }, { wch: 35 }, { wch: 35 }, { wch: 40 }, { wch: 40 },
+    { wch: 55 }, { wch: 55 }, { wch: 45 }, { wch: 55 }, { wch: 40 }, { wch: 35 }, { wch: 14 },
   ];
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "Muschio Catalog");
-  XLSX.writeFile(wb, filename);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Muschio Catalog");
+  XLSX.writeFile(workbook, filename);
 }
 
 /**
  * Parses an uploaded Excel (.xlsx, .xls) file into standardized CSV text and row count.
  */
 export async function parseExcelFileToCsv(file: File): Promise<{ csvText: string; rowCount: number }> {
+  const XLSX = await import("xlsx");
   const buffer = await file.arrayBuffer();
-  const data = new Uint8Array(buffer);
-  const wb = XLSX.read(data, { type: "array" });
-  if (!wb.SheetNames || wb.SheetNames.length === 0) {
+  const workbook = XLSX.read(new Uint8Array(buffer), { type: "array" });
+  const firstSheetName = workbook.SheetNames[0];
+  if (!firstSheetName) {
     throw new Error("The Excel workbook contains no sheets.");
   }
-  const firstSheetName = wb.SheetNames[0];
-  if (!firstSheetName) {
-    throw new Error("Could not find first sheet in Excel file.");
-  }
-  const sheet = wb.Sheets[firstSheetName];
-  if (!sheet) {
+  const worksheet = workbook.Sheets[firstSheetName];
+  if (!worksheet) {
     throw new Error("Could not read sheet data from Excel file.");
   }
-  const csvText = XLSX.utils.sheet_to_csv(sheet);
-  const rows = XLSX.utils.sheet_to_json(sheet);
+
+  const csvText = XLSX.utils.sheet_to_csv(worksheet);
+  const rows = XLSX.utils.sheet_to_json(worksheet);
   return { csvText, rowCount: rows.length };
 }

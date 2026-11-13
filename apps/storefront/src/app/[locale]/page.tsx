@@ -48,11 +48,17 @@ const DEFAULT_OFFER_BANNER = {
   imageUrl: photo("photo-1592945403244-b3fbafd7f539", 1400),
 };
 
-export default async function HomePage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default async function HomePage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const ar = locale === "ar";
   const c = (en: string, arabic: string) => (ar ? arabic : en);
 

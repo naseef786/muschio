@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, use } from "react";
 import Image from "next/image";
 import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay, Button } from "@muschio/ui";
@@ -26,11 +26,17 @@ import {
 
 type OrderFilterStatus = "ALL" | "ACTIVE" | "DELIVERED" | "CANCELLED";
 
-export default function MyOrdersPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function MyOrdersPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
 

@@ -8,11 +8,18 @@ import { resolveNoteSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
-export default async function NoteDetailPage({
-  params: { locale, slug },
-}: {
-  params: { locale: "en" | "ar"; slug: string };
-}) {
+export default async function NoteDetailPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar"; slug: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale,
+    slug
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 

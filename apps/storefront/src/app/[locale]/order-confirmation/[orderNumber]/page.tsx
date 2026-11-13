@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, use } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { StorefrontOrder } from "@muschio/types";
@@ -30,11 +30,18 @@ import {
   ShoppingBag,
 } from "lucide-react";
 
-export default function OrderStatusPage({
-  params: { locale, orderNumber },
-}: {
-  params: { locale: "en" | "ar"; orderNumber: string };
-}) {
+export default function OrderStatusPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar"; orderNumber: string }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale,
+    orderNumber
+  } = params;
+
   const isAr = locale === "ar";
   const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
   const searchParams = useSearchParams();

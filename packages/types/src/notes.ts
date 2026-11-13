@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { ProductSchema, NotePositionSchema } from "./catalog";
 
 export const NoteStatusSchema = z.enum(["DRAFT", "PUBLISHED", "ARCHIVED"]);

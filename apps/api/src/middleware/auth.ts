@@ -4,7 +4,7 @@ import { AdminRole } from "@prisma/client";
 import { ApiError } from "./error-handler";
 import { signingSecret } from "./storefront-auth";
 import { prisma } from "../prisma";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 export interface AuthenticatedAdmin {
   id: string;

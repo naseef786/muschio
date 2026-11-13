@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, use } from "react";
 import Image from "next/image";
 import { Link } from "../../../../navigation";
 import { Button, Badge, PriceDisplay } from "@muschio/ui";
@@ -27,11 +27,17 @@ interface Recommendation {
   accords: string[];
 }
 
-export default function AIScentDiscoveryPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function AIScentDiscoveryPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 

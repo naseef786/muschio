@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, use } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { muschioApi } from "../../../lib/api";
@@ -28,11 +28,17 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
-export default function OrderTrackingPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function OrderTrackingPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
 

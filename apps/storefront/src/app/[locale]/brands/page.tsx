@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, use } from "react";
 import { Link } from "../../../navigation";
 import { Search, ArrowUpRight, Globe, Loader2 } from "lucide-react";
 import { muschioApi } from "../../../lib/api";
@@ -18,11 +18,17 @@ interface LiveBrand {
   };
 }
 
-export default function BrandsDirectoryPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function BrandsDirectoryPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 

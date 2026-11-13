@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, use } from "react";
 import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay, Button } from "@muschio/ui";
 import { Link } from "../../../navigation";
@@ -27,11 +27,17 @@ import {
   Truck,
 } from "lucide-react";
 
-export default function AccountPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function AccountPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
 

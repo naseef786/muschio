@@ -89,16 +89,7 @@ export class AdminService {
 
       if (!payload?.id || payload?.purpose !== "admin") return null;
 
-      // Fast-path: If token payload already includes verified admin identity, return it without DB roundtrip
-      if (payload.email && payload.role) {
-        return {
-          id: payload.id,
-          email: payload.email,
-          name: payload.name || "Administrator",
-          role: payload.role,
-        };
-      }
-
+      // Re-read the administrator so deactivation and role changes take effect immediately.
       const user = await prisma.adminUser.findFirst({
         where: { id: payload.id, isActive: true },
         select: { id: true, email: true, role: true, name: true },

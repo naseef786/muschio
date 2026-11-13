@@ -1,6 +1,6 @@
 import React from "react";
 import { notFound } from "next/navigation";
-import { unstable_setRequestLocale, getMessages } from "next-intl/server";
+import { setRequestLocale, getMessages } from "next-intl/server";
 import { NextIntlClientProvider } from "next-intl";
 import { locales, Locale } from "../../i18n";
 import { ThemeProvider } from "next-themes";
@@ -33,11 +33,17 @@ const cairo = Cairo({
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({
-  params: { locale },
-}: {
-  params: { locale: string };
-}) {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ locale: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   return {
     metadataBase: new URL("https://www.muschio.ae"),
@@ -84,15 +90,24 @@ export async function generateMetadata({
   };
 }
 
-export default async function RootLayout({
-  children,
-  params: { locale },
-}: {
-  children: React.ReactNode;
-  params: { locale: string };
-}) {
+export default async function RootLayout(
+  props: {
+    children: React.ReactNode;
+    params: Promise<{ locale: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
+  const {
+    children
+  } = props;
+
   if (!locales.includes(locale as any)) notFound();
-  unstable_setRequestLocale(locale);
+  setRequestLocale(locale);
 
   const messages = await getMessages();
   const isRtl = locale === "ar";

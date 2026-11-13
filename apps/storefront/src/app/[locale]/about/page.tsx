@@ -4,11 +4,17 @@ import { Link } from "../../../navigation";
 import { EditorialReveal } from "../../../components/editorial-reveal";
 import styles from "../../../components/editorial-pages.module.css";
 
-export function generateMetadata({
-  params: { locale },
-}: {
-  params: { locale: string };
-}) {
+export async function generateMetadata(
+  props: {
+    params: Promise<{ locale: string }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const ar = locale === "ar";
   const title = ar
     ? "عن موسكيو | اكتشف عالم العطور"
@@ -27,11 +33,17 @@ export function generateMetadata({
   };
 }
 
-export default function AboutPage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default async function AboutPage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = await props.params;
+
+  const {
+    locale
+  } = params;
+
   const c = (en: string, ar: string) => (locale === "ar" ? ar : en);
   const principles = [
     {

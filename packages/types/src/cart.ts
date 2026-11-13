@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { CurrencySchema, ProductVariantSchema, ProductSchema } from "./catalog";
 
 export const CartItemSchema = z.object({

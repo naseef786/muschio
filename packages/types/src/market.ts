@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { PaymentMethodTypeSchema } from "./payment";
 
 export const MarketCodeSchema = z.enum(["AE", "SA", "QA", "KW", "OM", "BH"]);

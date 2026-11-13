@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 import { CurrencySchema } from "./catalog";
 
 export const PaymentMethodTypeSchema = z.enum([

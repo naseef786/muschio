@@ -1,5 +1,4 @@
-import { z } from "zod";
-import { DeliveryRequest, DeliveryResponse, DeliveryRuleSchema } from "@muschio/types";
+import { DeliveryRequest, DeliveryResponse, DeliveryRulesSchema } from "@muschio/types";
 
 const DEFAULT_GCC_DELIVERY_RULES = [
   {
@@ -81,7 +80,7 @@ export function quoteDelivery(
 ): DeliveryResponse {
   if (!enabled) return { enabled: false, currency: "AED", services: [] };
 
-  const parsed = z.array(DeliveryRuleSchema).safeParse(rules);
+  const parsed = DeliveryRulesSchema.safeParse(rules);
   if (!parsed.success) {
     return { enabled: false, currency: "AED", services: [] };
   }

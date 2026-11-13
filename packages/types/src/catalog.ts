@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 
 export const CurrencySchema = z.enum(["AED", "SAR", "USD", "QAR", "KWD", "OMR", "BHD"]);
 export type Currency = z.infer<typeof CurrencySchema>;

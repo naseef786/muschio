@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo, useCallback, use } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { Link } from "../../../navigation";
@@ -24,11 +24,17 @@ import {
   Plus,
 } from "lucide-react";
 
-export default function ComparePage({
-  params: { locale },
-}: {
-  params: { locale: "en" | "ar" };
-}) {
+export default function ComparePage(
+  props: {
+    params: Promise<{ locale: "en" | "ar" }>;
+  }
+) {
+  const params = use(props.params);
+
+  const {
+    locale
+  } = params;
+
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => (isAr ? ar : en);
   const searchParams = useSearchParams();

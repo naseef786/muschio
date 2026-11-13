@@ -14,9 +14,7 @@ const nextConfig = {
     ],
   },
   transpilePackages: ["@muschio/ui", "@muschio/types", "@muschio/api", "@muschio/admin"],
-  experimental: {
-    serverComponentsExternalPackages: ["@prisma/client", "prisma"],
-  },
+  serverExternalPackages: ["@prisma/client", "prisma"],
   webpack: (config, { isServer }) => {
     if (isServer) {
       config.plugins = [...config.plugins, new PrismaPlugin()];

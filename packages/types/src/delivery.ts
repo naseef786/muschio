@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "zod/v3";
 export const DeliveryCountrySchema = z.enum(["AE", "SA", "QA", "KW", "BH", "OM"]);
 export const DeliveryRequestSchema = z.object({
   country: DeliveryCountrySchema,
@@ -15,6 +15,7 @@ export const DeliveryRuleSchema = z.object({
   minBusinessDays: z.number().int().min(1),
   maxBusinessDays: z.number().int().min(1),
 }).refine(rule => rule.maxBusinessDays >= rule.minBusinessDays, "Invalid delivery window");
+export const DeliveryRulesSchema = z.array(DeliveryRuleSchema);
 export const DeliveryResponseSchema = z.object({
   enabled: z.boolean(),
   currency: z.literal("AED"),

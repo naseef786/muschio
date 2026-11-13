@@ -35,12 +35,12 @@ describe("Shared Zod API Contracts & Trust Boundaries", () => {
   describe("AddToCartInputSchema", () => {
     it("validates valid cart item addition", () => {
       const valid = AddToCartInputSchema.parse({
-        variantId: "11111111-1111-1111-1111-111111111111",
+        variantId: "11111111-1111-4111-8111-111111111111",
         quantity: 2,
         guestSessionId: "sess-abc-456",
       });
 
-      expect(valid.variantId).toBe("11111111-1111-1111-1111-111111111111");
+      expect(valid.variantId).toBe("11111111-1111-4111-8111-111111111111");
       expect(valid.quantity).toBe(2);
       expect(valid.guestSessionId).toBe("sess-abc-456");
     });
@@ -58,7 +58,7 @@ describe("Shared Zod API Contracts & Trust Boundaries", () => {
   describe("CheckoutPayloadSchema", () => {
     it("accepts valid checkout details", () => {
       const payload = CheckoutPayloadSchema.parse({
-        cartId: "22222222-2222-2222-2222-222222222222",
+        cartId: "22222222-2222-4222-8222-222222222222",
         shippingAddress: {
           fullName: "His Excellency Sultan Al-Nuaimi",
           phone: "+971501234567",
@@ -72,7 +72,7 @@ describe("Shared Zod API Contracts & Trust Boundaries", () => {
         currency: "AED",
       });
 
-      expect(payload.cartId).toBe("22222222-2222-2222-2222-222222222222");
+      expect(payload.cartId).toBe("22222222-2222-4222-8222-222222222222");
       expect(payload.shippingAddress.email).toBe("royal@muschio.luxury");
       expect(payload.paymentMethod).toBe("TABBY");
     });
@@ -123,7 +123,7 @@ describe("Shared Zod API Contracts & Trust Boundaries", () => {
       }).toThrow();
 
       const valid = CreateReviewInputSchema.parse({
-        productId: "33333333-3333-3333-3333-333333333333",
+        productId: "33333333-3333-4333-8333-333333333333",
         rating: 5,
         title: "Masterpiece",
         body: "Unrivaled sillage and longevity.",

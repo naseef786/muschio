@@ -69,7 +69,7 @@ describe("Stripe payment boundary", () => {
       sign(body) + `,t=${timestamp}`,
       `t=${timestamp},v1=garbage`,
     ])
-      expect(verifyStripeSignature(body, header, secret)).toBe(false);
+      expect(verifyStripeSignature(body, header, secret, timestamp * 1000)).toBe(false);
   });
   it("never reaches database mutation for unsigned callbacks", async () => {
     await expect(

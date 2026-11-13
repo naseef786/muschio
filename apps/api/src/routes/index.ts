@@ -2,7 +2,7 @@ import { Router } from "express";
 import rateLimit from "express-rate-limit";
 import { storefrontProduct } from "../services/storefront-catalog";
 import { storefrontOrder } from "../services/storefront-order";
-import { z } from "zod";
+import { z } from "zod/v3";
 import { ApiError } from "../middleware/error-handler";
 import {
   createGuestSession,

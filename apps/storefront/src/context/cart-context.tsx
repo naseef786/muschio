@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { z } from "zod";
+import { z } from "zod/v3";
 const SavedItemSchema = z.object({
   id: z.string().min(1).max(100),
   variantId: z.string().min(1).max(100),
