@@ -1942,22 +1942,24 @@ export function App() {
         const errJson = await res.json().catch(() => null);
         saveErrorMessage = errJson?.error?.message || errJson?.message || errJson?.error || "Error inserting product into PostgreSQL";
 
-        // Try admin fallback endpoint
-        const fallbackRes = await fetch("/api/v1/admin/products", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          },
-          body: JSON.stringify(payload),
-        });
-        if (fallbackRes.ok) {
-          const fallbackJson = await fallbackRes.json();
-          savedDbProduct = fallbackJson.product || fallbackJson.data;
-          saveErrorMessage = "";
-        } else {
-          const fallbackErr = await fallbackRes.json().catch(() => null);
-          saveErrorMessage = fallbackErr?.error?.message || fallbackErr?.message || saveErrorMessage;
+        // Validation/conflict responses must be shown, not retried through another writer.
+        if (res.status === 404 || res.status === 405 || res.status >= 500) {
+          const fallbackRes = await fetch("/api/v1/admin/products", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: JSON.stringify(payload),
+          });
+          if (fallbackRes.ok) {
+            const fallbackJson = await fallbackRes.json();
+            savedDbProduct = fallbackJson.product || fallbackJson.data;
+            saveErrorMessage = "";
+          } else {
+            const fallbackErr = await fallbackRes.json().catch(() => null);
+            saveErrorMessage = fallbackErr?.error?.message || fallbackErr?.message || saveErrorMessage;
+          }
         }
       }
     } catch (err: any) {
@@ -1973,6 +1975,12 @@ export function App() {
 
     if (savedDbProduct?.id) {
       newP.id = savedDbProduct.id;
+      if (Array.isArray(savedDbProduct.variants)) newP.variants = savedDbProduct.variants;
+      try {
+        localStorage.setItem("muschio:catalog-updated", `${savedDbProduct.id}:${Date.now()}`);
+      } catch {
+        // Storefront polling still syncs when browser storage is unavailable.
+      }
     }
 
     if (editingProductId) {
