@@ -48,6 +48,22 @@ describe("product variant synchronization", () => {
     expect(tx.productVariant.create).not.toHaveBeenCalled();
   });
 
+  it("keeps sample vials out of the commercial default selection", async () => {
+    await syncProductVariants(tx, "product", [
+      variant({ id: "existing-100", sku: "FRAG-02", volumeMl: 2, isDefault: true, isSampleVial: true }),
+      variant({ id: "existing-50", sku: "FRAG-50", volumeMl: 50, isDefault: false, isSampleVial: false }),
+    ], true);
+
+    expect(tx.productVariant.update).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ data: expect.objectContaining({ isDefault: false, isSampleVial: true }) }),
+    );
+    expect(tx.productVariant.update).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ data: expect.objectContaining({ isDefault: true, isSampleVial: false }) }),
+    );
+  });
+
   it("does not match a new volume row to an existing row just because volumes coincide", async () => {
     await syncProductVariants(tx, "product", [variant({ id: "var-new", sku: "REPLACEMENT" })], true);
     expect(tx.productVariant.update).not.toHaveBeenCalled();

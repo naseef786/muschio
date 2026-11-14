@@ -1,7 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma, syncProductVariants, ApiError } from "@muschio/api";
+import { prisma, syncProductVariants, ApiError, AdminService } from "@muschio/api";
 
 export const dynamic = "force-dynamic";
+
+const PRODUCT_WRITE_ROLES = new Set([
+  "SUPER_ADMIN",
+  "CATALOG_MANAGER",
+  "INVENTORY_MANAGER",
+]);
+
+async function authorizeProductWrite(req: NextRequest) {
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.startsWith("Bearer ")
+    ? authHeader.slice(7).trim()
+    : "";
+  const admin = token
+    ? await AdminService.verifyToken(token).catch(() => null)
+    : null;
+
+  if (!admin) {
+    return NextResponse.json(
+      { success: false, error: "Valid administrator authentication token is required" },
+      { status: 401 },
+    );
+  }
+
+  if (!PRODUCT_WRITE_ROLES.has(admin.role)) {
+    return NextResponse.json(
+      { success: false, error: "Your administrator role cannot manage products" },
+      { status: 403 },
+    );
+  }
+
+  return null;
+}
 
 function serializeVariant(v: any) {
   let volNum = 100;
@@ -309,6 +341,9 @@ function normalizeGender(val: any): "UNISEX" | "MEN" | "WOMEN" {
  * Bulletproof Create or Update product in Neon DB with brand, scentFamily, variants, and inventory.
  */
 export async function POST(req: NextRequest) {
+  const authError = await authorizeProductWrite(req);
+  if (authError) return authError;
+
   try {
     const body = await req.json();
     const resolvedName = String(body.name || body.nameEn || "").trim();
@@ -480,6 +515,7 @@ export async function POST(req: NextRequest) {
             discountPrice: vBasePrice > vPrice ? vPrice : null,
             warehouse: String(v.warehouse || "DXB-MAIN").trim(),
             isDefault: Boolean(v.isDefault ?? idx === 0),
+            isSampleVial: Boolean(v.isSampleVial),
             inventory: {
               create: {
                 sealedQuantity: vStock,

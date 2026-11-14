@@ -52,6 +52,7 @@ export interface ProductVariantItem {
   stockQuantity: number;
   warehouse?: string; // Warehouse location/identifier, e.g. "DXB-MAIN", "RUH-HUB"
   isDefault?: boolean;
+  isSampleVial?: boolean;
 }
 
 export interface ProductItem {

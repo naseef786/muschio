@@ -1132,54 +1132,44 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
     // 6. Cart Items Add
     if (path === "cart/items") {
       const { customerId, guestSessionId } = getAuth(req);
-      let targetVariantId = body.variantId;
-      // If variantId is not a UUID, resolve to a real database variant
-      if (
-        !targetVariantId ||
-        !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetVariantId)
-      ) {
-        const fallbackVariant = await prisma.productVariant.findFirst({
-          where: { product: { isPublished: true } },
-          select: { id: true },
-        });
-        if (fallbackVariant) targetVariantId = fallbackVariant.id;
+      if (!customerId && !guestSessionId) {
+        return error("UNAUTHORIZED", "A verified storefront session is required", 401);
       }
-      try {
-        const cart = await CartService.addItem({
-          guestSessionId: body.guestSessionId || guestSessionId,
-          customerId: body.customerId || customerId,
-          variantId: targetVariantId,
-          quantity: body.quantity || 1,
-        });
-        return success(cart);
-      } catch (err: any) {
-        // Fallback to first available variant if requested variant is missing
-        const firstVariant = await prisma.productVariant.findFirst({
-          where: { product: { isPublished: true } },
-          select: { id: true },
-        });
-        if (firstVariant && firstVariant.id !== targetVariantId) {
-          const cart = await CartService.addItem({
-            guestSessionId: body.guestSessionId || guestSessionId,
-            customerId: body.customerId || customerId,
-            variantId: firstVariant.id,
-            quantity: body.quantity || 1,
-          });
-          return success(cart);
-        }
-        throw err;
+
+      const targetVariantId = String(body.variantId || "");
+      if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetVariantId)) {
+        return error("INVALID_VARIANT", "A valid product variant is required", 400);
       }
+
+      const cart = await CartService.addItem({
+        guestSessionId: guestSessionId || undefined,
+        customerId: customerId || undefined,
+        variantId: targetVariantId,
+        quantity: body.quantity || 1,
+      });
+      return success(cart);
     }
 
     // 7. Checkout Process
     if (path === "checkout") {
+      const { customerId, guestSessionId } = getAuth(req);
+      if (!customerId && !guestSessionId) {
+        return error("UNAUTHORIZED", "A verified storefront session is required", 401);
+      }
+      const session = guestSessionId || `customer:${customerId}`;
+      const checkoutOwner = customerId
+        ? `customer:${customerId}`
+        : `guest:${guestSessionId}`;
       const idempotencyKey = typeof body?.idempotencyKey === "string" ? body.idempotencyKey : null;
       let ownsIdempotencyKey = false;
       try {
         if (idempotencyKey) {
           const existing = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
           if (existing) {
-            const prior = existing.response as { orderId?: string; status?: string };
+            const prior = existing.response as { orderId?: string; status?: string; owner?: string };
+            if (prior.owner !== checkoutOwner) {
+              return error("IDEMPOTENCY_KEY_CONFLICT", "This idempotency key belongs to another checkout", 409);
+            }
             if (prior.orderId) {
               const priorOrder = await CheckoutService.getOrderById(prior.orderId);
               if (priorOrder) return success(storefrontOrder(priorOrder), 200);
@@ -1189,16 +1179,13 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
           await prisma.idempotencyKey.create({
             data: {
               key: idempotencyKey,
-              response: { status: "PROCESSING" },
+              response: { status: "PROCESSING", owner: checkoutOwner },
               expiresAt: new Date(Date.now() + 30 * 60 * 1000),
             },
           });
           ownsIdempotencyKey = true;
         }
-        const { customerId, guestSessionId } = getAuth(req);
-        const session = guestSessionId || body.guestSessionId || "guest";
-        const customer = customerId;
-        const order = await CheckoutService.processCheckout(body, session, customer);
+        const order = await CheckoutService.processCheckout(body, session, customerId || undefined);
 
         // Fetch full order to guarantee addresses and items for logging & emails
         const fullOrder = await CheckoutService.getOrderById(order.id).catch(() => null);
@@ -1242,14 +1229,17 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         if (idempotencyKey) {
           await prisma.idempotencyKey.update({
             where: { key: idempotencyKey },
-            data: { response: { orderId: order.id, orderNumber: order.orderNumber } },
+            data: { response: { orderId: order.id, orderNumber: order.orderNumber, owner: checkoutOwner } },
           });
         }
         return success(storefrontOrder(orderToLog), 201);
       } catch (err: any) {
         if (idempotencyKey && err?.code === "P2002") {
           const existing = await prisma.idempotencyKey.findUnique({ where: { key: idempotencyKey } });
-          const prior = existing?.response as { orderId?: string } | undefined;
+          const prior = existing?.response as { orderId?: string; owner?: string } | undefined;
+          if (prior?.owner !== checkoutOwner) {
+            return error("IDEMPOTENCY_KEY_CONFLICT", "This idempotency key belongs to another checkout", 409);
+          }
           if (prior?.orderId) {
             const priorOrder = await CheckoutService.getOrderById(prior.orderId);
             if (priorOrder) return success(storefrontOrder(priorOrder), 200);
@@ -2786,8 +2776,11 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
     if (route[0] === "cart" && route[1] === "items" && route[2]) {
       const itemId = route[2];
       const { customerId, guestSessionId } = getAuth(req);
-      const session = body.guestSessionId || guestSessionId || "guest";
-      const result = await CartService.updateItem(itemId, Number(body.quantity || 0), session, customerId);
+      if (!customerId && !guestSessionId) {
+        return error("UNAUTHORIZED", "A verified storefront session is required", 401);
+      }
+      const session = guestSessionId || `customer:${customerId}`;
+      const result = await CartService.updateItem(itemId, Number(body.quantity || 0), session, customerId || undefined);
       return success(result);
     }
 
@@ -3052,8 +3045,11 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ route:
     if (route[0] === "cart" && route[1] === "items" && route[2]) {
       const itemId = route[2];
       const { customerId, guestSessionId } = getAuth(req);
-      const session = guestSessionId || "guest";
-      const result = await CartService.updateItem(itemId, 0, session, customerId);
+      if (!customerId && !guestSessionId) {
+        return error("UNAUTHORIZED", "A verified storefront session is required", 401);
+      }
+      const session = guestSessionId || `customer:${customerId}`;
+      const result = await CartService.updateItem(itemId, 0, session, customerId || undefined);
       return success(result);
     }
 

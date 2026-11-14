@@ -661,6 +661,7 @@ export function App() {
                   salePrice: discPrice,
                   stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
                   isDefault: v.isDefault ?? idx === 0,
+                  isSampleVial: Boolean(v.isSampleVial),
                 };
               })
             : [
@@ -1698,6 +1699,7 @@ export function App() {
             stockQuantity: stockNum,
             warehouse: wh,
             isDefault: v.isDefault !== undefined ? Boolean(v.isDefault) : i === 0,
+            isSampleVial: Boolean(v.isSampleVial),
           };
         })
       : [

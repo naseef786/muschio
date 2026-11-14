@@ -9,6 +9,31 @@ import { InventoryService } from "./inventory.service";
 import { LoyaltyService } from "./loyalty.service";
 import { PromotionService } from "./promotion.service";
 
+export function effectiveVariantPrice(variant: {
+  price: Prisma.Decimal;
+  discountPrice?: Prisma.Decimal | null;
+}) {
+  return variant.discountPrice &&
+    variant.discountPrice.greaterThan(0) &&
+    variant.discountPrice.lessThan(variant.price)
+    ? variant.discountPrice
+    : variant.price;
+}
+
+export function checkoutCartWhere(
+  cartId: string,
+  sessionId: string,
+  customerId?: string | null,
+): Prisma.CartWhereInput {
+  return {
+    id: cartId,
+    OR: [
+      { guestSessionId: sessionId },
+      ...(customerId ? [{ customerId }] : []),
+    ],
+  };
+}
+
 export class CheckoutService {
   static async processCheckout(
     payload: CheckoutPayload,
@@ -77,16 +102,18 @@ export class CheckoutService {
         }
       }
 
-      await tx.$queryRaw`SELECT id FROM "Cart" WHERE id = ${cartId} FOR UPDATE`;
-      const cart = await tx.cart.findFirst({
-        where: {
-          id: cartId,
-          OR: [
-            { guestSessionId: sessionId },
-            ...(verifiedCustomerId ? [{ customerId: verifiedCustomerId }] : []),
-            { id: cartId },
-          ],
-        },
+      const ownedCart = await tx.cart.findFirst({
+        where: checkoutCartWhere(cartId, sessionId, verifiedCustomerId),
+        select: { id: true },
+      });
+
+      if (!ownedCart) {
+        throw new ApiError(400, "EMPTY_CART", "Cart is empty or not found");
+      }
+
+      await tx.$queryRaw`SELECT id FROM "Cart" WHERE id = ${ownedCart.id} FOR UPDATE`;
+      const cart = await tx.cart.findUnique({
+        where: { id: ownedCart.id },
         include: {
           items: {
             include: {
@@ -122,9 +149,7 @@ export class CheckoutService {
             "An item in your bag is unavailable",
           );
         }
-        const effectivePrice = item.variant.discountPrice && new Prisma.Decimal(item.variant.discountPrice).greaterThan(0) && new Prisma.Decimal(item.variant.discountPrice).lessThan(item.variant.price)
-          ? item.variant.discountPrice
-          : item.variant.price;
+        const effectivePrice = effectiveVariantPrice(item.variant);
         subtotal = subtotal.plus(effectivePrice.times(item.quantity));
         itemsToReserve.push({
           variantId: item.variantId,
@@ -225,7 +250,7 @@ export class CheckoutService {
         variantId: it.variantId,
         productId: it.variant.productId,
         brandId: (it.variant.product as any).brandId,
-        price: Number(it.variant.price),
+        price: effectiveVariantPrice(it.variant).toNumber(),
         quantity: it.quantity,
       }));
 
@@ -321,17 +346,20 @@ export class CheckoutService {
           shippingAddressId: address.id,
           customerNotes,
           items: {
-            create: cart.items.map((item) => ({
-              variantId: item.variantId,
-              productNameEn: item.variant.product.nameEn,
-              productNameAr: item.variant.product.nameAr,
-              brandName: item.variant.product.brand.name,
-              sizeLabel: item.variant.sizeLabelEn,
-              sku: item.variant.sku,
-              unitPrice: item.variant.price,
-              quantity: item.quantity,
-              totalPrice: item.variant.price.times(item.quantity),
-            })),
+            create: cart.items.map((item) => {
+              const unitPrice = effectiveVariantPrice(item.variant);
+              return {
+                variantId: item.variantId,
+                productNameEn: item.variant.product.nameEn,
+                productNameAr: item.variant.product.nameAr,
+                brandName: item.variant.product.brand.name,
+                sizeLabel: item.variant.sizeLabelEn,
+                sku: item.variant.sku,
+                unitPrice,
+                quantity: item.quantity,
+                totalPrice: unitPrice.times(item.quantity),
+              };
+            }),
           },
         },
         include: {

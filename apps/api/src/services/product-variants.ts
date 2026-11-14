@@ -13,6 +13,7 @@ export interface ProductVariantInput {
   discountPrice: number | null;
   warehouse: string;
   isDefault: boolean;
+  isSampleVial?: boolean;
   stockQuantity: number;
 }
 
@@ -58,9 +59,16 @@ export async function syncProductVariants(
         where: { productId, id: { notIn: [...retainedIds] } },
       });
     }
-    const defaultIndex = Math.max(0, variants.findIndex((v) => v.isDefault));
+    const firstCommercialIndex = variants.findIndex((variant) => !variant.isSampleVial);
+    const requestedCommercialDefault = variants.findIndex(
+      (variant) => variant.isDefault && !variant.isSampleVial,
+    );
+    const defaultIndex = requestedCommercialDefault >= 0
+      ? requestedCommercialDefault
+      : Math.max(0, firstCommercialIndex);
     for (const [index, input] of variants.entries()) {
       const { stockQuantity } = input;
+      const match = matched[index];
       const data = {
         sku: input.sku.trim(),
         volume: input.volume,
@@ -72,8 +80,8 @@ export async function syncProductVariants(
         discountPrice: input.discountPrice,
         warehouse: input.warehouse,
         isDefault: index === defaultIndex,
+        isSampleVial: input.isSampleVial ?? match?.isSampleVial ?? false,
       };
-      const match = matched[index];
       if (match) {
         await tx.productVariant.update({ where: { id: match.id }, data });
         await tx.inventory.upsert({

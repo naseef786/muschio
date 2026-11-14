@@ -60,7 +60,10 @@ export default async function ShopCatalogPage(
         price: Number(v.price) || 0,
         compareAtPrice: v.compareAtPrice ? Number(v.compareAtPrice) : null,
         isSampleVial: Boolean(v.isSampleVial),
-        stock: v.inventory?.sealedQuantity ?? 20,
+        stock: Math.max(
+          0,
+          (v.inventory?.sealedQuantity ?? 0) - (v.inventory?.reservedQuantity ?? 0),
+        ),
       }));
       const primaryVariant = variants.find((v) => !v.isSampleVial) || variants[0];
       const images = Array.isArray(p.images) && p.images.length > 0 ? p.images : ["/product-placeholder.svg"];
