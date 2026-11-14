@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { Link } from "../../../../navigation";
@@ -6,8 +7,44 @@ import { ProductCard } from "../../../../components/product-card";
 import { ArrowLeft, Clock, User } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
 import { JournalService } from "@muschio/api";
+import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: "en" | "ar"; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).trim();
+  const post = await JournalService.getPostBySlug(cleanSlug).catch(() => null);
+
+  if (!post) {
+    return buildLocalizedMetadata({
+      locale,
+      path: `/journal/${cleanSlug}`,
+      title: locale === "ar" ? "المقال غير متوفر | موسكيو" : "Journal Article Unavailable | Muschio",
+      description: locale === "ar" ? "مقال مجلة موسكيو المطلوب غير متوفر حالياً." : "The requested Muschio Journal article is not currently available.",
+      index: false,
+    });
+  }
+
+  const title = locale === "ar" ? post.titleAr || post.titleEn : post.titleEn || post.titleAr;
+  const description = locale === "ar"
+    ? post.excerptAr || post.excerptEn
+    : post.excerptEn || post.excerptAr;
+
+  return buildLocalizedMetadata({
+    locale,
+    path: `/journal/${post.slug}`,
+    title: `${title} | Muschio Journal`,
+    description: description || (locale === "ar"
+      ? "اقرأ هذا المقال من مجلة موسكيو المتخصصة في فن العطور."
+      : "Read this article from the Muschio Journal on fragrance craft and discovery."),
+    image: post.coverImageUrl,
+  });
+}
 
 export default async function JournalDetailPage(
   props: {

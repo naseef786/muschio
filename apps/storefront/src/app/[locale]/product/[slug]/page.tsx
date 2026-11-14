@@ -1,9 +1,45 @@
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { CatalogService, storefrontProduct } from "@muschio/api";
 import { ProductExperience } from "../../../../components/product-experience";
+import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveProductSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: "en" | "ar"; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).trim();
+  const result = await CatalogService.getProductBySlug(cleanSlug).catch(() => null);
+
+  if (!result?.product) {
+    return buildLocalizedMetadata({
+      locale,
+      path: `/product/${cleanSlug}`,
+      title: locale === "ar" ? "العطر غير متوفر | موسكيو" : "Fragrance Unavailable | Muschio",
+      description: locale === "ar" ? "هذا العطر غير متوفر حالياً في مجموعة موسكيو." : "This fragrance is not currently available in the Muschio collection.",
+      index: false,
+    });
+  }
+
+  const product = storefrontProduct(result.product);
+  const name = locale === "ar" ? product.nameAr || product.nameEn : product.nameEn || product.nameAr;
+  const description = locale === "ar"
+    ? product.descriptionAr || product.descriptionEn
+    : product.descriptionEn || product.descriptionAr;
+
+  return buildLocalizedMetadata({
+    locale,
+    path: `/product/${product.slug}`,
+    title: `${name} by ${product.brand.name} | Muschio`,
+    description: description || `${name} by ${product.brand.name}. Explore available sizes and fragrance details at Muschio.`,
+    image: product.images[0],
+  });
+}
 
 export default async function ProductPage(
   props: {

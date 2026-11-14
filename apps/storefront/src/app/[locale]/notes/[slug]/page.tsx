@@ -1,12 +1,51 @@
 import React from "react";
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { muschioApi } from "../../../../lib/api";
 import { NotesService } from "@muschio/api";
+import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveNoteSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: "en" | "ar"; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).trim();
+  const noteData = await NotesService.getNoteBySlug(cleanSlug).catch(() => null);
+  const note = noteData?.note;
+
+  if (!note) {
+    return buildLocalizedMetadata({
+      locale,
+      path: `/notes/${cleanSlug}`,
+      title: locale === "ar" ? "النوتة العطرية غير متوفرة | موسكيو" : "Fragrance Note Unavailable | Muschio",
+      description: locale === "ar" ? "النوتة العطرية المطلوبة غير متوفرة حالياً." : "The requested fragrance note is not currently available.",
+      index: false,
+    });
+  }
+
+  const name = locale === "ar" ? note.nameAr || note.nameEn : note.nameEn || note.nameAr;
+  const description = locale === "ar"
+    ? note.descriptionAr || note.descriptionEn
+    : note.descriptionEn || note.descriptionAr;
+  const canonicalSlug = note.slugEn || cleanSlug;
+
+  return buildLocalizedMetadata({
+    locale,
+    path: `/notes/${canonicalSlug}`,
+    title: locale === "ar" ? `${name}: نوتة عطرية | موسكيو` : `${name} Fragrance Note | Muschio`,
+    description: description || (locale === "ar"
+      ? `تعرف على نوتة ${name} واكتشف العطور التي تبرزها لدى موسكيو.`
+      : `Learn about the ${name} fragrance note and discover Muschio perfumes that feature it.`),
+    image: note.heroImageUrl || note.thumbnailUrl,
+  });
+}
 
 export default async function NoteDetailPage(
   props: {

@@ -1,13 +1,49 @@
 import React from "react";
+import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
 import { ProductCard } from "../../../../components/product-card";
 import { Globe, ShieldCheck } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
 import { CatalogService } from "@muschio/api";
+import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveBrandSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: "en" | "ar"; slug: string }>;
+}): Promise<Metadata> {
+  const { locale, slug } = await params;
+  const cleanSlug = decodeURIComponent(slug).trim();
+  const brand = await CatalogService.getBrandBySlug(cleanSlug).catch(() => null);
+
+  if (!brand) {
+    return buildLocalizedMetadata({
+      locale,
+      path: `/brands/${cleanSlug}`,
+      title: locale === "ar" ? "دار العطور غير متوفرة | موسكيو" : "Fragrance House Unavailable | Muschio",
+      description: locale === "ar" ? "دار العطور المطلوبة غير متوفرة حالياً." : "The requested fragrance house is not currently available.",
+      index: false,
+    });
+  }
+
+  const description = locale === "ar"
+    ? brand.descriptionAr || brand.descriptionEn
+    : brand.descriptionEn || brand.descriptionAr;
+
+  return buildLocalizedMetadata({
+    locale,
+    path: `/brands/${brand.slug}`,
+    title: locale === "ar" ? `${brand.name} للعطور | موسكيو` : `${brand.name} Perfumes | Muschio`,
+    description: description || (locale === "ar"
+      ? `اكتشف عطور ${brand.name} المتوفرة لدى موسكيو.`
+      : `Discover ${brand.name} fragrances, the house story, and the collection available at Muschio.`),
+    image: brand.heroImageUrl || brand.logoUrl,
+  });
+}
 
 export default async function BrandDetailPage(
   props: {
