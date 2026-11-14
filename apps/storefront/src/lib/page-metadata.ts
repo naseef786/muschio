@@ -2,6 +2,19 @@ import type { Metadata } from "next";
 
 export type StorefrontLocale = "en" | "ar";
 
+export const privateRouteMetadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+};
+
 const SITE_URL = (
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.muschio.ae"
 ).replace(/\/$/, "");

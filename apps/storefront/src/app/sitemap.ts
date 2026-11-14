@@ -2,10 +2,20 @@ import { MetadataRoute } from "next";
 import { prisma } from "@muschio/api";
 
 const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_STORE_URL ||
-  process.env.STOREFRONT_URL ||
-  "https://www.muschio.ae";
+  (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_STORE_URL ||
+    process.env.STOREFRONT_URL ||
+    "https://www.muschio.ae"
+  ).replace(/\/$/, "");
+
+function languageAlternates(path: string) {
+  return {
+    "en-AE": `${BASE_URL}/en${path}`,
+    "ar-AE": `${BASE_URL}/ar${path}`,
+    "x-default": `${BASE_URL}/en${path}`,
+  };
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const routes: MetadataRoute.Sitemap = [];
@@ -30,14 +40,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     for (const locale of locales) {
       routes.push({
         url: `${BASE_URL}/${locale}${page.path}`,
-        lastModified: new Date(),
         changeFrequency: page.changeFrequency,
         priority: page.priority,
         alternates: {
-          languages: {
-            en: `${BASE_URL}/en${page.path}`,
-            ar: `${BASE_URL}/ar${page.path}`,
-          },
+          languages: languageAlternates(page.path),
         },
       });
     }
@@ -58,10 +64,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           changeFrequency: "weekly",
           priority: 0.9,
           alternates: {
-            languages: {
-              en: `${BASE_URL}/en/product/${p.slug}`,
-              ar: `${BASE_URL}/ar/product/${p.slug}`,
-            },
+            languages: languageAlternates(`/product/${p.slug}`),
           },
         });
       }
@@ -84,10 +87,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           changeFrequency: "weekly",
           priority: 0.8,
           alternates: {
-            languages: {
-              en: `${BASE_URL}/en/brands/${b.slug}`,
-              ar: `${BASE_URL}/ar/brands/${b.slug}`,
-            },
+            languages: languageAlternates(`/brands/${b.slug}`),
           },
         });
       }
@@ -99,6 +99,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Dynamic Note Pages from Database
   try {
     const notes = await prisma.note.findMany({
+      where: { status: "PUBLISHED" },
       select: { slugEn: true, updatedAt: true },
     });
 
@@ -111,10 +112,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
           changeFrequency: "weekly",
           priority: 0.7,
           alternates: {
-            languages: {
-              en: `${BASE_URL}/en/notes/${n.slugEn}`,
-              ar: `${BASE_URL}/ar/notes/${n.slugEn}`,
-            },
+            languages: languageAlternates(`/notes/${n.slugEn}`),
           },
         });
       }
@@ -123,30 +121,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.warn("[Sitemap Generator] Database notes lookup fallback:", err);
   }
 
-  // Dynamic Collection Pages from Database
+  // Published journal articles from the database
   try {
-    const collections = await prisma.collection.findMany({
+    const posts = await prisma.blogPost.findMany({
+      where: { isPublished: true },
       select: { slug: true, updatedAt: true },
     });
 
-    for (const c of collections) {
+    for (const post of posts) {
       for (const locale of locales) {
         routes.push({
-          url: `${BASE_URL}/${locale}/shop?collection=${c.slug}`,
-          lastModified: c.updatedAt || new Date(),
+          url: `${BASE_URL}/${locale}/journal/${post.slug}`,
+          lastModified: post.updatedAt,
           changeFrequency: "weekly",
           priority: 0.8,
           alternates: {
-            languages: {
-              en: `${BASE_URL}/en/shop?collection=${c.slug}`,
-              ar: `${BASE_URL}/ar/shop?collection=${c.slug}`,
-            },
+            languages: languageAlternates(`/journal/${post.slug}`),
           },
         });
       }
     }
   } catch (err) {
-    console.warn("[Sitemap Generator] Database collections lookup fallback:", err);
+    console.warn("[Sitemap Generator] Database journal lookup fallback:", err);
   }
 
   return routes;
