@@ -25,7 +25,7 @@ beforeEach(() => {
         { id: "existing-100", sku: "FRAG-100", volumeMl: 100 },
         { id: "existing-50", sku: "FRAG-50", volumeMl: 50 },
       ]),
-      update: vi.fn(), create: vi.fn(), deleteMany: vi.fn(),
+      update: vi.fn(), updateMany: vi.fn(), create: vi.fn(), deleteMany: vi.fn(),
     },
     inventory: { upsert: vi.fn() },
   };
@@ -85,6 +85,40 @@ describe("product variant synchronization", () => {
     await syncProductVariants(tx, "product", [variant({ id: undefined })], false);
     expect(tx.productVariant.deleteMany).not.toHaveBeenCalled();
     expect(tx.productVariant.update).toHaveBeenCalledWith(expect.objectContaining({ where: { id: "existing-100" } }));
+  });
+
+  it("merges a spreadsheet variant without deleting omitted variants", async () => {
+    tx.productVariant.findMany.mockResolvedValue([
+      { id: "existing-100", sku: "FRAG-100", volumeMl: 100, isDefault: true, isSampleVial: false },
+      { id: "existing-50", sku: "FRAG-50", volumeMl: 50, isDefault: false, isSampleVial: false },
+    ]);
+
+    await syncProductVariants(tx, "product", [variant({ id: undefined, sku: "FRAG-50", isDefault: false })], false);
+
+    expect(tx.productVariant.deleteMany).not.toHaveBeenCalled();
+    expect(tx.productVariant.updateMany).not.toHaveBeenCalled();
+    expect(tx.productVariant.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "existing-50" },
+      data: expect.objectContaining({ isDefault: false }),
+    }));
+  });
+
+  it("moves the default safely when a merged spreadsheet row requests it", async () => {
+    tx.productVariant.findMany.mockResolvedValue([
+      { id: "existing-100", sku: "FRAG-100", volumeMl: 100, isDefault: true, isSampleVial: false },
+      { id: "existing-50", sku: "FRAG-50", volumeMl: 50, isDefault: false, isSampleVial: false },
+    ]);
+
+    await syncProductVariants(tx, "product", [variant({ id: undefined, sku: "FRAG-50", isDefault: true })], false);
+
+    expect(tx.productVariant.updateMany).toHaveBeenCalledWith({
+      where: { productId: "product", isDefault: true },
+      data: { isDefault: false },
+    });
+    expect(tx.productVariant.update).toHaveBeenCalledWith(expect.objectContaining({
+      where: { id: "existing-50" },
+      data: expect.objectContaining({ isDefault: true }),
+    }));
   });
 
   it("returns a conflict without inventing a SKU when the database rejects a duplicate", async () => {

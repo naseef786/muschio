@@ -1669,11 +1669,20 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
       if (targetProduct) {
         savedProduct = await prisma.$transaction(async (tx) => {
-          await syncProductVariants(tx, targetProduct.id, incomingVariants, Array.isArray(body.variants), numTesterStock);
-          await tx.productPerfumer.deleteMany({ where: { productId: targetProduct.id } });
+          const mergeVariantsOnly = body.variantSyncMode === "merge";
+          await syncProductVariants(
+            tx,
+            targetProduct.id,
+            incomingVariants,
+            Array.isArray(body.variants) && body.variantSyncMode !== "merge",
+            numTesterStock,
+          );
+          if (!mergeVariantsOnly) {
+            await tx.productPerfumer.deleteMany({ where: { productId: targetProduct.id } });
+          }
           return tx.product.update({
             where: { id: targetProduct.id },
-            data: {
+            data: mergeVariantsOnly ? {} : {
               nameEn: resolvedName,
               nameAr: resolvedNameAr,
               descriptionEn: String(descriptionEn || resolvedName).trim(),
@@ -1709,7 +1718,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         }
 
         const safeVariantsData = [];
-        for (const iv of incomingVariants) {
+        const requestedDefaultIndex = incomingVariants.findIndex((variant) => variant.isDefault);
+        const createDefaultIndex = requestedDefaultIndex >= 0 ? requestedDefaultIndex : 0;
+        for (const [index, iv] of incomingVariants.entries()) {
           const conflicting = await prisma.productVariant.findUnique({ where: { sku: iv.sku } });
           if (conflicting) return error("SKU_CONFLICT", "This SKU is already in use. Choose a unique SKU for each variant.", 409);
           safeVariantsData.push({
@@ -1722,7 +1733,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
             compareAtPrice: iv.compareAtPrice,
             discountPrice: iv.discountPrice,
             warehouse: iv.warehouse,
-            isDefault: iv.isDefault,
+            isDefault: index === createDefaultIndex,
             inventory: {
               create: {
                 sealedQuantity: iv.stockQuantity,

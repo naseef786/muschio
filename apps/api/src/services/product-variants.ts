@@ -63,9 +63,24 @@ export async function syncProductVariants(
     const requestedCommercialDefault = variants.findIndex(
       (variant) => variant.isDefault && !variant.isSampleVial,
     );
-    const defaultIndex = requestedCommercialDefault >= 0
-      ? requestedCommercialDefault
-      : Math.max(0, firstCommercialIndex);
+    const hasExistingCommercialDefault = existing.some(
+      (variant) => variant.isDefault && !variant.isSampleVial,
+    );
+    const defaultIndex = replace
+      ? (requestedCommercialDefault >= 0 ? requestedCommercialDefault : Math.max(0, firstCommercialIndex))
+      : requestedCommercialDefault >= 0
+        ? requestedCommercialDefault
+        : hasExistingCommercialDefault
+          ? -1
+          : Math.max(0, firstCommercialIndex);
+
+    if (!replace && defaultIndex >= 0) {
+      await tx.productVariant.updateMany({
+        where: { productId, isDefault: true },
+        data: { isDefault: false },
+      });
+    }
+
     for (const [index, input] of variants.entries()) {
       const { stockQuantity } = input;
       const match = matched[index];
@@ -79,7 +94,11 @@ export async function syncProductVariants(
         compareAtPrice: input.compareAtPrice,
         discountPrice: input.discountPrice,
         warehouse: input.warehouse,
-        isDefault: index === defaultIndex,
+        isDefault: replace
+          ? index === defaultIndex
+          : index === defaultIndex
+            ? true
+            : match?.isDefault ?? false,
         isSampleVial: input.isSampleVial ?? match?.isSampleVial ?? false,
       };
       if (match) {

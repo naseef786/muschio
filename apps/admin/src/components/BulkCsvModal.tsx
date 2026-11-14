@@ -39,7 +39,7 @@ interface BulkCsvModalProps {
     newProducts: ProductItem[],
     newBrands: BrandItem[],
     newNotes: NoteItem[]
-  ) => void;
+  ) => void | Promise<void>;
 }
 
 export function BulkCsvModal({
@@ -55,6 +55,7 @@ export function BulkCsvModal({
   const [autoGenerateSeo, setAutoGenerateSeo] = useState<boolean>(true);
   const [previewSerpSku, setPreviewSerpSku] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
+  const [isImporting, setIsImporting] = useState<boolean>(false);
 
   // Trigger download of the sample Excel template
   const handleDownloadTemplate = () => {
@@ -301,7 +302,7 @@ export function BulkCsvModal({
   }, [csvContent, autoGenerateSeo, existingBrands, existingNotes]);
 
   // Execute Import
-  const handleExecuteImport = () => {
+  const handleExecuteImport = async () => {
     const importable = parsedResult.products.filter((p) => p.validationStatus !== "ERROR");
     if (importable.length === 0) {
       alert("No valid products to import. Please fix CSV errors.");
@@ -347,13 +348,22 @@ export function BulkCsvModal({
           volumeMl: p.volumeMl || 100,
           price: p.price,
           stockQuantity: p.stock || 0,
-          isDefault: true,
+          // The merge service preserves an existing default. For a new product,
+          // the API assigns the first uploaded variant as the default.
+          isDefault: false,
         },
       ],
     }));
 
-    onImportSuccess(convertedProducts, parsedResult.newBrandsToCreate, parsedResult.newNotesToCreate);
-    onClose();
+    setIsImporting(true);
+    try {
+      await onImportSuccess(convertedProducts, parsedResult.newBrandsToCreate, parsedResult.newNotesToCreate);
+      onClose();
+    } catch (error: any) {
+      alert(error?.message || "The spreadsheet import could not be saved.");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   if (!isOpen) return null;
@@ -744,12 +754,12 @@ export function BulkCsvModal({
             <button
               type="button"
               onClick={handleExecuteImport}
-              disabled={parsedResult.validCount + parsedResult.warningCount === 0}
+              disabled={isImporting || parsedResult.validCount + parsedResult.warningCount === 0}
               className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-xs rounded flex items-center gap-1.5 transition-colors shadow-sm"
             >
               <CheckCircle2 size={14} />
               <span>
-                Import {parsedResult.validCount + parsedResult.warningCount} Products
+                {isImporting ? "Saving products…" : `Import ${parsedResult.validCount + parsedResult.warningCount} Products`}
               </span>
             </button>
           </div>

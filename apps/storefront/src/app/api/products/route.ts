@@ -552,7 +552,7 @@ export async function POST(req: NextRequest) {
           ...iv,
           id: rawVariants[index]?.id,
           stockQuantity: iv.inventory.create.sealedQuantity,
-        })), Array.isArray(body.variants));
+        })), Array.isArray(body.variants) && body.variantSyncMode !== "merge");
         return tx.product.update({
           where: { id: targetProduct.id },
           data: {

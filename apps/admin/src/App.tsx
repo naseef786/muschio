@@ -2542,15 +2542,114 @@ export function App() {
   };
 
   // Bulk CSV Import Action
-  const handleBulkCsvImportSuccess = (
+  const handleBulkCsvImportSuccess = async (
     newProducts: ProductItem[],
     newBrands: BrandItem[],
     newNotes: NoteItem[]
   ) => {
-    setProducts((prev) => {
-      const existingSkus = new Set(prev.map((p) => p.sku));
-      const filteredNew = newProducts.filter((p) => !existingSkus.has(p.sku));
-      return [...filteredNew, ...prev];
+    if (!authSession?.token) {
+      throw new Error("Your administrator session has expired. Sign in and retry the import.");
+    }
+
+    // One spreadsheet row represents one volume. Group rows by product before
+    // saving so repeated product rows become variants instead of replacements.
+    const groupedProducts = new Map<string, ProductItem>();
+    for (const product of newProducts) {
+      const key = product.slug || `${product.brand}-${product.name}`.toLowerCase();
+      const current = groupedProducts.get(key);
+      const variants = [...(current?.variants || []), ...(product.variants || [])];
+      const variantsBySku = new Map(
+        variants.map((variant) => [String(variant.sku || "").trim().toLowerCase(), variant]),
+      );
+      groupedProducts.set(key, {
+        ...(current || product),
+        ...product,
+        variants: [...variantsBySku.values()],
+      });
+    }
+
+    const savedProducts: ProductItem[] = [];
+    for (const product of groupedProducts.values()) {
+      const response = await fetch("/api/v1/admin/products", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${authSession.token}`,
+        },
+        body: JSON.stringify({
+          ...product,
+          name: product.name,
+          nameEn: product.name,
+          variantSyncMode: "merge",
+          images: product.images || (product.imageUrl ? [product.imageUrl] : []),
+          variants: product.variants || [],
+        }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || !result?.success) {
+        throw new Error(result?.error?.message || result?.message || `Could not save ${product.name}.`);
+      }
+
+      const saved = result.data;
+      const savedVariants: ProductVariantItem[] = Array.isArray(saved?.variants)
+        ? saved.variants.map((variant: any) => {
+            const regularPrice = variant.compareAtPrice
+              ? Number(variant.compareAtPrice)
+              : Number(variant.price) || 0;
+            const sellingPrice = variant.discountPrice
+              ? Number(variant.discountPrice)
+              : Number(variant.price) || regularPrice;
+            return {
+              id: variant.id,
+              sku: variant.sku,
+              volume: variant.volume || `${variant.volumeMl || 100}ml`,
+              volumeMl: variant.volumeMl || 100,
+              regularPrice,
+              originalPrice: regularPrice,
+              basePrice: regularPrice,
+              price: sellingPrice,
+              discountPrice: sellingPrice < regularPrice ? sellingPrice : null,
+              stock: variant.inventory?.sealedQuantity ?? 0,
+              stockQuantity: variant.inventory?.sealedQuantity ?? 0,
+              warehouse: variant.warehouse || "DXB-MAIN",
+              isDefault: Boolean(variant.isDefault),
+              isSampleVial: Boolean(variant.isSampleVial),
+            };
+          })
+        : product.variants || [];
+      const defaultVariant = savedVariants.find((variant) => variant.isDefault) || savedVariants[0];
+
+      savedProducts.push({
+        ...product,
+        id: String(saved.id),
+        slug: saved.slug || product.slug,
+        name: saved.nameEn || product.name,
+        nameAr: saved.nameAr || product.nameAr,
+        brand: saved.brand?.name || product.brand,
+        brandSlug: saved.brand?.slug || product.brandSlug,
+        scentFamily: saved.scentFamily?.nameEn || product.scentFamily,
+        descriptionEn: saved.descriptionEn || product.descriptionEn,
+        descriptionAr: saved.descriptionAr || product.descriptionAr,
+        images: Array.isArray(saved.images) ? saved.images : product.images,
+        imageUrl: Array.isArray(saved.images) && saved.images[0] ? saved.images[0] : product.imageUrl,
+        status: saved.isPublished ? "PUBLISHED" : "DRAFT",
+        tags: Array.isArray(saved.tags) ? saved.tags.map((relation: any) => relation.tag || relation) : product.tags,
+        tagIds: Array.isArray(saved.tags) ? saved.tags.map((relation: any) => (relation.tag || relation).id) : product.tagIds,
+        sku: String(defaultVariant?.sku || product.sku),
+        price: `${Number(defaultVariant?.price || 0)} AED`,
+        stock: Number(defaultVariant?.stockQuantity || 0),
+        variants: savedVariants,
+      });
+    }
+
+    setProducts((previous) => {
+      const next = [...previous];
+      for (const product of savedProducts) {
+        const index = next.findIndex((item) => item.id === product.id || item.slug === product.slug);
+        if (index >= 0) next[index] = product;
+        else next.unshift(product);
+      }
+      return next;
     });
 
     if (newBrands.length > 0) {
@@ -2571,7 +2670,7 @@ export function App() {
 
     addAuditLog(
       "BULK_CSV_SEO_IMPORT",
-      `Imported ${newProducts.length} flacons, created ${newBrands.length} brands, resolved ${newNotes.length} scent notes`
+      `Imported ${savedProducts.length} products with ${newProducts.length} spreadsheet variant rows, created ${newBrands.length} brands, resolved ${newNotes.length} scent notes`
     );
   };
 
