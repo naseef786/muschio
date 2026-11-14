@@ -69,12 +69,14 @@ import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
 import { MediaLibraryPicker } from "./components/MediaLibraryPicker";
+import { MediaLibraryManager } from "./components/MediaLibraryManager";
 import { OrderDetailModal } from "./components/OrderDetailModal";
 import { MarketingPromotionsTab } from "./components/MarketingPromotionsTab";
 
 type AdminTab =
   | "dashboard"
   | "products"
+  | "media"
   | "collections"
   | "tags"
   | "brands"
@@ -94,6 +96,7 @@ type AdminTab =
 const TAB_TITLES: Record<AdminTab, string> = {
   dashboard: "Dashboard",
   products: "Products",
+  media: "Media Library",
   collections: "Collections",
   tags: "Tags & Curations",
   brands: "Brands",
@@ -114,6 +117,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
 const TAB_SUBTITLES: Record<AdminTab, string> = {
   dashboard: "Store operations, inventory, and order activity",
   products: "Manage catalog products, pricing, and stock",
+  media: "Bulk upload, organize, and remove Cloudinary product images",
   collections: "Curate fragrance collections and showcase them in storefront sliders according to your preference",
   tags: "Curate fragrance tags, olfactory classifications, and storefront filter badges",
   brands: "Manage perfume brands and brand profiles",
@@ -3119,6 +3123,7 @@ export function App() {
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
               { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
               { id: "products", label: "Products", icon: Package, count: products.length },
+              { id: "media", label: "Media Library", icon: ImageIcon },
               { id: "inventory", label: "Inventory", icon: Warehouse },
               { id: "collections", label: "Collections", icon: Sparkles, count: collections.length },
               { id: "brands", label: "Brands", icon: Award, count: brands.length },
@@ -4878,7 +4883,14 @@ export function App() {
           </div>
         )}
 
-        {/* 2. COLLECTIONS & PREFERENCE CURATIONS */}
+        {/* 2. MEDIA LIBRARY */}
+        {activeTab === "media" && (
+          <MediaLibraryManager
+            authHeaders={{ ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {}) }}
+          />
+        )}
+
+        {/* 3. COLLECTIONS & PREFERENCE CURATIONS */}
         {activeTab === "collections" && (
           <div className="space-y-6">
             <div className="flex flex-wrap items-center justify-between gap-4">

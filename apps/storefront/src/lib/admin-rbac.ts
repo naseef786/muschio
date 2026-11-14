@@ -26,7 +26,7 @@ const SUPER_ADMIN_RESOURCES = new Set([
  * Unknown admin resources fail closed to SUPER_ADMIN.
  */
 export function getRequiredAdminRoles(method: string, route: string[]): AdminRole[] | null {
-  if (route[0] === "media" && route[1] === "library") return EDITOR_ROLES;
+  if (route[0] === "media") return CATALOG_ROLES;
   if (route[0] !== "admin") return null;
 
   const path = route.join("/");

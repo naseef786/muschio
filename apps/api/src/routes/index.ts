@@ -1163,7 +1163,7 @@ router.post(
 // 14. MEDIA & CLOUDINARY STORAGE
 // -------------------------------------------------------------
 
-router.post("/media/upload", sessionLimiter, async (req, res, next) => {
+router.post("/media/upload", sessionLimiter, requireAdminAuth, requireRoles([AdminRole.CATALOG_MANAGER, AdminRole.EDITOR]), async (req, res, next) => {
   try {
     const { file, folder, publicId, tags, overwrite } = req.body || {};
     if (!file || typeof file !== "string") {
@@ -1182,7 +1182,7 @@ router.post("/media/upload", sessionLimiter, async (req, res, next) => {
   }
 });
 
-router.post("/media/sign", sessionLimiter, (req, res, next) => {
+router.post("/media/sign", sessionLimiter, requireAdminAuth, requireRoles([AdminRole.CATALOG_MANAGER, AdminRole.EDITOR]), (req, res, next) => {
   try {
     const folder = req.body?.folder || "muschio/uploads";
     const signatureData = CloudinaryService.generateSignature(folder);
@@ -1195,7 +1195,7 @@ router.post("/media/sign", sessionLimiter, (req, res, next) => {
 router.get(
   "/media/library",
   requireAdminAuth,
-  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  requireRoles([AdminRole.CATALOG_MANAGER, AdminRole.EDITOR]),
   async (req, res, next) => {
     try {
       const prefix = typeof req.query.folder === "string" ? req.query.folder : "muschio/products";
@@ -1208,7 +1208,7 @@ router.get(
   },
 );
 
-router.delete("/media", async (req, res, next) => {
+router.delete("/media", requireAdminAuth, requireRoles([AdminRole.CATALOG_MANAGER, AdminRole.EDITOR]), async (req, res, next) => {
   try {
     const publicId = (req.body?.publicId || req.query.publicId) as string;
     if (!publicId) {
