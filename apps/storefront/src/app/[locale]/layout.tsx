@@ -150,7 +150,7 @@ export default async function RootLayout(
                       <Header locale={locale as Locale} initialBrands={liveBrands} initialNotes={liveNotes} initialSettings={liveSettings} />
                       <main id="main-content" className="flex-1 w-full max-w-full overflow-x-hidden">{children}</main>
                       <Footer locale={locale as Locale} brands={liveBrands} settings={liveSettings} />
-                      <FloatingWhatsApp locale={locale as Locale} />
+                      <FloatingWhatsApp locale={locale as Locale} settings={liveSettings} />
                       <CompareBar locale={locale as Locale} />
                     </CompareProvider>
                   </WishlistProvider>
