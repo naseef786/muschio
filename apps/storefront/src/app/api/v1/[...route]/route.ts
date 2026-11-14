@@ -149,6 +149,14 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
     const adminAuthError = await authorizeAdminRequest(req, route);
     if (adminAuthError) return adminAuthError;
 
+    // Cloudinary media library for authorized catalog editors.
+    if (path === "media/library") {
+      const prefix = url.searchParams.get("folder") || "muschio/products";
+      const nextCursor = url.searchParams.get("nextCursor") || undefined;
+      const result = await CloudinaryService.listImages({ prefix, nextCursor });
+      return success(result);
+    }
+
     // 1. Brands
     if (path === "brands") {
       const brands = await CatalogService.getBrands();
