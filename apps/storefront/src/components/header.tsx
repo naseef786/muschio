@@ -302,32 +302,13 @@ export function Header({
     }));
   }, [navBrands]);
 
-  const [announcement, setAnnouncement] = useState<{ en: string; ar: string }>({
+  const announcement = {
     en: initialSettings?.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
     ar: initialSettings?.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
-  });
-  const [freeShippingThreshold, setFreeShippingThreshold] = useState<number>(
+  };
+  const freeShippingThreshold = Number(
     initialSettings?.freeShippingThreshold || 500
   );
-
-  useEffect(() => {
-    fetch("/api/v1/settings")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data?.success && data?.data) {
-          if (data.data.announcementBarEn || data.data.announcementBarAr) {
-            setAnnouncement({
-              en: data.data.announcementBarEn || "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
-              ar: data.data.announcementBarAr || "توصيل سريع مجاني في الخليج للطلبات فوق ٥٠٠ د.إ · عطور نيش أصلية ومضمونة ١٠٠٪",
-            });
-          }
-          if (typeof data.data.freeShippingThreshold === "number" && data.data.freeShippingThreshold > 0) {
-            setFreeShippingThreshold(data.data.freeShippingThreshold);
-          }
-        }
-      })
-      .catch(() => null);
-  }, []);
 
   return (
     <>
@@ -1120,9 +1101,12 @@ export function Header({
                     >
                       <div className="w-12 h-14 bg-neutral-100 dark:bg-neutral-900 rounded-sm overflow-hidden flex-shrink-0 flex items-center justify-center border border-neutral-200 dark:border-neutral-800">
                         {res.image ? (
-                          <img
+                          <Image
                             src={res.image}
                             alt={res.nameEn}
+                            width={48}
+                            height={56}
+                            sizes="48px"
                             className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         ) : (

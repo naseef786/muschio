@@ -1,4 +1,4 @@
-import React from "react";
+import React, { cache } from "react";
 import type { Metadata } from "next";
 import Image from "next/image";
 import { notFound } from "next/navigation";
@@ -11,6 +11,8 @@ import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 
 export const dynamic = "force-dynamic";
 
+const getPostBySlug = cache((slug: string) => JournalService.getPostBySlug(slug));
+
 export async function generateMetadata({
   params,
 }: {
@@ -18,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   const cleanSlug = decodeURIComponent(slug).trim();
-  const post = await JournalService.getPostBySlug(cleanSlug).catch(() => null);
+  const post = await getPostBySlug(cleanSlug).catch(() => null);
 
   if (!post) {
     return buildLocalizedMetadata({
@@ -65,7 +67,7 @@ export default async function JournalDetailPage(
 
   let post: any = null;
   try {
-    post = await JournalService.getPostBySlug(cleanSlug);
+    post = await getPostBySlug(cleanSlug);
   } catch (err) {
     console.warn("Direct JournalService failed, trying API fallback:", err);
   }

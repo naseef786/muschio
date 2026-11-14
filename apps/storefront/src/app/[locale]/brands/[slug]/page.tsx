@@ -1,4 +1,4 @@
-import React from "react";
+import React, { cache } from "react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
@@ -11,6 +11,8 @@ import { resolveBrandSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
+const getBrandBySlug = cache((slug: string) => CatalogService.getBrandBySlug(slug));
+
 export async function generateMetadata({
   params,
 }: {
@@ -18,7 +20,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   const cleanSlug = decodeURIComponent(slug).trim();
-  const brand = await CatalogService.getBrandBySlug(cleanSlug).catch(() => null);
+  const brand = await getBrandBySlug(cleanSlug).catch(() => null);
 
   if (!brand) {
     return buildLocalizedMetadata({
@@ -64,7 +66,7 @@ export default async function BrandDetailPage(
 
   let brand: any = null;
   try {
-    brand = await CatalogService.getBrandBySlug(cleanSlug);
+    brand = await getBrandBySlug(cleanSlug);
   } catch (err) {
     console.warn("Direct CatalogService.getBrandBySlug error, falling back to API:", err);
   }

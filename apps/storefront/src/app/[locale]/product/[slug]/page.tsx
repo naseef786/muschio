@@ -1,3 +1,4 @@
+import { cache } from "react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { CatalogService, storefrontProduct } from "@muschio/api";
@@ -7,6 +8,8 @@ import { resolveProductSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
+const getProductBySlug = cache((slug: string) => CatalogService.getProductBySlug(slug));
+
 export async function generateMetadata({
   params,
 }: {
@@ -14,7 +17,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   const cleanSlug = decodeURIComponent(slug).trim();
-  const result = await CatalogService.getProductBySlug(cleanSlug).catch(() => null);
+  const result = await getProductBySlug(cleanSlug).catch(() => null);
 
   if (!result?.product) {
     return buildLocalizedMetadata({
@@ -54,7 +57,7 @@ export default async function ProductPage(
   } = params;
 
   // Directly query the catalog in-process for instant, 100% live database data
-  let result = await CatalogService.getProductBySlug(slug);
+  let result = await getProductBySlug(slug);
 
   if (!result || !result.product) {
     // Attempt alias resolution for legacy Google links

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { cache } from "react";
 import type { Metadata } from "next";
 import { notFound, permanentRedirect } from "next/navigation";
 import { Link } from "../../../../navigation";
@@ -10,6 +10,8 @@ import { resolveNoteSlug } from "../../../../lib/seo-redirects";
 
 export const dynamic = "force-dynamic";
 
+const getNoteBySlug = cache((slug: string) => NotesService.getNoteBySlug(slug));
+
 export async function generateMetadata({
   params,
 }: {
@@ -17,7 +19,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { locale, slug } = await params;
   const cleanSlug = decodeURIComponent(slug).trim();
-  const noteData = await NotesService.getNoteBySlug(cleanSlug).catch(() => null);
+  const noteData = await getNoteBySlug(cleanSlug).catch(() => null);
   const note = noteData?.note;
 
   if (!note) {
@@ -69,7 +71,7 @@ export default async function NoteDetailPage(
 
   try {
     const [directNote, directPerfumes] = await Promise.all([
-      NotesService.getNoteBySlug(cleanSlug),
+      getNoteBySlug(cleanSlug),
       NotesService.getPerfumesByNoteSlug(cleanSlug),
     ]);
     noteData = directNote;
