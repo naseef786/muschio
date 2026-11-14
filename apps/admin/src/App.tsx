@@ -406,7 +406,16 @@ export function App() {
       if (response.status === 401) {
         const url = typeof args[0] === "string" ? args[0] : (args[0] as Request)?.url || "";
         // Only inspect authenticated admin routes (never storefront or login endpoints)
-        if (url.includes("/admin/") && !url.includes("/admin/auth/login") && !url.includes("/admin/login")) {
+        // A background live-order poll can briefly receive a stale 401 while a
+        // deployment, tab, or session refresh settles. It must not force the
+        // entire admin console back to the login screen.
+        const isLiveOrdersPoll = url.includes("/admin/orders/live");
+        if (
+          url.includes("/admin/") &&
+          !url.includes("/admin/auth/login") &&
+          !url.includes("/admin/login") &&
+          !isLiveOrdersPoll
+        ) {
           const init = args[1] as RequestInit | undefined;
           let hasAuthHeader = false;
           if (init?.headers) {
@@ -1101,9 +1110,18 @@ export function App() {
     if (!isLiveActive || !authSession?.token) return;
     const timer = setInterval(async () => {
       try {
+        // Read the ref so a poll never keeps using a token captured by an old
+        // effect instance after login/session restoration.
+        const currentToken = authSessionRef.current?.token;
+        if (!currentToken) return;
         const res = await fetch(`/api/v1/admin/orders/live?since=${encodeURIComponent(lastPollTimeRef.current)}`, {
-          headers: { Authorization: `Bearer ${authSession.token}` },
+          cache: "no-store",
+          headers: { Authorization: `Bearer ${currentToken}` },
         });
+        if (res.status === 401) {
+          console.warn("Live order polling was unauthorized; keeping the admin session active.");
+          return;
+        }
         if (!res.ok) return;
         const json = await res.json();
         if (!json.success || !json.data) return;
