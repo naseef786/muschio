@@ -68,6 +68,7 @@ import { SearchableTagSelect } from "./components/SearchableTagSelect";
 import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
+import { MediaLibraryPicker } from "./components/MediaLibraryPicker";
 import { OrderDetailModal } from "./components/OrderDetailModal";
 import { MarketingPromotionsTab } from "./components/MarketingPromotionsTab";
 
@@ -4705,7 +4706,14 @@ export function App() {
                         });
                       }}
                       folder="muschio/products"
+                      authHeaders={{ ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {}) }}
                       hint="Upload multiple luxury photos (bottle flacon, packaging box, lifestyle presentation). The first photo with ★ is the primary storefront cover."
+                    />
+                    <MediaLibraryPicker
+                      images={productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : [])}
+                      onChange={(urls) => setProductForm({ ...productForm, images: urls, imageUrl: urls[0] || "" })}
+                      folder="muschio/products"
+                      authHeaders={{ ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {}) }}
                     />
 
                     {/* Google SERP SEO Meta Title & Meta Description */}

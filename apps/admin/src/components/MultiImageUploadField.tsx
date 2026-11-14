@@ -17,6 +17,7 @@ interface MultiImageUploadFieldProps {
   onChange: (urls: string[]) => void;
   folder?: string;
   hint?: string;
+  authHeaders?: Record<string, string>;
 }
 
 export function MultiImageUploadField({
@@ -25,6 +26,7 @@ export function MultiImageUploadField({
   onChange,
   folder = "muschio/products",
   hint = "Upload multiple photos (bottle flacon, packaging box, lifestyle, details). The first photo is the primary cover image.",
+  authHeaders = {},
 }: MultiImageUploadFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
@@ -71,7 +73,7 @@ export function MultiImageUploadField({
 
         const res = await fetch("/api/v1/media/upload", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", ...authHeaders },
           body: JSON.stringify({
             file: base64,
             folder,

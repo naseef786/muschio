@@ -1192,6 +1192,22 @@ router.post("/media/sign", sessionLimiter, (req, res, next) => {
   }
 });
 
+router.get(
+  "/media/library",
+  requireAdminAuth,
+  requireRoles([AdminRole.SUPER_ADMIN, AdminRole.EDITOR]),
+  async (req, res, next) => {
+    try {
+      const prefix = typeof req.query.folder === "string" ? req.query.folder : "muschio/products";
+      const nextCursor = typeof req.query.nextCursor === "string" ? req.query.nextCursor : undefined;
+      const result = await CloudinaryService.listImages({ prefix, nextCursor });
+      res.json({ success: true, data: result, meta: { requestId: req.id } });
+    } catch (err) {
+      next(err);
+    }
+  },
+);
+
 router.delete("/media", async (req, res, next) => {
   try {
     const publicId = (req.body?.publicId || req.query.publicId) as string;

@@ -20,6 +20,16 @@ export interface CloudinaryUploadResult {
   createdAt: string;
 }
 
+export interface CloudinaryAsset {
+  publicId: string;
+  secureUrl: string;
+  width: number;
+  height: number;
+  format: string;
+  bytes: number;
+  createdAt: string;
+}
+
 export class CloudinaryService {
   private static getCredentials() {
     const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "zwkad4sz";
@@ -113,6 +123,38 @@ export class CloudinaryService {
     }
 
     return { result: data.result || "ok" };
+  }
+
+  /** Lists uploaded image assets for the authenticated admin media picker. */
+  static async listImages(options: { prefix?: string; maxResults?: number; nextCursor?: string } = {}) {
+    const { cloudName, apiKey, apiSecret } = this.getCredentials();
+    const params = new URLSearchParams({
+      type: "upload",
+      max_results: String(Math.min(Math.max(options.maxResults || 40, 1), 100)),
+    });
+    if (options.prefix) params.set("prefix", options.prefix);
+    if (options.nextCursor) params.set("next_cursor", options.nextCursor);
+
+    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString("base64");
+    const endpoint = `https://api.cloudinary.com/v1_1/${cloudName}/resources/image/upload?${params.toString()}`;
+    const response = await fetch(endpoint, { headers: { Authorization: `Basic ${auth}` } });
+    const data = await response.json();
+    if (!response.ok || data.error) {
+      throw new ApiError(response.status || 500, "CLOUDINARY_LIBRARY_ERROR", data.error?.message || "Failed to load the Cloudinary media library");
+    }
+
+    return {
+      assets: (data.resources || []).map((asset: any): CloudinaryAsset => ({
+        publicId: asset.public_id,
+        secureUrl: asset.secure_url,
+        width: asset.width,
+        height: asset.height,
+        format: asset.format,
+        bytes: asset.bytes,
+        createdAt: asset.created_at,
+      })),
+      nextCursor: data.next_cursor,
+    };
   }
 
   /**
