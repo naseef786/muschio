@@ -890,6 +890,7 @@ export function App() {
   }, [setIsSidebarCollapsed]);
   const [toasts, setToasts] = useState<LiveToast[]>([]);
   const [enquiries, setEnquiries] = useState<EnquiryItem[]>([]);
+  const [enquiryLoadError, setEnquiryLoadError] = useState<string | null>(null);
   const [enquiryStatusFilter, setEnquiryStatusFilter] = useState<string>("ALL");
   const [enquirySearch, setEnquirySearch] = useState<string>("");
   const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
@@ -1017,7 +1018,18 @@ export function App() {
           const json = await enquiriesRes.json();
           if (json.success && Array.isArray(json.data) && active) {
             setEnquiries(json.data.filter((e: any) => !isMockItem(e)));
+            setEnquiryLoadError(null);
           }
+        } else if (active) {
+          let message = "Messages could not be loaded. Please refresh and try again.";
+          if (enquiriesRes?.status === 401) {
+            message = "Your administrator session has expired. Please sign in again.";
+          } else if (enquiriesRes?.status === 403) {
+            message = "Your administrator role cannot view messages. Ask a Super Admin to grant Order Manager access.";
+          } else if (!enquiriesRes) {
+            message = "The messages service could not be reached. Check the API connection and try again.";
+          }
+          setEnquiryLoadError(message);
         }
 
         if (bannersRes && bannersRes.ok) {
@@ -5643,6 +5655,16 @@ export function App() {
 
           return (
             <div className="space-y-6">
+              {enquiryLoadError && (
+                <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  <AlertTriangle size={18} className="mt-0.5 shrink-0" />
+                  <div>
+                    <p className="font-medium">Messages are unavailable</p>
+                    <p className="mt-1 text-xs leading-relaxed">{enquiryLoadError}</p>
+                  </div>
+                </div>
+              )}
+
               {/* KPI Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">

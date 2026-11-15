@@ -35,7 +35,8 @@ The authoritative project documents are:
 7. Do not claim operational capabilities that are not implemented. Delivery remains configuration-driven and inactive unless explicitly enabled and operationally approved.
 8. Prefer small, focused changes. Preserve unrelated user work and do not reset or overwrite the working tree.
 9. Do not modify production data or external services without explicit authorization.
-10. When changing behavior, update the relevant tests and documentation.
+10. Check and verify changes locally first. Never push commits, deploy to Vercel, modify production data, or mutate an external service unless the user explicitly approves that specific action in the current request.
+11. When changing behavior, update the relevant tests and documentation.
 
 ## Media and Product Import Context
 

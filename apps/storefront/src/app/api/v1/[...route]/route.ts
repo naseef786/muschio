@@ -2175,6 +2175,9 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
       EmailService.sendEnquiryNotification(enquiryPayload).catch((err) =>
         console.error("Failed to send enquiry notification email:", err)
       );
+      EmailService.sendEnquiryAcknowledgement(enquiryPayload).catch((err) =>
+        console.error("Failed to send enquiry acknowledgement email:", err)
+      );
 
       return success({ success: true, enquiryId, eventId: event.id }, 201);
     }

@@ -18,6 +18,19 @@ interface SendEmailParams {
 }
 
 export class EmailService {
+  private static escapeHtml(value: string): string {
+    return value.replace(/[&<>\"']/g, (character) => {
+      const entities: Record<string, string> = {
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '\"': "&quot;",
+        "'": "&#39;",
+      };
+      return entities[character] || character;
+    });
+  }
+
   private static getResendKey(): string | undefined {
     return process.env.RESEND_API_KEY;
   }
@@ -580,6 +593,57 @@ export class EmailService {
           <p>Please ensure courier pickup is halted and reserved flacons are returned to inventory.</p>
         </div>
       `,
+    });
+  }
+
+  /**
+   * Acknowledge receipt of a customer contact / concierge enquiry.
+   */
+  static async sendEnquiryAcknowledgement(enquiry: {
+    enquiryId?: string;
+    name: string;
+    email: string;
+    subject?: string;
+  }) {
+    const customerName = this.escapeHtml(enquiry.name || "there");
+    const enquirySubject = this.escapeHtml(enquiry.subject || "Your enquiry");
+    const enquiryId = this.escapeHtml(enquiry.enquiryId || "pending");
+
+    const html = `
+      <div style="margin:0; padding:32px 16px; background:#f5f3ef; font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif; color:#191817;">
+        <table role="presentation" style="width:100%; max-width:620px; margin:0 auto; border-collapse:collapse; background:#ffffff;">
+          <tr>
+            <td style="padding:34px 36px 26px; border-bottom:1px solid #e8e3dc; text-align:center;">
+              <div style="font-family:Georgia,'Times New Roman',serif; font-size:25px; letter-spacing:.16em; color:#171615;">MUSCHIO</div>
+              <div style="margin-top:8px; font-size:10px; letter-spacing:.18em; color:#9a7950; text-transform:uppercase;">Haute Parfumerie</div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:40px 36px 28px;">
+              <p style="margin:0 0 18px; font-size:14px; color:#6f6a63;">Thank you for contacting Muschio.</p>
+              <h1 style="margin:0 0 18px; font-family:Georgia,'Times New Roman',serif; font-size:30px; line-height:1.2; font-weight:400; color:#171615;">We received your message</h1>
+              <p style="margin:0; font-size:15px; line-height:1.75; color:#4f4a44;">Dear ${customerName}, our team has received your enquiry about <strong style="color:#171615;">${enquirySubject}</strong>. A Muschio concierge will review it and reply using the contact details you provided.</p>
+              <div style="margin:28px 0; padding:18px 20px; border-left:3px solid #b58b58; background:#faf8f5; font-size:13px; line-height:1.7; color:#5d574f;">
+                <strong style="color:#171615;">Reference:</strong> ${enquiryId}<br />
+                <strong style="color:#171615;">Typical reply time:</strong> Within one business day
+              </div>
+              <p style="margin:0; font-size:14px; line-height:1.7; color:#5d574f;">If your request is urgent, reply to this email or contact our concierge team directly at <a href="mailto:concierge@muschio.luxury" style="color:#9a6f3f;">concierge@muschio.luxury</a>.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:22px 36px 30px; border-top:1px solid #e8e3dc; font-size:11px; line-height:1.7; color:#8b857d; text-align:center;">
+              Muschio Haute Parfumerie · Dubai, United Arab Emirates<br />
+              This is an automatic confirmation that your message reached our team.
+            </td>
+          </tr>
+        </table>
+      </div>
+    `;
+
+    return this.sendEmail({
+      to: enquiry.email,
+      subject: "We received your message — Muschio Haute Parfumerie",
+      html,
     });
   }
 

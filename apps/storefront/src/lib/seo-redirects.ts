@@ -474,10 +474,13 @@ export function getLegacyRedirect(pathname: string, search = "", cookieLocale?: 
     targetSubpath = "/contact";
   } else if (/^\/(shipping|delivery|shipping-policy|returns)$/i.test(subpath)) {
     targetSubpath = "/delivery";
-  } else if (/^\/(terms|terms-and-conditions|terms-of-service)$/i.test(subpath)) {
-    targetSubpath = "/guide#terms";
-  } else if (/^\/(privacy|privacy-policy)$/i.test(subpath)) {
-    targetSubpath = "/guide#privacy";
+  // Keep the canonical standalone policy routes on their own pages. Only
+  // redirect older alias URLs; otherwise /en/terms and /en/privacy are
+  // intercepted before the App Router can render their dedicated pages.
+  } else if (/^\/(terms-and-conditions|terms-of-service)$/i.test(subpath)) {
+    targetSubpath = "/terms";
+  } else if (/^\/(privacy-policy)$/i.test(subpath)) {
+    targetSubpath = "/privacy";
   } else if (/^\/(faq|faqs)$/i.test(subpath)) {
     targetSubpath = "/guide";
   } else if (/^\/(track|tracking|order-tracking|track-order)$/i.test(subpath)) {
