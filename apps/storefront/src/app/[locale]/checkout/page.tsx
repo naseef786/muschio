@@ -7,6 +7,7 @@ import { Link } from "../../../navigation";
 import { useCart } from "../../../context/cart-context";
 import { useAuth } from "../../../context/auth-context";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import { DeliveryPanel } from "../../../components/delivery-panel";
 import { PriceDisplay } from "@muschio/ui";
 import { StorefrontOrderSchema } from "@muschio/types";
@@ -38,7 +39,7 @@ export default function CheckoutPage(
   } = params;
 
   const ar = locale === "ar";
-  const c = (en: string, arabic: string) => (ar ? arabic : en);
+  const c = (en: string, arabic: string) => customerCopy(en, arabic, ar);
   const searchParams = useSearchParams();
   const isCancelled = searchParams.get("cancelled") === "true";
   const { items, subtotal, shipping: baseShipping, clearCart } = useCart();
@@ -377,6 +378,7 @@ export default function CheckoutPage(
           "muschio_pending_order",
           JSON.stringify({
             orderNumber: order.orderNumber,
+            contactEmail: cleanEmail,
             fingerprint,
             signature,
           }),
@@ -417,6 +419,11 @@ export default function CheckoutPage(
       };
 
       persistOrderLocally(order.orderNumber, order);
+      try {
+        localStorage.setItem("muschio_last_order_email", cleanEmail);
+      } catch {
+        // ignore storage restrictions
+      }
 
       // 1. VIP Cash on Delivery (Available in UAE with Courier Inspection)
       if (paymentMethod === "CASH_ON_DELIVERY") {

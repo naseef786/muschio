@@ -27,6 +27,7 @@ import {
   LoyaltyService,
   PromotionService,
   GiftCardService,
+  createGuestSession,
   verifyStorefrontToken,
 } from "@muschio/api";
 import { EmailService } from "@/lib/email-service";
@@ -1063,7 +1064,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
     // 1. Guest Session
     if (path === "sessions/guest") {
-      return success({ token: CustomerService.createToken("guest-" + Date.now(), "guest@muschio.client") });
+      return success({ token: createGuestSession() });
     }
 
     // 2. Auth: Customer & Admin Login

@@ -3,6 +3,7 @@ import { ArrowRight, Compass, Droplets, BookOpen } from "lucide-react";
 import { Link } from "../../../navigation";
 import { EditorialReveal } from "../../../components/editorial-reveal";
 import styles from "../../../components/editorial-pages.module.css";
+import { customerCopy } from "../../../lib/customer-copy";
 
 export async function generateMetadata(
   props: {
@@ -44,7 +45,7 @@ export default async function AboutPage(
     locale
   } = params;
 
-  const c = (en: string, ar: string) => (locale === "ar" ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, locale === "ar");
   const principles = [
     {
       title: c("Character comes first", "الشخصية أولاً"),

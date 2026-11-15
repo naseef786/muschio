@@ -3,6 +3,7 @@
 import React, { useState, use } from "react";
 import { Link } from "../../../navigation";
 import { DeliveryPanel } from "../../../components/delivery-panel";
+import { customerCopy } from "../../../lib/customer-copy";
 import {
   ShieldCheck,
   Package,
@@ -24,7 +25,7 @@ export default function DeliveryPage(
 
   const [country, setCountry] = useState("AE");
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const countries = [
     { code: "AE", nameEn: "United Arab Emirates", nameAr: "الإمارات العربية المتحدة", transitEn: "Same-day / Next-day", transitAr: "نفس اليوم / اليوم التالي" },

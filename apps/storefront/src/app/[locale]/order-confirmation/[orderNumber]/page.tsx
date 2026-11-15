@@ -7,6 +7,7 @@ import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay } from "@muschio/ui";
 import { Link } from "../../../../navigation";
 import { muschioApi } from "../../../../lib/api";
+import { customerCopy } from "../../../../lib/customer-copy";
 import { useCart } from "../../../../context/cart-context";
 import {
   CheckCircle2,
@@ -43,7 +44,7 @@ export default function OrderStatusPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
+  const c = useCallback((en: string, ar: string) => customerCopy(en, ar, isAr), [isAr]);
   const searchParams = useSearchParams();
   const sessionId = searchParams.get("session_id");
   const [order, setOrder] = useState<StorefrontOrder | null>(null);
@@ -54,6 +55,21 @@ export default function OrderStatusPage(
   const cart = useCart();
 
   const [processingCard, setProcessingCard] = useState(false);
+  const [paymentVerificationPending, setPaymentVerificationPending] = useState(Boolean(sessionId));
+
+  const getStoredOrderEmail = useCallback(() => {
+    try {
+      const pending = localStorage.getItem("muschio_pending_order");
+      if (pending) {
+        const parsed = JSON.parse(pending);
+        if (typeof parsed?.contactEmail === "string") return parsed.contactEmail;
+      }
+      const storedEmail = localStorage.getItem("muschio_last_order_email");
+      return storedEmail || undefined;
+    } catch {
+      return undefined;
+    }
+  }, []);
 
   // Automatic Stripe Checkout Session Verification
   useEffect(() => {
@@ -78,6 +94,8 @@ export default function OrderStatusPage(
         }
       } catch (err) {
         console.warn("Stripe session verification error:", err);
+      } finally {
+        if (!isCancelled) setPaymentVerificationPending(false);
       }
     }
 
@@ -120,7 +138,9 @@ export default function OrderStatusPage(
     async (isSilent = false) => {
       if (!isSilent) setLoading(true);
       try {
-        const result = await muschioApi.getOrder(orderNumber);
+        const result = await muschioApi.getOrder(orderNumber, {
+          email: getStoredOrderEmail(),
+        });
         if (result) {
           setOrder(result);
         }
@@ -130,17 +150,23 @@ export default function OrderStatusPage(
         if (!isSilent) setLoading(false);
       }
     },
-    [orderNumber],
+    [getStoredOrderEmail, orderNumber],
   );
 
   useEffect(() => {
-    if (orderNumber) {
+    if (orderNumber && !sessionId) {
       try {
         localStorage.setItem("muschio_last_order", orderNumber);
       } catch { }
+      void refresh(false);
     }
-    void refresh(false);
-  }, [orderNumber, refresh]);
+  }, [orderNumber, refresh, sessionId]);
+
+  useEffect(() => {
+    if (orderNumber && sessionId && !paymentVerificationPending) {
+      void refresh(false);
+    }
+  }, [orderNumber, paymentVerificationPending, refresh, sessionId]);
 
   // Real-time automatic background synchronization every 3.5 seconds
   useEffect(() => {
@@ -245,7 +271,7 @@ export default function OrderStatusPage(
     : "0.00";
 
   return (
-    <div className="max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 space-y-8 font-sans">
+    <div className="w-full min-w-0 max-w-[1140px] mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-14 space-y-8 font-sans">
       {/* 1. Minimalist Luxury Breadcrumbs (Level Shoes Pattern) */}
       <nav aria-label="Breadcrumb" className="text-xs text-neutral-400 font-sans">
         <ol className="flex items-center gap-2 flex-wrap">
@@ -278,7 +304,7 @@ export default function OrderStatusPage(
       {/* 2. Editorial Header Banner */}
       <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-5">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-100 dark:border-neutral-800 pb-4">
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-3">
             <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
               {c("HAUTE PARFUMERIE · OFFICIAL CLIENT RECEIPT", "دار العطور الراقية · إيصال العميل المعتمد")}
             </span>
@@ -289,11 +315,11 @@ export default function OrderStatusPage(
           </div>
 
           {order && (
-            <div className="flex items-center gap-2 bg-[#FAFAFA] dark:bg-neutral-900 px-3 py-1.5 border border-neutral-200 dark:border-neutral-800">
+            <div className="flex min-w-0 max-w-full items-center gap-2 bg-[#FAFAFA] dark:bg-neutral-900 px-3 py-1.5 border border-neutral-200 dark:border-neutral-800">
               <span className="text-[11px] font-sans font-medium text-neutral-400">
                 {c("Ref:", "الرقم المرجعي:")}
               </span>
-              <span className="font-mono text-xs text-neutral-900 dark:text-white font-semibold">
+              <span className="min-w-0 truncate font-mono text-xs text-neutral-900 dark:text-white font-semibold">
                 {order.orderNumber}
               </span>
               <button
@@ -309,7 +335,7 @@ export default function OrderStatusPage(
           )}
         </div>
 
-        <div className="flex items-start gap-4 pt-1">
+        <div className="flex min-w-0 items-start gap-4 pt-1">
           {loading ? (
             <div className="w-10 h-10 rounded-full border border-neutral-200 dark:border-neutral-700 flex items-center justify-center shrink-0 animate-spin">
               <RefreshCw size={18} className="text-neutral-500" />
@@ -328,7 +354,7 @@ export default function OrderStatusPage(
             </div>
           )}
 
-          <div className="space-y-1">
+          <div className="min-w-0 space-y-1">
             <h1 className="font-serif text-2xl sm:text-3xl text-neutral-900 dark:text-white font-normal">
               {loading
                 ? c("Checking your order…", "جاري مراجعة طلبك…")
@@ -346,7 +372,7 @@ export default function OrderStatusPage(
                             ? c("Thank you! Your order is confirmed.", "شكراً لك! تم تأكيد طلبك بنجاح.")
                             : c("Order Placed Successfully", "تم استلام طلبك بنجاح")}
             </h1>
-            <p className="text-xs sm:text-sm text-neutral-500 leading-relaxed">
+            <p className="max-w-prose text-xs sm:text-sm text-neutral-500 leading-relaxed">
               {isPaid
                 ? c(
                   "We have received your payment and our master perfumers are packaging your flacons for temperature-regulated delivery.",
@@ -365,7 +391,7 @@ export default function OrderStatusPage(
       {paymentSuccess && (
         <div className="p-4 border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 text-xs rounded-sm flex items-center gap-2.5 shadow-sm">
           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
-          <span>{paymentSuccess}</span>
+          <span className="min-w-0">{paymentSuccess}</span>
         </div>
       )}
 
@@ -415,7 +441,7 @@ export default function OrderStatusPage(
 
       {/* 3. Level Shoes Style Connected Progress Stepper */}
       <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm">
-        <div className="flex items-center justify-between mb-5">
+        <div className="flex flex-col items-start gap-3 mb-5 sm:flex-row sm:items-center sm:justify-between">
           <span className="text-xs uppercase font-sans tracking-[0.16em] font-medium text-neutral-400">
             {c("FULFILLMENT PROGRESS", "مراحل تنفيذ وتسليم الطلب")}
           </span>
@@ -466,7 +492,7 @@ export default function OrderStatusPage(
                     {isCompleted ? "✓" : step.num}
                   </div>
 
-                  <h3 className="text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider font-sans">
+                  <h3 className="break-words text-xs font-semibold text-neutral-900 dark:text-white uppercase tracking-wider font-sans">
                     {c(step.titleEn, step.titleAr)}
                   </h3>
                   <p className="text-[11px] text-neutral-400 mt-0.5 leading-snug">
@@ -504,8 +530,8 @@ export default function OrderStatusPage(
                   const itemSlug = item.slug;
 
                   return (
-                    <div key={item.id} className="py-4 flex items-center justify-between gap-4">
-                      <div className="flex items-center gap-4 min-w-0">
+                    <div key={item.id} className="py-4 flex min-w-0 flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="flex w-full min-w-0 items-start gap-3 sm:gap-4">
                         {/* 4:5 Flacon Image Canvas (Level Shoes Style) */}
                         <div className="relative w-16 h-20 bg-[#F8F8F8] dark:bg-neutral-900 border border-neutral-100 dark:border-neutral-800 shrink-0 overflow-hidden rounded-sm flex items-center justify-center">
                           <Image
@@ -523,7 +549,7 @@ export default function OrderStatusPage(
                               {item.brandName}
                             </span>
                           )}
-                          <h2 className="font-serif text-base text-neutral-900 dark:text-white truncate">
+                          <h2 className="break-words font-serif text-base text-neutral-900 dark:text-white">
                             {itemSlug ? (
                               <Link
                                 href={`/product/${itemSlug}`}
@@ -535,7 +561,7 @@ export default function OrderStatusPage(
                               c(item.productNameEn, item.productNameAr)
                             )}
                           </h2>
-                          <div className="flex items-center gap-2 text-xs text-neutral-400 mt-1">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-neutral-400 mt-1">
                             <span>{item.sizeLabel || "Standard Flacon"}</span>
                             <span>•</span>
                             <span className="font-mono text-neutral-600 dark:text-neutral-300">
@@ -553,7 +579,7 @@ export default function OrderStatusPage(
                         </div>
                       </div>
 
-                      <div className="text-end font-mono text-xs sm:text-sm font-semibold text-neutral-900 dark:text-white shrink-0">
+                      <div className="self-end text-end font-mono text-sm font-semibold text-neutral-900 dark:text-white shrink-0 sm:self-auto">
                         <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
                       </div>
                     </div>
@@ -646,18 +672,18 @@ export default function OrderStatusPage(
                 {c("RECEIPT SUMMARY", "ملخص الإيصال")}
               </span>
 
-              <div className="space-y-3 text-xs text-neutral-500">
-                <div className="flex justify-between">
+              <div className="space-y-3 break-words text-xs text-neutral-500">
+                <div className="flex items-start justify-between gap-3">
                   <span>{c("Subtotal", "المجموع الفرعي")}</span>
                   <PriceDisplay price={order.totalAmount} locale={locale} size="sm" />
                 </div>
-                <div className="flex justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <span>{c("White-Glove GCC Express Shipping", "الشحن السريع المبرد")}</span>
                   <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                     {c("Complimentary", "مجاني")}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex items-start justify-between gap-3">
                   <span>{c("Authenticity Vault Inspection", "فحص الأختام الرسمية")}</span>
                   <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                     {c("Included", "مشمول")}
@@ -665,8 +691,8 @@ export default function OrderStatusPage(
                 </div>
               </div>
 
-              <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 flex justify-between items-baseline">
-                <div>
+              <div className="border-t border-neutral-100 dark:border-neutral-800 pt-4 flex items-end justify-between gap-3">
+                <div className="min-w-0">
                   <span className="text-xs uppercase tracking-wider font-sans font-medium text-neutral-900 dark:text-white block">
                     {isPaid ? c("Total Settled", "المجموع المدفوع") : c("Total Due", "المجموع المطلوب")}
                   </span>
@@ -684,10 +710,10 @@ export default function OrderStatusPage(
               </div>
 
               {/* Status badge */}
-              <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-center justify-between text-xs">
+              <div className="mt-4 pt-4 border-t border-neutral-100 dark:border-neutral-800 flex items-start justify-between gap-3 text-xs">
                 <span className="text-neutral-400">{c("Payment Status", "حالة الدفع")}:</span>
                 <span
-                  className={`px-2.5 py-1 text-[11px] font-sans uppercase tracking-wider font-semibold rounded-none border ${isPaid
+                  className={`shrink-0 px-2.5 py-1 text-end text-[11px] font-sans uppercase tracking-wider font-semibold rounded-none border ${isPaid
                       ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800"
                       : "bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-800"
                     }`}
@@ -712,10 +738,10 @@ export default function OrderStatusPage(
                 const transactionId = paymentDetails?.gatewayReference || primaryPayment?.gatewayReference || null;
 
                 return (
-                  <div className="mt-3 p-3 rounded-sm bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2">
-                    <div className="flex items-center justify-between text-[11px]">
+                  <div className="mt-3 min-w-0 p-3 rounded-sm bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2 break-words">
+                    <div className="flex items-start justify-between gap-3 text-[11px]">
                       <span className="text-neutral-500 font-sans">{c("Settlement Method", "طريقة الدفع")}:</span>
-                      <span className="font-mono text-neutral-900 dark:text-white font-medium">
+                      <span className="shrink-0 text-end font-mono text-neutral-900 dark:text-white font-medium">
                         {isCod
                           ? c("Cash on Delivery (COD)", "الدفع عند الاستلام نقداً")
                           : isTabby
@@ -727,9 +753,9 @@ export default function OrderStatusPage(
                     </div>
 
                     {isPaid && !isCod && (
-                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <div className="flex items-start justify-between gap-3 text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
                         <span className="text-neutral-500 font-sans">{c("Card Acquired", "البطاقة المستخدمة")}:</span>
-                        <div className="flex items-center gap-1.5 font-mono">
+                        <div className="flex shrink-0 items-center gap-1.5 font-mono">
                           {cardBrand && (
                             <span className={`text-[9px] px-1 py-0.2 rounded text-white font-bold ${cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : "bg-neutral-700"
                               }`}>
@@ -744,7 +770,7 @@ export default function OrderStatusPage(
                     )}
 
                     {(isTabby || isTamara) && (
-                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <div className="flex items-start justify-between gap-3 text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
                         <span className="text-neutral-500 font-sans">{c("Installment Breakdown", "جدول الدفعات")}:</span>
                         <span className="font-mono text-neutral-900 dark:text-white font-semibold">
                           4 × AED {(Number(order.totalAmount) / 4).toFixed(2)}
@@ -753,7 +779,7 @@ export default function OrderStatusPage(
                     )}
 
                     {isCod && (
-                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <div className="flex items-start justify-between gap-3 text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
                         <span className="text-neutral-500 font-sans">{c("Payment Due", "المبلغ المطلوب")}:</span>
                         <span className="font-mono text-neutral-900 dark:text-white font-semibold">
                           AED {Number(order.totalAmount).toLocaleString()} {c("at Doorstep", "عند الاستلام")}
@@ -762,7 +788,7 @@ export default function OrderStatusPage(
                     )}
 
                     {cardHolder && (
-                      <div className="flex items-center justify-between text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <div className="flex items-start justify-between gap-3 text-[11px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
                         <span className="text-neutral-500 font-sans">{c("Recipient / Client", "اسم المستلم")}:</span>
                         <span className="text-neutral-800 dark:text-neutral-200 font-medium truncate max-w-[170px]">
                           {cardHolder}
@@ -771,7 +797,7 @@ export default function OrderStatusPage(
                     )}
 
                     {transactionId && (
-                      <div className="flex items-center justify-between text-[10px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
+                      <div className="flex items-start justify-between gap-3 text-[10px] pt-1.5 border-t border-neutral-200/60 dark:border-neutral-800">
                         <span className="text-neutral-400 font-sans">{c("Reference", "الرقم المرجعي")}:</span>
                         <span className="font-mono text-neutral-500 truncate max-w-[160px]" title={transactionId}>
                           {transactionId}

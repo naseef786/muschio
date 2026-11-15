@@ -8,6 +8,7 @@ import { ArrowLeft, Clock, User } from "lucide-react";
 import { muschioApi } from "../../../../lib/api";
 import { JournalService } from "@muschio/api";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
+import { customerCopy } from "../../../../lib/customer-copy";
 
 export const dynamic = "force-dynamic";
 
@@ -61,7 +62,7 @@ export default async function JournalDetailPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const cleanSlug = decodeURIComponent(slug).trim();
 

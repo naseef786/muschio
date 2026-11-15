@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../../../../context/cart-context";
 import { muschioApi } from "../../../../lib/api";
+import { customerCopy } from "../../../../lib/customer-copy";
 
 interface Recommendation {
   slug: string;
@@ -39,7 +40,7 @@ export default function AIScentDiscoveryPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const [query, setQuery] = useState("");
   const [selectedVibe, setSelectedVibe] = useState<string>("regal");

@@ -4,11 +4,12 @@ import React from "react";
 import { useParams } from "next/navigation";
 import { Link } from "../../navigation";
 import { ArrowRight, Compass, Home } from "lucide-react";
+import { customerCopy } from "../../lib/customer-copy";
 
 export default function LocaleNotFound() {
   const params = useParams();
   const isAr = params?.locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-20 sm:py-32 flex flex-col items-center justify-center text-center">

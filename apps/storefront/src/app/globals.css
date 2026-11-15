@@ -41,6 +41,8 @@
   body {
     background-color: var(--bg-canvas);
     color: var(--text-primary);
+    font-size: 16px;
+    line-height: 1.5;
     font-family: var(--font-figtree), 'Figtree', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
@@ -173,8 +175,8 @@
   align-items: center;
   gap: 36px;
   padding: 0 32px 14px;
-  font-size: 12px;
-  letter-spacing: 0.12em;
+  font-size: 14px;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
   max-width: 1400px;
   margin: 0 auto;
@@ -185,7 +187,7 @@
   display: inline-flex;
   align-items: center;
   padding: 6px 0;
-  line-height: 1.2;
+  line-height: 1.5;
   color: var(--text-primary);
   transition: color 0.15s;
 }
@@ -304,6 +306,22 @@
   padding: 24px;
   z-index: 55;
   border-radius: 2px;
+}
+
+.mega-menu-panel p,
+.mega-menu-panel a,
+.mega-menu-panel span {
+  line-height: 1.6;
+}
+
+.drawer-panel-start,
+.drawer-panel-end {
+  font-size: 15px;
+}
+
+.drawer-panel-start nav,
+.drawer-panel-end nav {
+  line-height: 1.6;
 }
 
 .mega-menu-panel::before {
@@ -755,21 +773,22 @@
 
 .footer-grid p {
   color: #A3A39C;
-  font-size: 13px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.85;
 }
 
 .footer-grid h4 {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: #FFFFFF;
 }
 
 .footer-grid a:not(.masthead-logo):not(.social-card-link):not(.footer-contact-link) {
   display: inline-block;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.6;
   color: #D4D1C8;
   transition: color 0.15s, transform 0.15s;
 }
@@ -782,9 +801,9 @@
   display: inline-flex !important;
   align-items: center !important;
   gap: 10px;
-  font-size: 12px;
+  font-size: 14px;
   color: #A3A39C;
-  line-height: 1.4;
+  line-height: 1.6;
   white-space: nowrap;
   transition: color 0.15s;
 }
@@ -835,7 +854,7 @@
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  font-size: 11px;
+  font-size: 12px;
   color: #A3A39C;
 }
 

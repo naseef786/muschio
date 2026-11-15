@@ -4,6 +4,7 @@ import React, { useState, useEffect, useMemo, use } from "react";
 import { Link } from "../../../navigation";
 import { Search, ArrowUpRight, Globe, Loader2 } from "lucide-react";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 
 interface LiveBrand {
   id: string;
@@ -30,7 +31,7 @@ export default function BrandsDirectoryPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const [brands, setBrands] = useState<LiveBrand[]>([]);
   const [loading, setLoading] = useState(true);

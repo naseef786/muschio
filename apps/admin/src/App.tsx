@@ -228,6 +228,20 @@ interface StoreSettings {
   announcementBarEn: string;
   announcementBarAr: string;
   freeShippingThreshold: number;
+  footerTaglineEn: string;
+  footerTaglineAr: string;
+  footerRegionsEn: string;
+  footerRegionsAr: string;
+  footerSocialTitleEn: string;
+  footerSocialTitleAr: string;
+  footerCollectionTitleEn: string;
+  footerCollectionTitleAr: string;
+  footerHousesTitleEn: string;
+  footerHousesTitleAr: string;
+  footerCareTitleEn: string;
+  footerCareTitleAr: string;
+  footerCopyrightEn: string;
+  footerCopyrightAr: string;
 }
 
 const SLOT_LABELS: Record<BannerSlot, string> = {
@@ -1126,9 +1140,13 @@ export function App() {
         const json = await res.json();
         if (!json.success || !json.data) return;
 
-        const { events, orders: newOrders, serverTime } = json.data;
+        const { events, orders: newOrders, counters, serverTime } = json.data;
         if (serverTime) {
           lastPollTimeRef.current = serverTime;
+        }
+
+        if (counters && typeof counters.totalOrders === "number") {
+          setDashboardMetrics((prev) => ({ ...(prev || {}), totalOrders: counters.totalOrders }));
         }
 
         if (Array.isArray(events) && events.length > 0) {
@@ -1136,6 +1154,24 @@ export function App() {
 
           events.forEach((evt: any) => {
             const p = evt.payload || {};
+            const eventStatus =
+              p.newStatus ||
+              (evt.eventName === "ORDER_CANCELLED"
+                ? "CANCELLED"
+                : evt.eventName.startsWith("ORDER_") && evt.eventName !== "ORDER_CREATED"
+                  ? evt.eventName.slice("ORDER_".length)
+                  : null);
+
+            if (p.orderNumber && eventStatus) {
+              setOrders((prev) =>
+                prev.map((order) =>
+                  order.number === p.orderNumber || order.orderNumber === p.orderNumber
+                    ? { ...order, status: eventStatus }
+                    : order,
+                ),
+              );
+            }
+
             if (evt.eventName === "ORDER_CREATED") {
               playLuxuryChime("order");
               addToast(
@@ -1177,6 +1213,7 @@ export function App() {
               map.set(o.id, {
                 id: o.id,
                 number: o.orderNumber,
+                orderNumber: o.orderNumber,
                 customer: o.shippingAddress?.fullName || o.customer?.firstName || o.guestEmail || "Client",
                 amount: `${Number(o.totalAmount).toLocaleString()} ${o.currency || "AED"}`,
                 method: o.payments?.[0]?.provider || "CARD",
@@ -1232,6 +1269,20 @@ export function App() {
     announcementBarEn: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
     announcementBarAr: "توصيل فاخر مجاني لكافة دول الخليج للطلبات فوق 500 درهم · عطور أصلية ومضمونة 100%",
     freeShippingThreshold: 500,
+    footerTaglineEn: "Haute Parfumerie & Niche Fragrance Platform dedicated to the connoisseurs of the Arabian Gulf. Curating rare extraits de parfum, aged attars, and crystalline olfactory creations.",
+    footerTaglineAr: "دار العطور الفاخرة المكرسة لعشاق العطور الراقية في الخليج العربي. ننتقي خلاصات العطور النادرة والزيوت المعتقة من أرقى الدور العالمية.",
+    footerRegionsEn: "Dubai · Abu Dhabi · Riyadh · Doha · Kuwait · Muscat",
+    footerRegionsAr: "دبي · أبوظبي · الرياض · الدوحة · الكويت · مسقط",
+    footerSocialTitleEn: "Social Media",
+    footerSocialTitleAr: "الحسابات الرسمية",
+    footerCollectionTitleEn: "Shop",
+    footerCollectionTitleAr: "المجموعة",
+    footerHousesTitleEn: "Brands",
+    footerHousesTitleAr: "دور العطور",
+    footerCareTitleEn: "Help & Contact",
+    footerCareTitleAr: "خدمة العملاء والكونسيرج",
+    footerCopyrightEn: "All Rights Reserved.",
+    footerCopyrightAr: "جميع الحقوق محفوظة.",
   });
 
   const [settingsFeedback, setSettingsFeedback] = useState("");
@@ -7377,13 +7428,22 @@ export function App() {
                   className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-sans"
                 />
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Concierge Email</label>
                   <input
                     type="email"
                     value={storeSettings.conciergeEmail}
                     onChange={(e) => setStoreSettings({ ...storeSettings, conciergeEmail: e.target.value })}
+                    className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Concierge Phone</label>
+                  <input
+                    type="text"
+                    value={storeSettings.conciergePhone}
+                    onChange={(e) => setStoreSettings({ ...storeSettings, conciergePhone: e.target.value })}
                     className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono"
                   />
                 </div>
@@ -7395,6 +7455,59 @@ export function App() {
                     onChange={(e) => setStoreSettings({ ...storeSettings, freeShippingThreshold: Number(e.target.value) })}
                     className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono"
                   />
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Content */}
+            <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded space-y-5 text-xs">
+              <div>
+                <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Footer Content</h3>
+                <p className="text-neutral-500 dark:text-neutral-400 mt-1">Manage the footer copy and section headings shown on the English and Arabic storefronts.</p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Brand tagline (English)</label>
+                  <textarea rows={4} value={storeSettings.footerTaglineEn} onChange={(e) => setStoreSettings({ ...storeSettings, footerTaglineEn: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                </div>
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Brand tagline (Arabic)</label>
+                  <textarea rows={4} dir="rtl" value={storeSettings.footerTaglineAr} onChange={(e) => setStoreSettings({ ...storeSettings, footerTaglineAr: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Regional presence (English)</label>
+                  <input type="text" value={storeSettings.footerRegionsEn} onChange={(e) => setStoreSettings({ ...storeSettings, footerRegionsEn: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                </div>
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Regional presence (Arabic)</label>
+                  <input type="text" dir="rtl" value={storeSettings.footerRegionsAr} onChange={(e) => setStoreSettings({ ...storeSettings, footerRegionsAr: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {([
+                  ["Social heading", "footerSocialTitleEn", "footerSocialTitleAr"],
+                  ["Collection heading", "footerCollectionTitleEn", "footerCollectionTitleAr"],
+                  ["Houses heading", "footerHousesTitleEn", "footerHousesTitleAr"],
+                  ["Client care heading", "footerCareTitleEn", "footerCareTitleAr"],
+                ] as const).map(([label, enKey, arKey]) => (
+                  <div key={enKey} className="space-y-2">
+                    <label className="block text-neutral-500 dark:text-neutral-400">{label} (EN)</label>
+                    <input type="text" value={storeSettings[enKey]} onChange={(e) => setStoreSettings({ ...storeSettings, [enKey]: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                    <label className="block text-neutral-500 dark:text-neutral-400">{label} (AR)</label>
+                    <input type="text" dir="rtl" value={storeSettings[arKey]} onChange={(e) => setStoreSettings({ ...storeSettings, [arKey]: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                  </div>
+                ))}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Copyright text (English)</label>
+                  <input type="text" value={storeSettings.footerCopyrightEn} onChange={(e) => setStoreSettings({ ...storeSettings, footerCopyrightEn: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
+                </div>
+                <div>
+                  <label className="block text-neutral-500 dark:text-neutral-400 mb-1">Copyright text (Arabic)</label>
+                  <input type="text" dir="rtl" value={storeSettings.footerCopyrightAr} onChange={(e) => setStoreSettings({ ...storeSettings, footerCopyrightAr: e.target.value })} className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded" />
                 </div>
               </div>
             </div>

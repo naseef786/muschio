@@ -29,5 +29,5 @@ export { InventoryService } from "./services/inventory.service";
 export { LoyaltyService } from "./services/loyalty.service";
 export { PromotionService } from "./services/promotion.service";
 export { GiftCardService } from "./services/gift-card.service";
-export { verifyStorefrontToken, signingSecret } from "./middleware/storefront-auth";
+export { createGuestSession, verifyStorefrontToken, signingSecret } from "./middleware/storefront-auth";
 export { ApiError } from "./middleware/error-handler";

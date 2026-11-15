@@ -4,6 +4,7 @@ import React, { useRef, useState, useEffect, useCallback } from "react";
 import { Link } from "../navigation";
 import { ChevronLeft, ChevronRight, ArrowUpRight, Sparkles } from "lucide-react";
 import { ProductCard, ProductCardProps } from "./product-card";
+import { customerCopy } from "../lib/customer-copy";
 
 export interface CollectionSliderProps {
   title?: string;
@@ -39,7 +40,7 @@ export function CollectionSlider({
   className = "",
 }: CollectionSliderProps) {
   const isAr = locale === "ar";
-  const c = (en: string, arText: string) => (isAr ? arText : en);
+  const c = (en: string, arText: string) => customerCopy(en, arText, isAr);
 
   const sliderRef = useRef<HTMLDivElement>(null);
   const [canScrollPrev, setCanScrollPrev] = useState(false);

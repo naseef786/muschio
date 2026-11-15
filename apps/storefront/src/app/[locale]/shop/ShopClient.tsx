@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import { subscribeCatalogUpdates } from "../../../lib/catalog-updates";
 import { ProductCard } from "../../../components/product-card";
 import { ProductGridSkeleton } from "../../../components/skeletons";
@@ -32,7 +33,7 @@ export function ShopClient({
   initialTags,
 }: ShopClientProps) {
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const ITEMS_PER_PAGE = 12;
   const [currentPage, setCurrentPage] = useState<number>(() => {

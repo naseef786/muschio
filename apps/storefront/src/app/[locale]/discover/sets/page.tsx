@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useCart } from "../../../../context/cart-context";
 import { muschioApi } from "../../../../lib/api";
+import { customerCopy } from "../../../../lib/customer-copy";
 
 interface SampleItem {
   id: string; // ProductVariant id
@@ -40,7 +41,7 @@ export default function DiscoverySetsPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const [samples, setSamples] = useState<SampleItem[]>([]);
   const [boxProduct, setBoxProduct] = useState<any>(null);

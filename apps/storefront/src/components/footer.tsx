@@ -2,6 +2,7 @@ import React from "react";
 import { Link } from "../navigation";
 import { ThemeToggle } from "./theme-toggle";
 import { ShieldCheck, Phone, Mail } from "lucide-react";
+import { customerCopy } from "../lib/customer-copy";
 
 export function Footer({
   locale,
@@ -13,7 +14,38 @@ export function Footer({
   settings?: any;
 }) {
   const ar = locale === "ar";
-  const c = (en: string, arabic: string) => (ar ? arabic : en);
+  const c = (en: string, arabic: string) => {
+    if (en === "Official Maisons") return ar ? footerSocialTitleAr : footerSocialTitleEn;
+    if (en === "THE COLLECTION") return ar ? footerCollectionTitleAr : footerCollectionTitleEn;
+    if (en === "THE HOUSES") return ar ? footerHousesTitleAr : footerHousesTitleEn;
+    if (en === "CLIENT CARE & CONCIERGE") return ar ? footerCareTitleAr : footerCareTitleEn;
+    if (en === "All Rights Reserved.") return ar ? footerCopyrightAr : footerCopyrightEn;
+    if (en.startsWith("Dubai")) return ar ? footerRegionsAr : footerRegionsEn;
+    if (en.startsWith("Haute Parfumerie & Niche Fragrance Platform")) return ar ? footerTaglineAr : footerTaglineEn;
+    if (!ar) {
+      const simpleEn: Record<string, string> = {
+        "Haute Parfumerie": "Luxury Fragrance",
+        "All Fragrances": "Shop All Fragrances",
+        "Haute Niche Extraits": "Niche Fragrances",
+        "Designer Privé": "Designer Fragrances",
+        "5 x 2ml Discovery Sets": "Sample Sets",
+        "Olfactory Notes Library": "Scent Notes",
+        "AI Scent Sommelier": "Scent Finder",
+        "View All Houses (A–Z) →": "View All Brands →",
+        "About the Maison": "About Us",
+        "Contact & VIP Concierge": "Contact Us",
+        "Track Order & Dispatch": "Track Order",
+        "The Fragrance Compendium": "Fragrance Guide",
+        "GCC Delivery Timelines": "Delivery Times",
+        "My Orders & Receipts": "My Orders",
+        "Client Vault & Account": "My Account",
+        "The Muschio Journal": "Journal",
+        "WhatsApp VIP Concierge": "WhatsApp Help",
+      };
+      return simpleEn[en] || en;
+    }
+    return customerCopy(en, arabic, ar);
+  };
   const displayBrands = initialBrands && initialBrands.length > 0 ? initialBrands.slice(0, 5) : [];
 
   const instagramUrl = settings?.instagramUrl || "https://www.instagram.com/muschio.parfums";
@@ -27,6 +59,20 @@ export function Footer({
   const conciergeEmail = settings?.conciergeEmail || "concierge@muschio.luxury";
   const whatsappNumber = settings?.whatsappNumber || "97148006872";
   const whatsappMsg = encodeURIComponent(settings?.whatsappDefaultMsg || "Hello Muschio Concierge, I would like assistance with a fragrance recommendation.");
+  const footerTaglineEn = settings?.footerTaglineEn || "Haute Parfumerie & Niche Fragrance Platform dedicated to the connoisseurs of the Arabian Gulf. Curating rare extraits de parfum, aged attars, and crystalline olfactory creations.";
+  const footerTaglineAr = settings?.footerTaglineAr || "دار العطور الفاخرة المكرسة لعشاق العطور الراقية في الخليج العربي. ننتقي خلاصات العطور النادرة والزيوت المعتقة من أرقى الدور العالمية.";
+  const footerRegionsEn = settings?.footerRegionsEn || "Dubai · Abu Dhabi · Riyadh · Doha · Kuwait · Muscat";
+  const footerRegionsAr = settings?.footerRegionsAr || "دبي · أبوظبي · الرياض · الدوحة · الكويت · مسقط";
+  const footerSocialTitleEn = settings?.footerSocialTitleEn || "Social Media";
+  const footerSocialTitleAr = settings?.footerSocialTitleAr || "الحسابات الرسمية";
+  const footerCollectionTitleEn = settings?.footerCollectionTitleEn || "Shop";
+  const footerCollectionTitleAr = settings?.footerCollectionTitleAr || "المجموعة";
+  const footerHousesTitleEn = settings?.footerHousesTitleEn || "Brands";
+  const footerHousesTitleAr = settings?.footerHousesTitleAr || "دور العطور";
+  const footerCareTitleEn = settings?.footerCareTitleEn || "Help & Contact";
+  const footerCareTitleAr = settings?.footerCareTitleAr || "خدمة العملاء والكونسيرج";
+  const footerCopyrightEn = settings?.footerCopyrightEn || "All Rights Reserved.";
+  const footerCopyrightAr = settings?.footerCopyrightAr || "جميع الحقوق محفوظة.";
 
   const socialLinks = [
     {
@@ -93,7 +139,7 @@ export function Footer({
 
           <p className="text-xs sm:text-[13px] leading-relaxed text-[#A3A39C] mt-3">
             {c(
-              "Haute Parfumerie & Niche Fragrance Platform dedicated to the connoisseurs of the Arabian Gulf. Curating rare extraits de parfum, aged attars, and crystalline olfactory creations.",
+              footerTaglineEn,
               "دار العطور الفاخرة المكرسة لعشاق العطور الراقية في الخليج العربي. ننتقي خلاصات العطور النادرة والزيوت المعتقة من أرقى الدور العالمية المعتمدة.",
             )}
           </p>
@@ -238,6 +284,16 @@ export function Footer({
             <li>
               <Link href="/account" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
                 {c("Client Vault & Account", "حساب العميل والمساعد")}
+              </Link>
+            </li>
+            <li>
+              <Link href="/terms" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
+                {c("Terms & Conditions", "الشروط والأحكام")}
+              </Link>
+            </li>
+            <li>
+              <Link href="/privacy" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
+                {c("Privacy Policy", "سياسة الخصوصية")}
               </Link>
             </li>
             <li>

@@ -12,6 +12,7 @@ import { ProductReviews } from "./product-reviews";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
 import { useCompare } from "../context/compare-context";
+import { customerCopy } from "../lib/customer-copy";
 
 export interface ProductDetailProps {
   product: {
@@ -161,7 +162,7 @@ export function ProductExperience({
     };
   }, [initialProduct.id, initialProduct.slug, initialProduct.variants]);
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   // Commercial flacon variants (filter out 2ml discovery vials)
   const commercialVariants = useMemo(() => {

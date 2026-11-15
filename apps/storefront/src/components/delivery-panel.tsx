@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { DeliveryResponse, DeliveryResponseSchema } from "@muschio/types";
 import { muschioApi } from "../lib/api";
+import { customerCopy } from "../lib/customer-copy";
 import { Truck, ShieldCheck, Clock } from "lucide-react";
 
 export function DeliveryPanel({
@@ -20,7 +21,7 @@ export function DeliveryPanel({
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState("");
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   useEffect(() => {
     let active = true;

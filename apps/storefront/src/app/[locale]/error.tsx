@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useParams } from "next/navigation";
 import { Link } from "../../navigation";
 import { RotateCcw, Home, MessageCircle, AlertCircle } from "lucide-react";
+import { customerCopy } from "../../lib/customer-copy";
 
 export default function ErrorBoundary({
   error,
@@ -14,7 +15,7 @@ export default function ErrorBoundary({
 }) {
   const params = useParams();
   const isAr = params?.locale === "ar";
-  const c = (en: string, arabic: string) => (isAr ? arabic : en);
+  const c = (en: string, arabic: string) => customerCopy(en, arabic, isAr);
 
   useEffect(() => {
     // Log the error to console or telemetry

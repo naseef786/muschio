@@ -6,6 +6,7 @@ import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay, Button } from "@muschio/ui";
 import { Link } from "../../../navigation";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import { useAuth } from "../../../context/auth-context";
 import {
   Package,
@@ -38,7 +39,7 @@ export default function MyOrdersPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
+  const c = useCallback((en: string, ar: string) => customerCopy(en, ar, isAr), [isAr]);
 
   const { user, isLoggedIn } = useAuth();
 

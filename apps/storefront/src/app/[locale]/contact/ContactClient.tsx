@@ -14,6 +14,7 @@ import {
 import { Link } from "../../../navigation";
 import { EditorialReveal } from "../../../components/editorial-reveal";
 import styles from "../../../components/editorial-pages.module.css";
+import { customerCopy } from "../../../lib/customer-copy";
 
 export interface ContactDetails {
   email: string;
@@ -29,7 +30,7 @@ export function ContactClient({
   locale: "en" | "ar";
   contact: ContactDetails;
 }) {
-  const c = (en: string, ar: string) => (locale === "ar" ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, locale === "ar");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Star, ShieldCheck, Check, Sparkles, Loader2, MessageSquare, Plus, X } from "lucide-react";
+import { customerCopy } from "../lib/customer-copy";
 
 interface ReviewImage {
   id: string;
@@ -34,7 +35,7 @@ export function ProductReviews({
   locale: "en" | "ar";
 }) {
   const ar = locale === "ar";
-  const c = useCallback((en: string, arabic: string) => (ar ? arabic : en), [ar]);
+  const c = useCallback((en: string, arabic: string) => customerCopy(en, arabic, ar), [ar]);
 
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);

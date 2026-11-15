@@ -32,6 +32,7 @@ import { useCompare } from "../context/compare-context";
 import { useAuth } from "../context/auth-context";
 import { PriceDisplay } from "@muschio/ui";
 import { ThemeToggle } from "./theme-toggle";
+import { repairMojibake } from "../lib/customer-copy";
 
 function SearchDialog({
   open,
@@ -88,7 +89,28 @@ export function Header({
   initialSettings?: any;
 }) {
   const ar = locale === "ar";
-  const c = (en: string, arabic: string) => (ar ? arabic : en);
+  const readableEn = (en: string) => ({
+    "Shop Fragrance": "Shop",
+    "The Collection": "Shop",
+    "The Houses": "Brands",
+    "Curated Haute Maisons": "Featured Brands",
+    "Olfactory Tiers": "Fragrance Types",
+    "Haute Niche Extraits": "Niche Fragrances",
+    "Designer Privé": "Designer Fragrances",
+    "Bespoke Discovery": "Find Your Scent",
+    "AI Scent Sommelier": "Scent Finder",
+    "Discovery Sets": "Sample Sets",
+    "Explore Olfactory Compendium →": "Fragrance Guide →",
+    "Discovery Vault": "Explore",
+    "The Fragrance Compendium": "Fragrance Guide",
+    "About The Maison": "About Us",
+    "Contact & VIP Concierge": "Contact Us",
+    "Track Order & Dispatch": "Track Order",
+    "Client Vault & Account": "My Account",
+    "Concierge & Socials": "Help & Social Media",
+    "WhatsApp VIP Concierge": "WhatsApp Help",
+  }[en] || en);
+  const c = (en: string, arabic: string) => (ar ? repairMojibake(arabic) : readableEn(en));
   const pathname = usePathname();
   const router = useRouter();
 
@@ -337,7 +359,7 @@ export function Header({
               onClick={() => {
                 setMenu(false);
                 cart.setCartDrawerOpen(false);
-                setSearch(true);
+                router.push("/search");
               }}
               aria-label={c("Search fragrances", "البحث في العطور")}
               className="text-luxury-text hover:text-accent transition-colors"
@@ -921,8 +943,8 @@ export function Header({
         </>
       )}
 
-      {/* 5. Live Search Modal Overlay with 300ms Debounce, Recent Searches & Rich Catalog Previews */}
-      <SearchDialog
+      {/* 5. Search is now handled on the dedicated search screen. */}
+      {false && (<SearchDialog
         open={search}
         close={() => setSearch(false)}
         title={c("Search the Vault", "البحث في المجموعة")}
@@ -1141,7 +1163,7 @@ export function Header({
             </div>
           )}
         </div>
-      </SearchDialog>
+      </SearchDialog>)}
 
       {/* 6. Luxury Sliding Shopping Bag Drawer */}
       {cart.cartDrawerOpen && (

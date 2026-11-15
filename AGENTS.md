@@ -87,3 +87,11 @@ The API build may run Prisma client generation. On restricted Windows environmen
 5. Run focused checks first, then the relevant monorepo gates.
 6. Report files changed, verification performed, remaining warnings, and any follow-up work.
 
+## Customer Language & Accessibility
+
+- Write customer-facing English for a general audience. Prefer short, familiar words such as “Shop”, “Brands”, “Find Your Scent”, “Track Order”, “Bottle”, and “Shipping”.
+- Avoid internal, luxury-marketing, or specialist terms unless they are explained in the same view. Keep brand names and product names unchanged.
+- Keep the shared customer vocabulary in `apps/storefront/src/lib/customer-copy.ts`; reuse it instead of adding one-off translations or replacements.
+- Arabic customer text must remain valid UTF-8. Check for mojibake such as `Ã`, `Â`, `Ø`, or `Ù` before release.
+- Preserve comfortable reading sizes, line spacing, wrapping, and touch targets on narrow screens. Do not solve overflow by making text smaller or tightly packed.
+

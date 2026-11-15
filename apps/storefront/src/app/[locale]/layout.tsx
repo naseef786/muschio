@@ -53,16 +53,31 @@ export async function generateMetadata(
     description: isAr
       ? "اكتشف أرقى دور العطور العالمية، خلاصات العطور النقية، مجموعات العينات الفاخرة، ومجلة موسكيو للطقوس العطرية."
       : "Discover rare niche fragrance houses, pure extraits de parfum, artisanal discovery sets, and the Muschio fragrance journal.",
-    keywords: [
-      "Niche Perfumes Dubai",
-      "Haute Parfumerie UAE",
-      "Amouage Extrait",
-      "Maison Francis Kurkdjian Dubai",
-      "Roja Parfums GCC",
+    /* keywords: [
+      "niche perfumes Dubai",
+      "luxury perfumes UAE",
+      "rare fragrances Dubai",
+      "designer perfumes UAE",
+      "perfume delivery UAE",
+      "GCC fragrance delivery",
+      "fragrance discovery sets",
+      "oud perfumes Dubai",
+      "fragrance notes guide",
       "عطور نيش دبي",
       "عطور أصلية الإمارات",
       "دهن عود معتق",
       "لبان حوجري فضي",
+    ], */
+    keywords: [
+      "niche perfumes Dubai",
+      "luxury perfumes UAE",
+      "rare fragrances Dubai",
+      "designer perfumes UAE",
+      "perfume delivery UAE",
+      "GCC fragrance delivery",
+      "fragrance discovery sets",
+      "oud perfumes Dubai",
+      "fragrance notes guide",
     ],
     alternates: {
       canonical: `https://www.muschio.ae/${locale}`,

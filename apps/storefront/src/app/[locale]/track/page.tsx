@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, use } from "react";
+import React, { useState, useEffect, useCallback, use, useRef } from "react";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import { PriceDisplay } from "@muschio/ui";
 import { Link } from "../../../navigation";
 import {
@@ -40,7 +41,7 @@ export default function OrderTrackingPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = useCallback((en: string, ar: string) => (isAr ? ar : en), [isAr]);
+  const c = useCallback((en: string, ar: string) => customerCopy(en, ar, isAr), [isAr]);
 
   const searchParams = useSearchParams();
   const initialRef = searchParams.get("ref") || searchParams.get("order") || "";
@@ -56,6 +57,7 @@ export default function OrderTrackingPage(
   const [isSyncing, setIsSyncing] = useState(false);
   const [statusToast, setStatusToast] = useState<string | null>(null);
   const [recentOrderRef, setRecentOrderRef] = useState<string | null>(null);
+  const lookupContactRef = useRef<string | undefined>(undefined);
 
   // 7-Day Guarantee RMA Return Modal State
   const [showReturnModal, setShowReturnModal] = useState(false);
@@ -136,6 +138,12 @@ export default function OrderTrackingPage(
       const cleanRef = ref.trim();
       if (!cleanRef) return;
       if (!isSilent) {
+        lookupContactRef.current = contact?.trim() || undefined;
+      } else if (contact?.trim()) {
+        lookupContactRef.current = contact.trim();
+      }
+      const verifiedContact = contact?.trim() || lookupContactRef.current;
+      if (!isSilent) {
         setLoading(true);
         setSearchError("");
       } else {
@@ -144,8 +152,8 @@ export default function OrderTrackingPage(
 
       try {
         const result = await muschioApi.getOrderTracking(cleanRef, {
-          email: contact?.includes("@") ? contact.trim() : undefined,
-          phone: !contact?.includes("@") && contact ? contact.trim() : undefined,
+          email: verifiedContact?.includes("@") ? verifiedContact : undefined,
+          phone: !verifiedContact?.includes("@") && verifiedContact ? verifiedContact : undefined,
         });
 
         if (result && result.orderNumber) {
@@ -207,7 +215,7 @@ export default function OrderTrackingPage(
 
     const syncTimer = setInterval(() => {
       if (typeof document !== "undefined" && document.visibilityState === "visible" && !isTerminal) {
-        void performLookup(currentRef, undefined, true);
+        void performLookup(currentRef, lookupContactRef.current, true);
       }
     }, 4000);
 

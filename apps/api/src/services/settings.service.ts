@@ -16,6 +16,20 @@ export interface StoreSettingsData {
   announcementBarEn: string;
   announcementBarAr: string;
   freeShippingThreshold: number;
+  footerTaglineEn: string;
+  footerTaglineAr: string;
+  footerRegionsEn: string;
+  footerRegionsAr: string;
+  footerSocialTitleEn: string;
+  footerSocialTitleAr: string;
+  footerCollectionTitleEn: string;
+  footerCollectionTitleAr: string;
+  footerHousesTitleEn: string;
+  footerHousesTitleAr: string;
+  footerCareTitleEn: string;
+  footerCareTitleAr: string;
+  footerCopyrightEn: string;
+  footerCopyrightAr: string;
 }
 
 export const DEFAULT_STORE_SETTINGS: StoreSettingsData = {
@@ -34,6 +48,20 @@ export const DEFAULT_STORE_SETTINGS: StoreSettingsData = {
   announcementBarEn: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
   announcementBarAr: "توصيل فاخر مجاني لكافة دول الخليج للطلبات فوق 500 درهم · عطور أصلية ومضمونة 100%",
   freeShippingThreshold: 500,
+  footerTaglineEn: "Haute Parfumerie & Niche Fragrance Platform dedicated to the connoisseurs of the Arabian Gulf. Curating rare extraits de parfum, aged attars, and crystalline olfactory creations.",
+  footerTaglineAr: "دار العطور الفاخرة المكرسة لعشاق العطور الراقية في الخليج العربي. ننتقي خلاصات العطور النادرة والزيوت المعتقة من أرقى الدور العالمية.",
+  footerRegionsEn: "Dubai · Abu Dhabi · Riyadh · Doha · Kuwait · Muscat",
+  footerRegionsAr: "دبي · أبوظبي · الرياض · الدوحة · الكويت · مسقط",
+  footerSocialTitleEn: "Social Media",
+  footerSocialTitleAr: "الحسابات الرسمية",
+  footerCollectionTitleEn: "Shop",
+  footerCollectionTitleAr: "المجموعة",
+  footerHousesTitleEn: "Brands",
+  footerHousesTitleAr: "دور العطور",
+  footerCareTitleEn: "Help & Contact",
+  footerCareTitleAr: "خدمة العملاء والكونسيرج",
+  footerCopyrightEn: "All Rights Reserved.",
+  footerCopyrightAr: "جميع الحقوق محفوظة.",
 };
 
 export class SettingsService {

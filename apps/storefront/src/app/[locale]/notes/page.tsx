@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Link } from "../../../navigation";
 import { Search, ArrowUpRight, Loader2 } from "lucide-react";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 
 interface LiveNote {
   id: string;
@@ -32,7 +33,7 @@ export default function NotesIndexPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const [notes, setNotes] = useState<LiveNote[]>([]);
   const [loading, setLoading] = useState(true);

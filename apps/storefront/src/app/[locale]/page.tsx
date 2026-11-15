@@ -4,6 +4,7 @@ import { Link } from "../../navigation";
 import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles, Tag } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
 import { muschioApi } from "../../lib/api";
+import { customerCopy } from "../../lib/customer-copy";
 import { BannerService, CatalogService, NotesService, storefrontProduct, prisma } from "@muschio/api";
 
 export const dynamic = "force-dynamic";
@@ -60,7 +61,7 @@ export default async function HomePage(
   } = params;
 
   const ar = locale === "ar";
-  const c = (en: string, arabic: string) => (ar ? arabic : en);
+  const c = (en: string, arabic: string) => customerCopy(en, arabic, ar);
 
   // Fetch live CMS banners, sections & catalog data directly from services with API fallback
   let heroBanners: any = null;

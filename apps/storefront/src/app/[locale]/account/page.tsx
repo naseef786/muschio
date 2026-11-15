@@ -5,6 +5,7 @@ import { StorefrontOrder } from "@muschio/types";
 import { PriceDisplay, Button } from "@muschio/ui";
 import { Link } from "../../../navigation";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import { useCart } from "../../../context/cart-context";
 import { useWishlist } from "../../../context/wishlist-context";
 import { useAuth } from "../../../context/auth-context";
@@ -39,7 +40,7 @@ export default function AccountPage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
 
   const {
     user,

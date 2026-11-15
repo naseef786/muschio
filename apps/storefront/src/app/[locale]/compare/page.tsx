@@ -7,6 +7,7 @@ import { Link } from "../../../navigation";
 import { useCompare, CompareItem } from "../../../context/compare-context";
 import { useCart } from "../../../context/cart-context";
 import { muschioApi } from "../../../lib/api";
+import { customerCopy } from "../../../lib/customer-copy";
 import {
   ArrowLeft,
   ArrowLeftRight,
@@ -36,7 +37,7 @@ export default function ComparePage(
   } = params;
 
   const isAr = locale === "ar";
-  const c = (en: string, ar: string) => (isAr ? ar : en);
+  const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
   const searchParams = useSearchParams();
   const { items, removeItem, clearCompare, addItem } = useCompare();
   const { addItem: addToCart } = useCart();
