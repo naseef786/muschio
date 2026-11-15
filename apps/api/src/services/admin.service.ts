@@ -101,16 +101,27 @@ export class AdminService {
     }
   }
 
-  static async getDashboardMetrics() {
-    const [
+  static async getAdminCounts() {
+    const [productsByPublication, ordersByStatus] = await Promise.all([
+      prisma.product.groupBy({ by: ["isPublished"], _count: { _all: true } }),
+      prisma.order.groupBy({ by: ["status"], _count: { _all: true } }),
+    ]);
+    const allProducts = productsByPublication.reduce((sum, row) => sum + row._count._all, 0);
+    const totalProducts = productsByPublication.find((row) => row.isPublished)?._count._all ?? 0;
+    const totalOrders = ordersByStatus.reduce((sum, row) => sum + row._count._all, 0);
+
+    return {
+      allProducts,
       totalProducts,
+      draftProducts: allProducts - totalProducts,
       totalOrders,
-      paidOrders,
-      lowStockInventories,
-      recentOrders,
-    ] = await Promise.all([
-      prisma.product.count({ where: { isPublished: true } }),
-      prisma.order.count(),
+      orderStatusCounts: Object.fromEntries(ordersByStatus.map((row) => [row.status, row._count._all])),
+    };
+  }
+
+  static async getDashboardMetrics() {
+    const [counts, paidOrders, lowStockInventories, recentOrders] = await Promise.all([
+      this.getAdminCounts(),
       prisma.order.findMany({
         where: { status: "PAID" },
         select: { totalAmount: true },
@@ -139,8 +150,7 @@ export class AdminService {
     );
 
     return {
-      totalProducts,
-      totalOrders,
+      ...counts,
       totalRevenue,
       lowStockCount: lowStockInventories.length,
       lowStockItems: lowStockInventories,

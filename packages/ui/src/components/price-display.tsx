@@ -33,6 +33,10 @@ const CURRENCY_LABELS: Record<Currency, { en: string; ar: string }> = {
 };
 
 export function formatCurrency(amount: number, currency: Currency = "AED", locale: "en" | "ar" = "en"): string {
+  if (!Number.isFinite(amount)) {
+    return "—";
+  }
+
   const formattedNumber = new Intl.NumberFormat(locale === "ar" ? "ar-AE" : "en-AE", {
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
@@ -78,6 +82,16 @@ export function PriceDisplay({
 
   const activeCurr = currency || selectedCurrency;
   const rate = GCC_RATES[activeCurr] || 1;
+
+  // API responses and legacy local orders can contain an unavailable price.
+  // Never expose NaN/Infinity to customers or Intl.NumberFormat.
+  if (!Number.isFinite(price)) {
+    return (
+      <div className={cn("inline-flex items-baseline gap-2 flex-wrap", className)} {...props}>
+        <span className="font-sans font-semibold tracking-tight text-zinc-950 dark:text-zinc-50">—</span>
+      </div>
+    );
+  }
 
   // Convert from baseline AED price to active currency
   const convertedPrice =

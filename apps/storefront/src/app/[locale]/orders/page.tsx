@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState, use } from "react";
 import Image from "next/image";
-import { StorefrontOrder } from "@muschio/types";
+import { StorefrontOrder, StorefrontOrderSchema } from "@muschio/types";
 import { PriceDisplay, Button } from "@muschio/ui";
 import { Link } from "../../../navigation";
 import { muschioApi } from "../../../lib/api";
@@ -77,9 +77,16 @@ export default function MyOrdersPage(
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setOrders(parsed as any);
-          setLoadingOrders(false);
-          return;
+          const validOrders = parsed.flatMap((order) => {
+            const result = StorefrontOrderSchema.safeParse(order);
+            return result.success ? [result.data] : [];
+          });
+
+          if (validOrders.length > 0) {
+            setOrders(validOrders);
+            setLoadingOrders(false);
+            return;
+          }
         }
       }
     } catch {
@@ -514,7 +521,13 @@ export default function MyOrdersPage(
 
                       {/* Price */}
                       <div className="text-end">
-                        <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
+                        {item.totalPrice > 0 ? (
+                          <PriceDisplay price={item.totalPrice} locale={locale} size="sm" />
+                        ) : (
+                          <span className="text-xs text-luxury-muted font-sans">
+                            {c("Price unavailable", "السعر غير متاح")}
+                          </span>
+                        )}
                       </div>
                     </div>
                   ))}

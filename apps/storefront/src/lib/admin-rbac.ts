@@ -7,6 +7,7 @@ const SUPER_ADMIN_ONLY: AdminRole[] = ["SUPER_ADMIN"];
 
 const CATALOG_RESOURCES = new Set(["products", "tags", "brands", "notes", "collections"]);
 const ORDER_RESOURCES = new Set(["orders", "enquiries", "messages", "returns"]);
+const CUSTOMER_RESOURCES = new Set(["customers", "customer-guests"]);
 const EDITOR_RESOURCES = new Set(["banners", "sections"]);
 const SUPER_ADMIN_RESOURCES = new Set([
   "settings",
@@ -35,8 +36,9 @@ export function getRequiredAdminRoles(method: string, route: string[]): AdminRol
   }
 
   const resource = route[1] || "";
-  if (resource === "dashboard") return [];
+  if (resource === "dashboard" || resource === "counts") return [];
   if (CATALOG_RESOURCES.has(resource)) return CATALOG_ROLES;
+  if (CUSTOMER_RESOURCES.has(resource)) return ORDER_ROLES;
   if (ORDER_RESOURCES.has(resource)) return ORDER_ROLES;
   if (EDITOR_RESOURCES.has(resource)) {
     // Banner deletion is intentionally restricted to SUPER_ADMIN, matching the API.

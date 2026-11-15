@@ -8,6 +8,7 @@ export { syncProductVariants } from "./services/product-variants";
 export { NotesService } from "./services/notes.service";
 export { DiscoverySetService } from "./services/discovery-set.service";
 export { CustomerService } from "./services/customer.service";
+export { CustomerAdminService } from "./services/customer-admin.service";
 export { AIScentDiscoveryService } from "./services/ai-discovery.service";
 export { BannerService } from "./services/banner.service";
 export { JournalService } from "./services/journal.service";

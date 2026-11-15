@@ -5,6 +5,7 @@ import {
   NotesService,
   DiscoverySetService,
   CustomerService,
+  CustomerAdminService,
   AIScentDiscoveryService,
   BannerService,
   JournalService,
@@ -30,6 +31,7 @@ import {
   createGuestSession,
   verifyStorefrontToken,
 } from "@muschio/api";
+import { AdminCustomerIdSchema, AdminCustomerListQuerySchema } from "@muschio/types";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
 import { getRequiredAdminRoles } from "@/lib/admin-rbac";
@@ -149,6 +151,40 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
 
     const adminAuthError = await authorizeAdminRequest(req, route);
     if (adminAuthError) return adminAuthError;
+
+    if (path === "admin/customers/search") {
+      const email = (url.searchParams.get("email") || "").trim().toLowerCase().slice(0, 254);
+      if (!email) return error("INVALID_INPUT", "Customer email is required", 400);
+      const customer = await CustomerAdminService.findCustomerByEmail(email);
+      return customer ? success(customer) : error("CUSTOMER_NOT_FOUND", "Customer not found", 404);
+    }
+
+    if (path === "admin/customers") {
+      const parsed = AdminCustomerListQuerySchema.safeParse({
+        search: url.searchParams.get("search") || undefined,
+        page: url.searchParams.get("page") || undefined,
+        limit: url.searchParams.get("limit") || undefined,
+      });
+      if (!parsed.success) return error("INVALID_INPUT", "Customer search filters are invalid", 400);
+      return success(await CustomerAdminService.listCustomers(parsed.data));
+    }
+
+    if (path === "admin/customer-guests") {
+      const parsed = AdminCustomerListQuerySchema.safeParse({
+        search: url.searchParams.get("search") || undefined,
+        page: url.searchParams.get("page") || undefined,
+        limit: url.searchParams.get("limit") || undefined,
+      });
+      if (!parsed.success) return error("INVALID_INPUT", "Guest search filters are invalid", 400);
+      return success(await CustomerAdminService.listGuestOrders(parsed.data));
+    }
+
+    if (route[0] === "admin" && route[1] === "customers" && route[2]) {
+      const id = AdminCustomerIdSchema.safeParse(route[2]);
+      if (!id.success) return error("INVALID_INPUT", "Customer ID is invalid", 400);
+      const customer = await CustomerAdminService.getCustomer(id.data);
+      return customer ? success(customer) : error("CUSTOMER_NOT_FOUND", "Customer not found", 404);
+    }
 
     // Cloudinary media library for authorized catalog editors.
     if (path === "media/library") {
@@ -792,6 +828,9 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
     if (path === "admin/dashboard") {
       const metrics = await AdminService.getDashboardMetrics();
       return success(metrics);
+    }
+    if (path === "admin/counts") {
+      return success(await AdminService.getAdminCounts());
     }
 
     // 14. Admin Products List

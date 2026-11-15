@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback, lazy, Suspense } from "react";
 import {
   LayoutDashboard,
   Package,
@@ -46,6 +46,7 @@ import {
   ArrowRight,
   Loader2,
   Gift,
+  Users,
 } from "lucide-react";
 import {
   BrandItem,
@@ -73,6 +74,8 @@ import { MediaLibraryManager } from "./components/MediaLibraryManager";
 import { OrderDetailModal } from "./components/OrderDetailModal";
 import { MarketingPromotionsTab } from "./components/MarketingPromotionsTab";
 
+const CustomerManager = lazy(() => import("./components/CustomerManager").then((module) => ({ default: module.CustomerManager })));
+
 type AdminTab =
   | "dashboard"
   | "products"
@@ -88,6 +91,7 @@ type AdminTab =
   | "marketing"
   | "markets"
   | "orders"
+  | "customers"
   | "enquiries"
   | "banners"
   | "settings"
@@ -105,6 +109,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
   purchasing: "Purchasing",
   returns: "Returns",
   orders: "Orders & Real-Time Tracking",
+  customers: "Customer Management",
   enquiries: "VIP Enquiries & Concierge",
   reviews: "Reviews",
   marketing: "Promotions & Loyalty",
@@ -126,6 +131,7 @@ const TAB_SUBTITLES: Record<AdminTab, string> = {
   purchasing: "Supplier purchase orders and incoming stock",
   returns: "Customer returns and product inspection",
   orders: "Live customer orders, real-time cancellations, and dispatch workflow",
+  customers: "Customer accounts, guest purchases, order history, and preferences",
   enquiries: "Live concierge consultations, bespoke inquiries, and VIP messages",
   reviews: "Moderate customer product ratings and reviews",
   marketing: "Automatic promotions, coupons, VIP discovery vouchers, gift cards, and rewards",
@@ -462,7 +468,8 @@ export function App() {
   }, [handleUnauthorized]);
 
   // 1. PRODUCTS (PRO SEO ENHANCED)
-  const [products, setProducts] = usePersistentState<ProductItem[]>("products", []);
+  const [products, setProducts] = useState<ProductItem[]>([]);
+  const [productsLoadState, setProductsLoadState] = useState<"loading" | "ready" | "error">("loading");
 
   const [productSearch, setProductSearch] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("ALL");
@@ -644,18 +651,69 @@ export function App() {
 
   // Live Dashboard Metrics
   const [dashboardMetrics, setDashboardMetrics] = useState<{
+    allProducts?: number;
     totalProducts?: number;
+    draftProducts?: number;
     totalOrders?: number;
+    orderStatusCounts?: Record<string, number>;
     totalRevenue?: number;
     lowStockCount?: number;
     lowStockItems?: any[];
     recentOrders?: any[];
   } | null>(null);
+  const [countsStatus, setCountsStatus] = useState<"loading" | "fresh" | "stale" | "error">("loading");
+  const [countsUpdatedAt, setCountsUpdatedAt] = useState<number | null>(null);
+  const countsRequestRef = useRef(0);
+
+  const refreshDashboardMetrics = useCallback(async () => {
+    const token = authSessionRef.current?.token;
+    if (!token) return;
+    const requestId = ++countsRequestRef.current;
+    try {
+      const response = await fetch("/api/v1/admin/counts", {
+        headers: { Authorization: `Bearer ${token}` },
+        cache: "no-store",
+      });
+      if (!response.ok) throw new Error("Dashboard totals unavailable");
+      const body = await response.json();
+      if (!body?.success || !Number.isInteger(body.data?.allProducts) || !Number.isInteger(body.data?.totalProducts) || !Number.isInteger(body.data?.draftProducts) || !Number.isInteger(body.data?.totalOrders) || !body.data?.orderStatusCounts) {
+        throw new Error("Dashboard totals unavailable");
+      }
+      if (requestId !== countsRequestRef.current || authSessionRef.current?.token !== token) return;
+      setDashboardMetrics((previous) => ({ ...(previous || {}), ...body.data }));
+      setCountsUpdatedAt(Date.now());
+      setCountsStatus("fresh");
+    } catch {
+      if (requestId !== countsRequestRef.current || authSessionRef.current?.token !== token) return;
+      setCountsStatus((current) => current === "fresh" || current === "stale" ? "stale" : "error");
+    }
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.removeItem("muschio_admin_products");
+      localStorage.removeItem("muschio_admin_orders");
+    } catch {
+      // Browser storage may be disabled; these lists are memory-only now.
+    }
+  }, []);
+
+  useEffect(() => {
+    countsRequestRef.current += 1;
+    setDashboardMetrics(null);
+    setCountsUpdatedAt(null);
+    setCountsStatus("loading");
+    if (!authSession?.token) return;
+    void refreshDashboardMetrics();
+    const timer = window.setInterval(() => void refreshDashboardMetrics(), 60_000);
+    return () => window.clearInterval(timer);
+  }, [authSession?.token, refreshDashboardMetrics]);
 
   // Sync live products, brands, notes, and collections from Neon PostgreSQL database
   useEffect(() => {
     if (!authSession?.token) return;
     let active = true;
+    setProductsLoadState("loading");
     const token = authSession.token;
     const authHeaders: Record<string, string> = { Authorization: `Bearer ${token}` };
 
@@ -669,10 +727,16 @@ export function App() {
     ]).then(([prodRes, brandRes, noteRes, colRes, dashRes, tagRes]) => {
       if (!active) return;
       if (dashRes?.success && dashRes.data) {
-        setDashboardMetrics(dashRes.data);
+        setDashboardMetrics((previous) => ({
+          ...(previous || {}),
+          totalRevenue: dashRes.data.totalRevenue,
+          lowStockCount: dashRes.data.lowStockCount,
+          lowStockItems: dashRes.data.lowStockItems,
+          recentOrders: dashRes.data.recentOrders,
+        }));
       }
       if (prodRes?.data && Array.isArray(prodRes.data)) {
-        const dbProducts: ProductItem[] = prodRes.data.filter((p: any) => !isMockItem(p)).map((p: any) => {
+        const dbProducts: ProductItem[] = prodRes.data.map((p: any) => {
           const variantsList: ProductVariantItem[] = Array.isArray(p.variants) && p.variants.length > 0
             ? p.variants.map((v: any, idx: number) => {
                 const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
@@ -755,6 +819,9 @@ export function App() {
           };
         });
         setProducts(dbProducts);
+        setProductsLoadState("ready");
+      } else {
+        setProductsLoadState("error");
       }
       if (tagRes?.data && Array.isArray(tagRes.data)) {
         setTags(tagRes.data.filter((t: any) => !isMockItem(t)).map((t: any) => ({
@@ -818,6 +885,8 @@ export function App() {
           updatedAt: c.updatedAt,
         })));
       }
+    }).catch(() => {
+      if (active) setProductsLoadState("error");
     });
     return () => {
       active = false;
@@ -825,7 +894,8 @@ export function App() {
   }, [authSession?.token]);
 
   // 3. ORDERS
-  const [orders, setOrders] = usePersistentState<any[]>("orders", []);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [ordersLoadState, setOrdersLoadState] = useState<"loading" | "ready" | "error">("loading");
 
   const [orderSearch, setOrderSearch] = useState("");
   const [orderMarketFilter, setOrderMarketFilter] = useState("ALL");
@@ -974,6 +1044,7 @@ export function App() {
   useEffect(() => {
     if (!authSession?.token) return;
     let active = true;
+    setOrdersLoadState("loading");
     const fetchLiveDbData = async () => {
       try {
         const token = authSession.token;
@@ -993,7 +1064,7 @@ export function App() {
           const json = await ordersRes.json();
           if (json.success && Array.isArray(json.data) && active) {
             setOrders(
-              json.data.filter((o: any) => !isMockItem(o)).map((o: any) => ({
+              json.data.map((o: any) => ({
                 ...o,
                 id: o.id,
                 number: o.orderNumber,
@@ -1011,7 +1082,12 @@ export function App() {
                 }),
               }))
             );
+            setOrdersLoadState("ready");
+          } else if (active) {
+            setOrdersLoadState("error");
           }
+        } else if (active) {
+          setOrdersLoadState("error");
         }
 
         if (enquiriesRes && enquiriesRes.ok) {
@@ -1122,6 +1198,7 @@ export function App() {
         }
       } catch (err) {
         console.warn("Could not load initial live admin data:", err);
+        if (active) setOrdersLoadState((current) => current === "loading" ? "error" : current);
       }
     };
 
@@ -1153,6 +1230,9 @@ export function App() {
         if (!json.success || !json.data) return;
 
         const { events, orders: newOrders, counters, serverTime } = json.data;
+        if (Array.isArray(events) && events.some((event: any) => typeof event.eventName === "string" && event.eventName.startsWith("ORDER_"))) {
+          void refreshDashboardMetrics();
+        }
         if (serverTime) {
           lastPollTimeRef.current = serverTime;
         }
@@ -1219,9 +1299,8 @@ export function App() {
 
         if (Array.isArray(newOrders) && newOrders.length > 0) {
           setOrders((prev) => {
-            const cleanPrev = prev.filter((o) => !isMockItem(o));
-            const map = new Map(cleanPrev.map((o) => [o.id, o]));
-            newOrders.filter((o: any) => !isMockItem(o)).forEach((o: any) => {
+            const map = new Map(prev.map((o) => [o.id, o]));
+            newOrders.forEach((o: any) => {
               map.set(o.id, {
                 id: o.id,
                 number: o.orderNumber,
@@ -1248,7 +1327,7 @@ export function App() {
     }, 4500);
 
     return () => clearInterval(timer);
-  }, [isLiveActive, isAudioEnabled]);
+  }, [isLiveActive, isAudioEnabled, authSession?.token, refreshDashboardMetrics]);
 
   // 4. RETURNS
   const [returns, setReturns] = usePersistentState<any[]>("returns", []);
@@ -2085,54 +2164,10 @@ export function App() {
       addToast("system", "Product Created", `"${newP.name}" created and synced to Neon PostgreSQL.`);
     }
 
-    // Immediately trigger a re-fetch of live products from Neon PostgreSQL
-    try {
-      const refreshRes = await fetch("/api/products?limit=100", { cache: "no-store" });
-      if (refreshRes.ok) {
-        const freshData = await refreshRes.json();
-        const freshProducts = freshData.products || freshData.data?.products;
-        if (Array.isArray(freshProducts) && freshProducts.length > 0) {
-          const mappedDbProducts: ProductItem[] = freshProducts.map((p: any) => ({
-            id: p.id,
-            sku: p.variants?.[0]?.sku || p.sku || "SKU",
-            name: p.nameEn || p.name,
-            nameAr: p.nameAr || p.name,
-            slug: p.slug,
-            brand: p.brandName || p.brand?.name || (typeof p.brand === "string" ? p.brand : "Haute Niche"),
-            brandSlug: p.brandSlug || p.brand?.slug || "haute-niche",
-            scentFamily: p.scentFamily?.nameEn || p.scentFamily?.slug || "Woody Amber",
-            concentration: p.concentration || "EXTRAIT_DE_PARFUM",
-            gender: p.gender || "UNISEX",
-            volumeMl: p.variants?.[0]?.volumeMl || 100,
-            price: `${p.price || p.variants?.[0]?.price || 0} AED`,
-            costPrice: "0 AED",
-            stock: p.variants?.[0]?.stock || 20,
-            testerStock: 2,
-            reserved: 0,
-            warehouse: p.variants?.[0]?.warehouse || "DXB-MAIN",
-            topNotes: [],
-            heartNotes: [],
-            baseNotes: [],
-            descriptionEn: p.descriptionEn || "",
-            descriptionAr: p.descriptionAr || "",
-            metaTitle: p.metaTitle || p.nameEn,
-            metaDescription: p.metaDescription || "",
-            imageUrl: p.images?.[0] || "/product-placeholder.svg",
-            images: p.images || [],
-            imageAlt: `${p.nameEn || p.name} flacon`,
-            status: p.isPublished ? "PUBLISHED" : "DRAFT",
-            tags: p.tags || [],
-            tagIds: p.tags?.map((t: any) => t.id) || [],
-            variants: p.variants || [],
-          }));
-          setProducts(mappedDbProducts);
-        }
-      }
-    } catch (refreshErr) {
-      console.warn("Immediate product refetch error:", refreshErr);
-    } finally {
-      setIsSavingProduct(false);
-    }
+    // The storefront feed contains only published products; keep all admin
+    // products in the editor and refresh the server's totals after saving.
+    await refreshDashboardMetrics();
+    setIsSavingProduct(false);
 
     setShowProductModal(false);
     setEditingProductId(null);
@@ -2198,9 +2233,25 @@ export function App() {
             const errData = await res.json().catch(() => null);
             throw new Error(errData?.error?.message || errData?.message || "Server rejected product deletion");
           }
-          setProducts((prev) => prev.filter((p) => p.id !== id));
-          addAuditLog("PRODUCT_DELETED", `Product ${id} (${name})`);
-          addToast("system", "Product Deleted", `"${name}" was successfully removed from database.`);
+          const listResponse = await fetch("/api/v1/admin/products", {
+            headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+            cache: "no-store",
+          }).catch(() => null);
+          const listBody = await listResponse?.json().catch(() => null);
+          if (!listResponse?.ok || !Array.isArray(listBody?.data)) {
+            setProductsLoadState("error");
+            void refreshDashboardMetrics();
+            addToast("system", "Product Changed", "The server changed the product, but its current state could not be confirmed. Refresh the list before another change.");
+            setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+            return;
+          }
+          const remainingProduct = listBody.data.find((product: any) => product.id === id);
+          setProducts((prev) => remainingProduct
+            ? prev.map((product) => product.id === id ? { ...product, status: remainingProduct.isPublished ? "PUBLISHED" : "DRAFT" } : product)
+            : prev.filter((product) => product.id !== id));
+          void refreshDashboardMetrics();
+          addAuditLog(remainingProduct ? "PRODUCT_UNPUBLISHED" : "PRODUCT_DELETED", `Product ${id} (${name})`);
+          addToast("system", remainingProduct ? "Product Unpublished" : "Product Deleted", remainingProduct ? `"${name}" remains in All products as a draft.` : `"${name}" was removed from the database.`);
           setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
         } catch (err: any) {
           console.error("DB product deletion failed:", err);
@@ -2737,6 +2788,7 @@ export function App() {
       }
       return next;
     });
+    void refreshDashboardMetrics();
 
     if (newBrands.length > 0) {
       setBrands((prev) => {
@@ -2846,6 +2898,7 @@ export function App() {
         }),
       });
       if (res.ok) {
+        void refreshDashboardMetrics();
         if (nextStatus === "CANCELLED") {
           playLuxuryChime("cancel");
           addToast("cancel", "Order Cancelled", `Order ${orderId} status set to CANCELLED.`);
@@ -3052,7 +3105,6 @@ export function App() {
   // Dynamic Dashboard Metrics
   const totalStockUnits = useMemo(() => products.reduce((acc, p) => acc + (p.stock || 0), 0), [products]);
   const totalTesterUnits = useMemo(() => products.reduce((acc, p) => acc + (p.testerStock || 0), 0), [products]);
-  const activeOrdersCount = useMemo(() => orders.filter((o) => o.status !== "CANCELLED").length, [orders]);
   const pendingReviewsCount = useMemo(() => reviews.filter((r) => r.status === "PENDING").length, [reviews]);
   const totalRevenueFromOrders = useMemo(() => {
     return orders
@@ -3202,8 +3254,9 @@ export function App() {
           <nav className="space-y-0.5 text-xs font-sans pb-6">
             {[
               { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-              { id: "orders", label: "Orders", icon: ShoppingBag, count: orders.length },
-              { id: "products", label: "Products", icon: Package, count: products.length },
+              { id: "orders", label: "Orders", icon: ShoppingBag, count: dashboardMetrics?.totalOrders },
+              { id: "customers", label: "Customers", icon: Users },
+              { id: "products", label: "Products", icon: Package, count: dashboardMetrics?.allProducts },
               { id: "media", label: "Media Library", icon: ImageIcon },
               { id: "inventory", label: "Inventory", icon: Warehouse },
               { id: "collections", label: "Collections", icon: Sparkles, count: collections.length },
@@ -3219,10 +3272,12 @@ export function App() {
               { id: "banners", label: "Banners", icon: ImageIcon, count: banners.length },
               { id: "settings", label: "Settings", icon: Share2 },
               { id: "audit", label: "Audit Log", icon: ShieldCheck },
-            ].map((item) => {
+            ].filter((item) => item.id !== "customers" || authSession?.user.role === "SUPER_ADMIN" || authSession?.user.role === "ORDER_MANAGER").map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
               const showText = !isSidebarCollapsed || isMobileNavOpen;
+              const isServerTotal = item.id === "orders" || item.id === "products";
+              const showCount = item.count !== undefined && (item.count > 0 || isServerTotal);
               return (
                 <button
                   key={item.id}
@@ -3230,7 +3285,7 @@ export function App() {
                     setActiveTab(item.id as AdminTab);
                     setIsMobileNavOpen(false);
                   }}
-                  title={`${item.label}${item.count !== undefined ? ` (${item.count})` : ""}`}
+                  title={`${item.label}${item.count !== undefined ? ` (${item.count}${isServerTotal ? " total" : ""})` : ""}${isServerTotal && countsStatus === "stale" ? " — count may be out of date" : ""}`}
                   className={`w-full shrink-0 flex items-center ${
                     showText ? "justify-between px-3 py-2" : "justify-center px-2 py-2"
                   } rounded-lg text-xs font-medium transition-all ${
@@ -3242,15 +3297,15 @@ export function App() {
                   <span className={`flex items-center min-w-0 ${showText ? "gap-2.5" : "justify-center"}`}>
                     <div className="relative flex items-center justify-center shrink-0">
                       <Icon size={16} />
-                      {!showText && item.count !== undefined && item.count > 0 && (
+                      {!showText && showCount && (
                         <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
-                          {item.count > 99 ? "99+" : item.count}
+                          {(item.count ?? 0) > 99 ? "99+" : item.count}
                         </span>
                       )}
                     </div>
                     {showText && <span className="truncate">{item.label}</span>}
                   </span>
-                  {showText && item.count !== undefined && item.count > 0 && (
+                  {showText && showCount && (
                     <span
                       className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
                         isActive
@@ -3261,10 +3316,17 @@ export function App() {
                       {item.count}
                     </span>
                   )}
+                  {showText && isServerTotal && item.count === undefined && <span className="text-xs text-neutral-400" aria-label="Count unavailable">—</span>}
                 </button>
               );
             })}
           </nav>
+          {!isSidebarCollapsed || isMobileNavOpen ? (
+            <div className="px-3 pt-2 text-[11px] text-neutral-500 dark:text-neutral-400" role="status">
+              {countsStatus === "loading" ? "Loading order and product totals…" : countsStatus === "fresh" && countsUpdatedAt ? `Totals updated ${new Date(countsUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : countsStatus === "stale" ? "Totals may be out of date" : "Totals unavailable"}
+              {(countsStatus === "stale" || countsStatus === "error") && <button type="button" onClick={() => void refreshDashboardMetrics()} className="ml-2 underline underline-offset-2">Retry</button>}
+            </div>
+          ) : null}
         </div>
 
         {/* 3. User Session Footer - Compact, Solid & Never Colliding */}
@@ -3529,6 +3591,23 @@ export function App() {
         </header>
 
         {/* 1. EXECUTIVE DASHBOARD */}
+        {activeTab === "customers" && authSession?.token && (
+          <Suspense fallback={<div className="flex min-h-48 items-center justify-center gap-2 text-sm text-neutral-500"><Loader2 size={18} className="animate-spin" />Loading customer tools…</div>}>
+            <CustomerManager
+              authToken={authSession.token}
+              onOpenOrder={(orderNumber) => {
+                const matchingOrder = orders.find((order) => order.number === orderNumber || order.orderNumber === orderNumber);
+                if (matchingOrder) {
+                  setSelectedOrderForDetail(matchingOrder);
+                  setShowOrderDetailModal(true);
+                  return;
+                }
+                setOrderSearch(orderNumber);
+                setActiveTab("orders");
+              }}
+            />
+          </Suspense>
+        )}
         {activeTab === "dashboard" && (
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -3544,19 +3623,19 @@ export function App() {
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Active Orders</span>
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">All Orders</span>
                 <div className="font-serif text-3xl text-amber-500 dark:text-amber-400 font-light">
-                  {dashboardMetrics?.totalOrders ?? activeOrdersCount} Orders
+                  {dashboardMetrics?.totalOrders ?? "—"} Orders
                 </div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">In processing & dispatch</div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">All order statuses</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Catalog Inventory</span>
+                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Published Products</span>
                 <div className="font-serif text-3xl text-emerald-500 dark:text-emerald-400 font-light">
-                  {dashboardMetrics?.totalProducts ?? products.length} Flacons
+                  {dashboardMetrics?.totalProducts ?? "—"} Products
                 </div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">{totalStockUnits} Sealed + {totalTesterUnits} Testers in vault</div>
+                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">{dashboardMetrics?.draftProducts ?? "—"} drafts · {totalStockUnits} sealed + {totalTesterUnits} testers</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
@@ -3579,7 +3658,7 @@ export function App() {
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
-                    {banners.length} active banners · {products.length} products
+                    {banners.length} active banners · {dashboardMetrics?.allProducts ?? "—"} total products
                   </span>
                 </div>
               </div>
@@ -3710,6 +3789,10 @@ export function App() {
         {/* 2. PRODUCTS */}
         {activeTab === "products" && (
           <div className="space-y-6">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">All products: {dashboardMetrics?.allProducts ?? "—"} · Published: {dashboardMetrics?.totalProducts ?? "—"} · Drafts: {dashboardMetrics?.draftProducts ?? "—"}</p>
+            {productsLoadState === "loading" && <p className="text-xs text-neutral-500">Loading product list…</p>}
+            {productsLoadState === "error" && <p className="text-xs text-amber-700 dark:text-amber-300">Product list could not be loaded. The totals above are from the server; refresh to retry.</p>}
+            {productsLoadState === "ready" && dashboardMetrics?.allProducts !== undefined && products.length < dashboardMetrics.allProducts && <p className="text-xs text-amber-700 dark:text-amber-300">Showing {products.length} loaded products of {dashboardMetrics.allProducts} total. Refresh to update the list.</p>}
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex flex-wrap items-center gap-2.5 flex-1 max-w-xl">
                 <div className="relative flex-1 min-w-[220px]">
@@ -6230,10 +6313,11 @@ export function App() {
         {/* 7. ORDERS */}
         {activeTab === "orders" && (
           <div className="space-y-6">
+            <p className="text-sm text-neutral-600 dark:text-neutral-300">{ordersLoadState === "loading" ? "Loading recent orders…" : ordersLoadState === "error" ? "Recent orders could not be loaded. Refresh to retry." : `Showing ${orders.length} most recent orders${dashboardMetrics?.totalOrders !== undefined ? ` of ${dashboardMetrics.totalOrders} total` : ""}.`} Status totals include all orders.</p>
             {/* Status & Market Filters + Real-Time Live Status */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-2 border-b border-neutral-200 dark:border-neutral-800">
               <div className="flex flex-wrap items-center gap-2">
-                {["ALL", "PENDING", "PAID", "FULFILLING", "SHIPPED", "DELIVERED", "CANCELLED"].map((st) => (
+                {["ALL", "PENDING", "PAYMENT_PENDING", "AUTHORIZED", "PAID", "FULFILLING", "PARTIALLY_SHIPPED", "SHIPPED", "DELIVERED", "CANCELLED", "PAYMENT_FAILED", "REFUNDED"].map((st) => (
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
@@ -6243,7 +6327,8 @@ export function App() {
                         : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
                     }`}
                   >
-                    {st === "ALL" ? "All Statuses" : st}
+                    {st === "ALL" ? "All Statuses" : st.replaceAll("_", " ")}
+                    {(st === "ALL" ? dashboardMetrics?.totalOrders !== undefined : dashboardMetrics?.orderStatusCounts !== undefined) && <span className="ml-1.5 opacity-70">{st === "ALL" ? dashboardMetrics?.totalOrders : dashboardMetrics?.orderStatusCounts?.[st] ?? 0}</span>}
                   </button>
                 ))}
               </div>
@@ -6251,7 +6336,7 @@ export function App() {
               <div className="flex items-center gap-2">
                 <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
-                  <span>Database Orders: {orders.length}</span>
+                  <span>All orders: {dashboardMetrics?.totalOrders ?? "—"}</span>
                 </div>
               </div>
             </div>

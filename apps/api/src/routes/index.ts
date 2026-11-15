@@ -12,6 +12,7 @@ import {
   assertOrderOwner,
 } from "../middleware/storefront-auth";
 import { CustomerService } from "../services/customer.service";
+import { CustomerAdminService } from "../services/customer-admin.service";
 import { DeliveryService } from "../services/delivery.service";
 import { DeliveryRequestSchema } from "@muschio/types";
 import { CatalogService } from "../services/catalog.service";
@@ -46,6 +47,8 @@ import {
   CustomerLoginSchema,
   CustomerRegisterSchema,
   CreateSavedAddressSchema,
+  AdminCustomerIdSchema,
+  AdminCustomerListQuerySchema,
 } from "@muschio/types";
 import { AdminRole, BannerSlot, HomepageSectionType } from "@prisma/client";
 
@@ -964,6 +967,58 @@ router.get("/admin/dashboard", requireAdminAuth, async (req, res, next) => {
   try {
     const metrics = await AdminService.getDashboardMetrics();
     res.json({ success: true, data: metrics, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/counts", requireAdminAuth, async (req, res, next) => {
+  try {
+    res.json({ success: true, data: await AdminService.getAdminCounts(), meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/customers/search", requireAdminAuth, requireRoles([AdminRole.ORDER_MANAGER]), async (req, res, next) => {
+  try {
+    const email = typeof req.query.email === "string" ? req.query.email.trim().toLowerCase().slice(0, 254) : "";
+    if (!email) throw new ApiError(400, "INVALID_INPUT", "Customer email is required");
+    const customer = await CustomerAdminService.findCustomerByEmail(email);
+    if (!customer) throw new ApiError(404, "CUSTOMER_NOT_FOUND", "Customer not found");
+    res.json({ success: true, data: customer, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/customers", requireAdminAuth, requireRoles([AdminRole.ORDER_MANAGER]), async (req, res, next) => {
+  try {
+    const parsed = AdminCustomerListQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new ApiError(400, "INVALID_INPUT", "Customer search filters are invalid");
+    res.json({ success: true, data: await CustomerAdminService.listCustomers(parsed.data), meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/customer-guests", requireAdminAuth, requireRoles([AdminRole.ORDER_MANAGER]), async (req, res, next) => {
+  try {
+    const parsed = AdminCustomerListQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new ApiError(400, "INVALID_INPUT", "Guest search filters are invalid");
+    res.json({ success: true, data: await CustomerAdminService.listGuestOrders(parsed.data), meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/customers/:id", requireAdminAuth, requireRoles([AdminRole.ORDER_MANAGER]), async (req, res, next) => {
+  try {
+    const parsedId = AdminCustomerIdSchema.safeParse(req.params.id);
+    if (!parsedId.success) throw new ApiError(400, "INVALID_INPUT", "Customer ID is invalid");
+    const customer = await CustomerAdminService.getCustomer(parsedId.data);
+    if (!customer) throw new ApiError(404, "CUSTOMER_NOT_FOUND", "Customer not found");
+    res.json({ success: true, data: customer, meta: { requestId: req.id } });
   } catch (err) {
     next(err);
   }

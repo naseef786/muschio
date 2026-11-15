@@ -9,6 +9,16 @@ export const AdminRoleEnum = z.enum([
 ]);
 export type AdminRole = z.infer<typeof AdminRoleEnum>;
 
+export const AdminCustomerListQuerySchema = z.object({
+  search: z.string().trim().max(120).optional(),
+  page: z.coerce.number().int().positive().max(100_000).default(1),
+  limit: z.coerce.number().int().positive().max(50).default(20),
+});
+
+export const AdminGuestOrdersQuerySchema = AdminCustomerListQuerySchema;
+
+export const AdminCustomerIdSchema = z.string().uuid();
+
 export const AdminUserSchema = z.object({
   id: z.string().uuid(),
   email: z.string().email(),

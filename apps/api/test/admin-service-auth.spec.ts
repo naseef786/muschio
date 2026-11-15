@@ -1,9 +1,18 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import jwt from "jsonwebtoken";
+import bcrypt from "bcryptjs";
 
-const { adminLookup } = vi.hoisted(() => ({ adminLookup: vi.fn() }));
+const { adminLookup, adminLoginLookup, adminUpdate, auditCreate } = vi.hoisted(() => ({
+  adminLookup: vi.fn(),
+  adminLoginLookup: vi.fn(),
+  adminUpdate: vi.fn(),
+  auditCreate: vi.fn(),
+}));
 vi.mock("../src/prisma", () => ({
-  prisma: { adminUser: { findFirst: adminLookup } },
+  prisma: {
+    adminUser: { findFirst: adminLookup, findUnique: adminLoginLookup, update: adminUpdate },
+    auditLog: { create: auditCreate },
+  },
 }));
 
 import { AdminService } from "../src/services/admin.service";
@@ -56,5 +65,46 @@ describe("AdminService.verifyToken", () => {
     adminLookup.mockResolvedValue(null);
 
     await expect(AdminService.verifyToken(createAdminToken())).resolves.toBeNull();
+  });
+});
+
+describe("AdminService.login", () => {
+  beforeEach(() => {
+    vi.stubEnv("ADMIN_JWT_SECRET", ADMIN_JWT_SECRET);
+    adminLoginLookup.mockReset();
+    adminUpdate.mockReset();
+    auditCreate.mockReset();
+  });
+
+  it("returns an administrator token after valid credentials and records the login", async () => {
+    adminLoginLookup.mockResolvedValue({
+      id: "admin-1",
+      email: "admin@example.test",
+      name: "Test Admin",
+      role: "SUPER_ADMIN",
+      passwordHash: bcrypt.hashSync("fixture-password", 4),
+    });
+
+    const result = await AdminService.login("admin@example.test", "fixture-password");
+
+    expect(result.user.email).toBe("admin@example.test");
+    expect(jwt.verify(result.token, ADMIN_JWT_SECRET, {
+      algorithms: ["HS256"],
+      issuer: "muschio-api",
+      audience: "muschio-admin",
+    })).toMatchObject({ id: "admin-1", purpose: "admin" });
+    expect(adminUpdate).toHaveBeenCalledOnce();
+    expect(auditCreate).toHaveBeenCalledOnce();
+  });
+
+  it("rejects unknown accounts without recording a login", async () => {
+    adminLoginLookup.mockResolvedValue(null);
+
+    await expect(AdminService.login("missing@example.test", "fixture-password")).rejects.toMatchObject({
+      statusCode: 401,
+      code: "INVALID_CREDENTIALS",
+    });
+    expect(adminUpdate).not.toHaveBeenCalled();
+    expect(auditCreate).not.toHaveBeenCalled();
   });
 });

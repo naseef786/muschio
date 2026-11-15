@@ -1,6 +1,10 @@
 import { MetadataRoute } from "next";
 import { prisma } from "@muschio/api";
 
+// Catalog URLs must be resolved at request time; build-time database outages
+// must not freeze an incomplete sitemap into the deployed static output.
+export const dynamic = "force-dynamic";
+
 const BASE_URL =
   (
     process.env.NEXT_PUBLIC_SITE_URL ||

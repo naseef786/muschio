@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { ShieldCheck, Lock, Mail, Eye, EyeOff, Loader2, KeyRound, Sparkles } from "lucide-react";
+import { ShieldCheck, Lock, Mail, Eye, EyeOff, Loader2, KeyRound } from "lucide-react";
 
 export interface AdminAuthSession {
   token: string;
@@ -23,12 +23,6 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [rememberMe, setRememberMe] = useState(true);
 
-  const handleFillDemo = () => {
-    setEmail("superadmin@muschio.luxury");
-    setPassword("MuschioAdmin2026!");
-    setErrorMsg(null);
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() || !password.trim()) {
@@ -46,10 +40,26 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
         body: JSON.stringify({ email: email.trim(), password }),
       });
 
-      const data = await res.json();
+      const responseText = await res.text();
+      if (!responseText.trim()) {
+        throw new Error(["localhost", "127.0.0.1"].includes(window.location.hostname)
+          ? "The sign-in service returned an empty response. Check that the local storefront server is running on port 3000, then try again."
+          : "The sign-in service returned an empty response. Please try again shortly.");
+      }
 
-      if (!res.ok || !data.success || !data.data?.token) {
-        throw new Error(data.error?.message || "Invalid administrator credentials. Access denied.");
+      let data: {
+        success?: boolean;
+        data?: AdminAuthSession;
+        error?: { message?: string };
+      };
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        throw new Error(`The sign-in service returned an invalid response (HTTP ${res.status}). Please try again when the server is ready.`);
+      }
+
+      if (!res.ok || !data?.success || !data.data?.token || !data.data.user) {
+        throw new Error(data?.error?.message || `Unable to sign in (HTTP ${res.status}). Please try again.`);
       }
 
       const session: AdminAuthSession = {
@@ -59,9 +69,8 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
 
       persistSession(session);
       onLoginSuccess(session);
-    } catch (err: any) {
-      console.error("Admin login error:", err);
-      setErrorMsg(err.message || "Invalid credentials. Please verify your access authorization.");
+    } catch (err) {
+      setErrorMsg(err instanceof Error ? err.message : "Unable to sign in. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -70,8 +79,9 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
   const persistSession = (session: AdminAuthSession) => {
     try {
       const payload = JSON.stringify(session);
-      localStorage.setItem("muschio_admin_auth", payload);
-      sessionStorage.setItem("muschio_admin_auth", payload);
+      localStorage.removeItem("muschio_admin_auth");
+      sessionStorage.removeItem("muschio_admin_auth");
+      (rememberMe ? localStorage : sessionStorage).setItem("muschio_admin_auth", payload);
     } catch (err) {
       console.warn("Could not save session to storage", err);
     }
@@ -118,7 +128,7 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
                 type="email"
                 required
                 autoComplete="email"
-                placeholder="superadmin@muschio.luxury"
+                placeholder="Enter your admin email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white ps-10 pe-3 py-2.5 rounded-md focus:outline-none focus:border-black dark:focus:border-white transition-colors font-mono"
@@ -162,7 +172,6 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
               />
               <span>Remember session (12 hrs)</span>
             </label>
-            <span className="font-mono text-[10px] text-neutral-500">256-Bit SSL</span>
           </div>
 
           {/* SUBMIT BUTTON */}
@@ -185,24 +194,6 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
           </button>
         </form>
 
-        {/* DEMO CREDENTIALS QUICK FILL FOR EASY TESTING */}
-        <div className="pt-4 border-t border-neutral-200 dark:border-neutral-800 space-y-2">
-          <div className="flex items-center justify-between text-[11px]">
-            <span className="text-neutral-500">Seeded Master Credentials:</span>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="text-neutral-900 dark:text-white hover:underline font-medium flex items-center gap-1 transition-colors"
-            >
-              <Sparkles size={11} />
-              <span>Auto-Fill Credentials</span>
-            </button>
-          </div>
-          <div className="p-2.5 rounded-md bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[11px] font-mono text-neutral-600 dark:text-neutral-400 flex items-center justify-between">
-            <span className="text-neutral-900 dark:text-neutral-100">superadmin@muschio.luxury</span>
-            <span className="text-neutral-500">MuschioAdmin2026!</span>
-          </div>
-        </div>
       </div>
     </div>
   );

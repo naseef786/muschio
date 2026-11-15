@@ -28,6 +28,14 @@ pnpm dev
 - REST API: `http://localhost:4000/api/v1`
 - Admin Operations Portal: `http://localhost:5173`
 
+The local admin proxies `/api` requests through the storefront on port 3000. If sign-in reports an empty or invalid response, confirm the storefront is running and ready before retrying. Do not put seeded or production administrator credentials in the admin UI or client bundle.
+
+### Admin count semantics
+
+- The sidebar Orders badge is the server total across all order statuses. The Orders list loads the most recent 100 records by default; its row count is not the database total.
+- The sidebar Products badge is the server total including published products and drafts. The Products page shows those two counts separately.
+- Order and product lists are kept in memory, not browser storage. Server totals refresh at login, every minute, and after relevant admin changes. If refresh fails, the last confirmed totals remain visible and are marked as possibly out of date.
+
 ### Step 4: Quality & Verification Gates
 ```powershell
 # Run linting across all monorepo workspaces

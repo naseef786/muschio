@@ -1,4 +1,9 @@
 export function storefrontOrder(order: any) {
+  const toFiniteNumber = (value: unknown, fallback = 0) => {
+    const number = typeof value === "number" ? value : Number(value);
+    return Number.isFinite(number) ? number : fallback;
+  };
+
   const payment =
     (order.payments || []).find((p: any) => p.status === "CAPTURED") ||
     (order.payments || [])[0];
@@ -31,11 +36,11 @@ export function storefrontOrder(order: any) {
     orderNumber: order.orderNumber,
     status: order.status,
     currency: order.currency || "AED",
-    subtotal: Number(order.subtotal || 0),
-    discountAmount: Number(order.discountAmount || 0),
-    taxAmount: Number(order.taxAmount || 0),
-    shippingAmount: Number(order.shippingAmount || 0),
-    totalAmount: Number(order.totalAmount),
+    subtotal: toFiniteNumber(order.subtotal),
+    discountAmount: toFiniteNumber(order.discountAmount),
+    taxAmount: toFiniteNumber(order.taxAmount),
+    shippingAmount: toFiniteNumber(order.shippingAmount),
+    totalAmount: toFiniteNumber(order.totalAmount),
     paymentStatus: payment?.status || (["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(order.status) ? "CAPTURED" : "PENDING"),
     paymentMethod: payment?.provider || (order.status === "PAID" ? "CREDIT_CARD" : null),
     paymentDetails: payment
@@ -65,11 +70,14 @@ export function storefrontOrder(order: any) {
       productNameAr: item.productNameAr,
       quantity: item.quantity,
       sizeLabel: item.sizeLabel,
-      totalPrice: Number(item.totalPrice),
+      totalPrice: toFiniteNumber(
+        item.totalPrice,
+        toFiniteNumber(item.unitPrice) * toFiniteNumber(item.quantity, 1),
+      ),
       image: item.image || item.product?.images?.[0] || null,
       slug: item.slug || item.product?.slug || null,
       brandName: item.brandName || item.product?.brand?.nameEn || null,
-      unitPrice: item.unitPrice ? Number(item.unitPrice) : null,
+      unitPrice: item.unitPrice == null ? null : toFiniteNumber(item.unitPrice),
     })),
   };
 }
