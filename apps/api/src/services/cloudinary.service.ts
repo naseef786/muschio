@@ -32,9 +32,15 @@ export interface CloudinaryAsset {
 
 export class CloudinaryService {
   private static getCredentials() {
-    const cloudName = process.env.CLOUDINARY_CLOUD_NAME || "zwkad4sz";
-    const apiKey = process.env.CLOUDINARY_API_KEY || "287343912324243";
-    const apiSecret = process.env.CLOUDINARY_API_SECRET || "YFAeE_1UdoL5Xlr05jOYspbNQnA";
+    const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+    const apiSecret = process.env.CLOUDINARY_API_SECRET;
+
+    if (!cloudName || !apiKey || !apiSecret) {
+      throw new Error(
+        "[SECURITY ERROR] Cloudinary credentials are not fully configured.",
+      );
+    }
 
     return { cloudName, apiKey, apiSecret };
   }

@@ -205,6 +205,38 @@ export default async function HomePage(
   const offerBanner = midCampaignBanners?.[0] || DEFAULT_OFFER_BANNER;
   const promoStrip = promoStripBanners?.[0] || null;
 
+  const toProductCardVariant = (variant: any) => ({
+    id: variant.id ? String(variant.id) : undefined,
+    sku: variant.sku,
+    volume: variant.volume,
+    volumeMl: variant.volumeMl ?? null,
+    sizeLabelEn: variant.sizeLabelEn,
+    sizeLabelAr: variant.sizeLabelAr,
+    price: Number(variant.price ?? 0),
+    compareAtPrice:
+      variant.compareAtPrice === null || variant.compareAtPrice === undefined
+        ? null
+        : Number(variant.compareAtPrice),
+    discountPrice:
+      variant.discountPrice === null || variant.discountPrice === undefined
+        ? null
+        : Number(variant.discountPrice),
+    stock:
+      variant.stock ??
+      variant.stockQuantity ??
+      variant.availableQuantity ??
+      (variant.inventory
+        ? Math.max(
+            0,
+            (variant.inventory.sealedQuantity ?? 0) -
+              (variant.inventory.reservedQuantity ?? 0),
+          )
+        : undefined),
+    warehouse: variant.warehouse,
+    isDefault: Boolean(variant.isDefault),
+    isSampleVial: Boolean(variant.isSampleVial),
+  });
+
   // Format live products
   const featuredProducts = (liveProducts || []).map((p: any) => {
     const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
@@ -227,11 +259,7 @@ export default async function HomePage(
       secondaryImage: p.images?.[1],
       images: p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
       badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
-      variants: (p.variants || []).map((varItem: any) => ({
-        ...varItem,
-        price: Number(varItem.price) || 0,
-        compareAtPrice: varItem.compareAtPrice ? Number(varItem.compareAtPrice) : null,
-      })),
+      variants: (p.variants || []).map(toProductCardVariant),
     };
   });
 
@@ -256,13 +284,16 @@ export default async function HomePage(
         nameAr: p.nameAr,
         brand: p.brand?.name || p.brand || "",
         concentration: (p.concentration || "").replaceAll("_", " "),
-        price: v?.price || p.price || 0,
-        compareAtPrice: v?.compareAtPrice,
+        price: Number(v?.price ?? p.price ?? 0),
+        compareAtPrice:
+          v?.compareAtPrice === null || v?.compareAtPrice === undefined
+            ? null
+            : Number(v.compareAtPrice),
         image: p.images?.[0] || p.image || "/product-placeholder.svg",
         secondaryImage: p.images?.[1],
         images: p.images && p.images.length > 0 ? p.images : (p.image ? [p.image] : []),
         badge: p.brand?.type === "NICHE" ? "Haute Niche" : "Private Blend",
-        variants: p.variants || [],
+        variants: (p.variants || []).map(toProductCardVariant),
       };
     }),
   }));
