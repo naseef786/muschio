@@ -13,6 +13,7 @@ import { WishlistProvider } from "../../context/wishlist-context";
 import { CompareProvider } from "../../context/compare-context";
 import { CurrencyProvider } from "../../context/currency-context";
 import { CompareBar } from "../../components/compare-bar";
+import { FloatingCartBar } from "../../components/floating-cart-bar";
 import { generateOrganizationJsonLd, generateWebSiteJsonLd } from "../../lib/seo";
 import { CatalogService, NotesService, SettingsService } from "@muschio/api";
 import { muschioApi } from "../../lib/api";
@@ -196,6 +197,7 @@ export default async function RootLayout(
                       <Footer locale={locale as Locale} brands={liveBrands} settings={liveSettings} />
                       <FloatingWhatsApp locale={locale as Locale} settings={liveSettings} />
                       <CompareBar locale={locale as Locale} />
+                      <FloatingCartBar locale={locale as Locale} />
                     </CompareProvider>
                   </WishlistProvider>
                 </CartProvider>

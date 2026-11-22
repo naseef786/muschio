@@ -334,9 +334,40 @@ export function Header({
 
   return (
     <>
-      {/* 1. Restrained Announcement Bar */}
+      {/* 1. Restrained Announcement Bar (Adapts when curation is active) */}
       <div className="announcement-bar">
-        {c(announcement.en, announcement.ar)}
+        {cart.itemCount > 0 ? (
+          cart.subtotal >= freeShippingThreshold ? (
+            <button
+              type="button"
+              onClick={() => cart.setCartDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 hover:underline focus:outline-none"
+            >
+              <span className="font-semibold text-accent">
+                {c("COMPLIMENTARY UAE DELIVERY UNLOCKED ON YOUR BAG", "حصلت على توصيل مجاني فاخر لطلبك الحالي")}
+              </span>
+              <span>·</span>
+              <span>{c("COMPLETE YOUR ACQUISITION", "تابع لإتمام الطلب")} →</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => cart.setCartDrawerOpen(true)}
+              className="inline-flex items-center gap-1.5 hover:underline focus:outline-none"
+            >
+              <span>
+                {c(
+                  `YOU ARE AED ${(freeShippingThreshold - cart.subtotal).toFixed(0)} AWAY FROM COMPLIMENTARY UAE DELIVERY`,
+                  `أنت على بعد ${(freeShippingThreshold - cart.subtotal).toFixed(0)} د.إ من التوصيل المجاني داخل الإمارات`
+                )}
+              </span>
+              <span>·</span>
+              <span className="text-accent underline font-medium">{c("VIEW BAG", "عرض الحقيبة")}</span>
+            </button>
+          )
+        ) : (
+          c(announcement.en, announcement.ar)
+        )}
       </div>
 
       {/* 2. Compact Sticky Luxury Header */}
@@ -488,11 +519,20 @@ export function Header({
                 `Shopping bag, ${cart.itemCount} items`,
                 `حقيبة التسوق، ${cart.itemCount} منتجات`,
               )}
-              className="flex items-center text-luxury-text hover:text-accent transition-colors"
+              className={`flex items-center transition-all duration-200 ${
+                cart.itemCount > 0
+                  ? "text-accent hover:opacity-90"
+                  : "text-luxury-text hover:text-accent"
+              }`}
             >
-              <ShoppingBag size={20} />
+              <div className="relative">
+                <ShoppingBag size={20} className={cart.itemCount > 0 ? "text-accent" : ""} />
+                {cart.itemCount > 0 && (
+                  <span className="absolute -top-1 -end-1 w-2 h-2 rounded-full bg-accent animate-ping opacity-75" />
+                )}
+              </div>
               {cart.itemCount > 0 && (
-                <span className="text-[11px] font-sans font-medium ms-1.5 px-1.5 py-0.2 bg-luxury-text text-luxury-canvas rounded-full">
+                <span className="text-[11px] font-sans font-semibold ms-1.5 px-2 py-0.5 bg-accent text-white rounded-full shadow-sm ring-1 ring-accent/30">
                   {cart.itemCount}
                 </span>
               )}
