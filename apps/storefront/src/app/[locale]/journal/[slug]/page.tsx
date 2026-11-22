@@ -9,6 +9,7 @@ import { muschioApi } from "../../../../lib/api";
 import { JournalService } from "@muschio/api";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { customerCopy } from "../../../../lib/customer-copy";
+import { generateArticleJsonLd, generateBreadcrumbJsonLd } from "../../../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -33,18 +34,29 @@ export async function generateMetadata({
     });
   }
 
-  const title = locale === "ar" ? post.titleAr || post.titleEn : post.titleEn || post.titleAr;
-  const description = locale === "ar"
+  const rawPost = post as any;
+  const customMetaTitle = locale === "ar"
+    ? rawPost.metaTitleAr || rawPost.metaTitleEn
+    : rawPost.metaTitleEn || rawPost.metaTitleAr;
+  const customMetaDescription = locale === "ar"
+    ? rawPost.metaDescriptionAr || rawPost.metaDescriptionEn
+    : rawPost.metaDescriptionEn || rawPost.metaDescriptionAr;
+
+  const defaultTitle = locale === "ar" ? post.titleAr || post.titleEn : post.titleEn || post.titleAr;
+  const defaultDesc = locale === "ar"
     ? post.excerptAr || post.excerptEn
     : post.excerptEn || post.excerptAr;
+
+  const title = customMetaTitle || `${defaultTitle} | Muschio Journal`;
+  const description = customMetaDescription || defaultDesc || (locale === "ar"
+    ? "اقرأ هذا المقال من مجلة موسكيو المتخصصة في فن العطور."
+    : "Read this article from the Muschio Journal on fragrance craft and discovery.");
 
   return buildLocalizedMetadata({
     locale,
     path: `/journal/${post.slug}`,
-    title: `${title} | Muschio Journal`,
-    description: description || (locale === "ar"
-      ? "اقرأ هذا المقال من مجلة موسكيو المتخصصة في فن العطور."
-      : "Read this article from the Muschio Journal on fragrance craft and discovery."),
+    title,
+    description,
     image: post.coverImageUrl,
   });
 }
@@ -87,8 +99,36 @@ export default async function JournalDetailPage(
 
   const featuredProduct = post.featuredProducts?.[0]?.product;
 
+  const articleTitle = isAr ? post.titleAr || post.titleEn : post.titleEn || post.titleAr;
+  const articleDesc = isAr ? post.excerptAr || post.excerptEn || "" : post.excerptEn || post.excerptAr || "";
+
+  const articleJsonLd = generateArticleJsonLd({
+    title: articleTitle,
+    description: articleDesc,
+    slug: post.slug,
+    imageUrl: post.coverImageUrl,
+    datePublished: post.publishedAt || post.createdAt,
+    dateModified: post.updatedAt,
+    authorName: isAr ? "محرر مجلة موسكيو" : "Muschio Editorial Board",
+    locale,
+  });
+
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: isAr ? "الرئيسية" : "Home", url: `/${locale}` },
+    { name: isAr ? "المجلة العطرية" : "Journal", url: `/${locale}/journal` },
+    { name: articleTitle, url: `/${locale}/journal/${post.slug}` },
+  ]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-14 space-y-10">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {/* 1. Back link */}
       <Link
         href="/journal"

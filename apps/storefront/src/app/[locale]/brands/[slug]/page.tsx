@@ -9,6 +9,7 @@ import { CatalogService } from "@muschio/api";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveBrandSlug } from "../../../../lib/seo-redirects";
 import { customerCopy } from "../../../../lib/customer-copy";
+import { generateBreadcrumbJsonLd } from "../../../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -90,8 +91,18 @@ export default async function BrandDetailPage(
 
   const products = brand.products || [];
 
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: isAr ? "الرئيسية" : "Home", url: `/${locale}` },
+    { name: isAr ? "دور العطور" : "Houses", url: `/${locale}/brands` },
+    { name: brand.name, url: `/${locale}/brands/${brand.slug}` },
+  ]);
+
   return (
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {/* 1. Breadcrumbs */}
       <nav aria-label="Breadcrumb" className="text-xs text-luxury-muted">
         <ol className="flex items-center gap-2">

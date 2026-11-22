@@ -64,7 +64,7 @@ The following scorecard evaluates the Muschio application across 10 critical dim
 - **Database**: PostgreSQL 16 on Neon Serverless (`neondb` on AWS `us-east-2`), PgBouncer connection pooler.
 - **Payments**: Stripe API & Hosted Checkout sessions (Test keys configured). Tabby & Tamara BNPL advertised on UI.
 - **Media CDN**: Cloudinary (`res.cloudinary.com`) + Cloudflare R2 placeholder configuration.
-- **Transactional Email**: Nodemailer configured for custom SMTP (`orders@muschio.ae`), with fallback support for Resend and SendGrid.
+- **Transactional Email**: Nodemailer configured for custom SMTP (`orders@muschio.ae`), with SendGrid as an alternative provider.
 - **Transactional Messaging**: Meta WhatsApp Cloud API / Twilio WhatsApp REST API (service layer implemented; templates not configured).
 - **AI Recommendation**: DeepSeek API (`api.deepseek.com/v1`).
 

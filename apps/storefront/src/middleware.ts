@@ -42,6 +42,7 @@ function checkRateLimit(ip: string, endpointKey: string, maxRequests: number, wi
 }
 
 // Malicious scrapers, vulnerability scanners, and automated spam attack agents
+// (Standard search engine bots and SEO audit tools like Semrush/Ahrefs are permitted)
 const BLOCKED_BOT_USER_AGENTS = [
   "sqlmap",
   "nikto",
@@ -53,8 +54,6 @@ const BLOCKED_BOT_USER_AGENTS = [
   "zgrab",
   "censys",
   "shodan",
-  "semrushbot",
-  "ahrefsbot",
   "dotbot",
   "petalbot",
   "mj12bot",

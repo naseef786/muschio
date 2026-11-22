@@ -50,7 +50,7 @@ Configure supported Managed plugins through Neon (Console, API, or `neon neon-au
 ## What It Does
 
 - **Managed identity in Postgres** — users and sessions in `neon_auth`, queryable with SQL, compatible with RLS.
-- **Auth emails without an app mailer** — verification, email OTP, magic links, and password reset. Getting started uses shared SMTP (`auth@mail.myneon.app`). You do not add Resend or SendGrid to implement login. Production needs custom SMTP: https://neon.com/docs/auth/production-checklist.md
+- **Auth emails without an app mailer** — verification, email OTP, magic links, and password reset. Getting started uses shared SMTP (`auth@mail.myneon.app`). You do not need an application email provider to implement login. Production needs custom SMTP: https://neon.com/docs/auth/production-checklist.md
 - **Branches with the database** — each branch has its own Auth URL and isolated auth state.
 - **Better Auth client methods via the Neon SDK** — `@neondatabase/auth` (auth only) or `@neondatabase/neon-js/auth` (combined SDK). Optional UI: `@neondatabase/auth-ui`.
 - **Fixed plugin set** — the Managed client does not accept a `plugins` option. See [plugin support](#plugin-support).

@@ -2,10 +2,9 @@
  * Muschio Haute Parfumerie — Transactional Email Service
  * 
  * Supports:
- * 1. Resend API (via native fetch) — RESEND_API_KEY
- * 2. SendGrid API (via native fetch) — SENDGRID_API_KEY
- * 3. Custom SMTP (via nodemailer) — SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
- * 4. Graceful simulation mode with informative logging when no provider is configured.
+ * 1. SendGrid API (via native fetch) — SENDGRID_API_KEY
+ * 2. Custom SMTP (via nodemailer) — SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_SECURE
+ * 3. Graceful simulation mode with informative logging when no provider is configured.
  */
 
 import nodemailer from "nodemailer";
@@ -29,10 +28,6 @@ export class EmailService {
       };
       return entities[character] || character;
     });
-  }
-
-  private static getResendKey(): string | undefined {
-    return process.env.RESEND_API_KEY;
   }
 
   private static getSendGridKey(): string | undefined {
@@ -67,9 +62,6 @@ export class EmailService {
   }
 
   public static getStatus() {
-    if (this.getResendKey()) {
-      return { provider: "resend", configured: true };
-    }
     if (this.getSendGridKey()) {
       return { provider: "sendgrid", configured: true };
     }
@@ -80,8 +72,7 @@ export class EmailService {
       provider: "none",
       configured: false,
       missing: [
-        "RESEND_API_KEY (Recommended: free at resend.com)",
-        "or SENDGRID_API_KEY",
+        "SENDGRID_API_KEY",
         "or SMTP_HOST, SMTP_USER, SMTP_PASS",
       ],
     };
@@ -98,38 +89,7 @@ export class EmailService {
     const fromAddress = from || this.getFromEmail();
     const toAddresses = Array.isArray(to) ? to : [to];
 
-    // 1. Resend API (Preferred & Zero-Setup)
-    const resendKey = this.getResendKey();
-    if (resendKey) {
-      try {
-        const res = await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${resendKey}`,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            from: fromAddress,
-            to: toAddresses,
-            subject,
-            html,
-          }),
-        });
-
-        const data = await res.json();
-        if (!res.ok) {
-          console.error("[EmailService:Resend] API Error:", data);
-          return { success: false, simulated: false, provider: "resend", error: data };
-        }
-
-        return { success: true, simulated: false, provider: "resend", id: data.id };
-      } catch (err: any) {
-        console.error("[EmailService:Resend] Delivery Exception:", err);
-        return { success: false, simulated: false, provider: "resend", error: err.message };
-      }
-    }
-
-    // 2. SendGrid API
+    // 1. SendGrid API
     const sendGridKey = this.getSendGridKey();
     if (sendGridKey) {
       try {
@@ -160,7 +120,7 @@ export class EmailService {
       }
     }
 
-    // 3. Custom SMTP (Gmail, Google Workspace, Zoho, Microsoft 365, AWS SES, cPanel)
+    // 2. Custom SMTP (Gmail, Google Workspace, Zoho, Microsoft 365, AWS SES, cPanel)
     const smtpConfig = this.getSmtpConfig();
     if (smtpConfig) {
       try {
@@ -179,20 +139,20 @@ export class EmailService {
       }
     }
 
-    // 4. Graceful Development / Missing Provider Simulation
+    // 3. Graceful Development / Missing Provider Simulation
     console.log(`\n---------------------------------------------------------`);
     console.log(`[Muschio Email Service (SIMULATION MODE)]`);
     console.log(`To: ${toAddresses.join(", ")}`);
     console.log(`Subject: ${subject}`);
     console.log(`Notice: No email provider configured.`);
-    console.log(`Configure RESEND_API_KEY in Vercel/environment to deliver live emails.`);
+    console.log(`Configure SENDGRID_API_KEY or SMTP credentials in the environment to deliver live emails.`);
     console.log(`---------------------------------------------------------\n`);
 
     return {
       success: true,
       simulated: true,
       provider: "none",
-      message: "Simulation mode: Set RESEND_API_KEY, SENDGRID_API_KEY, or SMTP credentials in Vercel to send live emails.",
+      message: "Simulation mode: Set SENDGRID_API_KEY or SMTP credentials to send live emails.",
       id: `sim-${Date.now()}`,
     };
   }

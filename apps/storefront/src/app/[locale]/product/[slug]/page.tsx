@@ -5,6 +5,7 @@ import { CatalogService, storefrontProduct } from "@muschio/api";
 import { ProductExperience } from "../../../../components/product-experience";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveProductSlug } from "../../../../lib/seo-redirects";
+import { generateProductJsonLd, generateBreadcrumbJsonLd } from "../../../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,22 @@ export async function generateMetadata({
     ? product.descriptionAr || product.descriptionEn
     : product.descriptionEn || product.descriptionAr;
 
+  const rawProduct = result.product as any;
+  const customMetaTitle = locale === "ar"
+    ? rawProduct.metaTitleAr || rawProduct.metaTitleEn
+    : rawProduct.metaTitleEn || rawProduct.metaTitleAr;
+  const customMetaDescription = locale === "ar"
+    ? rawProduct.metaDescriptionAr || rawProduct.metaDescriptionEn
+    : rawProduct.metaDescriptionEn || rawProduct.metaDescriptionAr;
+
+  const title = customMetaTitle || `${name} by ${product.brand.name} | Muschio`;
+  const metaDescription = customMetaDescription || description || `${name} by ${product.brand.name}. Explore available sizes and fragrance details at Muschio.`;
+
   return buildLocalizedMetadata({
     locale,
     path: `/product/${product.slug}`,
-    title: `${name} by ${product.brand.name} | Muschio`,
-    description: description || `${name} by ${product.brand.name}. Explore available sizes and fragrance details at Muschio.`,
+    title,
+    description: metaDescription,
     image: product.images[0],
   });
 }
@@ -176,12 +188,50 @@ export default async function ProductPage(
       };
     });
 
+  const defaultVariant = product.variants.find((v) => v.isDefault) || product.variants[0];
+  const firstVariantPrice = defaultVariant?.price || 0;
+  const inStock = product.variants.some((v) => (v.stockQuantity ?? v.stock ?? 0) > 0);
+
+  const productJsonLd = generateProductJsonLd(
+    {
+      name: locale === "ar" ? product.nameAr || product.nameEn : product.nameEn || product.nameAr,
+      description: locale === "ar" ? product.descriptionAr || product.descriptionEn || "" : product.descriptionEn || product.descriptionAr || "",
+      slug: product.slug,
+      brand: brandName,
+      images: images.filter((img: string) => !img.includes("placeholder")),
+      sku: defaultVariant?.sku || product.slug,
+      price: firstVariantPrice,
+      currency: "AED",
+      concentration: product.concentration,
+      countryOfOrigin: product.origin,
+      inStock,
+    },
+    locale
+  );
+
+  const breadcrumbJsonLd = generateBreadcrumbJsonLd([
+    { name: locale === "ar" ? "الرئيسية" : "Home", url: `/${locale}` },
+    { name: locale === "ar" ? "دور العطور" : "Houses", url: `/${locale}/brands` },
+    { name: brandName, url: `/${locale}/brands/${brandSlug}` },
+    { name: locale === "ar" ? product.nameAr || product.nameEn : product.nameEn || product.nameAr, url: `/${locale}/product/${product.slug}` },
+  ]);
+
   return (
-    <ProductExperience
-      product={product}
-      houseProducts={houseProducts}
-      relatedProducts={relatedProducts}
-      locale={locale}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <ProductExperience
+        product={product}
+        houseProducts={houseProducts}
+        relatedProducts={relatedProducts}
+        locale={locale}
+      />
+    </>
   );
 }

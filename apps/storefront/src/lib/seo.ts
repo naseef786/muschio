@@ -145,9 +145,90 @@ export function generateOrganizationJsonLd() {
     "@context": "https://schema.org",
     "@type": "Organization",
     "@id": `${CANONICAL_DOMAIN}/#organization`,
-    name: "Muschio",
+    name: "Muschio Haute Parfumerie",
     url: CANONICAL_DOMAIN,
+    logo: `${CANONICAL_DOMAIN}/icon.svg`,
     description:
-      "An online fragrance catalog and discovery platform serving English and Arabic audiences.",
+      "Haute Parfumerie & rare niche fragrance house serving Dubai, the UAE, and the Arabian Gulf.",
+    sameAs: [
+      "https://www.instagram.com/muschio_parfums",
+      "https://www.tiktok.com/@muschio_parfums",
+    ],
+    contactPoint: {
+      "@type": "ContactPoint",
+      telephone: "+971-4-000-0000",
+      contactType: "customer service",
+      areaServed: ["AE", "SA", "KW", "QA", "BH", "OM"],
+      availableLanguage: ["English", "Arabic"],
+    },
   };
 }
+
+export function generateWebSiteJsonLd(locale = "en") {
+  return {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    "@id": `${CANONICAL_DOMAIN}/#website`,
+    url: `${CANONICAL_DOMAIN}/${locale}`,
+    name: locale === "ar" ? "موسكيو للعطور الفاخرة" : "Muschio Haute Parfumerie",
+    alternateName: [
+      "Muschio",
+      "موسكيو",
+      "Muschio Perfumes Dubai",
+      "Muschio UAE",
+    ],
+    potentialAction: {
+      "@type": "SearchAction",
+      target: {
+        "@type": "EntryPoint",
+        urlTemplate: `${CANONICAL_DOMAIN}/${locale}/search?q={search_term_string}`,
+      },
+      "query-input": "required name=search_term_string",
+    },
+  };
+}
+
+export interface ArticleJsonLdParams {
+  title: string;
+  description: string;
+  slug: string;
+  imageUrl?: string | null;
+  datePublished?: string | Date;
+  dateModified?: string | Date;
+  authorName?: string;
+  locale?: string;
+}
+
+export function generateArticleJsonLd(params: ArticleJsonLdParams) {
+  const locale = params.locale || "en";
+  const url = `${CANONICAL_DOMAIN}/${locale}/journal/${params.slug}`;
+  return {
+    "@context": "https://schema.org",
+    "@type": "BlogPosting",
+    "@id": `${url}#article`,
+    headline: params.title,
+    description: params.description,
+    url,
+    ...(params.imageUrl ? { image: [params.imageUrl] } : {}),
+    ...(params.datePublished ? { datePublished: new Date(params.datePublished).toISOString() } : {}),
+    ...(params.dateModified ? { dateModified: new Date(params.dateModified).toISOString() } : {}),
+    author: {
+      "@type": "Person",
+      name: params.authorName || (locale === "ar" ? "محرر موسكيو للعطور" : "Muschio Olfactory Editor"),
+    },
+    publisher: {
+      "@type": "Organization",
+      "@id": `${CANONICAL_DOMAIN}/#organization`,
+      name: "Muschio",
+      logo: {
+        "@type": "ImageObject",
+        url: `${CANONICAL_DOMAIN}/icon.svg`,
+      },
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": url,
+    },
+  };
+}
+

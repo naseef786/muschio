@@ -13,7 +13,7 @@ Framework-specific companion skills also live in [neondatabase/neon-js](https://
 
 ## Auth emails
 
-Managed Auth sends verification, email OTP, magic-link, and password-reset messages. Getting started uses the shared SMTP provider (`auth@mail.myneon.app`). Implementing login does not require Resend, SendGrid, or other application email code.
+Managed Auth sends verification, email OTP, magic-link, and password-reset messages. Getting started uses the shared SMTP provider (`auth@mail.myneon.app`). Implementing login does not require application email code.
 
 Production requires custom SMTP. Verification codes work on shared or custom SMTP. Verification links require custom SMTP. Checklist: https://neon.com/docs/auth/production-checklist.md. Branding and webhook delivery: https://neon.com/docs/auth/guides/customize-emails.md.
 

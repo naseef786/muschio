@@ -210,7 +210,7 @@ functions: {
   todos: {
     name: "todo api",
     source: "src/index.ts",
-    env: { RESEND_API_KEY: process.env.RESEND_API_KEY! },
+    env: { SERVICE_API_KEY: process.env.SERVICE_API_KEY! },
   },
 }
 ```

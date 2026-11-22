@@ -1,3 +1,8 @@
+export const productCardCopy = {
+  en: { viewProduct: "View product", gallery: "Product images", previousImage: "Previous image", nextImage: "Next image", image: "Image", of: "of" },
+  ar: { viewProduct: "عرض المنتج", gallery: "صور المنتج", previousImage: "الصورة السابقة", nextImage: "الصورة التالية", image: "الصورة", of: "من" },
+} as const;
+
 const PLAIN_ENGLISH: Record<string, string> = {
   "Shop Fragrance": "Shop",
   "The Collection": "Shop",

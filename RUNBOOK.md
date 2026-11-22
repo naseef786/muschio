@@ -37,6 +37,11 @@ The local admin proxies `/api` requests through the storefront on port 3000. If 
 - Order and product lists are kept in memory, not browser storage. Server totals refresh at login, every minute, and after relevant admin changes. If refresh fails, the last confirmed totals remain visible and are marked as possibly out of date.
 
 ### Step 4: Quality & Verification Gates
+
+Product-image smoke check: product cards and the product-detail image use matching frosted-glass previous/next buttons and a compact dot rail. There is no visible **View product** overlay. Buttons and dots change photos; touch swipes and wheel/trackpad movement do not change photos. Image/title links still open product details, and wishlist toggling remains independent. Check multi-image wraparound, selecting dots, thumbnail synchronization on the detail page, reduced motion, keyboard focus/arrows, light/dark themes, and English/Arabic layouts. Single-image products show no arrows or dots. Check at 320px, 390px and desktop widths; collection scrolling must still work.
+
+Home offer-card smoke check: discounted products use the shared product-card image controls and pricing layout.
+
 ```powershell
 # Run linting across all monorepo workspaces
 pnpm run lint

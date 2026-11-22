@@ -56,8 +56,14 @@ export function buildLocalizedMetadata({
     alternates: {
       canonical,
       languages: {
+        en: `${SITE_URL}/en${routePath}`,
+        ar: `${SITE_URL}/ar${routePath}`,
         "en-AE": `${SITE_URL}/en${routePath}`,
         "ar-AE": `${SITE_URL}/ar${routePath}`,
+        "en-SA": `${SITE_URL}/en${routePath}`,
+        "ar-SA": `${SITE_URL}/ar${routePath}`,
+        "en-KW": `${SITE_URL}/en${routePath}`,
+        "ar-KW": `${SITE_URL}/ar${routePath}`,
         "x-default": `${SITE_URL}/en${routePath}`,
       },
     },

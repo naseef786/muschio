@@ -8,6 +8,7 @@ import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight, Star } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
 import { CollectionSlider } from "./collection-slider";
+import { ImageGalleryControls } from "./image-gallery-controls";
 import { ProductReviews } from "./product-reviews";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
@@ -348,14 +349,35 @@ export function ProductExperience({
         <div className="lg:col-span-7">
           <div className="lg:sticky lg:top-24 space-y-4">
             {/* Primary Main Image Canvas (4:5 Ratio, Full Bleed Luxury Canvas, Zero Padding) */}
-            <div className="relative aspect-[4/5] w-full bg-[#F8F8F8] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 overflow-hidden flex items-center justify-center rounded-sm">
-              <Image
-                src={currentImage}
-                alt={c(product.nameEn, product.nameAr)}
-                fill
-                priority
-                sizes="(max-width: 1024px) 100vw, 55vw"
-                className="object-cover object-center transition-transform duration-500 ease-out hover:scale-105"
+            <div
+              className="relative aspect-[4/5] w-full bg-[#F8F8F8] dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 overflow-hidden rounded-sm"
+
+            >
+              <div
+                dir="ltr"
+                className="flex h-full w-full transition-transform duration-300 ease-out motion-reduce:transition-none"
+                style={{ transform: `translateX(-${(selectedImageIndex % images.length) * 100}%)` }}
+              >
+                {images.map((src, index) => (
+                  <div key={`${src}-${index}`} className="relative h-full w-full shrink-0" aria-hidden={index !== selectedImageIndex % images.length}>
+                    <Image
+                      src={src}
+                      alt={index === selectedImageIndex % images.length ? c(product.nameEn, product.nameAr) : ""}
+                      fill
+                      priority={index === 0}
+                      draggable={false}
+                      sizes="(max-width: 1024px) 100vw, 55vw"
+                      className="object-cover object-center"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <ImageGalleryControls
+                count={images.length}
+                index={selectedImageIndex % images.length}
+                onSelect={setSelectedImageIndex}
+                locale={locale}
               />
 
               {/* Floating Luxury Action Dock (Circular Wishlist, Compare & Share) */}

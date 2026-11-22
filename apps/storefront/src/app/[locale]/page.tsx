@@ -3,6 +3,7 @@ import Image from "next/image";
 import { Link } from "../../navigation";
 import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles, Tag } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
+import { ProductCard } from "../../components/product-card";
 import { muschioApi } from "../../lib/api";
 import { customerCopy } from "../../lib/customer-copy";
 import { BannerService, CatalogService, NotesService, storefrontProduct, prisma } from "@muschio/api";
@@ -353,7 +354,10 @@ export default async function HomePage(
         <div className="lg:col-span-7 relative min-h-[380px] lg:min-h-[520px] bg-luxury-surface2">
           <Image
             src={heroImageUrl}
-            alt="Muschio Haute Parfumerie Flacon"
+            alt={c(
+              "Muschio Haute Parfumerie — Curated Luxury & Rare Niche Fragrances in Dubai",
+              "موسكيو للعطور الفاخرة — دار العطور النيش النادرة في دبي والخليج العربي"
+            )}
             fill
             priority
             sizes="(max-width: 1024px) 100vw, 60vw"
@@ -581,45 +585,24 @@ export default async function HomePage(
             </Link>
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {dealProducts.slice(0, 4).map((p: any) => {
-              const savingsPct = p.compareAtPrice
-                ? Math.round(((p.compareAtPrice - p.price) / p.compareAtPrice) * 100)
-                : 0;
-              return (
-                <Link
-                  key={p.slug}
-                  href={`/product/${p.slug}`}
-                  className="group border border-luxury-border bg-luxury-surface hover:border-luxury-muted p-3 flex flex-col justify-between transition-all rounded-sm"
-                >
-                  <div className="relative aspect-[3/4] w-full bg-luxury-surface2 mb-2 overflow-hidden">
-                    <Image
-                      src={p.image}
-                      alt={c(p.nameEn, p.nameAr)}
-                      fill
-                      sizes="(max-width: 640px) 50vw, 25vw"
-                      className="object-cover group-hover:scale-105 transition-transform duration-500"
-                    />
-                    {savingsPct > 0 && (
-                      <span className="absolute top-2 start-2 bg-rose-950/80 text-rose-300 border border-rose-500/30 text-[11px] font-bold px-1.5 py-0.5 rounded">
-                        -{savingsPct}%
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-sans text-luxury-muted uppercase block truncate">{p.brand}</span>
-                    <h4 className="font-serif text-xs font-medium text-luxury-text truncate group-hover:text-accent transition-colors">
-                      {c(p.nameEn, p.nameAr)}
-                    </h4>
-                    <div className="flex items-baseline gap-2 mt-1">
-                      <span className="text-xs font-semibold text-luxury-text font-mono">{p.price} AED</span>
-                      {p.compareAtPrice && (
-                        <span className="text-[10px] text-luxury-muted line-through font-mono">{p.compareAtPrice} AED</span>
-                      )}
-                    </div>
-                  </div>
-                </Link>
-              );
-            })}
+            {dealProducts.slice(0, 4).map((p: any) => (
+              <ProductCard
+                key={p.slug}
+                slug={p.slug}
+                nameEn={p.nameEn}
+                nameAr={p.nameAr}
+                brand={p.brand}
+                concentration={p.concentration}
+                price={p.price}
+                compareAtPrice={p.compareAtPrice}
+                variants={p.variants}
+                image={p.image}
+                secondaryImage={p.secondaryImage}
+                images={p.images}
+                badge={p.badge}
+                locale={locale}
+              />
+            ))}
           </div>
         </div>
       )}
