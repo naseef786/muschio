@@ -459,12 +459,51 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
     if (isSingleOrderLookup) {
       const orderIdentifier =
         route[1] === "lookup" || route[1] === "live" ? route[2] : route[1];
+      const cleanIdentifier = decodeURIComponent(orderIdentifier || "").trim();
+      const upperIdentifier = cleanIdentifier.toUpperCase();
+
+      // Support direct lookup by RMA reference (RET-YYYY-XXXX) or Reverse Logistics Tracking (DXB-RET-XXXX)
+      let resolvedOrderId: string | null = null;
+      if (upperIdentifier.startsWith("RET-") || upperIdentifier.startsWith("DXB-RET-")) {
+        const ret = await prisma.returnRequest.findFirst({
+          where: {
+            OR: [
+              { returnNumber: cleanIdentifier },
+              { returnNumber: upperIdentifier },
+              { returnNumber: cleanIdentifier.replace("DXB-RET-", "RET-") },
+              { returnNumber: upperIdentifier.replace("DXB-RET-", "RET-") },
+            ],
+          },
+          select: { orderId: true },
+        });
+        if (ret) {
+          resolvedOrderId = ret.orderId;
+        }
+      }
+      if (!resolvedOrderId && cleanIdentifier) {
+        const ret = await prisma.returnRequest.findFirst({
+          where: {
+            OR: [
+              { returnNumber: cleanIdentifier },
+              { returnNumber: cleanIdentifier.replace("DXB-RET-", "RET-") },
+            ],
+          },
+          select: { orderId: true },
+        });
+        if (ret) {
+          resolvedOrderId = ret.orderId;
+        }
+      }
 
       const order = await prisma.order.findFirst({
         where: {
           OR: [
-            { orderNumber: orderIdentifier },
-            { id: orderIdentifier },
+            { orderNumber: cleanIdentifier },
+            { orderNumber: upperIdentifier },
+            { id: cleanIdentifier },
+            ...(resolvedOrderId ? [{ id: resolvedOrderId }] : []),
+            ...(upperIdentifier.startsWith("MSC-") ? [] : [{ orderNumber: `MSC-${new Date().getFullYear()}-${upperIdentifier}` }]),
+            ...(cleanIdentifier.length >= 6 ? [{ orderNumber: { endsWith: cleanIdentifier } }] : []),
           ],
         },
         include: {
@@ -487,6 +526,25 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
           shippingAddress: true,
           fulfillments: { include: { shipments: true } },
           customer: true,
+          returnRequests: {
+            include: {
+              items: {
+                include: {
+                  orderItem: {
+                    include: {
+                      variant: {
+                        include: {
+                          product: true,
+                        },
+                      },
+                    },
+                  },
+                  inspection: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
         },
       });
       if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
@@ -545,17 +603,17 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
         timestamp: string;
         completed: boolean;
       }> = [
-        {
-          id: `evt_created_${order.id}`,
-          status: "PENDING",
-          titleEn: "Order Placed & Confirmed",
-          titleAr: "تم استلام الطلب وتأكيده",
-          descriptionEn: `Order #${order.orderNumber} has been received and confirmed.`,
-          descriptionAr: `تم استلام طلبك رقم #${order.orderNumber} بنجاح وحجز المنتجات.`,
-          timestamp: order.createdAt.toISOString(),
-          completed: true,
-        },
-      ];
+          {
+            id: `evt_created_${order.id}`,
+            status: "PENDING",
+            titleEn: "Order Placed & Confirmed",
+            titleAr: "تم استلام الطلب وتأكيده",
+            descriptionEn: `Order #${order.orderNumber} has been received and confirmed.`,
+            descriptionAr: `تم استلام طلبك رقم #${order.orderNumber} بنجاح وحجز المنتجات.`,
+            timestamp: order.createdAt.toISOString(),
+            completed: true,
+          },
+        ];
 
       const capturedPayment = order.payments?.find((p) => p.status === "CAPTURED");
       if (capturedPayment || ["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(order.status)) {
@@ -648,11 +706,11 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
       const safePayments = admin
         ? order.payments
         : order.payments.map((payment) => ({
-            provider: payment.provider,
-            status: payment.status,
-            amount: Number(payment.amount),
-            currency: payment.currency,
-          }));
+          provider: payment.provider,
+          status: payment.status,
+          amount: Number(payment.amount),
+          currency: payment.currency,
+        }));
 
       return success({
         ...base,
@@ -721,6 +779,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
           return error("DEPLETED", "Coupon usage limit reached", 400);
         }
         return success({
+          valid: true,
           code: coupon.code,
           discountAmount: coupon.promotion.type === "FIXED_AMOUNT" ? Number(coupon.promotion.value) : null,
           discountPercent: coupon.promotion.type === "PERCENTAGE" ? Number(coupon.promotion.value) : null,
@@ -747,6 +806,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
       }
 
       return success({
+        valid: true,
         code: voucher.code,
         discountAmount: voucher.discountAmount ? Number(voucher.discountAmount) : 0,
         discountPercent: voucher.discountPercent ? Number(voucher.discountPercent) : null,
@@ -922,6 +982,25 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
           payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
           customer: true,
           fulfillments: { include: { shipments: true } },
+          returnRequests: {
+            include: {
+              items: {
+                include: {
+                  orderItem: {
+                    include: {
+                      variant: {
+                        include: {
+                          product: true,
+                        },
+                      },
+                    },
+                  },
+                  inspection: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
         },
         orderBy: { createdAt: "desc" },
         take: limit,
@@ -942,6 +1021,25 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
           payments: { include: { events: true }, orderBy: { createdAt: "desc" } },
           customer: true,
           fulfillments: { include: { shipments: true } },
+          returnRequests: {
+            include: {
+              items: {
+                include: {
+                  orderItem: {
+                    include: {
+                      variant: {
+                        include: {
+                          product: true,
+                        },
+                      },
+                    },
+                  },
+                  inspection: true,
+                },
+              },
+            },
+            orderBy: { createdAt: "desc" },
+          },
         },
       });
 
@@ -1096,7 +1194,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
       if (rawText && rawText.trim()) {
         body = JSON.parse(rawText);
       }
-    } catch {}
+    } catch { }
 
     const adminAuthError = await authorizeAdminRequest(req, route);
     if (adminAuthError) return adminAuthError;
@@ -1148,8 +1246,10 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
     if (path === "delivery/quote") {
       const country = body.country || "AE";
       const subtotal = Number(body.subtotal || 0);
+      const settings = await SettingsService.getSettings().catch(() => null);
+      const freeShippingThreshold = settings?.freeShippingThreshold ?? 500;
       const quote = DeliveryService.quote({ country, subtotal, currency: "AED" });
-      const isFree = subtotal >= 500;
+      const isFree = subtotal >= freeShippingThreshold;
 
       return success({
         enabled: quote.enabled,
@@ -1157,7 +1257,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         currency: quote.currency || "AED",
         shippingFee: isFree ? 0 : 35,
         isFreeShipping: isFree,
-        freeShippingThreshold: 500,
+        freeShippingThreshold,
         estimatedDaysMin: country === "AE" ? 1 : 2,
         estimatedDaysMax: country === "AE" ? 2 : 4,
         services: quote.services,
@@ -1629,7 +1729,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         warehouse: string;
         isDefault: boolean;
       }> = (rawVariants.length > 0)
-        ? rawVariants.map((v: any, index: number) => {
+          ? rawVariants.map((v: any, index: number) => {
             const vVolNum = Number(v.volumeMl) || (typeof v.volume === "number" ? v.volume : parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10)) || 100;
             const vVol = String(v.volume || `${vVolNum}ml`).trim().endsWith("ml") ? String(v.volume || `${vVolNum}ml`).trim() : `${vVolNum}ml`;
             const vBasePrice = Number(String(v.basePrice ?? v.regularPrice ?? v.originalPrice ?? v.price ?? 0).replace(/[^0-9.]/g, "")) || 0;
@@ -1660,7 +1760,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
               isDefault: vIsDefault,
             };
           })
-        : [
+          : [
             {
               volume: `${numVolume}ml`,
               volumeMl: numVolume,
@@ -1743,11 +1843,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
               isPublished: status !== "DRAFT",
               perfumers: resolvedPerfumerIds.length > 0
                 ? {
-                    create: resolvedPerfumerIds.map((id, index) => ({
-                      perfumerId: id,
-                      isLead: index === 0,
-                    })),
-                  }
+                  create: resolvedPerfumerIds.map((id, index) => ({
+                    perfumerId: id,
+                    isLead: index === 0,
+                  })),
+                }
                 : undefined,
             },
             include: {
@@ -1806,11 +1906,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
             isPublished: status !== "DRAFT",
             perfumers: resolvedPerfumerIds.length > 0
               ? {
-                  create: resolvedPerfumerIds.map((id, index) => ({
-                    perfumerId: id,
-                    isLead: index === 0,
-                  })),
-                }
+                create: resolvedPerfumerIds.map((id, index) => ({
+                  perfumerId: id,
+                  isLead: index === 0,
+                })),
+              }
               : undefined,
             variants: {
               create: safeVariantsData,
@@ -2248,15 +2348,29 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
       const previousStatus = order.status;
 
-      // When transitioning to PAID, FULFILLING, SHIPPED, or DELIVERED, guarantee a captured payment record exists
+      // When transitioning to PAID, FULFILLING, SHIPPED, or DELIVERED
+      const isCodOrder =
+        order.payments.some((p) => p.provider === "CASH_ON_DELIVERY" || (p as any).provider === "COD") ||
+        order.payments.length === 0;
+
       if (["PAID", "FULFILLING", "SHIPPED", "DELIVERED"].includes(status)) {
         const hasCaptured = order.payments.some((p) => p.status === "CAPTURED");
-        if (!hasCaptured) {
+        if (!hasCaptured && !isCodOrder) {
           return error(
             "PAYMENT_REQUIRED",
             "This order cannot advance until the payment provider confirms capture.",
             409,
           );
+        }
+        // If an admin transitions a Cash on Delivery order to PAID or DELIVERED, automatically mark COD payment as CAPTURED
+        if (isCodOrder && (status === "PAID" || status === "DELIVERED")) {
+          const pendingCodPayment = order.payments.find((p) => p.status !== "CAPTURED");
+          if (pendingCodPayment) {
+            await prisma.payment.update({
+              where: { id: pendingCodPayment.id },
+              data: { status: "CAPTURED" },
+            });
+          }
         }
         await InventoryService.commitOrderInventory(order.id).catch(() => null);
       }
@@ -2467,8 +2581,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
       const event = await prisma.businessEvent.findFirst({
         where: {
           OR: [
-            ...(id ? [{ id }] : []),
-            ...(enquiryId ? [{ aggregateId: enquiryId }] : []),
+            ...(id ? [{ id }, { aggregateId: id }] : []),
+            ...(enquiryId ? [{ aggregateId: enquiryId }, { id: enquiryId }] : []),
           ],
           eventName: "ENQUIRY_CREATED",
         },
@@ -2621,11 +2735,35 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
       return success(updated);
     }
 
-    // Admin Return Inspection & Restock (PATCH)
+    // Admin Return Workflow Status, Tracking & Inspection (PATCH)
     if (route[0] === "admin" && route[1] === "returns" && route[2]) {
       const admin = await verifyAdminAuth(req);
       if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
       const returnRequestId = route[2];
+
+      if (body.status || body.trackingNumber || body.carrier) {
+        const updated = await ReturnsService.updateReturnStatus({
+          returnRequestId,
+          status: body.status,
+          trackingNumber: body.trackingNumber,
+          carrier: body.carrier,
+          notes: body.notes,
+          adminUserId: admin.id,
+        });
+
+        // Dispatch status update email to client
+        if (body.status) {
+          EmailService.sendReturnStatusUpdate(
+            updated,
+            body.status,
+            body.carrier,
+            body.trackingNumber
+          ).catch((err) => console.error("Return status update email failed:", err));
+        }
+
+        return success(updated);
+      }
+
       const updated = await ReturnsService.inspectReturnRequest({
         returnRequestId,
         disposition: body.disposition || "RESTOCK_SELLABLE",
@@ -2662,8 +2800,8 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
     if (path === "admin/vouchers") {
       const { code, discountAmount, discountPercent, isDiscoveryVoucher, expiresDays } = body || {};
-      const { randomUUID } = await import("node:crypto");
-      const voucherCode = (code || `MSC-VCH-${randomUUID().slice(0, 8)}`).trim().toUpperCase();
+      const voucherToken = Math.floor(100000 + Math.random() * 900000);
+      const voucherCode = (code || `MSC-VCH-${voucherToken}`).trim().toUpperCase();
       const expiresAt = expiresDays ? new Date(Date.now() + Number(expiresDays) * 24 * 60 * 60 * 1000) : null;
       const voucher = await prisma.voucher.create({
         data: {
@@ -2765,6 +2903,12 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         requestedAction: body.requestedAction || "REFUND",
         items: body.items || [],
       });
+
+      // Dispatch luxury 7-day guarantee return confirmation to client
+      EmailService.sendReturnRequestConfirmation(returnReq).catch((err) =>
+        console.error("Return confirmation email dispatch failed:", err)
+      );
+
       return success(returnReq, 201);
     }
 
@@ -2783,6 +2927,106 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         notes: body.notes,
       });
       return success(updated);
+    }
+
+    // 27b. Admin Return Refund & Store Credit Issuance
+    if (path === "admin/returns/refund") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const { returnRequestId, action, refundAmount, reason } = body || {};
+      if (!returnRequestId) return error("INVALID_INPUT", "returnRequestId is required", 400);
+
+      const result = await ReturnsService.issueReturnRefund({
+        returnRequestId,
+        action: action === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND",
+        refundAmount: refundAmount !== undefined ? Number(refundAmount) : undefined,
+        reason: reason || "Admin processed return resolution",
+        adminUserId: admin.id,
+      });
+
+      // Dispatch luxury refund / store credit voucher confirmation
+      const fullReturn = await prisma.returnRequest.findUnique({
+        where: { id: returnRequestId },
+        include: { customer: true, order: { include: { shippingAddress: true } } },
+      });
+      if (fullReturn) {
+        EmailService.sendRefundConfirmation(fullReturn, result).catch((err) =>
+          console.error("Refund confirmation email dispatch failed:", err)
+        );
+      }
+
+      return success(result);
+    }
+
+    // 27c. Admin Order Direct Refund / Store Credit
+    if (route[0] === "admin" && route[1] === "orders" && route[3] === "refund") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const orderId = route[2];
+      if (!orderId) return error("INVALID_INPUT", "orderId is required", 400);
+      const { action, refundAmount, reason } = body || {};
+
+      const activeReturn = await prisma.returnRequest.findFirst({
+        where: { orderId, status: { not: "COMPLETED" } },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (activeReturn) {
+        const result = await ReturnsService.issueReturnRefund({
+          returnRequestId: activeReturn.id,
+          action: action === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND",
+          refundAmount: refundAmount !== undefined ? Number(refundAmount) : undefined,
+          reason: reason || "Admin issued refund for order return",
+          adminUserId: admin.id,
+        });
+        return success(result);
+      }
+
+      if (action === "STORE_CREDIT") {
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
+        const creditAmount = refundAmount !== undefined ? Number(refundAmount) : Number(order.totalAmount);
+        const voucherToken = Math.floor(100000 + Math.random() * 900000);
+        const voucherCode = `CREDIT-ORD-${voucherToken}`;
+        const voucher = await prisma.voucher.create({
+          data: {
+            code: voucherCode,
+            discountAmount: creditAmount,
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          },
+        });
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: "REFUNDED" },
+        });
+        await LoyaltyService.reverseOrderPoints(orderId, "Store credit voucher issued").catch(() => null);
+        await prisma.businessEvent.create({
+          data: {
+            eventName: "ORDER_REFUNDED_STORE_CREDIT",
+            aggregateType: "Order",
+            aggregateId: orderId,
+            payload: { orderNumber: order.orderNumber, voucherCode, creditAmount },
+          },
+        });
+        return success({ refunded: true, action: "STORE_CREDIT", voucherCode, voucher });
+      }
+
+      // Card / Gateway Refund via PaymentService
+      const refundedPayment = await PaymentService.refundOrder(orderId, reason);
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "REFUNDED" },
+      });
+      await LoyaltyService.reverseOrderPoints(orderId, "Order refunded by admin").catch(() => null);
+      await prisma.businessEvent.create({
+        data: {
+          eventName: "ORDER_REFUNDED_ORIGINAL_PAYMENT",
+          aggregateType: "Order",
+          aggregateId: orderId,
+          payload: { refundAmount, reason },
+        },
+      });
+      return success({ refunded: true, action: "REFUND", payment: refundedPayment });
     }
 
     // 28. Admin Audit Log Record
@@ -2821,7 +3065,7 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
     let body: any = {};
     try {
       body = await req.json();
-    } catch {}
+    } catch { }
 
     const adminAuthError = await authorizeAdminRequest(req, route);
     if (adminAuthError) return adminAuthError;
@@ -2909,11 +3153,35 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
       return success(updated);
     }
 
-    // Admin Return Inspection & Restock (PATCH)
+    // Admin Return Workflow Status, Tracking & Inspection (PATCH)
     if (route[0] === "admin" && route[1] === "returns" && route[2]) {
       const admin = await verifyAdminAuth(req);
       if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
       const returnRequestId = route[2];
+
+      if (body.status || body.trackingNumber || body.carrier) {
+        const updated = await ReturnsService.updateReturnStatus({
+          returnRequestId,
+          status: body.status,
+          trackingNumber: body.trackingNumber,
+          carrier: body.carrier,
+          notes: body.notes,
+          adminUserId: admin.id,
+        });
+
+        // Dispatch status update email to client
+        if (body.status) {
+          EmailService.sendReturnStatusUpdate(
+            updated,
+            body.status,
+            body.carrier,
+            body.trackingNumber
+          ).catch((err) => console.error("Return status update email failed:", err));
+        }
+
+        return success(updated);
+      }
+
       const updated = await ReturnsService.inspectReturnRequest({
         returnRequestId,
         disposition: body.disposition || "RESTOCK_SELLABLE",
@@ -2950,8 +3218,8 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
 
     if (path === "admin/vouchers") {
       const { code, discountAmount, discountPercent, isDiscoveryVoucher, expiresDays } = body || {};
-      const { randomUUID } = await import("node:crypto");
-      const voucherCode = (code || `MSC-VCH-${randomUUID().slice(0, 8)}`).trim().toUpperCase();
+      const voucherToken = Math.floor(100000 + Math.random() * 900000);
+      const voucherCode = (code || `MSC-VCH-${voucherToken}`).trim().toUpperCase();
       const expiresAt = expiresDays ? new Date(Date.now() + Number(expiresDays) * 24 * 60 * 60 * 1000) : null;
       const voucher = await prisma.voucher.create({
         data: {
@@ -3053,6 +3321,12 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
         requestedAction: body.requestedAction || "REFUND",
         items: body.items || [],
       });
+
+      // Dispatch luxury 7-day guarantee return confirmation to client
+      EmailService.sendReturnRequestConfirmation(returnReq).catch((err) =>
+        console.error("Return confirmation email dispatch failed:", err)
+      );
+
       return success(returnReq, 201);
     }
 
@@ -3071,6 +3345,106 @@ export async function PATCH(req: NextRequest, props: { params: Promise<{ route: 
         notes: body.notes,
       });
       return success(updated);
+    }
+
+    // 27b. Admin Return Refund & Store Credit Issuance
+    if (path === "admin/returns/refund") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const { returnRequestId, action, refundAmount, reason } = body || {};
+      if (!returnRequestId) return error("INVALID_INPUT", "returnRequestId is required", 400);
+
+      const result = await ReturnsService.issueReturnRefund({
+        returnRequestId,
+        action: action === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND",
+        refundAmount: refundAmount !== undefined ? Number(refundAmount) : undefined,
+        reason: reason || "Admin processed return resolution",
+        adminUserId: admin.id,
+      });
+
+      // Dispatch luxury refund / store credit voucher confirmation
+      const fullReturn = await prisma.returnRequest.findUnique({
+        where: { id: returnRequestId },
+        include: { customer: true, order: { include: { shippingAddress: true } } },
+      });
+      if (fullReturn) {
+        EmailService.sendRefundConfirmation(fullReturn, result).catch((err) =>
+          console.error("Refund confirmation email dispatch failed:", err)
+        );
+      }
+
+      return success(result);
+    }
+
+    // 27c. Admin Order Direct Refund / Store Credit
+    if (route[0] === "admin" && route[1] === "orders" && route[3] === "refund") {
+      const admin = await verifyAdminAuth(req);
+      if (!admin) return error("UNAUTHORIZED", "Valid administrator authentication token is required", 401);
+      const orderId = route[2];
+      if (!orderId) return error("INVALID_INPUT", "orderId is required", 400);
+      const { action, refundAmount, reason } = body || {};
+
+      const activeReturn = await prisma.returnRequest.findFirst({
+        where: { orderId, status: { not: "COMPLETED" } },
+        orderBy: { createdAt: "desc" },
+      });
+
+      if (activeReturn) {
+        const result = await ReturnsService.issueReturnRefund({
+          returnRequestId: activeReturn.id,
+          action: action === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND",
+          refundAmount: refundAmount !== undefined ? Number(refundAmount) : undefined,
+          reason: reason || "Admin issued refund for order return",
+          adminUserId: admin.id,
+        });
+        return success(result);
+      }
+
+      if (action === "STORE_CREDIT") {
+        const order = await prisma.order.findUnique({ where: { id: orderId } });
+        if (!order) return error("ORDER_NOT_FOUND", "Order not found", 404);
+        const creditAmount = refundAmount !== undefined ? Number(refundAmount) : Number(order.totalAmount);
+        const voucherToken = Math.floor(100000 + Math.random() * 900000);
+        const voucherCode = `CREDIT-ORD-${voucherToken}`;
+        const voucher = await prisma.voucher.create({
+          data: {
+            code: voucherCode,
+            discountAmount: creditAmount,
+            expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
+          },
+        });
+        await prisma.order.update({
+          where: { id: orderId },
+          data: { status: "REFUNDED" },
+        });
+        await LoyaltyService.reverseOrderPoints(orderId, "Store credit voucher issued").catch(() => null);
+        await prisma.businessEvent.create({
+          data: {
+            eventName: "ORDER_REFUNDED_STORE_CREDIT",
+            aggregateType: "Order",
+            aggregateId: orderId,
+            payload: { orderNumber: order.orderNumber, voucherCode, creditAmount },
+          },
+        });
+        return success({ refunded: true, action: "STORE_CREDIT", voucherCode, voucher });
+      }
+
+      // Card / Gateway Refund via PaymentService
+      const refundedPayment = await PaymentService.refundOrder(orderId, reason);
+      await prisma.order.update({
+        where: { id: orderId },
+        data: { status: "REFUNDED" },
+      });
+      await LoyaltyService.reverseOrderPoints(orderId, "Order refunded by admin").catch(() => null);
+      await prisma.businessEvent.create({
+        data: {
+          eventName: "ORDER_REFUNDED_ORIGINAL_PAYMENT",
+          aggregateType: "Order",
+          aggregateId: orderId,
+          payload: { refundAmount, reason },
+        },
+      });
+      return success({ refunded: true, action: "REFUND", payment: refundedPayment });
     }
 
     // 28. Admin Audit Log Record
@@ -3130,7 +3504,7 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ route:
       let body: any = {};
       try {
         body = await req.json();
-      } catch {}
+      } catch { }
       const publicId = (url.searchParams.get("publicId") || body?.publicId) as string;
       if (!publicId) return error("INVALID_INPUT", "publicId is required", 400);
       const result = await CloudinaryService.deleteImage(publicId);

@@ -82,6 +82,21 @@ export class CatalogService {
       };
     }
 
+    if ((filters as any).collection || (filters as any).collectionSlug) {
+      const colFilter = String((filters as any).collectionSlug || (filters as any).collection).trim();
+      where.collections = {
+        some: {
+          collection: {
+            OR: [
+              { slug: colFilter },
+              { nameEn: { equals: colFilter, mode: "insensitive" } },
+              { nameAr: { equals: colFilter, mode: "insensitive" } },
+            ],
+          },
+        },
+      };
+    }
+
     if (gender) {
       where.gender = gender as GenderCategory;
     }

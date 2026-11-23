@@ -103,6 +103,7 @@ export const StorefrontOrderSchema = z.object({
   createdAt: z.string().optional(),
   updatedAt: z.string().optional(),
   events: z.array(z.any()).optional(),
+  returnRequests: z.array(z.any()).optional(),
   items: z.array(
     z.object({
       id: z.string(),

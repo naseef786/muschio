@@ -790,8 +790,8 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 uppercase tracking-wider font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="py-3 px-4">Name & Type</th>
@@ -880,8 +880,8 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 uppercase tracking-wider font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="py-3 px-4">Coupon Code</th>
@@ -962,8 +962,8 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 uppercase tracking-wider font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="py-3 px-4">Voucher Code</th>
@@ -1048,8 +1048,8 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 uppercase tracking-wider font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="py-3 px-4">Card Code</th>
@@ -1306,8 +1306,8 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </button>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs min-w-[640px]">
               <thead className="bg-neutral-50 dark:bg-neutral-800/50 text-neutral-500 uppercase tracking-wider font-semibold border-b border-neutral-200 dark:border-neutral-800">
                 <tr>
                   <th className="py-3 px-4">Date & Time</th>

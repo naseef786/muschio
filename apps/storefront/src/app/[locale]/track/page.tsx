@@ -98,6 +98,9 @@ export default function OrderTrackingPage(
       const json = await res.json();
       if (json.success && json.data) {
         setReturnSuccessData(json.data);
+        if (orderData?.orderNumber) {
+          void performLookup(orderData.orderNumber, undefined, true);
+        }
       } else {
         throw new Error(json.error?.message || "Failed to register return request");
       }
@@ -449,6 +452,185 @@ export default function OrderTrackingPage(
               >
                 ✕
               </button>
+            </div>
+          )}
+
+          {/* Active Return & RMA Reverse Logistics Card */}
+          {Array.isArray(orderData.returnRequests) && orderData.returnRequests.length > 0 && (
+            <div className="bg-gradient-to-br from-neutral-900 to-neutral-950 text-white border border-neutral-800 p-6 sm:p-8 rounded-sm space-y-6 shadow-xl">
+              <div className="flex flex-wrap items-center justify-between gap-4 border-b border-neutral-800 pb-5">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 text-xs text-amber-400 font-mono">
+                    <RotateCcw size={14} className="animate-pulse" />
+                    <span className="uppercase tracking-widest font-semibold text-[10px]">
+                      {c("WHITE-GLOVE REVERSE LOGISTICS & RETURN TRACKING", "تتبع مسار الإرجاع والتسليم العكسي")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-base sm:text-lg font-bold text-white">
+                      {orderData.returnRequests[0].returnNumber}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => copyText(orderData.returnRequests[0].returnNumber, "ref")}
+                      className="p-1 rounded text-neutral-400 hover:text-white transition-colors"
+                      title={c("Copy RMA reference", "نسخ رقم الاسترجاع")}
+                    >
+                      {copiedRef ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-neutral-400">
+                    {c(
+                      "7-Day Guarantee RMA Request initiated for this order.",
+                      "تم تسجيل طلب الاسترجاع بموجب ضمان التجربة لمدة 7 أيام.",
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {/* Status Badge */}
+                  <span
+                    className={`px-3 py-1.5 text-xs font-mono uppercase tracking-wider font-semibold rounded-none border ${
+                      orderData.returnRequests[0].status === "COMPLETED"
+                        ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/40"
+                        : orderData.returnRequests[0].status === "REJECTED"
+                        ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
+                        : orderData.returnRequests[0].status === "IN_TRANSIT" || orderData.returnRequests[0].status === "AUTHORIZED"
+                        ? "bg-blue-500/20 text-blue-400 border-blue-500/40"
+                        : "bg-amber-500/20 text-amber-400 border-amber-500/40"
+                    }`}
+                  >
+                    {orderData.returnRequests[0].status === "COMPLETED"
+                      ? c("RETURN COMPLETED & RESOLVED", "تم استكمال الاسترجاع والتسوية")
+                      : orderData.returnRequests[0].status === "REJECTED"
+                      ? c("RETURN REJECTED", "تم رفض طلب الاسترجاع")
+                      : orderData.returnRequests[0].status === "IN_TRANSIT"
+                      ? c("COURIER IN TRANSIT", "مندوب الشحن في الطريق للمستودع")
+                      : orderData.returnRequests[0].status === "AUTHORIZED"
+                      ? c("AUTHORIZED · PICKUP SCHEDULED", "تمت الموافقة · جاري جدولة الاستلام")
+                      : orderData.returnRequests[0].status === "RECEIVED_AT_WAREHOUSE"
+                      ? c("RECEIVED AT ATELIER", "تم الاستلام في الورشة للفحص")
+                      : c("REQUEST PENDING REVIEW", "طلب الاسترجاع قيد المراجعة")}
+                  </span>
+                </div>
+              </div>
+
+              {/* Reverse Logistics Timeline */}
+              {(() => {
+                const ret = orderData.returnRequests[0];
+                const retStatus = ret.status;
+                const retStep =
+                  retStatus === "COMPLETED"
+                    ? 4
+                    : retStatus === "RECEIVED_AT_WAREHOUSE"
+                    ? 3
+                    : retStatus === "IN_TRANSIT" || retStatus === "AUTHORIZED"
+                    ? 2
+                    : 1;
+
+                const retSteps = [
+                  { num: 1, titleEn: "RMA Initiated", titleAr: "تسجيل الطلب", descEn: "Request logged under 7-day guarantee", descAr: "تم تسجيل الطلب في النظام" },
+                  { num: 2, titleEn: "Courier Dispatch", titleAr: "مندوب الشحن", descEn: "Doorstep pickup and verification", descAr: "استلام المندوب للعبوة المغلفة" },
+                  { num: 3, titleEn: "Atelier Inspection", titleAr: "فحص الورشة", descEn: "Weight & integrity confirmation", descAr: "فحص سلامة العبوة والوزن" },
+                  { num: 4, titleEn: ret.requestedAction === "STORE_CREDIT" ? "Credit Issued" : "Refund Settled", titleAr: ret.requestedAction === "STORE_CREDIT" ? "رصيد المتجر" : "استرداد المبلغ", descEn: ret.requestedAction === "STORE_CREDIT" ? "Store voucher active" : "Reimbursed to payment method", descAr: ret.requestedAction === "STORE_CREDIT" ? "تم تفعيل كود الرصيد" : "تم تحويل المبلغ للبطاقة" },
+                ];
+
+                const reverseTracking =
+                  ret.trackingNumber ||
+                  `DXB-RET-${ret.returnNumber.replace(/[^0-9]/g, "").slice(-6) || "882104"}`;
+
+                return (
+                  <div className="space-y-6">
+                    {/* Stepper Bar */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {retSteps.map((st) => {
+                        const isDone = retStep >= st.num;
+                        const isCurr = retStep === st.num;
+                        return (
+                          <div
+                            key={st.num}
+                            className={`p-3 border rounded-none text-start space-y-1 ${
+                              isCurr
+                                ? "border-amber-400 bg-amber-400/10"
+                                : isDone
+                                ? "border-emerald-500/40 bg-emerald-500/10"
+                                : "border-neutral-800 bg-neutral-900/40 opacity-50"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between text-xs font-mono font-bold">
+                              <span>0{st.num}. {c(st.titleEn, st.titleAr)}</span>
+                              {isDone && <Check size={13} className="text-emerald-400" />}
+                            </div>
+                            <p className="text-[11px] text-neutral-400 leading-snug">
+                              {c(st.descEn, st.descAr)}
+                            </p>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Reverse Logistics Details Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-4 border-t border-neutral-800 text-xs font-sans">
+                      <div className="p-3 bg-neutral-900/80 border border-neutral-800 space-y-1">
+                        <span className="text-[10px] uppercase font-mono text-neutral-400 block">
+                          {c("REVERSE COURIER", "شركة الشحن العكسي")}
+                        </span>
+                        <div className="font-semibold text-white">
+                          {ret.carrier || "Muschio GCC Reverse Logistics"}
+                        </div>
+                        <div className="flex items-center gap-2 pt-1 font-mono text-[11px] text-amber-400">
+                          <span>{reverseTracking}</span>
+                          <button
+                            type="button"
+                            onClick={() => copyText(reverseTracking, "tracking")}
+                            className="text-neutral-400 hover:text-white"
+                            title={c("Copy reverse tracking", "نسخ رقم الشحنة العكسية")}
+                          >
+                            {copiedTracking ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-neutral-900/80 border border-neutral-800 space-y-1">
+                        <span className="text-[10px] uppercase font-mono text-neutral-400 block">
+                          {c("REQUESTED RESOLUTION", "طريقة التسوية المطلوبة")}
+                        </span>
+                        <div className="font-semibold text-white">
+                          {ret.requestedAction === "STORE_CREDIT"
+                            ? c("Store Credit Voucher (Valid 12M)", "رصيد متجر فاخر (صالح ١٢ شهر)")
+                            : c("Refund to Original Payment", "استرداد للبطاقة البنكية الأصلية")}
+                        </div>
+                        <div className="text-[11px] text-neutral-400">
+                          {c("Zero restocking fees on sealed flacons", "بدون أي رسوم استرجاع للعبوات السليمة")}
+                        </div>
+                      </div>
+
+                      <div className="p-3 bg-neutral-900/80 border border-neutral-800 space-y-1">
+                        <span className="text-[10px] uppercase font-mono text-neutral-400 block">
+                          {c("SETTLEMENT STATUS", "حالة التسوية المالية")}
+                        </span>
+                        <div className="font-semibold text-white">
+                          {ret.status === "COMPLETED" ? (
+                            <span className="text-emerald-400 flex items-center gap-1.5 font-mono">
+                              <CheckCircle2 size={13} />
+                              {ret.reason?.includes("CREDIT-RET-")
+                                ? c(`Voucher Issued: ${ret.reason.match(/CREDIT-RET-\d+/)?.[0] || "Active"}`, `تم إصدار القسيمة: ${ret.reason.match(/CREDIT-RET-\d+/)?.[0] || "فعالة"}`)
+                                : c("Refund Reconciled", "تم تحويل المبلغ")}
+                            </span>
+                          ) : (
+                            <span className="text-amber-400">
+                              {c("Pending Atelier Inspection", "بانتظار وصول وفحص العبوة")}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-[11px] text-neutral-400 truncate">
+                          {ret.reason ? ret.reason.split("|")[0].trim() : c("Sealed flacon guarantee", "ضمان العبوة المغلقة")}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
           )}
 

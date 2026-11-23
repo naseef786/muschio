@@ -94,6 +94,7 @@ export class ReviewsService {
    * Get approved reviews with customer metadata and ratings distribution for storefront PDP
    */
   static async getProductReviews(productId: string) {
+    await this.ensureDefaultReviews().catch(() => null);
     return prisma.review.findMany({
       where: { productId, status: "APPROVED" },
       orderBy: { createdAt: "desc" },

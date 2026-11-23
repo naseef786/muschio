@@ -14,6 +14,7 @@ export default async function ShopCatalogPage(
       brand?: string;
       tag?: string;
       tagSlug?: string;
+      collection?: string;
       page?: string;
       deal?: string;
     }>;
@@ -43,6 +44,7 @@ export default async function ShopCatalogPage(
           },
           notes: { include: { note: true } },
           tags: { include: { tag: true } },
+          collections: { include: { collection: true } },
         },
         orderBy: { createdAt: "desc" },
         take: 100,
@@ -94,6 +96,7 @@ export default async function ShopCatalogPage(
           colorHex: t.tag?.colorHex || t.colorHex || "#171717",
           isFeatured: Boolean(t.tag?.isFeatured ?? t.isFeatured),
         })),
+        collections: (p.collections || []).map((c: any) => c.collection?.slug || c.slug || ""),
         variants,
       };
     });

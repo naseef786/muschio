@@ -205,6 +205,8 @@ export default async function ProductPage(
       concentration: product.concentration,
       countryOfOrigin: product.origin,
       inStock,
+      ratingValue: Number(live.ratingAverage) > 0 ? Number(live.ratingAverage) : undefined,
+      reviewCount: (live.ratingCount && live.ratingCount > 0) ? live.ratingCount : undefined,
     },
     locale
   );

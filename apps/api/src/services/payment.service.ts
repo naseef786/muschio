@@ -73,7 +73,7 @@ function configured() {
     /^whsec_[A-Za-z0-9]+$/.test(process.env.STRIPE_WEBHOOK_SECRET || "") &&
     !/mock|replace/i.test(
       (process.env.STRIPE_SECRET_KEY || "") +
-        (process.env.STRIPE_WEBHOOK_SECRET || ""),
+      (process.env.STRIPE_WEBHOOK_SECRET || ""),
     )
   );
 }
@@ -287,14 +287,17 @@ export class PaymentService {
         success_url: request.returnUrl,
         cancel_url: request.cancelUrl,
         customer_email: order.guestEmail!,
-        client_reference_id: order.id,
+        client_reference_id: order.orderNumber,
         "metadata[orderId]": order.id,
+        "metadata[orderNumber]": order.orderNumber,
         "payment_intent_data[metadata][orderId]": order.id,
+        "payment_intent_data[metadata][orderNumber]": order.orderNumber,
+        "payment_intent_data[description]": `Muschio Order #${order.orderNumber}`,
         "line_items[0][price_data][currency]": order.currency.toLowerCase(),
         "line_items[0][price_data][unit_amount]": order.totalAmount
           .times(100)
           .toFixed(0),
-        "line_items[0][price_data][product_data][name]": `Muschio order ${order.orderNumber}`,
+        "line_items[0][price_data][product_data][name]": `Muschio Order #${order.orderNumber}`,
         "line_items[0][quantity]": "1",
         expires_at: String(
           Math.floor(Date.now() / 1000) + 2100,
@@ -345,10 +348,10 @@ export class PaymentService {
     }
 
     const sessionData = await sessionRes.json();
-    const orderId =
-      sessionData.metadata?.orderId || sessionData.client_reference_id;
+    const orderIdentifier =
+      sessionData.metadata?.orderId || sessionData.metadata?.orderNumber || sessionData.client_reference_id;
 
-    if (!orderId) {
+    if (!orderIdentifier) {
       throw new ApiError(404, "ORDER_NOT_FOUND", "No order associated with this Stripe session");
     }
 
@@ -363,8 +366,13 @@ export class PaymentService {
     const receiptUrl = pi?.charges?.data?.[0]?.receipt_url || sessionData.url || null;
 
     return await prisma.$transaction(async (tx) => {
-      const order = await tx.order.findUnique({
-        where: { id: orderId },
+      const order = await tx.order.findFirst({
+        where: {
+          OR: [
+            { id: orderIdentifier },
+            { orderNumber: orderIdentifier },
+          ],
+        },
         include: {
           items: true,
           shippingAddress: true,

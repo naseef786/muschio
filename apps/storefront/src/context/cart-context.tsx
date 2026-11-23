@@ -48,11 +48,18 @@ interface CartContextType {
   itemCount: number;
   cartDrawerOpen: boolean;
   setCartDrawerOpen: (open: boolean) => void;
+  freeShippingThreshold: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-export function CartProvider({ children }: { children: React.ReactNode }) {
+export function CartProvider({
+  children,
+  freeShippingThreshold = 500,
+}: {
+  children: React.ReactNode;
+  freeShippingThreshold?: number;
+}) {
   const [items, setItems] = useState<CartItemModel[]>([]);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -159,7 +166,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     (sum, item) => sum + item.price * item.quantity,
     0,
   );
-  const shipping = subtotal >= 500 || subtotal === 0 ? 0 : 35;
+  const shipping = subtotal >= freeShippingThreshold || subtotal === 0 ? 0 : 35;
   const total = subtotal + shipping;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -177,6 +184,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         itemCount,
         cartDrawerOpen,
         setCartDrawerOpen,
+        freeShippingThreshold,
       }}
     >
       {children}

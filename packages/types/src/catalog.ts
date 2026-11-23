@@ -217,6 +217,8 @@ export const ProductFilterSchema = z.object({
   accordSlug: z.string().optional(),
   tag: z.string().optional(),
   tagSlug: z.string().optional(),
+  collection: z.string().optional(),
+  collectionSlug: z.string().optional(),
   minPrice: z.coerce.number().optional(),
   maxPrice: z.coerce.number().optional(),
   inStock: z.coerce.boolean().optional(),

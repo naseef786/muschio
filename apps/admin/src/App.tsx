@@ -340,7 +340,7 @@ function usePersistentState<T>(key: string, initialValue: T): [T, React.Dispatch
           const sanitized = parsed.filter((it) => !isMockItem(it));
           try {
             localStorage.setItem(`muschio_admin_${key}`, JSON.stringify(sanitized));
-          } catch {}
+          } catch { }
           return sanitized as unknown as T;
         }
         return parsed;
@@ -403,7 +403,7 @@ export function App() {
     try {
       localStorage.removeItem("muschio_admin_auth");
       sessionStorage.removeItem("muschio_admin_auth");
-    } catch {}
+    } catch { }
     setAuthSession(null);
   }, []);
 
@@ -412,7 +412,7 @@ export function App() {
     try {
       localStorage.removeItem("muschio_admin_auth");
       sessionStorage.removeItem("muschio_admin_auth");
-    } catch {}
+    } catch { }
     setAuthSession(null);
   };
 
@@ -501,7 +501,7 @@ export function App() {
     itemName: "",
     warning: "",
     isDeleting: false,
-    onConfirm: async () => {},
+    onConfirm: async () => { },
   });
 
   // SAVE LOADING STATES FOR SECTIONS
@@ -739,38 +739,38 @@ export function App() {
         const dbProducts: ProductItem[] = prodRes.data.map((p: any) => {
           const variantsList: ProductVariantItem[] = Array.isArray(p.variants) && p.variants.length > 0
             ? p.variants.map((v: any, idx: number) => {
-                const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
-                const discPrice = v.discountPrice ? Number(v.discountPrice) : (v.compareAtPrice ? Number(v.price) : null);
-                return {
-                  id: v.id,
-                  sku: v.sku,
-                  volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
-                  volumeMl: v.volumeMl || 100,
-                  regularPrice: regPrice,
-                  originalPrice: regPrice,
-                  price: regPrice,
-                  discountPrice: discPrice,
-                  salePrice: discPrice,
-                  stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
-                  isDefault: v.isDefault ?? idx === 0,
-                  isSampleVial: Boolean(v.isSampleVial),
-                };
-              })
+              const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
+              const discPrice = v.discountPrice ? Number(v.discountPrice) : (v.compareAtPrice ? Number(v.price) : null);
+              return {
+                id: v.id,
+                sku: v.sku,
+                volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
+                volumeMl: v.volumeMl || 100,
+                regularPrice: regPrice,
+                originalPrice: regPrice,
+                price: regPrice,
+                discountPrice: discPrice,
+                salePrice: discPrice,
+                stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
+                isDefault: v.isDefault ?? idx === 0,
+                isSampleVial: Boolean(v.isSampleVial),
+              };
+            })
             : [
-                {
-                  id: `var-${p.id}`,
-                  sku: `SKU-${p.slug}`,
-                  volume: "100ml",
-                  volumeMl: 100,
-                  regularPrice: 1000,
-                  originalPrice: 1000,
-                  price: 1000,
-                  discountPrice: null,
-                  salePrice: null,
-                  stockQuantity: 20,
-                  isDefault: true,
-                },
-              ];
+              {
+                id: `var-${p.id}`,
+                sku: `SKU-${p.slug}`,
+                volume: "100ml",
+                volumeMl: 100,
+                regularPrice: 1000,
+                originalPrice: 1000,
+                price: 1000,
+                discountPrice: null,
+                salePrice: null,
+                stockQuantity: 20,
+                isDefault: true,
+              },
+            ];
           const defaultV = variantsList.find((v) => v.isDefault) || variantsList[0] || {
             sku: p.slug || "SKU-DEF",
             volumeMl: 100,
@@ -965,6 +965,8 @@ export function App() {
   const [enquirySearch, setEnquirySearch] = useState<string>("");
   const [isLiveActive, setIsLiveActive] = useState<boolean>(true);
   const lastPollTimeRef = useRef<string>(new Date(Date.now() - 60000).toISOString());
+  const pollerFailuresRef = useRef<number>(0);
+  const isPollingBusyRef = useRef<boolean>(false);
 
   // Web Audio API Luxury Ambient Chime Synthesizer
   const playLuxuryChime = (toneType: "order" | "cancel" | "enquiry" = "order") => {
@@ -1167,11 +1169,18 @@ export function App() {
                 return {
                   id: r.id,
                   number: r.returnNumber,
+                  orderId: r.orderId,
+                  orderNumber: r.order?.orderNumber || (r.orderId ? `MSC-ORD-${r.orderId.slice(-6).toUpperCase()}` : "MSC-ORD"),
                   customer: r.customer ? `${r.customer.firstName} ${r.customer.lastName || ""}`.trim() : "Client",
                   item: prodName,
+                  reason: r.reason,
+                  requestedAction: r.requestedAction || "REFUND",
+                  refundAmount: r.refundAmount || r.order?.totalAmount || null,
+                  trackingNumber: r.trackingNumber || `DXB-RET-${r.returnNumber?.slice(-6) || "882104"}`,
                   condition,
                   disposition,
                   status: r.status,
+                  rawOrder: r.order,
                   date: new Date(r.createdAt).toLocaleDateString("en-GB", {
                     month: "short",
                     day: "numeric",
@@ -1208,26 +1217,42 @@ export function App() {
     };
   }, [authSession?.token]);
 
-  // Real-time live poller (polls every 4.5 seconds)
+  // Real-time live poller (polls every 4.5 seconds with visibility checks & network backoff)
   useEffect(() => {
     if (!isLiveActive || !authSession?.token) return;
-    const timer = setInterval(async () => {
+
+    let isCancelled = false;
+
+    const executePoll = async () => {
+      if (isCancelled || isPollingBusyRef.current) return;
+      if (typeof document !== "undefined" && document.visibilityState !== "visible") return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) return;
+
+      const currentToken = authSessionRef.current?.token;
+      if (!currentToken) return;
+
+      isPollingBusyRef.current = true;
       try {
-        // Read the ref so a poll never keeps using a token captured by an old
-        // effect instance after login/session restoration.
-        const currentToken = authSessionRef.current?.token;
-        if (!currentToken) return;
         const res = await fetch(`/api/v1/admin/orders/live?since=${encodeURIComponent(lastPollTimeRef.current)}`, {
           cache: "no-store",
           headers: { Authorization: `Bearer ${currentToken}` },
         });
+
         if (res.status === 401) {
           console.warn("Live order polling was unauthorized; keeping the admin session active.");
+          pollerFailuresRef.current = 0;
           return;
         }
-        if (!res.ok) return;
+
+        if (!res.ok) {
+          pollerFailuresRef.current += 1;
+          return;
+        }
+
         const json = await res.json();
         if (!json.success || !json.data) return;
+
+        pollerFailuresRef.current = 0;
 
         const { events, orders: newOrders, counters, serverTime } = json.data;
         if (Array.isArray(events) && events.some((event: any) => typeof event.eventName === "string" && event.eventName.startsWith("ORDER_"))) {
@@ -1322,11 +1347,36 @@ export function App() {
           });
         }
       } catch {
-        // Silently continue
+        pollerFailuresRef.current += 1;
+      } finally {
+        isPollingBusyRef.current = false;
       }
+    };
+
+    const timer = setInterval(() => {
+      // If we experienced consecutive failures, back off to 15 seconds
+      if (pollerFailuresRef.current > 3 && Date.now() % 15000 > 4500) {
+        return;
+      }
+      void executePoll();
     }, 4500);
 
-    return () => clearInterval(timer);
+    const handleVisibilityOrOnline = () => {
+      if (document.visibilityState === "visible") {
+        pollerFailuresRef.current = 0;
+        void executePoll();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityOrOnline);
+    window.addEventListener("online", handleVisibilityOrOnline);
+
+    return () => {
+      isCancelled = true;
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", handleVisibilityOrOnline);
+      window.removeEventListener("online", handleVisibilityOrOnline);
+    };
   }, [isLiveActive, isAudioEnabled, authSession?.token, refreshDashboardMetrics]);
 
   // 4. RETURNS
@@ -1394,7 +1444,7 @@ export function App() {
         },
         body: JSON.stringify({ action, diff: res }),
       }).catch(() => null);
-    } catch {}
+    } catch { }
   };
 
   // Banner form state
@@ -1826,65 +1876,65 @@ export function App() {
     const rawVariants: any[] = Array.isArray(p.variants) && p.variants.length > 0 ? p.variants : [];
     const initialVariants: ProductVariantItem[] = rawVariants.length > 0
       ? rawVariants.map((v, i) => {
-          const rawBaseNum = Number(
-            v.basePrice ??
-            v.regularPrice ??
-            v.originalPrice ??
-            (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
-          ) || defaultPriceNum;
+        const rawBaseNum = Number(
+          v.basePrice ??
+          v.regularPrice ??
+          v.originalPrice ??
+          (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
+        ) || defaultPriceNum;
 
-          const rawSellingNum = Number(
-            v.price !== undefined && v.price !== null
-              ? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
-              : (v.discountPrice ?? rawBaseNum)
-          ) || rawBaseNum;
+        const rawSellingNum = Number(
+          v.price !== undefined && v.price !== null
+            ? (typeof v.price === "string" ? Number(v.price.replace(/[^0-9.]/g, "")) : v.price)
+            : (v.discountPrice ?? rawBaseNum)
+        ) || rawBaseNum;
 
-          const volNum = typeof v.volume === "number"
-            ? v.volume
-            : (v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
+        const volNum = typeof v.volume === "number"
+          ? v.volume
+          : (v.volumeMl || parseInt(String(v.volume || "100").replace(/[^0-9]/g, "") || "100", 10) || 100);
 
-          const stockNum = v.stock !== undefined
-            ? Number(v.stock)
-            : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : (p.stock || 20));
+        const stockNum = v.stock !== undefined
+          ? Number(v.stock)
+          : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : (p.stock || 20));
 
-          const wh = v.warehouse || p.warehouse || "DXB-MAIN";
+        const wh = v.warehouse || p.warehouse || "DXB-MAIN";
 
-          return {
-            id: v.id || `var-${p.id}-${i}-${Date.now()}`,
-            sku: v.sku || (i === 0 ? (pSku || `SKU-${volNum}`) : `${pSku || "SKU"}-${volNum}`),
-            volume: volNum,
-            volumeMl: volNum,
-            basePrice: rawBaseNum,
-            regularPrice: rawBaseNum,
-            originalPrice: rawBaseNum,
-            price: rawSellingNum,
-            discountPrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
-            salePrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
-            stock: stockNum,
-            stockQuantity: stockNum,
-            warehouse: wh,
-            isDefault: v.isDefault !== undefined ? Boolean(v.isDefault) : i === 0,
-            isSampleVial: Boolean(v.isSampleVial),
-          };
-        })
+        return {
+          id: v.id || `var-${p.id}-${i}-${Date.now()}`,
+          sku: v.sku || (i === 0 ? (pSku || `SKU-${volNum}`) : `${pSku || "SKU"}-${volNum}`),
+          volume: volNum,
+          volumeMl: volNum,
+          basePrice: rawBaseNum,
+          regularPrice: rawBaseNum,
+          originalPrice: rawBaseNum,
+          price: rawSellingNum,
+          discountPrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
+          salePrice: rawSellingNum < rawBaseNum ? rawSellingNum : null,
+          stock: stockNum,
+          stockQuantity: stockNum,
+          warehouse: wh,
+          isDefault: v.isDefault !== undefined ? Boolean(v.isDefault) : i === 0,
+          isSampleVial: Boolean(v.isSampleVial),
+        };
+      })
       : [
-          {
-            id: `var-${p.id}-1`,
-            sku: pSku || "AMO-INT53-100",
-            volume: pVolumeMl,
-            volumeMl: pVolumeMl,
-            basePrice: defaultPriceNum,
-            regularPrice: defaultPriceNum,
-            originalPrice: defaultPriceNum,
-            price: defaultPriceNum,
-            discountPrice: null,
-            salePrice: null,
-            stock: p.stock !== undefined ? Number(p.stock) : 20,
-            stockQuantity: p.stock !== undefined ? Number(p.stock) : 20,
-            warehouse: p.warehouse || "DXB-MAIN",
-            isDefault: true,
-          },
-        ];
+        {
+          id: `var-${p.id}-1`,
+          sku: pSku || "AMO-INT53-100",
+          volume: pVolumeMl,
+          volumeMl: pVolumeMl,
+          basePrice: defaultPriceNum,
+          regularPrice: defaultPriceNum,
+          originalPrice: defaultPriceNum,
+          price: defaultPriceNum,
+          discountPrice: null,
+          salePrice: null,
+          stock: p.stock !== undefined ? Number(p.stock) : 20,
+          stockQuantity: p.stock !== undefined ? Number(p.stock) : 20,
+          warehouse: p.warehouse || "DXB-MAIN",
+          isDefault: true,
+        },
+      ];
 
     setProductForm({
       sku: pSku,
@@ -2730,29 +2780,29 @@ export function App() {
       const saved = result.data;
       const savedVariants: ProductVariantItem[] = Array.isArray(saved?.variants)
         ? saved.variants.map((variant: any) => {
-            const regularPrice = variant.compareAtPrice
-              ? Number(variant.compareAtPrice)
-              : Number(variant.price) || 0;
-            const sellingPrice = variant.discountPrice
-              ? Number(variant.discountPrice)
-              : Number(variant.price) || regularPrice;
-            return {
-              id: variant.id,
-              sku: variant.sku,
-              volume: variant.volume || `${variant.volumeMl || 100}ml`,
-              volumeMl: variant.volumeMl || 100,
-              regularPrice,
-              originalPrice: regularPrice,
-              basePrice: regularPrice,
-              price: sellingPrice,
-              discountPrice: sellingPrice < regularPrice ? sellingPrice : null,
-              stock: variant.inventory?.sealedQuantity ?? 0,
-              stockQuantity: variant.inventory?.sealedQuantity ?? 0,
-              warehouse: variant.warehouse || "DXB-MAIN",
-              isDefault: Boolean(variant.isDefault),
-              isSampleVial: Boolean(variant.isSampleVial),
-            };
-          })
+          const regularPrice = variant.compareAtPrice
+            ? Number(variant.compareAtPrice)
+            : Number(variant.price) || 0;
+          const sellingPrice = variant.discountPrice
+            ? Number(variant.discountPrice)
+            : Number(variant.price) || regularPrice;
+          return {
+            id: variant.id,
+            sku: variant.sku,
+            volume: variant.volume || `${variant.volumeMl || 100}ml`,
+            volumeMl: variant.volumeMl || 100,
+            regularPrice,
+            originalPrice: regularPrice,
+            basePrice: regularPrice,
+            price: sellingPrice,
+            discountPrice: sellingPrice < regularPrice ? sellingPrice : null,
+            stock: variant.inventory?.sealedQuantity ?? 0,
+            stockQuantity: variant.inventory?.sealedQuantity ?? 0,
+            warehouse: variant.warehouse || "DXB-MAIN",
+            isDefault: Boolean(variant.isDefault),
+            isSampleVial: Boolean(variant.isSampleVial),
+          };
+        })
         : product.variants || [];
       const defaultVariant = savedVariants.find((variant) => variant.isDefault) || savedVariants[0];
 
@@ -2828,25 +2878,25 @@ export function App() {
       prev.map((o) =>
         o.id === orderId || o.number === orderId
           ? {
-              ...o,
-              status: nextStatus,
-              ...(trackingNumber
-                ? {
-                    fulfillments: [
+            ...o,
+            status: nextStatus,
+            ...(trackingNumber
+              ? {
+                fulfillments: [
+                  {
+                    ...(o.fulfillments?.[0] || {}),
+                    shipments: [
                       {
-                        ...(o.fulfillments?.[0] || {}),
-                        shipments: [
-                          {
-                            carrier: carrier || "DHL_EXPRESS",
-                            trackingNumber,
-                            status: "IN_TRANSIT",
-                          },
-                        ],
+                        carrier: carrier || "DHL_EXPRESS",
+                        trackingNumber,
+                        status: "IN_TRANSIT",
                       },
                     ],
-                  }
-                : {}),
-            }
+                  },
+                ],
+              }
+              : {}),
+          }
           : o
       )
     );
@@ -2860,19 +2910,19 @@ export function App() {
         status: nextStatus,
         ...(trackingNumber
           ? {
-              fulfillments: [
-                {
-                  ...(prev?.fulfillments?.[0] || {}),
-                  shipments: [
-                    {
-                      carrier: carrier || "DHL_EXPRESS",
-                      trackingNumber,
-                      status: "IN_TRANSIT",
-                    },
-                  ],
-                },
-              ],
-            }
+            fulfillments: [
+              {
+                ...(prev?.fulfillments?.[0] || {}),
+                shipments: [
+                  {
+                    carrier: carrier || "DHL_EXPRESS",
+                    trackingNumber,
+                    status: "IN_TRANSIT",
+                  },
+                ],
+              },
+            ],
+          }
           : {}),
       }));
     }
@@ -2890,7 +2940,7 @@ export function App() {
         },
         body: JSON.stringify({
           orderId,
-          orderNumber: targetOrder?.number || targetOrder?.id,
+          orderNumber: targetOrder?.orderNumber || targetOrder?.number || targetOrder?.id,
           status: nextStatus,
           trackingNumber,
           carrier,
@@ -2899,11 +2949,12 @@ export function App() {
       });
       if (res.ok) {
         void refreshDashboardMetrics();
+        const displayOrderRef = targetOrder?.orderNumber || targetOrder?.number || orderId;
         if (nextStatus === "CANCELLED") {
           playLuxuryChime("cancel");
-          addToast("cancel", "Order Cancelled", `Order ${orderId} status set to CANCELLED.`);
+          addToast("cancel", "Order Cancelled", `Order ${displayOrderRef} status set to CANCELLED.`);
         } else {
-          addToast("order", "Status Updated", `Order ${orderId} set to ${nextStatus}`);
+          addToast("order", "Status Updated", `Order ${displayOrderRef} set to ${nextStatus}`);
         }
       } else {
         const errJson = await res.json().catch(() => null);
@@ -2986,6 +3037,66 @@ export function App() {
       addToast("return", "Return Inspection Completed", `Disposition set to ${disposition}`);
     } catch (err) {
       console.warn("Could not save return inspection to server:", err);
+    }
+  };
+
+  const handleIssueReturnRefund = async (returnId: string, action: "REFUND" | "STORE_CREDIT") => {
+    try {
+      const token = authSession?.token;
+      const res = await fetch("/api/v1/admin/returns/refund", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          returnRequestId: returnId,
+          action,
+          reason: `Admin approved ${action === "STORE_CREDIT" ? "store credit voucher" : "payment refund"} for RMA`,
+        }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setReturns((prev) =>
+          prev.map((r) =>
+            r.id === returnId ? { ...r, status: "COMPLETED", disposition: "RESTOCK_SELLABLE" } : r
+          )
+        );
+        addAuditLog("RETURN_REFUND_ISSUED", `${returnId} action=${action} voucher=${json.data?.voucherCode || "N/A"}`);
+        addToast("return", "Refund Resolution Completed", action === "STORE_CREDIT" ? `Store credit voucher issued: ${json.data?.voucherCode || ""}` : "Payment refund processed via gateway");
+      } else {
+        throw new Error(json.error?.message || "Failed to process refund");
+      }
+    } catch (err: any) {
+      console.error("Failed to issue refund:", err);
+      addToast("return", "Refund Failed", err?.message || "Could not process refund");
+    }
+  };
+
+  const handleAdvanceReturnStatus = async (returnId: string, newStatus: string) => {
+    try {
+      const token = authSession?.token;
+      const res = await fetch(`/api/v1/admin/returns/${returnId}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setReturns((prev) =>
+          prev.map((r) => (r.id === returnId ? { ...r, status: newStatus } : r))
+        );
+        addAuditLog("RETURN_STATUS_UPDATED", `${returnId} status=${newStatus}`);
+        addToast("return", "Return Status Updated", `Workflow advanced to ${newStatus}`);
+      } else {
+        throw new Error(json.error?.message || "Failed to update return status");
+      }
+    } catch (err: any) {
+      console.error("Failed to advance return status:", err);
+      addToast("return", "Status Update Failed", err?.message || "Could not update status");
     }
   };
 
@@ -3121,22 +3232,21 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen md:h-screen md:overflow-hidden ${
-        adminTheme === "light" ? "bg-neutral-100 text-neutral-900" : "bg-black text-white"
-      } flex flex-col md:flex-row font-sans antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black`}
+      className={`min-h-screen md:h-screen md:overflow-hidden ${adminTheme === "light" ? "bg-neutral-100 text-neutral-900" : "bg-black text-white"
+        } flex flex-col md:flex-row font-sans antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black`}
     >
       {/* MOBILE TOP NAVIGATION BAR (< md) */}
-      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3 bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
-        <div className="flex items-center gap-3">
+      <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-3 sm:px-4 py-2.5 bg-white dark:bg-black border-b border-neutral-200 dark:border-neutral-800 shadow-sm">
+        <div className="flex items-center gap-2.5">
           <button
             type="button"
             onClick={() => setIsMobileNavOpen(true)}
             className="p-1.5 -ms-1 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
             aria-label="Open Navigation Menu"
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white">MUSCHIO</span>
             <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black font-mono">
               Admin
@@ -3144,27 +3254,43 @@ export function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          {/* Quick Add Banner Shortcut for Mobile Viewport */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          {/* Live Sync Status Toggle */}
           <button
             type="button"
-            onClick={handleOpenAddBanner}
-            className="px-2.5 py-1 text-xs rounded bg-black text-white dark:bg-white dark:text-black flex items-center gap-1 font-medium shadow-sm transition-colors shrink-0"
-            title="Add New Campaign Banner"
+            onClick={() => setIsLiveActive(!isLiveActive)}
+            title={isLiveActive ? "Real-time sync active (Tap to pause)" : "Sync paused (Tap to resume)"}
+            className="p-2 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
           >
-            <Plus size={13} />
-            <span>Banner</span>
+            <span className="relative flex h-2 w-2">
+              {isLiveActive && (
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              )}
+              <span className={`relative inline-flex rounded-full h-2 w-2 ${isLiveActive ? "bg-emerald-500" : "bg-neutral-400"}`}></span>
+            </span>
           </button>
-          <span className="text-xs font-medium text-neutral-600 dark:text-neutral-400 capitalize hidden xs:inline">
-            {TAB_TITLES[activeTab]}
-          </span>
+
+          {/* Audio Chime */}
           <button
+            type="button"
+            onClick={() => setIsAudioEnabled(!isAudioEnabled)}
+            title={isAudioEnabled ? "Audio chimes active" : "Audio muted"}
+            className="p-1.5 rounded-md border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+          >
+            {isAudioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
+          </button>
+
+          {/* Theme Toggle */}
+          <button
+            type="button"
             onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
-            className="px-2 py-1 text-xs rounded border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+            className="px-2 py-1 text-[10px] rounded border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
             title="Toggle Light / Dark"
           >
             {adminTheme === "light" ? "DARK" : "LIGHT"}
           </button>
+
+          {/* Storefront Link */}
           <a
             href="/"
             target="_blank"
@@ -3172,7 +3298,7 @@ export function App() {
             className="p-1.5 rounded text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
             title="Open Live Storefront"
           >
-            <ExternalLink size={16} />
+            <ExternalLink size={15} />
           </a>
         </div>
       </header>
@@ -3188,11 +3314,9 @@ export function App() {
 
       {/* SIDEBAR NAVIGATION (Drawer on Mobile, Sticky Pinned on Desktop) */}
       <aside
-        className={`fixed inset-y-0 start-0 z-50 ${
-          isSidebarCollapsed ? "md:w-20" : "md:w-64"
-        } w-72 max-w-[85vw] h-[100dvh] max-h-[100dvh] md:h-screen md:max-h-screen md:sticky md:top-0 md:self-start bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 overflow-hidden transform transition-all duration-300 ease-in-out md:translate-x-0 ${
-          isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
-        }`}
+        className={`fixed inset-y-0 start-0 z-50 ${isSidebarCollapsed ? "md:w-20" : "md:w-64"
+          } w-72 max-w-[85vw] h-[100dvh] max-h-[100dvh] md:h-screen md:max-h-screen md:sticky md:top-0 md:self-start bg-white dark:bg-black border-e border-neutral-200 dark:border-neutral-800 flex flex-col shrink-0 overflow-hidden transform transition-all duration-300 ease-in-out md:translate-x-0 ${isMobileNavOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full md:translate-x-0"
+          }`}
       >
         {/* 1. Header (Brand Logo & Collapse/Close Controls) - Fixed at top, never scrolls */}
         <div className={`shrink-0 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black ${isSidebarCollapsed ? "p-3" : "px-4 py-3.5"}`}>
@@ -3286,13 +3410,11 @@ export function App() {
                     setIsMobileNavOpen(false);
                   }}
                   title={`${item.label}${item.count !== undefined ? ` (${item.count}${isServerTotal ? " total" : ""})` : ""}${isServerTotal && countsStatus === "stale" ? " — count may be out of date" : ""}`}
-                  className={`w-full shrink-0 flex items-center ${
-                    showText ? "justify-between px-3 py-2" : "justify-center px-2 py-2"
-                  } rounded-lg text-xs font-medium transition-all ${
-                    isActive
+                  className={`w-full shrink-0 flex items-center ${showText ? "justify-between px-3 py-2" : "justify-center px-2 py-2"
+                    } rounded-lg text-xs font-medium transition-all ${isActive
                       ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
                       : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                  }`}
+                    }`}
                 >
                   <span className={`flex items-center min-w-0 ${showText ? "gap-2.5" : "justify-center"}`}>
                     <div className="relative flex items-center justify-center shrink-0">
@@ -3307,11 +3429,10 @@ export function App() {
                   </span>
                   {showText && showCount && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${
-                        isActive
-                          ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
-                          : "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800"
-                      }`}
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${isActive
+                        ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
+                        : "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800"
+                        }`}
                     >
                       {item.count}
                     </span>
@@ -3405,6 +3526,15 @@ export function App() {
             >
               {isSidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
             </button>
+            <button
+              type="button"
+              onClick={() => setIsMobileNavOpen(true)}
+              className="flex md:hidden p-2 rounded-md border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
+              title="Open Navigation"
+              aria-label="Open Navigation"
+            >
+              <Menu size={18} />
+            </button>
             <div>
               <h1 className="font-serif text-2xl font-light text-neutral-900 dark:text-white capitalize">
                 {TAB_TITLES[activeTab] || activeTab}
@@ -3420,11 +3550,10 @@ export function App() {
             <button
               onClick={() => setIsLiveActive(!isLiveActive)}
               title={isLiveActive ? "Live sync active (Click to pause)" : "Live sync paused (Click to resume)"}
-              className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-[11px] font-mono transition-colors ${
-                isLiveActive
-                  ? "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
-                  : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500"
-              }`}
+              className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-[11px] font-mono transition-colors ${isLiveActive
+                ? "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
+                : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500"
+                }`}
             >
               <span className="relative flex h-2 w-2">
                 {isLiveActive && (
@@ -3439,11 +3568,10 @@ export function App() {
             <button
               onClick={() => setIsAudioEnabled(!isAudioEnabled)}
               title={isAudioEnabled ? "Audio chimes active (Click to mute)" : "Audio muted (Click to enable luxury chime)"}
-              className={`p-2 border rounded-md transition-colors ${
-                isAudioEnabled
-                  ? "bg-white dark:bg-black border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white"
-                  : "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-400"
-              }`}
+              className={`p-2 border rounded-md transition-colors ${isAudioEnabled
+                ? "bg-white dark:bg-black border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white"
+                : "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-400"
+                }`}
             >
               {isAudioEnabled ? <Volume2 size={15} /> : <VolumeX size={15} />}
             </button>
@@ -3469,7 +3597,7 @@ export function App() {
 
               {/* Notification Popover */}
               {isNotificationOpen && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-lg shadow-2xl z-50 overflow-hidden font-sans">
+                <div className="absolute right-0 mt-2 w-[calc(100vw-2rem)] max-w-sm sm:w-96 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 rounded-lg shadow-2xl z-50 overflow-hidden font-sans">
                   <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-900">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-xs text-neutral-900 dark:text-white">Live Activity Stream</span>
@@ -3504,19 +3632,17 @@ export function App() {
                         return (
                           <div
                             key={evt.id}
-                            className={`p-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900 ${
-                              !evt.read ? "bg-neutral-50/50 dark:bg-neutral-900/50" : ""
-                            }`}
+                            className={`p-3 transition-colors hover:bg-neutral-50 dark:hover:bg-neutral-900 ${!evt.read ? "bg-neutral-50/50 dark:bg-neutral-900/50" : ""
+                              }`}
                           >
                             <div className="flex items-start justify-between gap-2">
                               <span
-                                className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded font-mono ${
-                                  isCancel
-                                    ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
-                                    : isOrder
+                                className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded font-mono ${isCancel
+                                  ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
+                                  : isOrder
                                     ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
                                     : "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                                }`}
+                                  }`}
                               >
                                 {evt.eventName.replace("_", " ")}
                               </span>
@@ -3556,9 +3682,8 @@ export function App() {
               title="Toggle Monochromatic Black & White Theme"
             >
               <span
-                className={`w-2 h-2 rounded-full border border-neutral-400 ${
-                  adminTheme === "light" ? "bg-white" : "bg-black"
-                }`}
+                className={`w-2 h-2 rounded-full border border-neutral-400 ${adminTheme === "light" ? "bg-white" : "bg-black"
+                  }`}
               />
               <span className="capitalize">{adminTheme} (B&W)</span>
             </button>
@@ -3999,171 +4124,170 @@ export function App() {
                     </tr>
                   ) : (
                     paginatedAdminProducts.map((p) => (
-                    <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shrink-0 flex items-center justify-center p-0.5">
-                            {p.imageUrl ? (
-                              <img
-                                src={p.imageUrl}
-                                alt={p.name}
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              <Package size={16} className="text-neutral-400" />
-                            )}
+                      <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shrink-0 flex items-center justify-center p-0.5">
+                              {p.imageUrl ? (
+                                <img
+                                  src={p.imageUrl}
+                                  alt={p.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <Package size={16} className="text-neutral-400" />
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
+                              {p.nameAr && (
+                                <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
+                                  {p.nameAr}
+                                </span>
+                              )}
+                              <span className="text-neutral-400 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                              {p.tags && p.tags.length > 0 && (
+                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                  {p.tags.slice(0, 3).map((tg) => (
+                                    <span
+                                      key={tg.id || tg.slug}
+                                      className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+                                    >
+                                      {tg.colorHex && (
+                                        <span
+                                          className="w-1.5 h-1.5 rounded-full"
+                                          style={{ backgroundColor: tg.colorHex }}
+                                        />
+                                      )}
+                                      <span>{tg.nameEn}</span>
+                                    </span>
+                                  ))}
+                                  {p.tags.length > 3 && (
+                                    <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
-                            {p.nameAr && (
-                              <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
-                                {p.nameAr}
-                              </span>
-                            )}
-                            <span className="text-neutral-400 font-mono text-[11px] block mt-0.5">{p.sku}</span>
-                            {p.tags && p.tags.length > 0 && (
-                              <div className="flex flex-wrap items-center gap-1 mt-1">
-                                {p.tags.slice(0, 3).map((tg) => (
-                                  <span
-                                    key={tg.id || tg.slug}
-                                    className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
-                                  >
-                                    {tg.colorHex && (
-                                      <span
-                                        className="w-1.5 h-1.5 rounded-full"
-                                        style={{ backgroundColor: tg.colorHex }}
-                                      />
-                                    )}
-                                    <span>{tg.nameEn}</span>
-                                  </span>
-                                ))}
-                                {p.tags.length > 3 && (
-                                  <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
-                                )}
-                              </div>
-                            )}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-400">/product/</span>
+                            <span className="text-emerald-500 font-medium">{p.slug}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px]">
-                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                          <span className="text-neutral-400">/product/</span>
-                          <span className="text-emerald-500 font-medium">{p.slug}</span>
-                        </div>
-                        <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
-                          {p.concentration || "Extrait de Parfum"}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <button
-                          onClick={() => {
-                            setActiveTab("brands");
-                            setBrandSearch(p.brand);
-                          }}
-                          className="text-neutral-900 dark:text-neutral-100 font-medium hover:text-accent hover:underline flex items-center gap-1"
-                          title="View brand details"
-                        >
-                          <span>{p.brand}</span>
-                          <Award size={11} className="text-amber-400" />
-                        </button>
-                        <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono mt-0.5">
-                          {p.scentFamily || "Woody Amber"}
-                        </span>
-                        {p.perfumer && (
-                          <span className="text-[10px] text-amber-500 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
-                            <Sparkles size={10} className="text-amber-400 shrink-0" />
-                            <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
+                          <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
+                            {p.concentration || "Extrait de Parfum"}
                           </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 text-[11px]">
-                        <div className="space-y-0.5">
-                          <span className="text-neutral-700 dark:text-neutral-300 block">
-                            Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <button
+                            onClick={() => {
+                              setActiveTab("brands");
+                              setBrandSearch(p.brand);
+                            }}
+                            className="text-neutral-900 dark:text-neutral-100 font-medium hover:text-accent hover:underline flex items-center gap-1"
+                            title="View brand details"
+                          >
+                            <span>{p.brand}</span>
+                            <Award size={11} className="text-amber-400" />
+                          </button>
+                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono mt-0.5">
+                            {p.scentFamily || "Woody Amber"}
                           </span>
-                          {p.topNotes && p.topNotes.length > 0 && (
-                            <span className="text-neutral-400 text-[10px] block truncate max-w-xs">
-                              Opening: {p.topNotes.slice(0, 2).join(", ")}
+                          {p.perfumer && (
+                            <span className="text-[10px] text-amber-500 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
+                              <Sparkles size={10} className="text-amber-400 shrink-0" />
+                              <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
                             </span>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono">
-                        <div className="font-semibold text-neutral-900 dark:text-white">{p.price}</div>
-                        {p.variants && p.variants.length > 0 ? (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {p.variants.map((v, i) => {
-                              const orig = Number(v.regularPrice ?? v.price);
-                              const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
-                              return (
-                                <span
-                                  key={v.id || i}
-                                  className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${
-                                    v.isDefault
+                        </td>
+                        <td className="py-3.5 px-4 text-[11px]">
+                          <div className="space-y-0.5">
+                            <span className="text-neutral-700 dark:text-neutral-300 block">
+                              Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
+                            </span>
+                            {p.topNotes && p.topNotes.length > 0 && (
+                              <span className="text-neutral-400 text-[10px] block truncate max-w-xs">
+                                Opening: {p.topNotes.slice(0, 2).join(", ")}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono">
+                          <div className="font-semibold text-neutral-900 dark:text-white">{p.price}</div>
+                          {p.variants && p.variants.length > 0 ? (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {p.variants.map((v, i) => {
+                                const orig = Number(v.regularPrice ?? v.price);
+                                const hasDisc = v.discountPrice && Number(v.discountPrice) < orig;
+                                return (
+                                  <span
+                                    key={v.id || i}
+                                    className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${v.isDefault
                                       ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40"
                                       : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700"
-                                  }`}
-                                  title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
-                                >
-                                  {v.volume}
-                                  {hasDisc && <span className="ms-0.5 text-emerald-500 font-bold">%</span>}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium block">
-                          {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
-                        </span>
-                        {p.variants && p.variants.length > 1 && (
-                          <span className="text-neutral-500 text-[10px] block">
-                            Total: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)} flacons
+                                      }`}
+                                    title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
+                                  >
+                                    {v.volume}
+                                    {hasDisc && <span className="ms-0.5 text-emerald-500 font-bold">%</span>}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium block">
+                            {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
                           </span>
-                        )}
-                        <span className="text-purple-500 dark:text-purple-400 text-[11px] block mt-0.5">
-                          +{p.testerStock} testers
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
-                          <CheckCircle2 size={11} className="text-emerald-500" />
-                          <span>SEO Ready</span>
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEditProduct(p)}
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Edit Product"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <a
-                            href={`/en/product/${p.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="View Storefront Page"
-                          >
-                            <ExternalLink size={14} />
-                          </a>
-                          <button
-                            onClick={() => handleDeleteProduct(p.id, p.name)}
-                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Delete Product"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                          {p.variants && p.variants.length > 1 && (
+                            <span className="text-neutral-500 text-[10px] block">
+                              Total: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)} flacons
+                            </span>
+                          )}
+                          <span className="text-purple-500 dark:text-purple-400 text-[11px] block mt-0.5">
+                            +{p.testerStock} testers
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
+                            <CheckCircle2 size={11} className="text-emerald-500" />
+                            <span>SEO Ready</span>
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEditProduct(p)}
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Edit Product"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <a
+                              href={`/en/product/${p.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="View Storefront Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteProduct(p.id, p.name)}
+                              className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -4340,7 +4464,7 @@ export function App() {
                         </span>
                         <span className="text-[10px] text-neutral-500 font-mono">Storefront: Maison & Perfumer Details</span>
                       </div>
-                      
+
                       <div>
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">
@@ -4424,11 +4548,10 @@ export function App() {
                                   setProductForm({ ...productForm, perfumer: updated });
                                 }}
                                 disabled={isAlreadyAdded}
-                                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${
-                                  isAlreadyAdded
-                                    ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border border-neutral-200 dark:border-neutral-700 cursor-default"
-                                    : "bg-white dark:bg-neutral-900 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700"
-                                }`}
+                                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${isAlreadyAdded
+                                  ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border border-neutral-200 dark:border-neutral-700 cursor-default"
+                                  : "bg-white dark:bg-neutral-900 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700"
+                                  }`}
                               >
                                 {isAlreadyAdded ? `✓ ${perfumerSuggestion}` : `+ ${perfumerSuggestion}`}
                               </button>
@@ -4569,8 +4692,8 @@ export function App() {
                               const currentBase = v.basePrice !== undefined && v.basePrice !== null
                                 ? (typeof v.basePrice === "number" ? v.basePrice : (Number(String(v.basePrice).replace(/[^0-9.]/g, "")) || ""))
                                 : (v.regularPrice !== undefined && v.regularPrice !== null
-                                    ? (typeof v.regularPrice === "number" ? v.regularPrice : (Number(String(v.regularPrice).replace(/[^0-9.]/g, "")) || ""))
-                                    : "");
+                                  ? (typeof v.regularPrice === "number" ? v.regularPrice : (Number(String(v.regularPrice).replace(/[^0-9.]/g, "")) || ""))
+                                  : "");
                               const currentStock = v.stock !== undefined && v.stock !== null
                                 ? Number(v.stock)
                                 : (v.stockQuantity !== undefined ? Number(v.stockQuantity) : 0);
@@ -4578,9 +4701,8 @@ export function App() {
                               return (
                                 <tr
                                   key={v.id || index}
-                                  className={`transition-colors ${
-                                    v.isDefault ? "bg-amber-500/10 hover:bg-amber-500/15" : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
-                                  }`}
+                                  className={`transition-colors ${v.isDefault ? "bg-amber-500/10 hover:bg-amber-500/15" : "hover:bg-neutral-50 dark:hover:bg-neutral-900"
+                                    }`}
                                 >
                                   {/* Volume (ml) */}
                                   <td className="p-2.5">
@@ -4642,13 +4764,12 @@ export function App() {
                                           };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className={`w-32 bg-white dark:bg-neutral-900 border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${
-                                          isOverpriced
-                                            ? "border-rose-500 text-rose-600 dark:text-rose-300 ring-1 ring-rose-500/30"
-                                            : isDiscounted
+                                        className={`w-32 bg-white dark:bg-neutral-900 border px-2.5 py-1.5 rounded text-xs font-mono focus:outline-none ${isOverpriced
+                                          ? "border-rose-500 text-rose-600 dark:text-rose-300 ring-1 ring-rose-500/30"
+                                          : isDiscounted
                                             ? "border-emerald-500/60 text-emerald-600 dark:text-emerald-300"
                                             : "border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white focus:border-black dark:focus:border-white"
-                                        }`}
+                                          }`}
                                         required
                                       />
                                       {isOverpriced && (
@@ -4744,11 +4865,10 @@ export function App() {
                                         setProductForm({ ...productForm, variants: updated });
                                       }}
                                       title={v.isDefault ? "Default bottle variant (active on PDP)" : "Click to set as default bottle variant"}
-                                      className={`px-2 py-1 rounded text-xs transition-colors ${
-                                        v.isDefault
-                                          ? "text-amber-700 dark:text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
-                                          : "text-neutral-500 hover:text-black dark:hover:text-white border border-transparent"
-                                      }`}
+                                      className={`px-2 py-1 rounded text-xs transition-colors ${v.isDefault
+                                        ? "text-amber-700 dark:text-amber-400 bg-amber-500/20 font-bold border border-amber-500/40"
+                                        : "text-neutral-500 hover:text-black dark:hover:text-white border border-transparent"
+                                        }`}
                                     >
                                       {v.isDefault ? "★ Primary" : "Set"}
                                     </button>
@@ -4768,11 +4888,10 @@ export function App() {
                                         setProductForm({ ...productForm, variants: filtered });
                                       }}
                                       title={productForm.variants.length <= 1 ? "At least one volume variant is required" : "Remove variant"}
-                                      className={`p-1.5 rounded transition-colors ${
-                                        productForm.variants.length <= 1
-                                          ? "text-neutral-300 dark:text-neutral-700 cursor-not-allowed"
-                                          : "text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10"
-                                      }`}
+                                      className={`p-1.5 rounded transition-colors ${productForm.variants.length <= 1
+                                        ? "text-neutral-300 dark:text-neutral-700 cursor-not-allowed"
+                                        : "text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 hover:bg-rose-500/10"
+                                        }`}
                                     >
                                       <Trash2 size={14} />
                                     </button>
@@ -4921,9 +5040,8 @@ export function App() {
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Title (Google)</label>
                           <span
-                            className={`text-[10px] font-mono ${
-                              (productForm.metaTitle || "").length > 60 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
-                            }`}
+                            className={`text-[10px] font-mono ${(productForm.metaTitle || "").length > 60 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
+                              }`}
                           >
                             {(productForm.metaTitle || "").length}/60 chars
                           </span>
@@ -4941,9 +5059,8 @@ export function App() {
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Description (Google)</label>
                           <span
-                            className={`text-[10px] font-mono ${
-                              (productForm.metaDescription || "").length > 160 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
-                            }`}
+                            className={`text-[10px] font-mono ${(productForm.metaDescription || "").length > 160 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
+                              }`}
                           >
                             {(productForm.metaDescription || "").length}/160 chars
                           </span>
@@ -5191,11 +5308,10 @@ export function App() {
                             <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2">
                               <button
                                 onClick={() => handleToggleFeaturedCollection(col)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors shadow-sm backdrop-blur-md ${
-                                  col.isFeatured
-                                    ? "bg-amber-500/90 text-black hover:bg-amber-400"
-                                    : "bg-black/60 text-neutral-300 hover:text-white hover:bg-black/80 border border-white/10"
-                                }`}
+                                className={`px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors shadow-sm backdrop-blur-md ${col.isFeatured
+                                  ? "bg-amber-500/90 text-black hover:bg-amber-400"
+                                  : "bg-black/60 text-neutral-300 hover:text-white hover:bg-black/80 border border-white/10"
+                                  }`}
                                 title="Click to toggle display on storefront slider"
                               >
                                 <Sparkles size={11} className={col.isFeatured ? "fill-black" : ""} />
@@ -5305,11 +5421,10 @@ export function App() {
                             <button
                               onClick={() => handleToggleFeaturedCollection(col)}
                               title={col.isFeatured ? "Unfeature from storefront slider" : "Feature on storefront slider"}
-                              className={`p-1.5 rounded transition-colors ${
-                                col.isFeatured
-                                  ? "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
-                                  : "text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
-                              }`}
+                              className={`p-1.5 rounded transition-colors ${col.isFeatured
+                                ? "text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+                                : "text-neutral-400 hover:text-black dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                                }`}
                             >
                               <Sparkles size={14} className={col.isFeatured ? "fill-current" : ""} />
                             </button>
@@ -5365,8 +5480,123 @@ export function App() {
               </div>
             </div>
 
-            {/* Tags Table */}
-            <div className="border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
+            {/* MOBILE TAGS CARDS (hidden on md+, visible on mobile) */}
+            <div className="block md:hidden space-y-3">
+              {tags.filter((t) => {
+                if (!tagSearch.trim()) return true;
+                const q = tagSearch.toLowerCase();
+                return (
+                  t.nameEn.toLowerCase().includes(q) ||
+                  (t.nameAr && t.nameAr.toLowerCase().includes(q)) ||
+                  t.slug.toLowerCase().includes(q) ||
+                  (t.description && t.description.toLowerCase().includes(q))
+                );
+              }).length === 0 ? (
+                <div className="p-8 text-center border border-dashed border-neutral-300 dark:border-neutral-800 rounded-lg text-xs text-neutral-500">
+                  No tags found matching your search. Click "Create Tag" to add one.
+                </div>
+              ) : (
+                tags
+                  .filter((t) => {
+                    if (!tagSearch.trim()) return true;
+                    const q = tagSearch.toLowerCase();
+                    return (
+                      t.nameEn.toLowerCase().includes(q) ||
+                      (t.nameAr && t.nameAr.toLowerCase().includes(q)) ||
+                      t.slug.toLowerCase().includes(q) ||
+                      (t.description && t.description.toLowerCase().includes(q))
+                    );
+                  })
+                  .map((t) => {
+                    const prodCount =
+                      t.productCount ??
+                      (t._count?.products ??
+                        products.filter(
+                          (p) =>
+                            (p.tags || []).some((pt) => pt.id === t.id || pt.slug === t.slug) ||
+                            (p.tagIds || []).includes(t.id)
+                        ).length);
+                    return (
+                      <div
+                        key={t.id}
+                        className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-lg shadow-sm space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-2.5">
+                            <span
+                              className="w-3.5 h-3.5 rounded-full shrink-0 shadow-xs"
+                              style={{ backgroundColor: t.colorHex || "#D4AF37" }}
+                            />
+                            <div>
+                              <span className="font-semibold text-xs text-neutral-900 dark:text-white block">{t.nameEn}</span>
+                              {t.nameAr && (
+                                <span className="text-neutral-500 text-[11px] block" dir="rtl">
+                                  {t.nameAr}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          <span
+                            className={`px-2 py-0.5 text-[10px] font-semibold rounded shrink-0 ${t.isFeatured
+                              ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                              : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
+                              }`}
+                          >
+                            {t.isFeatured ? "Featured" : "Standard"}
+                          </span>
+                        </div>
+
+                        {t.description && (
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2">
+                            {t.description}
+                          </p>
+                        )}
+
+                        <div className="flex items-center justify-between text-xs font-mono text-neutral-500 pt-2 border-t border-neutral-100 dark:border-neutral-900">
+                          <span>
+                            Slug: <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t.slug}</span>
+                          </span>
+                          <span>{prodCount} {prodCount === 1 ? "product" : "products"}</span>
+                        </div>
+
+                        <div className="flex items-center justify-end gap-2 pt-1 border-t border-neutral-100 dark:border-neutral-900">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditingTag(t);
+                              setShowTagModal(true);
+                            }}
+                            className="px-2.5 py-1.5 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 shadow-sm"
+                          >
+                            <Edit3 size={12} />
+                            <span>Edit</span>
+                          </button>
+                          <a
+                            href={`/en/shop?tag=${t.slug}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-1.5 rounded border border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                            title="View on Storefront"
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteTag(t.id, t.nameEn)}
+                            className="p-1.5 rounded border border-rose-200 dark:border-rose-900/40 text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                            title="Delete Tag"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* DESKTOP & LAPTOP TAGS TABLE (hidden on mobile, visible md+) */}
+            <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[800px]">
                 <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
@@ -5443,11 +5673,10 @@ export function App() {
                           </td>
                           <td className="py-3.5 px-4">
                             <span
-                              className={`px-2 py-0.5 text-[10px] font-semibold rounded ${
-                                t.isFeatured
-                                  ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
-                                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
-                              }`}
+                              className={`px-2 py-0.5 text-[10px] font-semibold rounded ${t.isFeatured
+                                ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
+                                : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
+                                }`}
                             >
                               {t.isFeatured ? "Featured Filter" : "Standard Tag"}
                             </span>
@@ -5552,11 +5781,10 @@ export function App() {
                             {b.name}
                           </span>
                           <span
-                            className={`px-2 py-0.5 text-[9px] font-bold rounded ${
-                              b.type === "NICHE"
-                                ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                                : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-                            }`}
+                            className={`px-2 py-0.5 text-[9px] font-bold rounded ${b.type === "NICHE"
+                              ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                              : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
+                              }`}
                           >
                             {b.type === "NICHE" ? "Niche" : "Designer"}
                           </span>
@@ -5630,90 +5858,89 @@ export function App() {
                     </tr>
                   ) : (
                     filteredBrands.map((b) => (
-                    <tr key={b.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center p-1">
-                            {b.logoUrl || b.heroImageUrl ? (
-                              <img
-                                src={b.logoUrl || b.heroImageUrl}
-                                alt={b.name}
-                                className="w-full h-full object-contain"
-                              />
-                            ) : (
-                              <span className="font-serif text-amber-500 font-bold text-sm">
-                                {b.name.charAt(0)}
-                              </span>
-                            )}
+                      <tr key={b.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center p-1">
+                              {b.logoUrl || b.heroImageUrl ? (
+                                <img
+                                  src={b.logoUrl || b.heroImageUrl}
+                                  alt={b.name}
+                                  className="w-full h-full object-contain"
+                                />
+                              ) : (
+                                <span className="font-serif text-amber-500 font-bold text-sm">
+                                  {b.name.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
+                              <span className="text-neutral-500 text-[11px]">{b.countryEn || "Prestige House"}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
-                            <span className="text-neutral-500 text-[11px]">{b.countryEn || "Prestige House"}</span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-400">/brands/</span>
+                            <span className="text-amber-500 font-medium">{b.slug}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px]">
-                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                          <span className="text-neutral-400">/brands/</span>
-                          <span className="text-amber-500 font-medium">{b.slug}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                            b.type === "NICHE"
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${b.type === "NICHE"
                               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
                               : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
-                          }`}
-                        >
-                          {b.type === "NICHE" ? "Niche Brand" : "Designer"}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
-                        <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono">
-                        <span className="text-emerald-600 dark:text-emerald-400 font-medium">
-                          {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-500 max-w-sm truncate text-[11px]">
-                        {b.storyEn || "Brand description available."}
-                      </td>
-                      <td className="py-3.5 px-4 text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => {
-                              setBrandToEdit(b);
-                              setShowBrandModal(true);
-                            }}
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Edit Brand"
+                              }`}
                           >
-                            <Edit3 size={14} />
-                          </button>
-                          <a
-                            href={`/en/brands/${b.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="View Brand Page"
-                          >
-                            <ExternalLink size={14} />
-                          </a>
-                          <button
-                            onClick={() => handleDeleteBrand(b.id, b.name)}
-                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Delete Brand"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                            {b.type === "NICHE" ? "Niche Brand" : "Designer"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
+                          <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                            {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-500 max-w-sm truncate text-[11px]">
+                          {b.storyEn || "Brand description available."}
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setBrandToEdit(b);
+                                setShowBrandModal(true);
+                              }}
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Edit Brand"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <a
+                              href={`/en/brands/${b.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="View Brand Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteBrand(b.id, b.name)}
+                              className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Delete Brand"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -5785,11 +6012,10 @@ export function App() {
                       <button
                         key={st}
                         onClick={() => setEnquiryStatusFilter(st)}
-                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
-                          enquiryStatusFilter === st
-                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
-                            : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
-                        }`}
+                        className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${enquiryStatusFilter === st
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
+                          : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                          }`}
                       >
                         {st === "ALL" ? `All Requests (${count})` : `${st.replace("_", " ")} (${count})`}
                       </button>
@@ -5820,15 +6046,14 @@ export function App() {
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm text-neutral-900 dark:text-white">{enq.name}</span>
                             <span
-                              className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold ${
-                                enq.status === "NEW"
-                                  ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
-                                  : enq.status === "IN_PROGRESS"
+                              className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold ${enq.status === "NEW"
+                                ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
+                                : enq.status === "IN_PROGRESS"
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
                                   : enq.status === "RESOLVED"
-                                  ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
-                                  : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"
-                              }`}
+                                    ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                                    : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-400"
+                                }`}
                             >
                               {enq.status}
                             </span>
@@ -5903,9 +6128,9 @@ export function App() {
                         <span>
                           {enq.createdAt
                             ? new Date(enq.createdAt).toLocaleString([], {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })
+                              dateStyle: "medium",
+                              timeStyle: "short",
+                            })
                             : "Recent"}
                         </span>
                       </div>
@@ -6066,83 +6291,83 @@ export function App() {
                     </tr>
                   ) : (
                     filteredNotes.map((n) => (
-                    <tr key={n.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center">
-                            {n.heroImageUrl || n.thumbnailUrl ? (
-                              <img
-                                src={n.heroImageUrl || n.thumbnailUrl}
-                                alt={n.nameEn}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="font-serif text-purple-500 font-bold text-sm">
-                                {n.nameEn.charAt(0)}
+                      <tr key={n.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 shrink-0 flex items-center justify-center">
+                              {n.heroImageUrl || n.thumbnailUrl ? (
+                                <img
+                                  src={n.heroImageUrl || n.thumbnailUrl}
+                                  alt={n.nameEn}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span className="font-serif text-purple-500 font-bold text-sm">
+                                  {n.nameEn.charAt(0)}
+                                </span>
+                              )}
+                            </div>
+                            <div>
+                              <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{n.nameEn}</span>
+                              <span className="text-neutral-500 text-xs block" dir="rtl">
+                                {n.nameAr}
                               </span>
-                            )}
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{n.nameEn}</span>
-                            <span className="text-neutral-500 text-xs block" dir="rtl">
-                              {n.nameAr}
-                            </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
+                            <span className="text-neutral-400">/notes/</span>
+                            <span className="text-purple-500 font-medium">{n.slug}</span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-[11px]">
-                        <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                          <span className="text-neutral-400">/notes/</span>
-                          <span className="text-purple-500 font-medium">{n.slug}</span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
-                          {n.family}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
-                        {n.originEn || "Middle East"}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
-                        {n.perfumesCount} products
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-500 max-w-xs truncate text-[11px]">
-                        {n.descriptionEn || "Sensory description available."}
-                      </td>
-                      <td className="py-3.5 px-4 text-end">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => {
-                              setNoteToEdit(n);
-                              setShowNoteModal(true);
-                            }}
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Edit Note"
-                          >
-                            <Edit3 size={14} />
-                          </button>
-                          <a
-                            href={`/en/notes/${n.slug}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="View Note Page"
-                          >
-                            <ExternalLink size={14} />
-                          </a>
-                          <button
-                            onClick={() => handleDeleteNote(n.id, n.nameEn)}
-                            className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
-                            title="Delete Note"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
+                            {n.family}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
+                          {n.originEn || "Middle East"}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
+                          {n.perfumesCount} products
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-500 max-w-xs truncate text-[11px]">
+                          {n.descriptionEn || "Sensory description available."}
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => {
+                                setNoteToEdit(n);
+                                setShowNoteModal(true);
+                              }}
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Edit Note"
+                            >
+                              <Edit3 size={14} />
+                            </button>
+                            <a
+                              href={`/en/notes/${n.slug}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="View Note Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              onClick={() => handleDeleteNote(n.id, n.nameEn)}
+                              className="p-1.5 text-neutral-500 hover:text-rose-500 rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                              title="Delete Note"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -6213,42 +6438,77 @@ export function App() {
                         <span className="font-mono font-semibold text-xs text-neutral-900 dark:text-white block">
                           {r.number}
                         </span>
-                        <span className="text-[11px] text-neutral-500">{r.customer}</span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[11px] text-neutral-500">{r.customer}</span>
+                          <span className="text-neutral-400">•</span>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const match = orders.find((o) => o.id === r.orderId || o.number === r.orderNumber);
+                              setSelectedOrderForDetail(match || r.rawOrder || { id: r.orderId, orderNumber: r.orderNumber });
+                              setShowOrderDetailModal(true);
+                            }}
+                            className="font-mono text-[11px] text-accent hover:underline font-semibold"
+                          >
+                            {r.orderNumber}
+                          </button>
+                        </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                          r.status === "COMPLETED"
-                            ? "bg-black text-white dark:bg-white dark:text-black"
-                            : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
-                        }`}
+                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED"
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
+                          }`}
                       >
                         {r.status}
                       </span>
                     </div>
 
-                    <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1">
+                    <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1.5">
                       <div className="flex items-center justify-between">
                         <span className="text-neutral-500 text-[11px]">Returned Item:</span>
                         <span className="font-medium text-neutral-900 dark:text-white">{r.item}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Inspection Condition:</span>
-                        <span className="font-mono text-neutral-700 dark:text-neutral-300">{r.condition}</span>
+                        <span className="text-neutral-500 text-[11px]">Requested Action:</span>
+                        <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
+                          {r.requestedAction === "STORE_CREDIT" ? "STORE CREDIT VOUCHER" : "ORIGINAL PAYMENT REFUND"}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Disposition Action:</span>
-                        <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">{r.disposition}</span>
+                        <span className="text-neutral-500 text-[11px]">Reverse Tracking:</span>
+                        <span className="font-mono text-neutral-700 dark:text-neutral-300">{r.trackingNumber}</span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-neutral-500 text-[11px]">Condition / Disposition:</span>
+                        <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">
+                          {r.condition} → {r.disposition}
+                        </span>
+                      </div>
+                      {r.reason && (
+                        <div className="pt-1 text-[11px] text-neutral-500 italic border-t border-neutral-200 dark:border-neutral-800">
+                          "{r.reason}"
+                        </div>
+                      )}
                     </div>
 
                     {r.status !== "COMPLETED" && (
-                      <button
-                        type="button"
-                        onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                        className="w-full py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-semibold rounded shadow-sm transition-colors text-center"
-                      >
-                        Approve Restock
-                      </button>
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
+                          className="py-1.5 px-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-black text-white text-[11px] font-semibold rounded shadow-sm text-center"
+                        >
+                          Approve Restock
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleIssueReturnRefund(r.id, r.requestedAction === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND")}
+                          className="py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold rounded shadow-sm text-center"
+                        >
+                          Issue {r.requestedAction === "STORE_CREDIT" ? "Store Credit" : "Card Refund"}
+                        </button>
+                      </div>
                     )}
                   </div>
                 ))
@@ -6257,15 +6517,15 @@ export function App() {
 
             {/* DESKTOP & LAPTOP RETURNS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
-              <table className="w-full text-start text-xs font-sans min-w-[850px]">
+              <table className="w-full text-start text-xs font-sans min-w-[950px]">
                 <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="py-3.5 px-4 text-start min-w-[180px]">Return # / Customer</th>
-                    <th className="py-3.5 px-4 text-start min-w-[200px]">Returned Item</th>
-                    <th className="py-3.5 px-4 text-start min-w-[140px]">Condition</th>
-                    <th className="py-3.5 px-4 text-start min-w-[160px]">Restock Action</th>
-                    <th className="py-3.5 px-4 text-start min-w-[120px]">Status</th>
-                    <th className="py-3.5 px-4 text-end min-w-[130px]">Action</th>
+                    <th className="py-3.5 px-4 text-start min-w-[200px]">Return # / Order</th>
+                    <th className="py-3.5 px-4 text-start min-w-[180px]">Customer & Reason</th>
+                    <th className="py-3.5 px-4 text-start min-w-[180px]">Item & Tracking</th>
+                    <th className="py-3.5 px-4 text-start min-w-[160px]">Condition / Restock</th>
+                    <th className="py-3.5 px-4 text-start min-w-[130px]">Status</th>
+                    <th className="py-3.5 px-4 text-end min-w-[200px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
@@ -6277,33 +6537,87 @@ export function App() {
                     </tr>
                   ) : (
                     returns.map((r) => (
-                    <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-neutral-900 dark:text-white block">{r.number}</span>
-                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-800 dark:text-neutral-200 font-medium">{r.item}</td>
-                      <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">{r.condition}</td>
-                      <td className="py-3.5 px-4 font-mono text-purple-600 dark:text-purple-400 font-semibold">{r.disposition}</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
-                          {r.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-end">
-                        {r.status !== "COMPLETED" && (
+                      <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="py-3.5 px-4">
+                          <span className="font-semibold text-neutral-900 dark:text-white block font-mono">{r.number}</span>
                           <button
                             type="button"
-                            onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                            className="px-3 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                            onClick={() => {
+                              const match = orders.find((o) => o.id === r.orderId || o.number === r.orderNumber);
+                              setSelectedOrderForDetail(match || r.rawOrder || { id: r.orderId, orderNumber: r.orderNumber });
+                              setShowOrderDetailModal(true);
+                            }}
+                            className="text-[11px] font-mono text-accent hover:underline font-semibold flex items-center gap-1 mt-0.5"
                           >
-                            Approve Restock
+                            <span>{r.orderNumber}</span>
+                            <ExternalLink size={10} />
                           </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))
-                )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-medium text-neutral-900 dark:text-white block">{r.customer}</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px] line-clamp-1" title={r.reason}>
+                            {r.reason || "7-day guarantee flacon return"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="text-neutral-800 dark:text-neutral-200 font-medium block">{r.item}</span>
+                          <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 block mt-0.5">
+                            {r.trackingNumber}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono text-neutral-600 dark:text-neutral-400 block text-[11px]">{r.condition}</span>
+                          <span className="font-mono text-purple-600 dark:text-purple-400 font-semibold text-[11px] block">{r.disposition}</span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-1">
+                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
+                              {r.status}
+                            </span>
+                            <span className="text-[10px] font-mono text-neutral-400 block">
+                              {r.requestedAction === "STORE_CREDIT" ? "Credit Voucher" : "Card Refund"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 text-end">
+                          <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                            {r.status !== "COMPLETED" && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
+                                  title="Inspect & Restock Flacon"
+                                  className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                                >
+                                  Restock
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleIssueReturnRefund(r.id, r.requestedAction === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND")}
+                                  title={`Issue ${r.requestedAction === "STORE_CREDIT" ? "Store Credit Voucher" : "Original Card Refund"}`}
+                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-medium rounded shadow-sm"
+                                >
+                                  {r.requestedAction === "STORE_CREDIT" ? "Credit" : "Refund"}
+                                </button>
+                              </>
+                            )}
+                            <select
+                              value={r.status}
+                              onChange={(e) => handleAdvanceReturnStatus(r.id, e.target.value)}
+                              className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-[10px] px-1.5 py-1 rounded font-mono"
+                            >
+                              <option value="REQUESTED">REQUESTED</option>
+                              <option value="AUTHORIZED">AUTHORIZED</option>
+                              <option value="IN_TRANSIT">IN_TRANSIT</option>
+                              <option value="RECEIVED_AT_WAREHOUSE">RECEIVED</option>
+                              <option value="COMPLETED">COMPLETED</option>
+                              <option value="REJECTED">REJECTED</option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -6321,11 +6635,10 @@ export function App() {
                   <button
                     key={st}
                     onClick={() => setOrderStatusFilter(st)}
-                    className={`px-3 py-1 text-xs rounded-md border transition-colors font-mono ${
-                      orderStatusFilter === st
-                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold"
-                        : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
-                    }`}
+                    className={`px-3 py-1 text-xs rounded-md border transition-colors font-mono ${orderStatusFilter === st
+                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold"
+                      : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                      }`}
                   >
                     {st === "ALL" ? "All Statuses" : st.replaceAll("_", " ")}
                     {(st === "ALL" ? dashboardMetrics?.totalOrders !== undefined : dashboardMetrics?.orderStatusCounts !== undefined) && <span className="ml-1.5 opacity-70">{st === "ALL" ? dashboardMetrics?.totalOrders : dashboardMetrics?.orderStatusCounts?.[st] ?? 0}</span>}
@@ -6347,11 +6660,10 @@ export function App() {
                   <button
                     key={mkt}
                     onClick={() => setOrderMarketFilter(mkt)}
-                    className={`px-3 py-1.5 text-xs rounded border transition-colors ${
-                      orderMarketFilter === mkt
-                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
-                        : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
-                    }`}
+                    className={`px-3 py-1.5 text-xs rounded border transition-colors ${orderMarketFilter === mkt
+                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
+                      : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                      }`}
                   >
                     {mkt === "ALL" ? "All Markets" : `Market: ${mkt}`}
                   </button>
@@ -6393,19 +6705,18 @@ export function App() {
                         </span>
                       </div>
                       <span
-                        className={`px-2 py-0.5 text-[10px] font-mono font-semibold uppercase rounded ${
-                          o.status === "DELIVERED"
-                            ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
-                            : o.status === "SHIPPED"
+                        className={`px-2 py-0.5 text-[10px] font-mono font-semibold uppercase rounded ${o.status === "DELIVERED"
+                          ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
+                          : o.status === "SHIPPED"
                             ? "bg-blue-500/10 text-blue-600 border border-blue-500/30"
                             : o.status === "FULFILLING"
-                            ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
-                            : o.status === "PAID"
-                            ? "bg-cyan-500/10 text-cyan-600 border border-cyan-500/30"
-                            : o.status === "CANCELLED"
-                            ? "bg-rose-500/10 text-rose-600 border border-rose-500/30"
-                            : "bg-amber-500/10 text-amber-600 border border-amber-500/30"
-                        }`}
+                              ? "bg-purple-500/10 text-purple-600 border border-purple-500/30"
+                              : o.status === "PAID"
+                                ? "bg-cyan-500/10 text-cyan-600 border border-cyan-500/30"
+                                : o.status === "CANCELLED"
+                                  ? "bg-rose-500/10 text-rose-600 border border-rose-500/30"
+                                  : "bg-amber-500/10 text-amber-600 border border-amber-500/30"
+                          }`}
                       >
                         {o.status}
                       </span>
@@ -6519,98 +6830,98 @@ export function App() {
                     </tr>
                   ) : (
                     filteredOrders.map((o) => (
-                    <tr
-                      key={o.id}
-                      onClick={() => {
-                        setSelectedOrderForDetail(o);
-                        setShowOrderDetailModal(true);
-                      }}
-                      className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors"
-                    >
-                      <td className="py-3.5 px-4">
-                        <span className="font-semibold text-neutral-900 dark:text-white block hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">
-                          {o.number}
-                        </span>
-                        <span className="text-neutral-600 dark:text-neutral-400 text-[11px] block mt-0.5">
-                          {o.customer}
-                        </span>
-                        {o.email && (
-                          <span className="text-neutral-400 dark:text-neutral-500 text-[10px] block font-mono">
-                            {o.email}
+                      <tr
+                        key={o.id}
+                        onClick={() => {
+                          setSelectedOrderForDetail(o);
+                          setShowOrderDetailModal(true);
+                        }}
+                        className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 cursor-pointer transition-colors"
+                      >
+                        <td className="py-3.5 px-4">
+                          <span className="font-semibold text-neutral-900 dark:text-white block hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">
+                            {o.number}
                           </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
-                          <Package size={11} className="text-neutral-400" />
-                          {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-semibold text-neutral-900 dark:text-white">
-                        {o.amount}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-cyan-600 dark:text-cyan-400">
-                        {o.method}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[10px] font-bold rounded">
-                          {o.market}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
-                        {o.date}
-                      </td>
-                      <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
-                        <select
-                          value={o.status}
-                          onChange={(e) => updateOrderStatus(o.id, e.target.value)}
-                          className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none font-medium"
-                        >
-                          <option value="PENDING">PENDING</option>
-                          <option value="PAID">PAID</option>
-                          <option value="FULFILLING">FULFILLING</option>
-                          <option value="SHIPPED">SHIPPED</option>
-                          <option value="DELIVERED">DELIVERED</option>
-                          <option value="CANCELLED">CANCELLED</option>
-                        </select>
-                      </td>
-                      <td className="py-3.5 px-4 text-end" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              setSelectedOrderForDetail(o);
-                              setShowOrderDetailModal(true);
-                            }}
-                            title="Inspect Full Order Dossier & Tracking"
-                            className="px-2.5 py-1 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-[11px] flex items-center gap-1 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
+                          <span className="text-neutral-600 dark:text-neutral-400 text-[11px] block mt-0.5">
+                            {o.customer}
+                          </span>
+                          {o.email && (
+                            <span className="text-neutral-400 dark:text-neutral-500 text-[10px] block font-mono">
+                              {o.email}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
+                            <Package size={11} className="text-neutral-400" />
+                            {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-semibold text-neutral-900 dark:text-white">
+                          {o.amount}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-cyan-600 dark:text-cyan-400">
+                          {o.method}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[10px] font-bold rounded">
+                            {o.market}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 text-neutral-500 dark:text-neutral-400 whitespace-nowrap">
+                          {o.date}
+                        </td>
+                        <td className="py-3.5 px-4" onClick={(e) => e.stopPropagation()}>
+                          <select
+                            value={o.status}
+                            onChange={(e) => updateOrderStatus(o.id, e.target.value)}
+                            className="bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white text-xs px-2.5 py-1 rounded focus:outline-none font-medium"
                           >
-                            <Eye size={12} />
-                            <span>Details</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleResendNotification(o.id, "whatsapp")}
-                            title="Send WhatsApp"
-                            className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
-                          >
-                            <MessageSquare size={12} />
-                            <span className="hidden xl:inline">WhatsApp</span>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleResendNotification(o.id, "email")}
-                            title="Send Email"
-                            className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
-                          >
-                            <Mail size={12} />
-                            <span className="hidden xl:inline">Email</span>
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                )}
+                            <option value="PENDING">PENDING</option>
+                            <option value="PAID">PAID</option>
+                            <option value="FULFILLING">FULFILLING</option>
+                            <option value="SHIPPED">SHIPPED</option>
+                            <option value="DELIVERED">DELIVERED</option>
+                            <option value="CANCELLED">CANCELLED</option>
+                          </select>
+                        </td>
+                        <td className="py-3.5 px-4 text-end" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setSelectedOrderForDetail(o);
+                                setShowOrderDetailModal(true);
+                              }}
+                              title="Inspect Full Order Dossier & Tracking"
+                              className="px-2.5 py-1 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-[11px] flex items-center gap-1 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
+                            >
+                              <Eye size={12} />
+                              <span>Details</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResendNotification(o.id, "whatsapp")}
+                              title="Send WhatsApp"
+                              className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                            >
+                              <MessageSquare size={12} />
+                              <span className="hidden xl:inline">WhatsApp</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleResendNotification(o.id, "email")}
+                              title="Send Email"
+                              className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                            >
+                              <Mail size={12} />
+                              <span className="hidden xl:inline">Email</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -6678,11 +6989,10 @@ export function App() {
                       key={st}
                       type="button"
                       onClick={() => setReviewStatusFilter(st)}
-                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${
-                        reviewStatusFilter === st
-                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
-                          : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
-                      }`}
+                      className={`px-3 py-1.5 text-xs rounded-md border transition-colors font-mono ${reviewStatusFilter === st
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-medium"
+                        : "bg-white dark:bg-black border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                        }`}
                     >
                       {st === "ALL" ? `All Reviews (${reviews.length})` : `${st} (${reviews.filter((r) => (st === "PENDING" ? r.status === "PENDING" || !r.status : r.status === st)).length})`}
                     </button>
@@ -6717,13 +7027,12 @@ export function App() {
                           <span className="text-[11px] text-neutral-500">By {r.customer}</span>
                         </div>
                         <span
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${
-                            r.status === "APPROVED"
-                              ? "bg-black text-white dark:bg-white dark:text-black"
-                              : r.status === "REJECTED"
+                          className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${r.status === "APPROVED"
+                            ? "bg-black text-white dark:bg-white dark:text-black"
+                            : r.status === "REJECTED"
                               ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
                               : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-900"
-                          }`}
+                            }`}
                         >
                           {r.status || "PENDING"}
                         </span>
@@ -6798,77 +7107,76 @@ export function App() {
                       </tr>
                     ) : (
                       filteredReviews.map((r) => (
-                      <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
-                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
-                          {r.isVerifiedPurchase && (
-                            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono mt-0.5">
-                              ✓ Verified Purchase
-                            </span>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 max-w-sm">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-amber-500 font-medium">★ {r.rating} / 5</span>
-                            {r.title && <span className="text-neutral-900 dark:text-white font-medium">"{r.title}"</span>}
-                          </div>
-                          {r.review && (
-                            <p className="text-neutral-600 dark:text-neutral-400 text-xs line-clamp-2">
-                              {r.review}
-                            </p>
-                          )}
-                        </td>
-                        <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">
-                          L: {r.longevity || 4}/5 • S: {r.sillage || 4}/5
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${
-                              r.status === "APPROVED"
+                        <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                          <td className="py-3.5 px-4">
+                            <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
+                            {r.isVerifiedPurchase && (
+                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono mt-0.5">
+                                ✓ Verified Purchase
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 max-w-sm">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-amber-500 font-medium">★ {r.rating} / 5</span>
+                              {r.title && <span className="text-neutral-900 dark:text-white font-medium">"{r.title}"</span>}
+                            </div>
+                            {r.review && (
+                              <p className="text-neutral-600 dark:text-neutral-400 text-xs line-clamp-2">
+                                {r.review}
+                              </p>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-neutral-600 dark:text-neutral-400">
+                            L: {r.longevity || 4}/5 • S: {r.sillage || 4}/5
+                          </td>
+                          <td className="py-3.5 px-4">
+                            <span
+                              className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "APPROVED"
                                 ? "bg-black text-white dark:bg-white dark:text-black"
                                 : r.status === "REJECTED"
-                                ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
-                                : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-900"
-                            }`}
-                          >
-                            {r.status || "PENDING"}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-end">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {r.status !== "APPROVED" && (
-                              <button
-                                type="button"
-                                onClick={() => handleReviewAction(r.id, "APPROVED")}
-                                className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
-                              >
-                                Approve
-                              </button>
-                            )}
-                            {r.status !== "REJECTED" && (
-                              <button
-                                type="button"
-                                onClick={() => handleReviewAction(r.id, "REJECTED")}
-                                className="px-2.5 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[11px] rounded"
-                              >
-                                Reject
-                              </button>
-                            )}
-                            <button
-                              type="button"
-                              onClick={() => promptDeleteReview(r)}
-                              className="p-1.5 border border-neutral-300 dark:border-neutral-700 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-500 hover:text-rose-600 rounded transition-colors"
-                              title="Delete Review"
-                              aria-label="Delete Review"
+                                  ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
+                                  : "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-900"
+                                }`}
                             >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
+                              {r.status || "PENDING"}
+                            </span>
+                          </td>
+                          <td className="py-3.5 px-4 text-end">
+                            <div className="flex items-center justify-end gap-1.5">
+                              {r.status !== "APPROVED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReviewAction(r.id, "APPROVED")}
+                                  className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                                >
+                                  Approve
+                                </button>
+                              )}
+                              {r.status !== "REJECTED" && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleReviewAction(r.id, "REJECTED")}
+                                  className="px-2.5 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[11px] rounded"
+                                >
+                                  Reject
+                                </button>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => promptDeleteReview(r)}
+                                className="p-1.5 border border-neutral-300 dark:border-neutral-700 hover:border-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 text-neutral-500 hover:text-rose-600 rounded transition-colors"
+                                title="Delete Review"
+                                aria-label="Delete Review"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -6928,11 +7236,10 @@ export function App() {
                 <button
                   key={pill.id}
                   onClick={() => setBannerSlotFilter(pill.id)}
-                  className={`px-3 py-1.5 text-xs rounded transition-colors ${
-                    bannerSlotFilter === pill.id
-                      ? "bg-black text-white dark:bg-white dark:text-black font-medium"
-                      : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
-                  }`}
+                  className={`px-3 py-1.5 text-xs rounded transition-colors ${bannerSlotFilter === pill.id
+                    ? "bg-black text-white dark:bg-white dark:text-black font-medium"
+                    : "bg-neutral-100 text-neutral-600 hover:bg-neutral-200 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                    }`}
                 >
                   {pill.label}
                 </button>
@@ -6967,55 +7274,55 @@ export function App() {
                     return b.slot === bannerSlotFilter;
                   })
                   .map((b) => (
-                <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
-                  <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
-                        {SLOT_LABELS[b.slot] || b.slot}
-                      </span>
-                      {b.eyebrowEn && (
-                        <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">
-                          {b.eyebrowEn}
-                        </span>
-                      )}
-                      <span className="font-serif text-sm text-neutral-900 dark:text-white font-medium">{b.titleEn}</span>
+                    <div key={b.id} className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded flex gap-4 items-center">
+                      <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
+                            {SLOT_LABELS[b.slot] || b.slot}
+                          </span>
+                          {b.eyebrowEn && (
+                            <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">
+                              {b.eyebrowEn}
+                            </span>
+                          )}
+                          <span className="font-serif text-sm text-neutral-900 dark:text-white font-medium">{b.titleEn}</span>
+                        </div>
+                        <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
+                          {b.overlayLabelEn && (
+                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded border border-neutral-200 dark:border-neutral-700">
+                              {b.overlayLabelEn}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleOpenEditBanner(b)}
+                          className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded transition-colors"
+                          title="Edit Banner"
+                        >
+                          <Edit3 size={16} />
+                        </button>
+                        <button
+                          onClick={() => toggleBannerActive(b.id)}
+                          className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-600 dark:text-emerald-400 hover:bg-neutral-100 dark:hover:bg-neutral-800" : "text-neutral-400 hover:text-black dark:hover:text-white"}`}
+                          title={b.isActive ? "Deactivate" : "Activate"}
+                        >
+                          {b.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
+                        </button>
+                        <button
+                          onClick={() => deleteBanner(b.id)}
+                          className="p-1.5 text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 rounded transition-colors"
+                          title="Delete Banner"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
-                      {b.overlayLabelEn && (
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded border border-neutral-200 dark:border-neutral-700">
-                          {b.overlayLabelEn}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleOpenEditBanner(b)}
-                      className="p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded transition-colors"
-                      title="Edit Banner"
-                    >
-                      <Edit3 size={16} />
-                    </button>
-                    <button
-                      onClick={() => toggleBannerActive(b.id)}
-                      className={`p-1.5 rounded transition-colors ${b.isActive ? "text-emerald-600 dark:text-emerald-400 hover:bg-neutral-100 dark:hover:bg-neutral-800" : "text-neutral-400 hover:text-black dark:hover:text-white"}`}
-                      title={b.isActive ? "Deactivate" : "Activate"}
-                    >
-                      {b.isActive ? <Eye size={16} /> : <EyeOff size={16} />}
-                    </button>
-                    <button
-                      onClick={() => deleteBanner(b.id)}
-                      className="p-1.5 text-neutral-500 hover:text-rose-500 dark:hover:text-rose-400 rounded transition-colors"
-                      title="Delete Banner"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-              ))
+                  ))
               )}
             </div>
 
@@ -7790,6 +8097,23 @@ export function App() {
         }}
         onUpdateStatus={updateOrderStatus}
         onResendNotification={handleResendNotification}
+        onOrderRefunded={(orderId, refundData) => {
+          setOrders((prev) =>
+            prev.map((ord) => (ord.id === orderId ? { ...ord, status: "REFUNDED" } : ord))
+          );
+          setReturns((prev) =>
+            prev.map((ret) =>
+              ret.orderId === orderId ? { ...ret, status: "COMPLETED", disposition: "RESTOCK_SELLABLE" } : ret
+            )
+          );
+          addToast(
+            "order",
+            "Order Refunded",
+            refundData?.action === "STORE_CREDIT"
+              ? `Store credit voucher issued: ${refundData?.voucherCode || ""}`
+              : "Payment refund recorded in ledger"
+          );
+        }}
       />
 
       {/* GLOBAL DELETE CONFIRMATION DIALOG MODAL (SAFETY & ERROR FALLBACK) */}

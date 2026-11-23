@@ -19,6 +19,7 @@ export interface ShopClientProps {
     tagSlug?: string;
     page?: string;
     deal?: string;
+    collection?: string;
   };
   initialProducts: any[];
   initialFamilies: any[];
@@ -52,6 +53,9 @@ export function ShopClient({
   );
   const [selectedTag, setSelectedTag] = useState<string | null>(
     searchParams.tag ?? searchParams.tagSlug ?? null,
+  );
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(
+    searchParams.collection ?? null,
   );
   const [dealOnly, setDealOnly] = useState<boolean>(
     searchParams.deal === "true" || searchParams.deal === "1",
@@ -161,6 +165,7 @@ export function ShopClient({
           ? product.notes.map((note: any) => (typeof note === "string" ? note : (isAr ? (note.nameAr || note.nameEn) : (note.nameEn || note.nameAr))))
           : [],
         tags: product.tags || [],
+        collections: product.collections || [],
         variants: variantsList,
       };
     });
@@ -183,6 +188,14 @@ export function ShopClient({
           );
           if (!hasTag) return false;
         }
+        if (selectedCollection) {
+          const inCol = (p.collections || []).some(
+            (c: any) =>
+              (typeof c === "string" ? c : c.slug || "")
+                .toLowerCase() === selectedCollection.toLowerCase()
+          );
+          if (!inCol) return false;
+        }
         const query = search.trim().toLowerCase();
         if (
           query &&
@@ -201,12 +214,12 @@ export function ShopClient({
         if (sort === "name") return a.nameEn.localeCompare(b.nameEn);
         return 0; // Default: newest / curated order
       });
-  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, selectedTag, search, sort, dealOnly]);
+  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, selectedTag, selectedCollection, search, sort, dealOnly]);
 
   // Reset page to 1 whenever any filter or sort option changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBrandType, selectedBrand, selectedFamily, selectedTag, search, sort, dealOnly]);
+  }, [selectedBrandType, selectedBrand, selectedFamily, selectedTag, selectedCollection, search, sort, dealOnly]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
 
@@ -221,6 +234,7 @@ export function ShopClient({
     setSelectedBrand(null);
     setSelectedFamily("");
     setSelectedTag(null);
+    setSelectedCollection(null);
     setSearch("");
     setDealOnly(false);
     setCurrentPage(1);
@@ -451,6 +465,18 @@ export function ShopClient({
                 type="button"
                 onClick={() => setSelectedTag(null)}
                 aria-label="Remove tag filter"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {selectedCollection && (
+            <span className="filter-chip">
+              <span>{c("Collection: ", "المجموعة: ")}{selectedCollection}</span>
+              <button
+                type="button"
+                onClick={() => setSelectedCollection(null)}
+                aria-label="Remove collection filter"
               >
                 <X size={12} />
               </button>

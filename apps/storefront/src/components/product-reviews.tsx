@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from "react";
 import { Star, ShieldCheck, Check, Sparkles, Loader2, MessageSquare, Plus, X } from "lucide-react";
 import { customerCopy } from "../lib/customer-copy";
+import { useAuth } from "../context/auth-context";
 
 interface ReviewImage {
   id: string;
@@ -37,6 +38,7 @@ export function ProductReviews({
   const ar = locale === "ar";
   const c = useCallback((en: string, arabic: string) => customerCopy(en, arabic, ar), [ar]);
 
+  const { user } = useAuth();
   const [reviews, setReviews] = useState<ProductReviewItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -52,7 +54,14 @@ export function ProductReviews({
   const [sillage, setSillage] = useState(4);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [submittedStatus, setSubmittedStatus] = useState<"APPROVED" | "PENDING" | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+
+  // Pre-fill name and email if authenticated
+  useEffect(() => {
+    if (user?.name) setName((prev) => prev || user.name || "");
+    if (user?.email) setEmail((prev) => prev || user.email || "");
+  }, [user?.name, user?.email]);
 
   const fetchReviews = useCallback(async () => {
     try {
@@ -85,9 +94,13 @@ export function ProductReviews({
     try {
       setIsSubmitting(true);
       setErrorMessage("");
+      const token = typeof window !== "undefined" ? localStorage.getItem("muschio_token") : null;
       const res = await fetch("/api/v1/reviews", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           productId,
           rating,
@@ -102,16 +115,23 @@ export function ProductReviews({
 
       const data = await res.json();
       if (data?.success) {
+        const status = data?.data?.status || "PENDING";
+        setSubmittedStatus(status);
         setSubmitSuccess(true);
-        setName("");
-        setEmail("");
         setTitle("");
         setBody("");
-        fetchReviews();
+
+        if (status === "APPROVED" && data.data) {
+          setReviews((prev) => [data.data, ...prev]);
+        } else {
+          void fetchReviews();
+        }
+
         setTimeout(() => {
           setShowModal(false);
           setSubmitSuccess(false);
-        }, 2200);
+          setSubmittedStatus(null);
+        }, 3200);
       } else {
         setErrorMessage(data?.error?.message || c("Failed to submit review. Please try again.", "تعذر إرسال التقييم، يرجى المحاولة لاحقاً."));
       }
@@ -125,6 +145,16 @@ export function ProductReviews({
   const averageRating = reviews.length > 0
     ? (reviews.reduce((acc, r) => acc + Number(r.rating || 5), 0) / reviews.length).toFixed(1)
     : "5.0";
+
+  const reviewsWithLongevity = reviews.filter((r) => r.longevityRating && r.longevityRating > 0);
+  const avgLongevity = reviewsWithLongevity.length > 0
+    ? (reviewsWithLongevity.reduce((acc, r) => acc + (r.longevityRating || 0), 0) / reviewsWithLongevity.length).toFixed(1)
+    : null;
+
+  const reviewsWithSillage = reviews.filter((r) => r.sillageRating && r.sillageRating > 0);
+  const avgSillage = reviewsWithSillage.length > 0
+    ? (reviewsWithSillage.reduce((acc, r) => acc + (r.sillageRating || 0), 0) / reviewsWithSillage.length).toFixed(1)
+    : null;
 
   return (
     <section className="py-12 border-t border-luxury-border/60 font-sans" id="reviews-section">
@@ -145,7 +175,7 @@ export function ProductReviews({
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-4">
+        <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5 bg-luxury-surface px-4 py-2.5 rounded-sm border border-luxury-border">
             <div className="flex items-center gap-1 text-amber-500">
               {[1, 2, 3, 4, 5].map((s) => (
@@ -161,6 +191,22 @@ export function ProductReviews({
               ({reviews.length} {c("impressions", "تقييم")})
             </span>
           </div>
+
+          {(avgLongevity || avgSillage) && (
+            <div className="hidden sm:flex items-center gap-2 text-xs font-mono text-neutral-600 dark:text-neutral-400 bg-luxury-surface px-3 py-2.5 rounded-sm border border-luxury-border">
+              {avgLongevity && (
+                <span>
+                  {c("Longevity", "الثبات")}: <strong className="text-luxury-text">{avgLongevity}/5</strong>
+                </span>
+              )}
+              {avgLongevity && avgSillage && <span>•</span>}
+              {avgSillage && (
+                <span>
+                  {c("Sillage", "الفوحان")}: <strong className="text-luxury-text">{avgSillage}/5</strong>
+                </span>
+              )}
+            </div>
+          )}
 
           <button
             type="button"
@@ -314,10 +360,14 @@ export function ProductReviews({
                   <Check size={20} />
                 </div>
                 <h4 className="font-serif text-lg text-emerald-900 dark:text-emerald-200">
-                  {c("Impression Received With Gratitude", "تم استلام تقييمك بنجاح")}
+                  {submittedStatus === "APPROVED"
+                    ? c("Impression Published Live", "تم نشر انطباعك مباشرة")
+                    : c("Impression Submitted for Curation", "تم إرسال تقييمك للمراجعة")}
                 </h4>
-                <p className="text-xs text-emerald-700 dark:text-emerald-300">
-                  {c("Thank you for chronicling your olfactory experience.", "شكراً لمشاركتك انطباعك مع مجتمع عشاق العطور.")}
+                <p className="text-xs text-emerald-700 dark:text-emerald-300 max-w-sm mx-auto leading-relaxed">
+                  {submittedStatus === "APPROVED"
+                    ? c("Thank you for chronicling your olfactory experience! Your verified impression is now live on this flacon.", "شكراً لمشاركتك! تم نشر تقييمك المعتمد مباشرة على صفحة العطر.")
+                    : c("Thank you! Your olfactory impression has been submitted to our curators and will appear on this flacon's page once reviewed.", "شكراً لمشاركتك! تم إرسال تقييمك إلى فريق المراجعة وسيظهر على صفحة العطر فور اعتماده.")}
                 </p>
               </div>
             ) : (

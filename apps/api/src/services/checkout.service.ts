@@ -4,10 +4,11 @@ import { DeliveryRequestSchema } from "@muschio/types";
 import { ApiError } from "../middleware/error-handler";
 import { CheckoutPayload } from "@muschio/types";
 import { OrderStatus, PaymentMethodType, PaymentStatus, Prisma } from "@prisma/client";
-import { randomUUID } from "node:crypto";
+import { randomInt } from "node:crypto";
 import { InventoryService } from "./inventory.service";
 import { LoyaltyService } from "./loyalty.service";
 import { PromotionService } from "./promotion.service";
+import { SettingsService } from "./settings.service";
 
 export function effectiveVariantPrice(variant: {
   price: Prisma.Decimal;
@@ -157,7 +158,9 @@ export class CheckoutService {
         });
       }
 
-      let shippingAmount = subtotal.greaterThanOrEqualTo(500) ? 0 : 35;
+      const storeSettings = await SettingsService.getSettings().catch(() => null);
+      const freeThreshold = storeSettings?.freeShippingThreshold ?? 500;
+      let shippingAmount = subtotal.greaterThanOrEqualTo(freeThreshold) ? 0 : 35;
       if (payload.deliveryServiceId) {
         const input = DeliveryRequestSchema.parse({
           country: shippingAddress.country,
@@ -287,8 +290,24 @@ export class CheckoutService {
         .plus(shippingAmount)
         .minus(discountAmount);
 
-      // Generate Luxury Order Number
-      const orderNumber = `MSC-${new Date().getFullYear()}-${randomUUID().slice(0, 18).toUpperCase()}`;
+      // Generate Short & Pro Luxury Order Reference: MSC-YYYY-XXXXXX (e.g. MSC-2026-849201)
+      const year = new Date().getFullYear();
+      let orderNumber = "";
+      for (let attempt = 0; attempt < 5; attempt++) {
+        const token = randomInt(100000, 1000000); // 6 cryptographically secure digits
+        const candidate = `MSC-${year}-${token}`;
+        const existing = await tx.order.findUnique({
+          where: { orderNumber: candidate },
+          select: { id: true },
+        });
+        if (!existing) {
+          orderNumber = candidate;
+          break;
+        }
+      }
+      if (!orderNumber) {
+        orderNumber = `MSC-${year}-${randomInt(100000, 1000000)}`;
+      }
 
       // 2. Create Address record (check if already saved to profile to prevent duplicate rows)
       let shouldLinkAddressToCustomer = false;
@@ -456,7 +475,7 @@ export class CheckoutService {
           console.info("No active Discovery promotion configured; no voucher issued");
         } else {
           const discValue = Number(discPromo.value);
-          const discCode = `MSC-DISC-${randomUUID().slice(0, 8).toUpperCase()}`;
+          const discCode = `MSC-DISC-${randomInt(10000, 99999)}`;
 
           await tx.voucher.create({
           data: {
@@ -545,8 +564,18 @@ export class CheckoutService {
   }
 
   static async getOrderByNumber(orderNumber: string) {
-    return prisma.order.findUnique({
-      where: { orderNumber },
+    const clean = orderNumber.trim();
+    const upper = clean.toUpperCase();
+    return prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: clean },
+          { orderNumber: upper },
+          { id: clean },
+          ...(upper.startsWith("MSC-") ? [] : [{ orderNumber: `MSC-${new Date().getFullYear()}-${upper}` }]),
+          ...(clean.length >= 6 ? [{ orderNumber: { endsWith: clean } }] : []),
+        ],
+      },
       include: {
         items: true,
         shippingAddress: true,

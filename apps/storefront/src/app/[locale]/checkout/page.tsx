@@ -1312,7 +1312,11 @@ export default function CheckoutPage(
                     try {
                       const codeClean = promoCode.trim().toUpperCase();
                       const verifyRes = await muschioApi.verifyVoucher(codeClean, subtotal, user?.id);
-                      if (verifyRes && verifyRes.valid) {
+                      const isPromoValid = Boolean(
+                        verifyRes?.valid ||
+                        (verifyRes?.code && (Boolean(verifyRes?.discountAmount) || Boolean(verifyRes?.discountPercent)))
+                      );
+                      if (verifyRes && isPromoValid) {
                         let discount = 0;
                         if (verifyRes.discountAmount) {
                           discount = Number(verifyRes.discountAmount);

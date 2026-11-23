@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Printer,
@@ -14,6 +14,7 @@ import {
   MapPin,
   AlertCircle,
   Phone,
+  RotateCcw,
 } from "lucide-react";
 
 export interface OrderDetailModalProps {
@@ -22,6 +23,7 @@ export interface OrderDetailModalProps {
   onClose: () => void;
   onUpdateStatus: (orderId: string, status: string, trackingNumber?: string, carrier?: string, reason?: string) => Promise<void>;
   onResendNotification: (orderId: string, channel: "whatsapp" | "email") => Promise<void>;
+  onOrderRefunded?: (orderId: string, refundData: any) => void;
 }
 
 const ORDER_STEPS = [
@@ -38,44 +40,76 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   onClose,
   onUpdateStatus,
   onResendNotification,
+  onOrderRefunded,
 }) => {
   if (!isOpen || !order) return null;
 
+  const [detailedOrder, setDetailedOrder] = useState<any>(order);
+
+  useEffect(() => {
+    setDetailedOrder(order);
+    if (!order?.id) return;
+    const token = localStorage.getItem("muschio_admin_auth")
+      ? JSON.parse(localStorage.getItem("muschio_admin_auth") || "{}")?.token
+      : undefined;
+
+    fetch(`/api/v1/admin/orders/${order.id}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success && json.data) {
+          setDetailedOrder(json.data);
+        }
+      })
+      .catch(() => null);
+  }, [order?.id]);
+
+  const activeOrder = detailedOrder || order;
+
   const [copiedId, setCopiedId] = useState(false);
-  const [selectedStatus, setSelectedStatus] = useState<string>(order.status || "PENDING");
+  const [selectedStatus, setSelectedStatus] = useState<string>(activeOrder.status || "PENDING");
   const [carrier, setCarrier] = useState<string>(
-    order.fulfillments?.[0]?.shipments?.[0]?.carrier || "DHL_EXPRESS"
+    activeOrder.fulfillments?.[0]?.shipments?.[0]?.carrier || "DHL_EXPRESS"
   );
   const [trackingNumber, setTrackingNumber] = useState<string>(
-    order.fulfillments?.[0]?.shipments?.[0]?.trackingNumber || ""
+    activeOrder.fulfillments?.[0]?.shipments?.[0]?.trackingNumber || ""
   );
   const [adminNote, setAdminNote] = useState<string>("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
-  const orderNum = order.orderNumber || order.number || order.id;
+  // Refund Management State
+  const [showRefundSection, setShowRefundSection] = useState(false);
+  const [refundAction, setRefundAction] = useState<"REFUND" | "STORE_CREDIT">("REFUND");
+  const [refundAmountInput, setRefundAmountInput] = useState<string>(String(activeOrder.totalAmount || activeOrder.amount || 0));
+  const [refundReason, setRefundReason] = useState<string>("7-day guarantee flacon return resolution");
+  const [isRefunding, setIsRefunding] = useState(false);
+  const [refundFeedback, setRefundFeedback] = useState<string | null>(null);
+
+  const orderNum = activeOrder.orderNumber || activeOrder.number || activeOrder.id;
   const clientName =
-    order.shippingAddress?.fullName ||
-    order.customerName ||
-    order.customer?.name ||
-    order.customer ||
+    activeOrder.shippingAddress?.fullName ||
+    activeOrder.customerName ||
+    activeOrder.customer?.name ||
+    activeOrder.customer ||
     "Client";
   const clientEmail =
-    order.shippingAddress?.email ||
-    order.customerEmail ||
-    order.customer?.email ||
-    order.guestEmail ||
+    activeOrder.shippingAddress?.email ||
+    activeOrder.customerEmail ||
+    activeOrder.customer?.email ||
+    activeOrder.guestEmail ||
     "";
   const clientPhone =
-    order.shippingAddress?.phone ||
-    order.customerPhone ||
-    order.customer?.phone ||
+    activeOrder.shippingAddress?.phone ||
+    activeOrder.customerPhone ||
+    activeOrder.customer?.phone ||
     "";
-  const address = order.shippingAddress || {};
-  const items = Array.isArray(order.items) ? order.items : [];
-  const payments = Array.isArray(order.payments) ? order.payments : [];
+  const address = activeOrder.shippingAddress || {};
+  const items = Array.isArray(activeOrder.items) ? activeOrder.items : [];
+  const payments = Array.isArray(activeOrder.payments) ? activeOrder.payments : [];
   const primaryPayment = payments[0] || null;
-  const paymentEvent = (primaryPayment?.events?.[0]?.payload as any) || (order.events?.find((e: any) => e.eventName === "ORDER_PAID")?.payload as any) || null;
+  const paymentEvent = (primaryPayment?.events?.[0]?.payload as any) || (activeOrder.events?.find((e: any) => e.eventName === "ORDER_PAID")?.payload as any) || null;
   const cardBrand =
     paymentEvent?.cardBrand ||
     (primaryPayment?.gatewayReference?.toLowerCase().includes("visa")
@@ -91,19 +125,19 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     paymentEvent?.cardLast4 ||
     primaryPayment?.gatewayReference?.match(/_(\d{4})_/)?.[1] ||
     (primaryPayment?.provider === "CREDIT_CARD" ? "4242" : null);
-  const cardHolder = paymentEvent?.cardHolder || address.fullName || order.customerName || null;
+  const cardHolder = paymentEvent?.cardHolder || address.fullName || activeOrder.customerName || null;
   const receiptUrl = paymentEvent?.receiptUrl || null;
   const transactionId = paymentEvent?.transactionId || primaryPayment?.gatewayReference || null;
   const paymentDate = paymentEvent?.paidAt || primaryPayment?.updatedAt || primaryPayment?.createdAt || null;
-  const shipment = order.fulfillments?.[0]?.shipments?.[0] || null;
+  const shipment = activeOrder.fulfillments?.[0]?.shipments?.[0] || null;
 
-  const currency = order.currency || "AED";
-  const totalAmount = Number(order.totalAmount || order.amount || 0);
-  const subtotal = Number(order.subtotal || totalAmount);
-  const shippingAmount = Number(order.shippingAmount || 0);
-  const discountAmount = Number(order.discountAmount || 0);
+  const currency = activeOrder.currency || "AED";
+  const totalAmount = Number(activeOrder.totalAmount || activeOrder.amount || 0);
+  const subtotal = Number(activeOrder.subtotal || totalAmount);
+  const shippingAmount = Number(activeOrder.shippingAmount || 0);
+  const discountAmount = Number(activeOrder.discountAmount || 0);
 
-  const market = (order.market || address.country || "AE").toUpperCase();
+  const market = (activeOrder.market || address.country || "AE").toUpperCase();
   const vatRate = market === "SA" ? 0.15 : market === "BH" ? 0.10 : market === "OM" ? 0.05 : 0.05;
   const vatRateLabel = market === "SA" ? "15.0% (KSA ZATCA)" : market === "BH" ? "10.0% (Bahrain NBR)" : market === "OM" ? "5.0% (Oman OTA)" : "5.0% (UAE FTA)";
   const taxableSubtotal = totalAmount > 0 ? totalAmount / (1 + vatRate) : 0;
@@ -113,6 +147,50 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
     navigator.clipboard.writeText(orderNum);
     setCopiedId(true);
     setTimeout(() => setCopiedId(false), 2000);
+  };
+
+  const handleExecuteRefund = async () => {
+    if (isRefunding || !activeOrder?.id) return;
+    setIsRefunding(true);
+    setRefundFeedback(null);
+    try {
+      const token = localStorage.getItem("muschio_admin_auth")
+        ? JSON.parse(localStorage.getItem("muschio_admin_auth") || "{}")?.token
+        : undefined;
+
+      const res = await fetch(`/api/v1/admin/orders/${activeOrder.id}/refund`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({
+          action: refundAction,
+          refundAmount: Number(refundAmountInput) || totalAmount,
+          reason: refundReason,
+        }),
+      });
+
+      const json = await res.json();
+      if (json.success) {
+        setRefundFeedback(
+          refundAction === "STORE_CREDIT"
+            ? `Store credit voucher ${json.data?.voucherCode || ""} successfully issued for ${currency} ${Number(refundAmountInput || totalAmount).toLocaleString()}!`
+            : `Order successfully refunded via original payment method! Ledger updated.`
+        );
+        setSelectedStatus("REFUNDED");
+        setDetailedOrder((prev: any) => ({ ...prev, status: "REFUNDED" }));
+        if (onOrderRefunded) {
+          onOrderRefunded(activeOrder.id, json.data);
+        }
+      } else {
+        throw new Error(json.error?.message || "Failed to process refund");
+      }
+    } catch (err: any) {
+      setRefundFeedback(`Refund error: ${err?.message || "Internal failure"}`);
+    } finally {
+      setIsRefunding(false);
+    }
   };
 
   const handleStatusSubmit = async (e: React.FormEvent) => {
@@ -155,19 +233,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 {copiedId ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
               </button>
               <span
-                className={`px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-none ${
-                  order.status === "DELIVERED"
-                    ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                    : order.status === "SHIPPED"
+                className={`px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-none ${order.status === "DELIVERED"
+                  ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                  : order.status === "SHIPPED"
                     ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
                     : order.status === "FULFILLING"
-                    ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30"
-                    : order.status === "PAID"
-                    ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30"
-                    : order.status === "CANCELLED"
-                    ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30"
-                    : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                }`}
+                      ? "bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/30"
+                      : order.status === "PAID"
+                        ? "bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30"
+                        : order.status === "CANCELLED"
+                          ? "bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                          : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
+                  }`}
               >
                 {order.status}
               </span>
@@ -225,13 +302,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     <div
                       key={step.key}
                       onClick={() => setSelectedStatus(step.key)}
-                      className={`p-2.5 border rounded-none cursor-pointer transition-all ${
-                        isCurrent
-                          ? "border-black dark:border-white bg-black/5 dark:bg-white/10 font-medium"
-                          : isDone
+                      className={`p-2.5 border rounded-none cursor-pointer transition-all ${isCurrent
+                        ? "border-black dark:border-white bg-black/5 dark:bg-white/10 font-medium"
+                        : isDone
                           ? "border-emerald-500/40 bg-emerald-500/5 text-emerald-700 dark:text-emerald-400"
                           : "border-neutral-200 dark:border-neutral-800 opacity-60 hover:opacity-100"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-1">
                         <span className="text-[11px] font-semibold">{step.label}</span>
@@ -254,6 +330,58 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <p className="font-semibold text-xs">This order has been cancelled</p>
                 <p className="text-[11px] opacity-80">Inventory reservations have been released back to stock.</p>
               </div>
+            </div>
+          )}
+
+          {/* Linked 7-Day Guarantee Return Requests */}
+          {Array.isArray(activeOrder.returnRequests) && activeOrder.returnRequests.length > 0 && (
+            <div className="p-4 border border-amber-500/40 bg-amber-500/5 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                  <RotateCcw size={13} />
+                  Linked RMA Return Request ({activeOrder.returnRequests.length})
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold border border-amber-500/30">
+                  {activeOrder.returnRequests[0].status}
+                </span>
+              </div>
+
+              {activeOrder.returnRequests.map((ret: any) => (
+                <div key={ret.id} className="p-3 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 space-y-2 text-xs">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <span className="font-mono font-bold text-neutral-900 dark:text-white">
+                        {ret.returnNumber}
+                      </span>
+                      <span className="text-[11px] text-neutral-500 ml-2">
+                        Resolution: <strong className="text-neutral-800 dark:text-neutral-200">{ret.requestedAction}</strong>
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-mono text-neutral-500">
+                      Reverse Tracking: <strong className="text-amber-700 dark:text-amber-400">{ret.trackingNumber || `DXB-RET-${ret.returnNumber?.slice(-6) || "882104"}`}</strong>
+                    </span>
+                  </div>
+
+                  <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                    <strong>Customer Reason:</strong> {ret.reason}
+                  </p>
+
+                  {/* Return items */}
+                  {Array.isArray(ret.items) && ret.items.length > 0 && (
+                    <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-1">
+                      <span className="text-[10px] uppercase font-mono text-neutral-400">Items for inspection:</span>
+                      {ret.items.map((it: any) => (
+                        <div key={it.id} className="flex items-center justify-between text-[11px]">
+                          <span>{it.productNameEn || it.orderItem?.productNameEn || "Fragrance Flacon"} (Qty: {it.quantity})</span>
+                          <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">
+                            {it.condition || it.inspection?.condition || "PENDING"} → {it.disposition || it.inspection?.disposition || "PENDING"}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
           )}
 
@@ -373,72 +501,74 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </span>
             </div>
 
-            <table className="w-full text-start text-xs font-sans">
-              <thead className="bg-neutral-50 dark:bg-neutral-900/50 text-neutral-500 uppercase text-[10px] tracking-wider border-b border-neutral-200 dark:border-neutral-800">
-                <tr>
-                  <th className="p-3 text-start">Fragrance / Creation</th>
-                  <th className="p-3 text-start">Volume / Flacon</th>
-                  <th className="p-3 text-start">SKU</th>
-                  <th className="p-3 text-end">Unit Price</th>
-                  <th className="p-3 text-center">Qty</th>
-                  <th className="p-3 text-end">Total</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
-                {items.length > 0 ? (
-                  items.map((item: any, idx: number) => {
-                    const itemUnitPrice = Number(item.unitPrice || item.price || (totalAmount / (items.length || 1)));
-                    const itemQty = Number(item.quantity || 1);
-                    const itemTotal = Number(item.totalPrice || (itemUnitPrice * itemQty));
-
-                    return (
-                      <tr key={item.id || idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50">
-                        <td className="p-3">
-                          <p className="font-semibold text-neutral-900 dark:text-white">
-                            {item.productNameEn || item.nameEn || item.name || "Haute Parfumerie Flacon"}
-                          </p>
-                          {item.productNameAr && (
-                            <p className="text-[11px] text-neutral-400 font-sans" dir="rtl">
-                              {item.productNameAr}
-                            </p>
-                          )}
-                        </td>
-                        <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">
-                          {item.sizeLabel || "100ml Flacon"}
-                        </td>
-                        <td className="p-3 font-mono text-neutral-500 text-[11px]">
-                          {item.sku || "FRAG-VOL"}
-                        </td>
-                        <td className="p-3 text-end font-mono">
-                          {itemUnitPrice.toLocaleString()} {currency}
-                        </td>
-                        <td className="p-3 text-center font-mono font-medium">
-                          {itemQty}
-                        </td>
-                        <td className="p-3 text-end font-mono font-semibold text-neutral-900 dark:text-white">
-                          {itemTotal.toLocaleString()} {currency}
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-start text-xs font-sans min-w-[560px]">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/50 text-neutral-500 uppercase text-[10px] tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <td className="p-3">
-                      <p className="font-semibold text-neutral-900 dark:text-white">
-                        {order.title || "Amouage Interlude 53 Man Extrait"}
-                      </p>
-                    </td>
-                    <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">100ml Flacon</td>
-                    <td className="p-3 font-mono text-neutral-500">AMO-INT53-100</td>
-                    <td className="p-3 text-end font-mono">{totalAmount.toLocaleString()} {currency}</td>
-                    <td className="p-3 text-center font-mono">1</td>
-                    <td className="p-3 text-end font-mono font-semibold text-neutral-900 dark:text-white">
-                      {totalAmount.toLocaleString()} {currency}
-                    </td>
+                    <th className="p-3 text-start">Fragrance / Creation</th>
+                    <th className="p-3 text-start">Volume / Flacon</th>
+                    <th className="p-3 text-start">SKU</th>
+                    <th className="p-3 text-end">Unit Price</th>
+                    <th className="p-3 text-center">Qty</th>
+                    <th className="p-3 text-end">Total</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                  {items.length > 0 ? (
+                    items.map((item: any, idx: number) => {
+                      const itemUnitPrice = Number(item.unitPrice || item.price || (totalAmount / (items.length || 1)));
+                      const itemQty = Number(item.quantity || 1);
+                      const itemTotal = Number(item.totalPrice || (itemUnitPrice * itemQty));
+
+                      return (
+                        <tr key={item.id || idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50">
+                          <td className="p-3">
+                            <p className="font-semibold text-neutral-900 dark:text-white">
+                              {item.productNameEn || item.nameEn || item.name || "Haute Parfumerie Flacon"}
+                            </p>
+                            {item.productNameAr && (
+                              <p className="text-[11px] text-neutral-400 font-sans" dir="rtl">
+                                {item.productNameAr}
+                              </p>
+                            )}
+                          </td>
+                          <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">
+                            {item.sizeLabel || "100ml Flacon"}
+                          </td>
+                          <td className="p-3 font-mono text-neutral-500 text-[11px]">
+                            {item.sku || "FRAG-VOL"}
+                          </td>
+                          <td className="p-3 text-end font-mono">
+                            {itemUnitPrice.toLocaleString()} {currency}
+                          </td>
+                          <td className="p-3 text-center font-mono font-medium">
+                            {itemQty}
+                          </td>
+                          <td className="p-3 text-end font-mono font-semibold text-neutral-900 dark:text-white">
+                            {itemTotal.toLocaleString()} {currency}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  ) : (
+                    <tr>
+                      <td className="p-3">
+                        <p className="font-semibold text-neutral-900 dark:text-white">
+                          {order.title || "Amouage Interlude 53 Man Extrait"}
+                        </p>
+                      </td>
+                      <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">100ml Flacon</td>
+                      <td className="p-3 font-mono text-neutral-500">AMO-INT53-100</td>
+                      <td className="p-3 text-end font-mono">{totalAmount.toLocaleString()} {currency}</td>
+                      <td className="p-3 text-center font-mono">1</td>
+                      <td className="p-3 text-end font-mono font-semibold text-neutral-900 dark:text-white">
+                        {totalAmount.toLocaleString()} {currency}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* 4. Financial Summary & Payment Breakdown */}
@@ -502,9 +632,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </span>
                     <div className="flex items-center gap-1.5 font-mono font-semibold">
                       {cardBrand && (
-                        <span className={`text-[10px] px-1 py-0.2 rounded text-white font-bold ${
-                          cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : cardBrand === "AMEX" ? "bg-emerald-600" : "bg-neutral-700"
-                        }`}>
+                        <span className={`text-[10px] px-1 py-0.2 rounded text-white font-bold ${cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : cardBrand === "AMEX" ? "bg-emerald-600" : "bg-neutral-700"
+                          }`}>
                           {cardBrand}
                         </span>
                       )}
@@ -584,7 +713,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <span className="font-mono">-{discountAmount.toLocaleString()} {currency}</span>
                 </div>
               )}
-              
+
               {/* VAT & Tax Invoice Breakdown */}
               <div className="pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-800 space-y-1">
                 <div className="flex items-center justify-between text-neutral-500 text-[11px]">
@@ -617,6 +746,98 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             </div>
           </div>
 
+          {/* 4b. Order Refund & Store Credit Issuance Panel */}
+          {activeOrder.status !== "CANCELLED" && (
+            <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/60 dark:bg-neutral-900/40 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="font-mono text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white flex items-center gap-1.5">
+                  <CreditCard size={14} className="text-neutral-700 dark:text-neutral-300" />
+                  Financial Refund & Store Credit Issuance
+                </span>
+                {activeOrder.status === "REFUNDED" ? (
+                  <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-rose-500/10 text-rose-600 border border-rose-500/30">
+                    Order Refunded
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setShowRefundSection(!showRefundSection)}
+                    className="text-[11px] font-medium text-accent hover:underline flex items-center gap-1"
+                  >
+                    {showRefundSection ? "Hide Refund Controls" : "Open Refund Controls"}
+                  </button>
+                )}
+              </div>
+
+              {refundFeedback && (
+                <div className={`p-3 text-xs border rounded ${refundFeedback.startsWith("Refund error")
+                  ? "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400"
+                  : "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400"
+                  }`}>
+                  {refundFeedback}
+                </div>
+              )}
+
+              {showRefundSection && activeOrder.status !== "REFUNDED" && (
+                <div className="p-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-3 pt-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                        Refund Resolution Method
+                      </label>
+                      <select
+                        value={refundAction}
+                        onChange={(e) => setRefundAction(e.target.value as any)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs px-3 py-2 rounded focus:outline-none font-medium"
+                      >
+                        <option value="REFUND">Refund Original Payment (Stripe / Gateway)</option>
+                        <option value="STORE_CREDIT">Issue Store Credit Voucher (12M Validity)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                        Refund Amount ({currency})
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={refundAmountInput}
+                        onChange={(e) => setRefundAmountInput(e.target.value)}
+                        className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs px-3 py-2 rounded focus:outline-none font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                      Administrative Refund Reason & Audit Note
+                    </label>
+                    <input
+                      type="text"
+                      value={refundReason}
+                      onChange={(e) => setRefundReason(e.target.value)}
+                      placeholder="e.g. 7-Day Guarantee Sealed Return / Client Service Concession"
+                      className="w-full bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs px-3 py-2 rounded focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex justify-end pt-1">
+                    <button
+                      type="button"
+                      disabled={isRefunding}
+                      onClick={handleExecuteRefund}
+                      className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-medium text-xs rounded transition-colors disabled:opacity-50 flex items-center gap-1.5 shadow-sm"
+                    >
+                      <RotateCcw size={13} />
+                      <span>{isRefunding ? "Processing Refund…" : refundAction === "STORE_CREDIT" ? "Issue Store Credit Voucher" : "Process Original Payment Refund"}</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 5. Update Status & Dispatch Form */}
           <form onSubmit={handleStatusSubmit} className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-100/50 dark:bg-neutral-900/70 space-y-3">
             <span className="font-mono text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white block">
@@ -638,6 +859,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   <option value="FULFILLING">FULFILLING (Packaging in cleanroom)</option>
                   <option value="SHIPPED">SHIPPED (Handed to GCC courier)</option>
                   <option value="DELIVERED">DELIVERED (Client received)</option>
+                  <option value="REFUNDED">REFUNDED (Order refunded & closed)</option>
                   <option value="CANCELLED">CANCELLED (Void & restock)</option>
                 </select>
               </div>

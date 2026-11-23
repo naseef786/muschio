@@ -1,14 +1,22 @@
 import { PrismaClient } from "@prisma/client";
+import dotenv from "dotenv";
+
+if (!process.env.DATABASE_URL) {
+  dotenv.config();
+}
 
 declare global {
   // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 
-const defaultDatabaseUrl =
-  "postgresql://neondb_owner:npg_sQVMUZS9i7gC@ep-noisy-band-b4h6frtw-pooler.c-6.us-east-2.aws.neon.tech/neondb?sslmode=require";
+const dbUrl = process.env.DATABASE_URL;
 
-const dbUrl = process.env.DATABASE_URL || defaultDatabaseUrl;
+if (!dbUrl) {
+  throw new Error(
+    "[SECURITY ERROR] DATABASE_URL environment variable is mandatory but was not found. Prisma cannot initialize without an explicit DATABASE_URL."
+  );
+}
 
 export const prisma =
   global.prisma ||

@@ -188,7 +188,7 @@ export default async function RootLayout(
           <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
             <AuthProvider>
               <CurrencyProvider>
-                <CartProvider>
+                <CartProvider freeShippingThreshold={liveSettings?.freeShippingThreshold || 500}>
                   <WishlistProvider>
                     <CompareProvider>
                       <a href="#main-content" className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:start-2 focus:z-50 focus:bg-luxury-surface focus:p-4">{locale === "ar" ? "انتقل إلى المحتوى" : "Skip to content"}</a>
