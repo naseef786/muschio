@@ -91,6 +91,53 @@ export function ProductCard({
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const activeImageIndex = selectedImageIndex % galleryImages.length;
 
+  const touchStartXRef = React.useRef<number | null>(null);
+  const touchStartYRef = React.useRef<number | null>(null);
+  const isSwipingRef = React.useRef(false);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+    isSwipingRef.current = false;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const diffX = touch.clientX - touchStartXRef.current;
+    const diffY = touch.clientY - touchStartYRef.current;
+    if (Math.abs(diffX) > 12 && Math.abs(diffX) > Math.abs(diffY)) {
+      isSwipingRef.current = true;
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touch = e.changedTouches[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const diffX = touch.clientX - touchStartXRef.current;
+    const diffY = touch.clientY - touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY) && galleryImages.length > 1) {
+      isSwipingRef.current = true;
+      if (diffX < 0) {
+        setSelectedImageIndex((prev) => (prev + 1) % galleryImages.length);
+      } else {
+        setSelectedImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
+      }
+      setTimeout(() => {
+        isSwipingRef.current = false;
+      }, 150);
+    } else {
+      setTimeout(() => {
+        isSwipingRef.current = false;
+      }, 50);
+    }
+  };
+
   // Resolve variants from props
   const activeVariants: ProductCardVariant[] = useMemo(() => {
     const rawList = variants && variants.length > 0 ? variants : [];
@@ -259,10 +306,18 @@ export function ProductCard({
         <Link
           href={`/product/${slug}`}
           aria-label={`${copy.viewProduct}: ${title}`}
+          onClick={(e) => {
+            if (isSwipingRef.current) {
+              e.preventDefault();
+            }
+          }}
           className="group/cover relative block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-900 dark:focus-visible:ring-white"
         >
           <div
             dir="ltr"
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             className="flex h-full w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
             style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
           >

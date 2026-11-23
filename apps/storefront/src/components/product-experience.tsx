@@ -216,6 +216,33 @@ export function ProductExperience({
   const images = product.images.length > 0 ? product.images : ["/product-placeholder.svg"];
   const currentImage: string = images[selectedImageIndex] || images[0] || "/product-placeholder.svg";
 
+  const touchStartXRef = React.useRef<number | null>(null);
+  const touchStartYRef = React.useRef<number | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    const touch = e.touches[0];
+    if (!touch) return;
+    touchStartXRef.current = touch.clientX;
+    touchStartYRef.current = touch.clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const touch = e.changedTouches[0];
+    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const diffX = touch.clientX - touchStartXRef.current;
+    const diffY = touch.clientY - touchStartYRef.current;
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+
+    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY) && images.length > 1) {
+      if (diffX < 0) {
+        setSelectedImageIndex((prev) => (prev + 1) % images.length);
+      } else {
+        setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+      }
+    }
+  };
+
   const handleToggleWishlist = () => {
     toggleWishlist({
       slug: product.slug,
@@ -355,6 +382,8 @@ export function ProductExperience({
             >
               <div
                 dir="ltr"
+                onTouchStart={handleTouchStart}
+                onTouchEnd={handleTouchEnd}
                 className="flex h-full w-full transition-transform duration-300 ease-out motion-reduce:transition-none"
                 style={{ transform: `translateX(-${(selectedImageIndex % images.length) * 100}%)` }}
               >
