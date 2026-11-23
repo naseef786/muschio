@@ -106,7 +106,7 @@ export function MediaUploadField({
         <button
           type="button"
           onClick={() => setShowUrlInput(!showUrlInput)}
-          className="text-[10px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
+          className="text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
         >
           {showUrlInput ? "Hide Direct URL" : "Enter Image URL"}
         </button>
@@ -130,16 +130,16 @@ export function MediaUploadField({
 
           <div className="flex-1 min-w-0 space-y-1">
             <div className="flex items-center gap-1.5">
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black">
+              <span className="text-xs uppercase font-mono px-2 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black">
                 Cloudinary CDN
               </span>
               {uploadSuccess && (
-                <span className="text-[10px] text-black dark:text-white flex items-center gap-1 font-medium">
-                  <Check size={11} /> Uploaded!
+                <span className="text-xs text-black dark:text-white flex items-center gap-1 font-medium">
+                  <Check size={12} /> Uploaded!
                 </span>
               )}
             </div>
-            <p className="text-[11px] font-mono text-neutral-600 dark:text-neutral-400 truncate max-w-full">{value}</p>
+            <p className="text-xs font-mono text-neutral-600 dark:text-neutral-400 truncate max-w-full">{value}</p>
           </div>
 
           <div className="flex items-center gap-1.5">
@@ -197,7 +197,7 @@ export function MediaUploadField({
                 <span className="text-xs text-neutral-800 dark:text-neutral-200 font-medium">
                   Click to upload or drag & drop image
                 </span>
-                <p className="text-[10px] text-neutral-500 dark:text-neutral-400 font-sans mt-0.5">{finalHelper}</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 font-sans mt-0.5">{finalHelper}</p>
               </div>
             </div>
           )}
@@ -228,7 +228,7 @@ export function MediaUploadField({
 
       {/* ERROR MESSAGE */}
       {uploadError && (
-        <div className="p-2 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-[11px] flex items-center justify-between">
+        <div className="p-2.5 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-neutral-100 text-xs flex items-center justify-between">
           <span>{uploadError}</span>
           <button type="button" onClick={() => setUploadError(null)} className="text-neutral-500 hover:text-black dark:hover:text-white">
             <X size={12} />

@@ -21,11 +21,11 @@ interface MultiImageUploadFieldProps {
 }
 
 export function MultiImageUploadField({
-  label = "Product Flacon & Gallery Photography",
+  label = "Product Image & Gallery Photography",
   images = [],
   onChange,
   folder = "muschio/products",
-  hint = "Upload multiple photos (bottle flacon, packaging box, lifestyle, details). The first photo is the primary cover image.",
+  hint = "Upload multiple photos (bottle, packaging box, lifestyle, details). The first photo is the primary cover image.",
   authHeaders = {},
 }: MultiImageUploadFieldProps) {
   const [isUploading, setIsUploading] = useState(false);
@@ -145,8 +145,8 @@ export function MultiImageUploadField({
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-1.5">
           <ImageIcon size={14} className="text-neutral-700 dark:text-neutral-300" />
-          <span className="text-[11px] font-medium text-neutral-900 dark:text-neutral-100">{label}</span>
-          <span className="text-[10px] px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-mono border border-neutral-200 dark:border-neutral-700">
+          <span className="text-xs font-medium text-neutral-900 dark:text-neutral-100">{label}</span>
+          <span className="text-xs px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 rounded-full font-mono border border-neutral-200 dark:border-neutral-700">
             {images.length} {images.length === 1 ? "photo" : "photos"}
           </span>
         </div>
@@ -154,7 +154,7 @@ export function MultiImageUploadField({
           <button
             type="button"
             onClick={() => setShowUrlInput(!showUrlInput)}
-            className="text-[10px] text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-1"
+            className="text-xs text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white transition-colors flex items-center gap-1"
           >
             <Plus size={11} />
             <span>{showUrlInput ? "Hide URL" : "Add by URL"}</span>
@@ -162,7 +162,7 @@ export function MultiImageUploadField({
         </div>
       </div>
 
-      <p className="text-[10px] text-neutral-500 leading-normal">{hint}</p>
+      <p className="text-xs text-neutral-500 dark:text-neutral-400 leading-normal">{hint}</p>
 
       {/* URL Input Bar */}
       {showUrlInput && (
@@ -210,15 +210,15 @@ export function MultiImageUploadField({
 
               {/* Cover Badge */}
               {idx === 0 ? (
-                <div className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[9px] font-semibold rounded flex items-center gap-0.5 shadow">
-                  <Star size={9} fill="currentColor" />
+                <div className="absolute top-1.5 start-1.5 px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-xs font-semibold rounded flex items-center gap-0.5 shadow">
+                  <Star size={10} fill="currentColor" />
                   <span>Cover</span>
                 </div>
               ) : (
                 <button
                   type="button"
                   onClick={() => handleSetCover(idx)}
-                  className="absolute top-1.5 start-1.5 px-1.5 py-0.5 bg-black/80 hover:bg-black text-white text-[9px] rounded opacity-0 group-hover:opacity-100 transition-all shadow"
+                  className="absolute top-1.5 start-1.5 px-2 py-0.5 bg-black/80 hover:bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-all shadow"
                   title="Make this the primary cover photo"
                 >
                   Set Cover
@@ -247,7 +247,7 @@ export function MultiImageUploadField({
               </div>
 
               {/* Index Number */}
-              <div className="absolute bottom-1 end-1.5 px-1 bg-black/70 text-white text-[8px] rounded font-mono">
+              <div className="absolute bottom-1 end-1.5 px-1.5 py-0.5 bg-black/80 text-white text-xs rounded font-mono font-medium">
                 #{idx + 1}
               </div>
             </div>
@@ -263,7 +263,7 @@ export function MultiImageUploadField({
             <div className="p-2 rounded-full bg-neutral-100 dark:bg-neutral-800 group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black text-neutral-600 dark:text-neutral-400 transition-colors mb-1">
               <Plus size={14} />
             </div>
-            <span className="text-[10px] text-neutral-600 dark:text-neutral-400 group-hover:text-black dark:group-hover:text-white">
+            <span className="text-xs text-neutral-600 dark:text-neutral-400 group-hover:text-black dark:group-hover:text-white">
               Add More
             </span>
           </button>
@@ -289,7 +289,7 @@ export function MultiImageUploadField({
             <p className="text-xs text-neutral-900 dark:text-white font-medium">
               Click to select product photos or drag & drop here
             </p>
-            <p className="text-[10px] text-neutral-500 mt-0.5">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
               Select multiple files at once • PNG, JPG, WEBP up to 10MB
             </p>
           </div>

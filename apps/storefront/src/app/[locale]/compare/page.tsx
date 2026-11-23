@@ -359,7 +359,7 @@ export default function ComparePage(
                     <span className="block font-sans text-[10px] uppercase tracking-widest text-accent mb-1">
                       {c("CRITERIA", "المعايير")}
                     </span>
-                    {c("Maison Flacon", "العطر والدار")}
+                    {c("Fragrance & House", "العطر والدار")}
                   </th>
 
                   {items.map((item) => (
@@ -434,7 +434,7 @@ export default function ComparePage(
                           <Plus size={18} />
                         </div>
                         <span className="text-xs font-sans tracking-wide">
-                          {c("+ Add Flacon", "+ إضافة عطر")}
+                          {c("+ Add Fragrance", "+ إضافة عطر")}
                         </span>
                       </Link>
                     </th>

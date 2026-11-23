@@ -61,7 +61,7 @@ export default function OrderTrackingPage(
 
   // 7-Day Guarantee RMA Return Modal State
   const [showReturnModal, setShowReturnModal] = useState(false);
-  const [returnReason, setReturnReason] = useState("Pristine Sealed Flacon (Changed Mind)");
+  const [returnReason, setReturnReason] = useState("Pristine Sealed Bottle (Changed Mind)");
   const [returnAction, setReturnAction] = useState<"REFUND" | "STORE_CREDIT" | "REPLACEMENT">("REFUND");
   const [returnNotes, setReturnNotes] = useState("");
   const [returnSubmitting, setReturnSubmitting] = useState(false);
@@ -601,7 +601,7 @@ export default function OrderTrackingPage(
                             : c("Refund to Original Payment", "استرداد للبطاقة البنكية الأصلية")}
                         </div>
                         <div className="text-[11px] text-neutral-400">
-                          {c("Zero restocking fees on sealed flacons", "بدون أي رسوم استرجاع للعبوات السليمة")}
+                          {c("Zero restocking fees on sealed bottles", "بدون أي رسوم استرجاع للعبوات السليمة")}
                         </div>
                       </div>
 
@@ -624,7 +624,7 @@ export default function OrderTrackingPage(
                           )}
                         </div>
                         <div className="text-[11px] text-neutral-400 truncate">
-                          {ret.reason ? ret.reason.split("|")[0].trim() : c("Sealed flacon guarantee", "ضمان العبوة المغلقة")}
+                          {ret.reason ? ret.reason.split("|")[0].trim() : c("Sealed bottle guarantee", "ضمان العبوة المغلقة")}
                         </div>
                       </div>
                     </div>
@@ -847,12 +847,12 @@ export default function OrderTrackingPage(
             <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm space-y-5">
               <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500 font-sans">
-                  {c("ACQUIRED CREATIONS", "القطع المقتناة في هذا الطلب")}
+                  {c("ORDERED ITEMS", "القطع المطلوبة في هذا الطلب")}
                 </span>
                 <span className="text-xs text-neutral-400 font-mono">
                   {orderData.items.length}{" "}
                   {c(
-                    orderData.items.length === 1 ? "Flacon" : "Flacons",
+                    orderData.items.length === 1 ? "Bottle" : "Bottles",
                     orderData.items.length === 1 ? "عطر" : "عطور",
                   )}
                 </span>
@@ -1127,11 +1127,11 @@ export default function OrderTrackingPage(
                     onChange={(e) => setReturnReason(e.target.value)}
                     className="w-full bg-[#FAFAFA] dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 p-2.5 text-xs text-neutral-900 dark:text-white rounded focus:outline-none"
                   >
-                    <option value="Pristine Sealed Flacon (Changed Mind)">
-                      {c("Pristine Sealed Flacon (Changed Mind)", "العبوة أصلية ومختومة (تغيير الرأي)")}
+                    <option value="Pristine Sealed Bottle (Changed Mind)">
+                      {c("Pristine Sealed Bottle (Changed Mind)", "العبوة أصلية ومختومة (تغيير الرأي)")}
                     </option>
                     <option value="Defective Atomizer or Leakage">
-                      {c("Defective Atomizer or Flacon Leakage", "خلل في الرشاش أو تسريب في الزجاجة")}
+                      {c("Defective Atomizer or Bottle Leakage", "خلل في الرشاش أو تسريب في الزجاجة")}
                     </option>
                     <option value="Incorrect Fragrance Received">
                       {c("Incorrect Fragrance Received", "استلام عطر مختلف عن الطلب")}
@@ -1150,7 +1150,7 @@ export default function OrderTrackingPage(
                     {[
                       { id: "REFUND", labelEn: "Refund to Card", labelAr: "استرداد للبطاقة" },
                       { id: "STORE_CREDIT", labelEn: "Store Credit", labelAr: "رصيد متجر" },
-                      { id: "REPLACEMENT", labelEn: "Flacon Exchange", labelAr: "استبدال العطر" },
+                      { id: "REPLACEMENT", labelEn: "Bottle Exchange", labelAr: "استبدال العطر" },
                     ].map((opt) => (
                       <button
                         key={opt.id}

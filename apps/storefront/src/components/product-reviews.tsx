@@ -236,7 +236,7 @@ export function ProductReviews({
             </p>
             <p className="text-xs text-neutral-500 leading-relaxed">
               {c(
-                "Chronicle your personal impression of this flacon's projection, longevity, and sillage.",
+                "Share your personal impression of this fragrance's projection, longevity, and sillage.",
                 "شارك انطباعك الشخصي حول ثبات، فوحان، وجمال هذا العطر النيش النادر."
               )}
             </p>
@@ -366,8 +366,8 @@ export function ProductReviews({
                 </h4>
                 <p className="text-xs text-emerald-700 dark:text-emerald-300 max-w-sm mx-auto leading-relaxed">
                   {submittedStatus === "APPROVED"
-                    ? c("Thank you for chronicling your olfactory experience! Your verified impression is now live on this flacon.", "شكراً لمشاركتك! تم نشر تقييمك المعتمد مباشرة على صفحة العطر.")
-                    : c("Thank you! Your olfactory impression has been submitted to our curators and will appear on this flacon's page once reviewed.", "شكراً لمشاركتك! تم إرسال تقييمك إلى فريق المراجعة وسيظهر على صفحة العطر فور اعتماده.")}
+                    ? c("Thank you for sharing your experience! Your verified review is now live on this fragrance.", "شكراً لمشاركتك! تم نشر تقييمك المعتمد مباشرة على صفحة العطر.")
+                    : c("Thank you! Your review has been submitted and will appear on this fragrance's page once approved.", "شكراً لمشاركتك! تم إرسال تقييمك إلى فريق المراجعة وسيظهر على صفحة العطر فور اعتماده.")}
                 </p>
               </div>
             ) : (

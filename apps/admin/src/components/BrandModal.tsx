@@ -175,7 +175,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="text-neutral-700 dark:text-neutral-300">URL Slug *</label>
-              <span className="text-[10px] text-neutral-500 font-mono">
+              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                 Storefront: /en/brands/{formData.slug || "slug"}
               </span>
             </div>
@@ -234,7 +234,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
               placeholder="https://res.cloudinary.com/zwkad4sz/image/upload/..."
             />
             <MediaUploadField
-              label="Brand Hero Banner / Flacon Photography"
+              label="Brand Hero Banner / Product Photography"
               value={formData.heroImageUrl}
               onChange={(url) => setFormData({ ...formData, heroImageUrl: url })}
               folder="muschio/brands/heroes"
@@ -275,7 +275,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-neutral-700 dark:text-neutral-300">SEO Title (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaTitle.length > 60 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
+                <span className={`text-xs font-mono ${formData.metaTitle.length > 60 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaTitle.length}/60 chars
                 </span>
               </div>
@@ -291,7 +291,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-neutral-700 dark:text-neutral-300">SEO Description (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaDescription.length > 160 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
+                <span className={`text-xs font-mono ${formData.metaDescription.length > 160 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaDescription.length}/160 chars
                 </span>
               </div>
@@ -307,7 +307,7 @@ export function BrandModal({ isOpen, onClose, brandToEdit, onSave }: BrandModalP
 
           {/* SERP PREVIEW BOX */}
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md space-y-1 font-sans">
-            <span className="text-[10px] text-neutral-900 dark:text-white font-semibold flex items-center gap-1">
+            <span className="text-xs text-neutral-900 dark:text-white font-semibold flex items-center gap-1">
               <Globe size={11} />
               <span>Google Search Preview</span>
             </span>

@@ -45,7 +45,6 @@ export function CollectionSlider({
   const sliderRef = useRef<HTMLDivElement>(null);
   const [canScrollPrev, setCanScrollPrev] = useState(false);
   const [canScrollNext, setCanScrollNext] = useState(true);
-  const [scrollProgress, setScrollProgress] = useState(0);
   const [activeTab, setActiveTab] = useState<string>("all");
 
   const validCollections = React.useMemo(() => {
@@ -56,7 +55,7 @@ export function CollectionSlider({
   const tabs = React.useMemo(() => {
     if (validCollections.length > 0) {
       return [
-        { id: "all", labelEn: "All Curations", labelAr: "جميع المختارات" },
+        { id: "all", labelEn: "All Fragrances", labelAr: "جميع العطور" },
         ...validCollections.map((col) => ({
           id: col.id,
           labelEn: col.nameEn,
@@ -66,7 +65,7 @@ export function CollectionSlider({
     }
 
     const availableTabs = [
-      { id: "all", labelEn: "All Curations", labelAr: "جميع المختارات" },
+      { id: "all", labelEn: "All Fragrances", labelAr: "جميع العطور" },
     ];
 
     const hasExtraits = products.some((p) => {
@@ -159,7 +158,7 @@ export function CollectionSlider({
     }
   }, [activeTab]);
 
-  // Scroll position & progress updates
+  // Scroll position updates for prev/next buttons
   const updateScrollState = useCallback(() => {
     const el = sliderRef.current;
     if (!el) return;
@@ -170,15 +169,11 @@ export function CollectionSlider({
     if (maxScroll <= 0) {
       setCanScrollPrev(false);
       setCanScrollNext(false);
-      setScrollProgress(100);
       return;
     }
 
     const currentScroll = Math.abs(scrollLeft);
-    const progress = Math.min(100, Math.max(0, (currentScroll / maxScroll) * 100));
-    setScrollProgress(progress);
-
-    // Tolerance of 5px for sub-pixel rendering
+    // Tolerance of 8px for sub-pixel rendering
     setCanScrollPrev(currentScroll > 8);
     setCanScrollNext(currentScroll < maxScroll - 8);
   }, []);
@@ -332,7 +327,7 @@ export function CollectionSlider({
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-4 py-2 rounded-full text-xs font-sans tracking-wide transition-all duration-200 whitespace-nowrap cursor-pointer ${
                   isActive
-                    ? "bg-luxury-text text-luxury-canvas font-medium shadow-sm"
+                    ? "bg-accent text-white font-medium shadow-sm"
                     : "bg-luxury-surface border border-luxury-border text-luxury-muted hover:text-luxury-text hover:border-luxury-muted"
                 }`}
               >
@@ -367,7 +362,7 @@ export function CollectionSlider({
           {displayProducts.map((product) => (
             <div
               key={product.slug}
-              className="w-[220px] sm:w-[250px] md:w-[270px] lg:w-[290px] shrink-0 snap-start flex flex-col"
+              className="w-[280px] sm:w-[310px] md:w-[330px] lg:w-[350px] shrink-0 snap-start flex flex-col"
               onClickCapture={(e) => {
                 if (hasMoved) {
                   e.preventDefault();
@@ -395,22 +390,6 @@ export function CollectionSlider({
           ))}
         </div>
         )}
-
-        {/* 4. Luxury Scroll Progress Indicator */}
-        <div className="mt-6 flex items-center justify-between gap-4">
-          <div className="h-0.5 bg-luxury-border flex-1 max-w-[200px] rounded-full overflow-hidden">
-            <div
-              className="h-full bg-accent transition-all duration-200 ease-out rounded-full"
-              style={{
-                width: `${Math.max(15, scrollProgress)}%`,
-                marginInlineStart: isAr ? "auto" : undefined,
-              }}
-            />
-          </div>
-          <span className="text-[10px] font-sans text-luxury-muted uppercase tracking-[0.18em]">
-            {displayProducts.length} {c("Flacons Curated", "عطر مميز")}
-          </span>
-        </div>
       </div>
     </section>
   );

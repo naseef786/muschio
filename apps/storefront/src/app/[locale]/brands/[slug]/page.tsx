@@ -159,7 +159,7 @@ export default async function BrandDetailPage(
         <div className="flex items-end justify-between pb-4 border-b border-luxury-border">
           <div>
             <span className="eyebrow mb-1">
-              {c("AUTHORIZED FLACONS", "العطور المتوفرة")}
+              {c("AVAILABLE FRAGRANCES", "العطور المتوفرة")}
             </span>
             <h2 className="font-serif text-2xl text-luxury-text font-normal">
               {c(`Creations by ${brand.name}`, `إصدارات دار ${brand.name}`)}

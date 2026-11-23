@@ -83,7 +83,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
   const [showRefundSection, setShowRefundSection] = useState(false);
   const [refundAction, setRefundAction] = useState<"REFUND" | "STORE_CREDIT">("REFUND");
   const [refundAmountInput, setRefundAmountInput] = useState<string>(String(activeOrder.totalAmount || activeOrder.amount || 0));
-  const [refundReason, setRefundReason] = useState<string>("7-day guarantee flacon return resolution");
+  const [refundReason, setRefundReason] = useState<string>("7-day guarantee return resolution");
   const [isRefunding, setIsRefunding] = useState(false);
   const [refundFeedback, setRefundFeedback] = useState<string | null>(null);
 
@@ -228,12 +228,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 type="button"
                 onClick={handleCopyOrderNumber}
                 title="Copy Order Reference"
-                className="p-1 rounded text-neutral-400 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
+                className="p-1 rounded text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 transition-colors"
               >
                 {copiedId ? <Check size={14} className="text-emerald-500" /> : <Copy size={14} />}
               </button>
               <span
-                className={`px-2.5 py-0.5 text-[10px] font-mono font-semibold uppercase tracking-wider rounded-none ${order.status === "DELIVERED"
+                className={`px-2.5 py-0.5 text-xs font-mono font-semibold uppercase tracking-wider rounded-none ${order.status === "DELIVERED"
                   ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                   : order.status === "SHIPPED"
                     ? "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
@@ -248,12 +248,12 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               >
                 {order.status}
               </span>
-              <span className="text-[11px] font-mono text-neutral-500">
+              <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">
                 Market: <strong className="text-neutral-900 dark:text-white">{order.market || order.shippingAddress?.country || "AE"}</strong>
               </span>
             </div>
-            <p className="text-xs text-neutral-500 dark:text-neutral-400 font-sans">
-              Acquisition placed on {order.createdAt ? new Date(order.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : order.date || "Today"}
+            <p className="text-xs text-neutral-600 dark:text-neutral-400 font-sans">
+              Order placed on {order.createdAt ? new Date(order.createdAt).toLocaleString("en-GB", { dateStyle: "medium", timeStyle: "short" }) : order.date || "Today"}
             </p>
           </div>
 
@@ -289,8 +289,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
           {/* 1. Lifecycle Progression Tracker */}
           {order.status !== "CANCELLED" ? (
-            <div className="p-4 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200/80 dark:border-neutral-800/80">
-              <h4 className="text-[10px] font-mono uppercase tracking-wider text-neutral-400 mb-3">
+            <div className="p-4 bg-neutral-50 dark:bg-neutral-900/40 border border-neutral-200 dark:border-neutral-800">
+              <h4 className="text-xs font-mono uppercase tracking-wider text-neutral-600 dark:text-neutral-300 font-semibold mb-3">
                 Order Fulfillment Pipeline
               </h4>
               <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
@@ -310,14 +310,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         }`}
                     >
                       <div className="flex items-center justify-between mb-1">
-                        <span className="text-[11px] font-semibold">{step.label}</span>
+                        <span className="text-xs font-semibold">{step.label}</span>
                         {isDone ? (
                           <Check size={12} className="text-emerald-500" />
                         ) : (
-                          <span className="text-[9px] text-neutral-400">#{idx + 1}</span>
+                          <span className="text-xs text-neutral-500">#{idx + 1}</span>
                         )}
                       </div>
-                      <p className="text-[10px] text-neutral-500 line-clamp-1">{step.desc}</p>
+                      <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{step.desc}</p>
                     </div>
                   );
                 })}
@@ -328,7 +328,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <AlertCircle size={18} />
               <div>
                 <p className="font-semibold text-xs">This order has been cancelled</p>
-                <p className="text-[11px] opacity-80">Inventory reservations have been released back to stock.</p>
+                <p className="text-xs opacity-90">Inventory reservations have been released back to stock.</p>
               </div>
             </div>
           )}
@@ -337,11 +337,11 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
           {Array.isArray(activeOrder.returnRequests) && activeOrder.returnRequests.length > 0 && (
             <div className="p-4 border border-amber-500/40 bg-amber-500/5 space-y-3">
               <div className="flex items-center justify-between">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5">
+                <span className="font-mono text-xs uppercase tracking-wider text-amber-700 dark:text-amber-400 font-bold flex items-center gap-1.5">
                   <RotateCcw size={13} />
                   Linked RMA Return Request ({activeOrder.returnRequests.length})
                 </span>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold border border-amber-500/30">
+                <span className="text-xs font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-800 dark:text-amber-300 font-semibold border border-amber-500/30">
                   {activeOrder.returnRequests[0].status}
                 </span>
               </div>
@@ -353,26 +353,26 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       <span className="font-mono font-bold text-neutral-900 dark:text-white">
                         {ret.returnNumber}
                       </span>
-                      <span className="text-[11px] text-neutral-500 ml-2">
+                      <span className="text-xs text-neutral-600 dark:text-neutral-400 ml-2">
                         Resolution: <strong className="text-neutral-800 dark:text-neutral-200">{ret.requestedAction}</strong>
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-neutral-500">
+                    <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">
                       Reverse Tracking: <strong className="text-amber-700 dark:text-amber-400">{ret.trackingNumber || `DXB-RET-${ret.returnNumber?.slice(-6) || "882104"}`}</strong>
                     </span>
                   </div>
 
-                  <p className="text-[11px] text-neutral-600 dark:text-neutral-300">
+                  <p className="text-xs text-neutral-700 dark:text-neutral-300">
                     <strong>Customer Reason:</strong> {ret.reason}
                   </p>
 
                   {/* Return items */}
                   {Array.isArray(ret.items) && ret.items.length > 0 && (
                     <div className="pt-2 border-t border-neutral-100 dark:border-neutral-800 space-y-1">
-                      <span className="text-[10px] uppercase font-mono text-neutral-400">Items for inspection:</span>
+                      <span className="text-xs uppercase font-mono text-neutral-500 font-medium">Items for inspection:</span>
                       {ret.items.map((it: any) => (
-                        <div key={it.id} className="flex items-center justify-between text-[11px]">
-                          <span>{it.productNameEn || it.orderItem?.productNameEn || "Fragrance Flacon"} (Qty: {it.quantity})</span>
+                        <div key={it.id} className="flex items-center justify-between text-xs">
+                          <span>{it.productNameEn || it.orderItem?.productNameEn || "Fragrance"} (Qty: {it.quantity})</span>
                           <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">
                             {it.condition || it.inspection?.condition || "PENDING"} → {it.disposition || it.inspection?.disposition || "PENDING"}
                           </span>
@@ -390,7 +390,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Client & Delivery Card */}
             <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                <span className="font-mono text-xs uppercase tracking-wider text-neutral-600 dark:text-neutral-400 font-semibold flex items-center gap-1.5">
                   <User size={13} className="text-accent" />
                   Client & Shipping Details
                 </span>
@@ -399,7 +399,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     href={`https://wa.me/${clientPhone.replace(/[^0-9]/g, "")}`}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-[11px] font-medium text-[#128C7E] flex items-center gap-1 hover:underline"
+                    className="text-xs font-semibold text-[#128C7E] flex items-center gap-1 hover:underline"
                   >
                     <MessageSquare size={12} />
                     <span>WhatsApp</span>
@@ -412,21 +412,21 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   {clientName}
                 </p>
                 {clientEmail && (
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-                    <Mail size={12} className="text-neutral-400" />
+                  <p className="text-xs text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                    <Mail size={12} className="text-neutral-500" />
                     <a href={`mailto:${clientEmail}`} className="hover:underline">{clientEmail}</a>
                   </p>
                 )}
                 {clientPhone && (
-                  <p className="text-xs text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
-                    <Phone size={12} className="text-neutral-400" />
+                  <p className="text-xs text-neutral-700 dark:text-neutral-300 flex items-center gap-1.5">
+                    <Phone size={12} className="text-neutral-500" />
                     <a href={`tel:${clientPhone}`} className="hover:underline">{clientPhone}</a>
                   </p>
                 )}
               </div>
 
               <div className="pt-2 border-t border-neutral-200/60 dark:border-neutral-800/60 space-y-1">
-                <span className="text-[10px] font-mono uppercase text-neutral-400 flex items-center gap-1">
+                <span className="text-xs font-mono uppercase text-neutral-600 dark:text-neutral-400 font-medium flex items-center gap-1">
                   <MapPin size={11} /> Destination
                 </span>
                 <p className="text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed font-sans">
@@ -438,18 +438,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Shipment & Courier Card */}
             <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 space-y-3">
               <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                <span className="font-mono text-xs uppercase tracking-wider text-neutral-600 dark:text-neutral-400 font-semibold flex items-center gap-1.5">
                   <Truck size={13} className="text-accent" />
                   Courier & Climate Tracking
                 </span>
-                <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-400">
+                <span className="text-xs font-mono font-medium text-emerald-600 dark:text-emerald-400">
                   White-Glove GCC
                 </span>
               </div>
 
               <div className="space-y-2">
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                     Carrier Partner
                   </label>
                   <select
@@ -465,7 +465,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                     Tracking Number
                   </label>
                   <input
@@ -483,7 +483,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   href={shipment.trackingUrl}
                   target="_blank"
                   rel="noreferrer"
-                  className="inline-flex items-center gap-1 text-[11px] text-accent hover:underline pt-1"
+                  className="inline-flex items-center gap-1 text-xs text-accent hover:underline pt-1"
                 >
                   <ExternalLink size={12} />
                   <span>Open Live Carrier Tracking Sheet</span>
@@ -497,16 +497,16 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             <div className="p-3 bg-neutral-100 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
               <span className="font-mono text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white flex items-center gap-2">
                 <Package size={14} className="text-accent" />
-                Purchased Olfactory Items ({items.length || 1})
+                Ordered Fragrances & Items ({items.length || 1})
               </span>
             </div>
 
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-start text-xs font-sans min-w-[560px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/50 text-neutral-500 uppercase text-[10px] tracking-wider border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/50 text-neutral-700 dark:text-neutral-300 uppercase text-xs font-semibold tracking-wider border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
-                    <th className="p-3 text-start">Fragrance / Creation</th>
-                    <th className="p-3 text-start">Volume / Flacon</th>
+                    <th className="p-3 text-start">Fragrance</th>
+                    <th className="p-3 text-start">Size / Volume</th>
                     <th className="p-3 text-start">SKU</th>
                     <th className="p-3 text-end">Unit Price</th>
                     <th className="p-3 text-center">Qty</th>
@@ -524,18 +524,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                         <tr key={item.id || idx} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-900/50">
                           <td className="p-3">
                             <p className="font-semibold text-neutral-900 dark:text-white">
-                              {item.productNameEn || item.nameEn || item.name || "Haute Parfumerie Flacon"}
+                              {item.productNameEn || item.nameEn || item.name || "Luxury Fragrance"}
                             </p>
                             {item.productNameAr && (
-                              <p className="text-[11px] text-neutral-400 font-sans" dir="rtl">
+                              <p className="text-xs text-neutral-500 dark:text-neutral-400 font-sans" dir="rtl">
                                 {item.productNameAr}
                               </p>
                             )}
                           </td>
-                          <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">
-                            {item.sizeLabel || "100ml Flacon"}
+                          <td className="p-3 font-mono text-neutral-700 dark:text-neutral-300">
+                            {item.sizeLabel || "100ml Bottle"}
                           </td>
-                          <td className="p-3 font-mono text-neutral-500 text-[11px]">
+                          <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400 text-xs">
                             {item.sku || "FRAG-VOL"}
                           </td>
                           <td className="p-3 text-end font-mono">
@@ -557,8 +557,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                           {order.title || "Amouage Interlude 53 Man Extrait"}
                         </p>
                       </td>
-                      <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">100ml Flacon</td>
-                      <td className="p-3 font-mono text-neutral-500">AMO-INT53-100</td>
+                      <td className="p-3 font-mono text-neutral-700 dark:text-neutral-300">100ml Bottle</td>
+                      <td className="p-3 font-mono text-neutral-600 dark:text-neutral-400">AMO-INT53-100</td>
                       <td className="p-3 text-end font-mono">{totalAmount.toLocaleString()} {currency}</td>
                       <td className="p-3 text-center font-mono">1</td>
                       <td className="p-3 text-end font-mono font-semibold text-neutral-900 dark:text-white">
@@ -576,18 +576,18 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
             {/* Payment Method / Verification */}
             <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 space-y-2.5">
               <div className="flex items-center justify-between pb-1 border-b border-neutral-200 dark:border-neutral-800">
-                <span className="font-mono text-[11px] uppercase tracking-wider text-neutral-400 flex items-center gap-1.5">
+                <span className="font-mono text-xs uppercase tracking-wider text-neutral-600 dark:text-neutral-400 font-semibold flex items-center gap-1.5">
                   <CreditCard size={13} className="text-accent" />
                   Payment Clearance & Verification
                 </span>
-                <span className="font-mono text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
+                <span className="font-mono text-xs text-emerald-600 dark:text-emerald-400 font-semibold uppercase">
                   {primaryPayment?.status || (order.status === "PAID" || order.status === "SHIPPED" || order.status === "DELIVERED" ? "CAPTURED" : "PENDING")}
                 </span>
               </div>
 
               <div className="space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-neutral-500">Method / Gateway:</span>
+                  <span className="text-neutral-600 dark:text-neutral-400">Method / Gateway:</span>
                   <span className="font-mono font-semibold text-neutral-900 dark:text-white uppercase flex items-center gap-1.5">
                     {primaryPayment?.provider === "CASH_ON_DELIVERY"
                       ? "Cash on Delivery (COD)"
@@ -605,8 +605,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {/* Tabby / Tamara Installment Schedule */}
                 {(primaryPayment?.provider === "TABBY" || primaryPayment?.provider === "TAMARA") && (
-                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-[11px] flex items-center justify-between">
-                    <span className="text-neutral-500">Installments:</span>
+                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-xs flex items-center justify-between">
+                    <span className="text-neutral-600 dark:text-neutral-400">Installments:</span>
                     <span className="font-mono text-neutral-900 dark:text-white font-semibold">
                       4 × {currency} {(totalAmount / 4).toFixed(2)} (0% Interest)
                     </span>
@@ -615,8 +615,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {/* Cash on Delivery Delivery Note */}
                 {primaryPayment?.provider === "CASH_ON_DELIVERY" && (
-                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-[11px] flex items-center justify-between">
-                    <span className="text-neutral-500">Collection:</span>
+                  <div className="py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-xs flex items-center justify-between">
+                    <span className="text-neutral-600 dark:text-neutral-400">Collection:</span>
                     <span className="font-medium text-amber-700 dark:text-amber-400">
                       Collect {currency} {totalAmount.toLocaleString()} upon client handover
                     </span>
@@ -625,14 +625,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {/* Card Brand & Last4 Dossier */}
                 {(cardBrand || cardLast4) && (
-                  <div className="flex items-center justify-between py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60">
-                    <span className="text-neutral-500 flex items-center gap-1.5">
+                  <div className="flex items-center justify-between py-1 px-2 rounded bg-neutral-100 dark:bg-neutral-800/60 border border-neutral-200 dark:border-neutral-700/60 text-xs">
+                    <span className="text-neutral-600 dark:text-neutral-400 flex items-center gap-1.5">
                       <CreditCard size={13} />
                       <span>Card Details:</span>
                     </span>
                     <div className="flex items-center gap-1.5 font-mono font-semibold">
                       {cardBrand && (
-                        <span className={`text-[10px] px-1 py-0.2 rounded text-white font-bold ${cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : cardBrand === "AMEX" ? "bg-emerald-600" : "bg-neutral-700"
+                        <span className={`text-xs px-1.5 py-0.5 rounded text-white font-bold ${cardBrand === "VISA" ? "bg-blue-600" : cardBrand === "MASTERCARD" ? "bg-red-600" : cardBrand === "AMEX" ? "bg-emerald-600" : "bg-neutral-700"
                           }`}>
                           {cardBrand}
                         </span>
@@ -646,7 +646,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {cardHolder && (
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Cardholder:</span>
+                    <span className="text-neutral-600 dark:text-neutral-400">Cardholder:</span>
                     <span className="font-medium text-neutral-900 dark:text-white truncate max-w-[180px]">
                       {cardHolder}
                     </span>
@@ -655,8 +655,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {transactionId && (
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Transaction ID:</span>
-                    <span className="font-mono text-[10px] text-neutral-600 dark:text-neutral-400 truncate max-w-[180px]" title={transactionId}>
+                    <span className="text-neutral-600 dark:text-neutral-400">Transaction ID:</span>
+                    <span className="font-mono text-xs text-neutral-700 dark:text-neutral-300 truncate max-w-[180px]" title={transactionId}>
                       {transactionId}
                     </span>
                   </div>
@@ -664,8 +664,8 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
                 {paymentDate && (
                   <div className="flex items-center justify-between">
-                    <span className="text-neutral-500">Settled At:</span>
-                    <span className="font-mono text-[10px] text-neutral-500">
+                    <span className="text-neutral-600 dark:text-neutral-400">Settled At:</span>
+                    <span className="font-mono text-xs text-neutral-600 dark:text-neutral-400">
                       {new Date(paymentDate).toLocaleString("en-GB", {
                         day: "2-digit",
                         month: "short",
@@ -683,7 +683,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                       href={receiptUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[11px] text-accent hover:underline flex items-center gap-1 font-mono"
+                      className="text-xs text-accent hover:underline flex items-center gap-1 font-mono"
                     >
                       <span>View Official Stripe Receipt</span>
                       <ExternalLink size={11} />
@@ -695,38 +695,38 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
             {/* Calculations Breakdown */}
             <div className="p-4 border border-neutral-200 dark:border-neutral-800 bg-neutral-50/40 dark:bg-neutral-900/30 space-y-2">
-              <div className="flex items-center justify-between text-neutral-500">
+              <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs">
                 <span>Gross Items Subtotal:</span>
-                <span className="font-mono text-neutral-900 dark:text-white">
+                <span className="font-mono font-medium text-neutral-900 dark:text-white">
                   {subtotal.toLocaleString()} {currency}
                 </span>
               </div>
-              <div className="flex items-center justify-between text-neutral-500">
+              <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs">
                 <span>Climate Courier Delivery:</span>
-                <span className="font-mono text-neutral-900 dark:text-white">
+                <span className="font-mono font-medium text-neutral-900 dark:text-white">
                   {shippingAmount > 0 ? `${shippingAmount.toLocaleString()} ${currency}` : "Complimentary"}
                 </span>
               </div>
               {discountAmount > 0 && (
-                <div className="flex items-center justify-between text-emerald-600">
+                <div className="flex items-center justify-between text-emerald-600 text-xs">
                   <span>Loyalty Credit Redeemed:</span>
-                  <span className="font-mono">-{discountAmount.toLocaleString()} {currency}</span>
+                  <span className="font-mono font-medium">-{discountAmount.toLocaleString()} {currency}</span>
                 </div>
               )}
 
               {/* VAT & Tax Invoice Breakdown */}
               <div className="pt-2 border-t border-dashed border-neutral-200 dark:border-neutral-800 space-y-1">
-                <div className="flex items-center justify-between text-neutral-500 text-[11px]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs">
                   <span>Taxable Base (Ex-VAT):</span>
-                  <span className="font-mono text-neutral-700 dark:text-neutral-300">
+                  <span className="font-mono text-neutral-800 dark:text-neutral-200">
                     {taxableSubtotal.toFixed(2)} {currency}
                   </span>
                 </div>
-                <div className="flex items-center justify-between text-neutral-500 text-[11px]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs">
                   <span>VAT Rate:</span>
-                  <span className="font-mono text-neutral-700 dark:text-neutral-300">{vatRateLabel}</span>
+                  <span className="font-mono text-neutral-800 dark:text-neutral-200">{vatRateLabel}</span>
                 </div>
-                <div className="flex items-center justify-between text-neutral-500 text-[11px]">
+                <div className="flex items-center justify-between text-neutral-600 dark:text-neutral-400 text-xs">
                   <span>VAT Amount (Included):</span>
                   <span className="font-mono font-medium text-neutral-900 dark:text-white">
                     {vatAmount.toFixed(2)} {currency}
@@ -737,9 +737,9 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-between text-sm font-semibold">
                 <div>
                   <span className="text-neutral-900 dark:text-white block">Net Total Settled:</span>
-                  <span className="text-[10px] text-neutral-400 font-normal">VAT Inclusive · TRN: 100492817200003</span>
+                  <span className="text-xs text-neutral-500 dark:text-neutral-400 font-normal">VAT Inclusive · TRN: 100492817200003</span>
                 </div>
-                <span className="font-mono text-base text-neutral-900 dark:text-white">
+                <span className="font-mono text-base font-bold text-neutral-900 dark:text-white">
                   {totalAmount.toLocaleString()} {currency}
                 </span>
               </div>
@@ -755,14 +755,14 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   Financial Refund & Store Credit Issuance
                 </span>
                 {activeOrder.status === "REFUNDED" ? (
-                  <span className="px-2 py-0.5 text-[10px] font-mono font-bold uppercase rounded bg-rose-500/10 text-rose-600 border border-rose-500/30">
+                  <span className="px-2.5 py-0.5 text-xs font-mono font-bold uppercase rounded bg-rose-500/10 text-rose-600 border border-rose-500/30">
                     Order Refunded
                   </span>
                 ) : (
                   <button
                     type="button"
                     onClick={() => setShowRefundSection(!showRefundSection)}
-                    className="text-[11px] font-medium text-accent hover:underline flex items-center gap-1"
+                    className="text-xs font-semibold text-accent hover:underline flex items-center gap-1"
                   >
                     {showRefundSection ? "Hide Refund Controls" : "Open Refund Controls"}
                   </button>
@@ -782,7 +782,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                 <div className="p-3 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-3 pt-3">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                         Refund Resolution Method
                       </label>
                       <select
@@ -796,7 +796,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                     </div>
 
                     <div>
-                      <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                         Refund Amount ({currency})
                       </label>
                       <input
@@ -810,7 +810,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                       Administrative Refund Reason & Audit Note
                     </label>
                     <input
@@ -846,7 +846,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                   Target Workflow Status
                 </label>
                 <select
@@ -865,7 +865,7 @@ export const OrderDetailModal: React.FC<OrderDetailModalProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono uppercase text-neutral-500 mb-1">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-neutral-600 dark:text-neutral-300 mb-1">
                   Internal Status Note (Logged to Timeline)
                 </label>
                 <input

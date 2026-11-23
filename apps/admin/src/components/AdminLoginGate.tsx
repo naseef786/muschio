@@ -100,12 +100,12 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
             <h1 className="font-serif text-2xl font-light tracking-[0.25em] text-neutral-900 dark:text-white">
               MUSCHIO
             </h1>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-neutral-500 dark:text-neutral-400 font-medium mt-1">
+            <p className="text-xs uppercase tracking-[0.2em] text-neutral-600 dark:text-neutral-400 font-medium mt-1">
               HAUTE PARFUMERIE • DUBAI & GCC
             </p>
           </div>
 
-          <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-center gap-1.5 text-[11px] text-neutral-600 dark:text-neutral-400 font-sans">
+          <div className="pt-2 border-t border-neutral-200 dark:border-neutral-800 flex items-center justify-center gap-1.5 text-xs text-neutral-600 dark:text-neutral-400 font-sans">
             <ShieldCheck size={14} className="text-black dark:text-white" />
             <span>Restricted Administrator Console</span>
           </div>
@@ -142,7 +142,7 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-[11px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
+                className="text-xs text-neutral-500 hover:text-black dark:hover:text-white transition-colors flex items-center gap-1"
               >
                 {showPassword ? <EyeOff size={12} /> : <Eye size={12} />}
                 <span>{showPassword ? "Hide" : "Show"}</span>
@@ -162,7 +162,7 @@ export function AdminLoginGate({ onLoginSuccess }: AdminLoginGateProps) {
             </div>
           </div>
 
-          <div className="flex items-center justify-between text-[11px] text-neutral-600 dark:text-neutral-400 pt-1">
+          <div className="flex items-center justify-between text-xs text-neutral-600 dark:text-neutral-400 pt-1">
             <label className="flex items-center gap-2 cursor-pointer select-none">
               <input
                 type="checkbox"

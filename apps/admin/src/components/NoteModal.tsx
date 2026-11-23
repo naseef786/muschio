@@ -177,7 +177,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-neutral-700 dark:text-neutral-300">URL Slug *</label>
-                <span className="text-[10px] text-neutral-500 font-mono">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                   Storefront: /en/notes/{formData.slug || "slug"}
                 </span>
               </div>
@@ -237,7 +237,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
             </div>
           </div>
 
-          {/* Row 3.5: Note Botanical & Flacon Artwork */}
+          {/* Row 3.5: Note Botanical & Fragrance Artwork */}
           <div className="pt-1 border-t border-neutral-200 dark:border-neutral-800">
             <MediaUploadField
               label="Scent Note Botanical / Hero Artwork"
@@ -282,7 +282,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-neutral-700 dark:text-neutral-300">SEO Title (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaTitle.length > 60 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
+                <span className={`text-xs font-mono ${formData.metaTitle.length > 60 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaTitle.length}/60 chars
                 </span>
               </div>
@@ -298,7 +298,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="text-neutral-700 dark:text-neutral-300">SEO Description (Google)</label>
-                <span className={`text-[10px] font-mono ${formData.metaDescription.length > 160 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
+                <span className={`text-xs font-mono ${formData.metaDescription.length > 160 ? "text-neutral-900 dark:text-white font-bold" : "text-neutral-500"}`}>
                   {formData.metaDescription.length}/160 chars
                 </span>
               </div>
@@ -314,7 +314,7 @@ export function NoteModal({ isOpen, onClose, noteToEdit, onSave }: NoteModalProp
 
           {/* SERP PREVIEW BOX */}
           <div className="p-3.5 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-md space-y-1 font-sans">
-            <span className="text-[10px] text-neutral-900 dark:text-white font-semibold flex items-center gap-1">
+            <span className="text-xs text-neutral-900 dark:text-white font-semibold flex items-center gap-1">
               <Globe size={11} />
               <span>Google Search Preview</span>
             </span>

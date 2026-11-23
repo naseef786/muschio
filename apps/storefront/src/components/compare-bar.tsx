@@ -4,6 +4,7 @@ import React from "react";
 import Image from "next/image";
 import { Link, useRouter, usePathname } from "../navigation";
 import { useCompare } from "../context/compare-context";
+import { useCart } from "../context/cart-context";
 import { ArrowLeftRight, X, ChevronDown, ChevronUp, Trash2, Scale } from "lucide-react";
 
 interface CompareBarProps {
@@ -15,6 +16,14 @@ export function CompareBar({ locale }: CompareBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const isPdp = typeof pathname === "string" && pathname.includes("/product/");
+  const { itemCount: cartCount } = useCart();
+  const isExcludedPage =
+    typeof pathname === "string" &&
+    (pathname.startsWith("/checkout") ||
+      pathname.startsWith("/cart") ||
+      pathname.startsWith("/order-confirmation"));
+  const hasFloatingCartBar = cartCount > 0 && !isPdp && !isExcludedPage;
+
   const { items, itemCount, removeItem, clearCompare, isDockOpen, setIsDockOpen } =
     useCompare();
 
@@ -26,9 +35,11 @@ export function CompareBar({ locale }: CompareBarProps) {
     router.push(`/compare?items=${encodeURIComponent(slugs)}`);
   };
 
-  const pillPadding = isPdp
+  const pillPadding = hasFloatingCartBar
+    ? "pb-[calc(6.25rem+env(safe-area-inset-bottom))] md:pb-3"
+    : isPdp
     ? "pb-[calc(5.75rem+env(safe-area-inset-bottom))] md:pb-3"
-    : "pb-[calc(4.75rem+env(safe-area-inset-bottom))] md:pb-3";
+    : "pb-[calc(1.25rem+env(safe-area-inset-bottom))] md:pb-3";
 
   return (
     <aside
@@ -40,7 +51,7 @@ export function CompareBar({ locale }: CompareBarProps) {
         <div className={`max-w-7xl mx-auto px-4 ${pillPadding} flex justify-start sm:justify-end transition-all duration-300`}>
           <button
             onClick={() => setIsDockOpen(true)}
-            className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-luxury-surface/95 backdrop-blur-md border border-accent/60 shadow-xl text-luxury-text hover:border-accent text-xs font-sans tracking-wider uppercase transition-all duration-200 group"
+            className="flex items-center gap-2.5 px-4 py-2.5 rounded-full bg-luxury-surface/95 dark:bg-luxury-surface2/95 backdrop-blur-md border border-accent/60 shadow-xl text-luxury-text hover:border-accent text-xs font-sans tracking-wider uppercase transition-all duration-200 group"
           >
             <ArrowLeftRight size={15} className="text-accent group-hover:scale-110 transition-transform" />
             <span className="font-medium">
@@ -51,20 +62,20 @@ export function CompareBar({ locale }: CompareBarProps) {
         </div>
       )}
 
-      {/* Main Comparison Dock */}
+      {/* Main Comparison Dock — Harmonized with Luxury Theme Tokens */}
       {isDockOpen && (
-        <div className="bg-[#0D1117]/95 dark:bg-[#0D1117]/95 backdrop-blur-xl border-t border-luxury-border/80 shadow-[0_-8px_30px_rgba(0,0,0,0.4)] text-white">
+        <div className="bg-luxury-surface/98 dark:bg-luxury-surface2/98 backdrop-blur-xl border-t border-luxury-border shadow-[0_-8px_30px_rgba(0,0,0,0.12)] dark:shadow-[0_-8px_30px_rgba(0,0,0,0.5)] text-luxury-text">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3.5 sm:py-4">
             {/* Top Bar inside dock */}
-            <div className="flex items-center justify-between pb-2 mb-2 border-b border-white/10 text-xs font-sans">
+            <div className="flex items-center justify-between pb-2 mb-2 border-b border-luxury-border text-xs font-sans">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-accent/20 border border-accent/40 flex items-center justify-center text-accent">
                   <ArrowLeftRight size={12} />
                 </div>
                 <span className="font-medium tracking-widest uppercase text-[11px] text-accent">
-                  {isAr ? "منصة مقارنة العطور الملكية" : "Haute Parfumerie Comparison"}
+                  {isAr ? "مقارنة العطور" : "Fragrance Comparison"}
                 </span>
-                <span className="text-white/40 text-[10px] font-mono">
+                <span className="text-luxury-muted text-[10px] font-mono">
                   ({itemCount}/4 {isAr ? "عطور مختارة" : "selected"})
                 </span>
               </div>
@@ -73,7 +84,7 @@ export function CompareBar({ locale }: CompareBarProps) {
                 <button
                   type="button"
                   onClick={clearCompare}
-                  className="text-white/50 hover:text-rose-400 text-[11px] flex items-center gap-1 transition-colors"
+                  className="text-luxury-muted hover:text-rose-600 text-[11px] flex items-center gap-1 transition-colors"
                   title={isAr ? "مسح جميع العطور" : "Clear all items"}
                 >
                   <Trash2 size={12} />
@@ -82,7 +93,7 @@ export function CompareBar({ locale }: CompareBarProps) {
                 <button
                   type="button"
                   onClick={() => setIsDockOpen(false)}
-                  className="text-white/50 hover:text-white p-1 rounded transition-colors"
+                  className="text-luxury-muted hover:text-luxury-text p-1 rounded transition-colors"
                   title={isAr ? "تصغير الشريط" : "Minimize"}
                   aria-label="Minimize comparison bar"
                 >
@@ -91,17 +102,17 @@ export function CompareBar({ locale }: CompareBarProps) {
               </div>
             </div>
 
-            {/* Bottom Row: Flacon Cards + Actions */}
+            {/* Bottom Row: Fragrance Slots + Actions */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              {/* Product Flacon Slots */}
+              {/* Product Fragrance Slots */}
               <div className="flex items-center gap-2 sm:gap-3 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                 {items.map((item) => (
                   <div
                     key={item.slug}
-                    className="relative flex items-center gap-2.5 p-1.5 sm:p-2 rounded bg-white/5 border border-white/10 hover:border-accent/50 transition-all shrink-0 max-w-[190px] sm:max-w-[210px] group"
+                    className="relative flex items-center gap-2.5 p-1.5 sm:p-2 rounded bg-luxury-surface2 border border-luxury-border hover:border-accent/50 transition-all shrink-0 max-w-[190px] sm:max-w-[210px] group"
                   >
                     {/* Thumbnail */}
-                    <div className="relative w-10 h-12 bg-white/10 rounded overflow-hidden shrink-0 border border-white/10">
+                    <div className="relative w-10 h-12 bg-luxury-surface rounded overflow-hidden shrink-0 border border-luxury-border">
                       <Image
                         src={item.image || "/product-placeholder.svg"}
                         alt={item.nameEn}
@@ -116,10 +127,10 @@ export function CompareBar({ locale }: CompareBarProps) {
                       <span className="text-[10px] text-accent truncate block uppercase tracking-wider font-medium">
                         {item.brand}
                       </span>
-                      <h4 className="text-[11px] text-white font-medium truncate leading-tight">
+                      <h4 className="text-[11px] text-luxury-text font-medium truncate leading-tight">
                         {isAr && item.nameAr ? item.nameAr : item.nameEn}
                       </h4>
-                      <span className="text-[10px] text-white/60 font-mono block">
+                      <span className="text-[10px] text-luxury-muted font-mono block">
                         {item.price} AED
                       </span>
                     </div>
@@ -128,7 +139,7 @@ export function CompareBar({ locale }: CompareBarProps) {
                     <button
                       type="button"
                       onClick={() => removeItem(item.slug)}
-                      className="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-black/80 border border-white/30 text-white/70 hover:text-white hover:bg-rose-600 flex items-center justify-center transition-all shadow-md"
+                      className="absolute -top-1.5 -end-1.5 w-5 h-5 rounded-full bg-luxury-surface border border-luxury-border text-luxury-muted hover:text-white hover:bg-rose-600 flex items-center justify-center transition-all shadow-md"
                       title={isAr ? "إزالة من المقارنة" : "Remove from compare"}
                       aria-label={`Remove ${item.nameEn}`}
                     >
@@ -141,13 +152,13 @@ export function CompareBar({ locale }: CompareBarProps) {
                 {itemCount < 4 && (
                   <Link
                     href="/shop"
-                    className="flex items-center gap-2 px-3 py-2.5 rounded border border-dashed border-white/20 hover:border-accent/60 text-white/50 hover:text-accent transition-all shrink-0 text-xs font-sans"
+                    className="flex items-center gap-2 px-3 py-2.5 rounded border border-dashed border-luxury-border hover:border-accent/60 text-luxury-muted hover:text-accent transition-all shrink-0 text-xs font-sans"
                   >
-                    <span className="w-6 h-6 rounded-full border border-dashed border-white/30 flex items-center justify-center text-xs">
+                    <span className="w-6 h-6 rounded-full border border-dashed border-luxury-border flex items-center justify-center text-xs">
                       +
                     </span>
                     <span className="text-[11px]">
-                      {isAr ? "إضافة عطر آخر" : "Add another flacon"}
+                      {isAr ? "إضافة عطر آخر" : "Add another fragrance"}
                     </span>
                   </Link>
                 )}
@@ -158,7 +169,7 @@ export function CompareBar({ locale }: CompareBarProps) {
                 <button
                   type="button"
                   onClick={handleLaunchCompare}
-                  className="w-full sm:w-auto px-5 py-2.5 rounded bg-accent hover:bg-accent-hover text-luxury-canvas font-sans font-semibold text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-accent/20 active:scale-95"
+                  className="w-full sm:w-auto px-5 py-2.5 rounded bg-accent hover:bg-accent/90 text-white font-sans font-semibold text-xs tracking-wider uppercase transition-all duration-200 flex items-center justify-center gap-2 shadow-sm active:scale-95"
                 >
                   <Scale size={14} />
                   <span>

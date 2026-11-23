@@ -353,13 +353,13 @@ export function Footer({
           © {new Date().getFullYear()} MUSCHIO HAUTE PARFUMERIE. {c("All Rights Reserved.", "جميع الحقوق محفوظة.")}
         </div>
         <div className="flex items-center gap-3 sm:gap-5 flex-wrap text-xs text-[#A3A39C] pe-16 lg:pe-24">
-          <ThemeToggle locale={locale} showLabel={true} className="!p-0 text-[#A3A39C] hover:text-white self-center" />
+          <ThemeToggle locale={locale} showLabel={false} className="!p-0 text-[#A3A39C] hover:text-white self-center" />
           <span className="text-white/20 select-none self-center">|</span>
           <span className="self-center">{c("United Arab Emirates (AED)", "الإمارات العربية المتحدة (AED)")}</span>
           <span className="text-white/20 select-none self-center">|</span>
           <span className="inline-flex items-center gap-1.5 text-white/90 self-center">
             <ShieldCheck size={14} className="text-emerald-400 flex-shrink-0" />
-            <span>{c("100% Authentic Flacons", "عطور معتمدة وأصلية ١٠٠٪")}</span>
+            <span>{c("100% Authentic Fragrances", "عطور معتمدة وأصلية ١٠٠٪")}</span>
           </span>
         </div>
       </div>

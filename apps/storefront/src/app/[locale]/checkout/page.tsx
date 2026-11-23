@@ -505,7 +505,7 @@ export default function CheckoutPage(
             {c("HAUTE PARFUMERIE · 100% AUTHENTIC & SECURE", "دار العطور الراقية · إتمام الطلب الآمن")}
           </span>
           <h1 className="font-serif text-2xl sm:text-4xl text-luxury-text font-normal mt-0.5">
-            {c("Checkout & Acquisition", "إتمام الشراء")}
+            {c("Checkout & Payment", "إتمام الشراء والدفع")}
           </h1>
         </div>
         <div className="flex items-center gap-2 text-xs text-luxury-muted">
@@ -1457,7 +1457,7 @@ export default function CheckoutPage(
             <div className="flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <ShieldCheck size={13} className="text-emerald-600" />
-                <span>{c("100% Authentic Maison Flacons", "عطور أصلية ومضمونة 100%")}</span>
+                <span>{c("100% Authentic Fragrances", "عطور أصلية ومضمونة 100%")}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <Lock size={13} className="text-accent" />

@@ -272,7 +272,7 @@ export default function AccountPage(
                       "شحن جوي مبرد مجاني لكافة الطلبات، وأولوية حجز الدفعات الخاصة، ومستشار عطري مخصص.",
                     )
                   : c(
-                      "Earn 5% Olfactory Loyalty credits on every acquisition, complimentary 7-day returns, and priority dispatch.",
+                      "Earn 5% Olfactory Loyalty credits on every order, complimentary 7-day returns, and priority dispatch.",
                       "كسب ٥٪ رصيد ولاء عطري على كل عملية شراء، وإرجاع مجاني حتى ٧ أيام، وأولوية في التجهيز.",
                     )}
               </p>
@@ -295,7 +295,7 @@ export default function AccountPage(
               </div>
               <p className="text-xs text-luxury-muted mt-2 leading-relaxed">
                 {c(
-                  "Your credits can be applied directly at checkout toward any luxury flacon or bespoke discovery set. Every 100 points equals 10 AED.",
+                  "Your credits can be applied directly at checkout toward any luxury fragrance or discovery set. Every 100 points equals 10 AED.",
                   "يمكنك استخدام هذا الرصيد مباشرة عند الدفع لخصمه من أي زجاجة عطر أو مجموعة عينات. كل ١٠٠ نقطة تعادل ١٠ دراهم.",
                 )}
               </p>
@@ -366,8 +366,8 @@ export default function AccountPage(
               </h2>
               <p className="text-xs text-luxury-muted leading-relaxed">
                 {c(
-                  "Join our circle of Gulf fragrance connoisseurs. Save multiple delivery addresses for 1-click checkout, earn 5% olfactory rewards, and receive invitations to private atelier batches.",
-                  "انضم لدائرة متذوقي العطور الراقية في الخليج. احفظ عناوين التوصيل المتعددة لتسهيل الشراء بضغطة زر، واكسب ٥٪ رصيد ولاء عطري، واحصل على دعوات حصرية لأندر الدفعات.",
+                  "Join our community of fragrance lovers across the GCC. Save multiple delivery addresses for fast checkout, earn 5% reward points on every order, and get early access to exclusive releases.",
+                  "انضم لمجتمع عشاق العطور في الخليج. احفظ عناوين التوصيل المتعددة لتسهيل الشراء بسرعة، واكسب ٥٪ نقاط مكافآت مع كل طلب، واحصل على أسبقية الوصول للإصدارات الحصرية.",
                 )}
               </p>
             </div>
@@ -697,7 +697,7 @@ export default function AccountPage(
             </h3>
             <p className="text-xs text-luxury-muted max-w-sm mx-auto">
               {c(
-                "Add your home or office address to enjoy instant 1-click checkout on all future fragrance acquisitions.",
+                "Add your home or office address to enjoy instant 1-click checkout on all future orders.",
                 "أضف عنوان منزلك أو مكتبك للتمتع بتجربة شراء سريعة بضغطة زر واحدة.",
               )}
             </p>
@@ -778,7 +778,7 @@ export default function AccountPage(
               {c("My Orders", "طلباتي")}
             </span>
             <span className="text-[11px] text-accent font-medium">
-              {orders ? orders.length : 0} {c("Acquisitions", "مقتنيات")} →
+              {orders ? orders.length : 0} {c("Orders", "الطلبات")} →
             </span>
           </div>
         </Link>
@@ -798,7 +798,7 @@ export default function AccountPage(
               {c("Wishlist", "قائمتك المفضلة")}
             </span>
             <span className="text-[11px] text-accent font-medium">
-              {wishlistCount} {c("Saved Flacons", "عطور محفوظة")} →
+              {wishlistCount} {c("Saved Fragrances", "عطور محفوظة")} →
             </span>
           </div>
         </Link>
@@ -917,8 +917,8 @@ export default function AccountPage(
             </h3>
             <p className="text-xs text-luxury-muted leading-relaxed">
               {c(
-                "When you acquire a flacon or curate a discovery set, your receipt and live tracking details will appear here.",
-                "عند اقتنائك لأي زجاجة عطر أو تصميم صندوق عينات، ستظهر تفاصيل طلبك وروابط التتبع المباشر هنا.",
+                "When you order a fragrance or discovery set, your receipt and live tracking details will appear here.",
+                "عند طلب أي عطر أو مجموعة عينات، ستظهر تفاصيل طلبك وروابط التتبع المباشر هنا.",
               )}
             </p>
             <div className="flex flex-wrap items-center justify-center gap-3 pt-2">

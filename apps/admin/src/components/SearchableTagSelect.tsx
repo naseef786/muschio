@@ -96,7 +96,7 @@ export function SearchableTagSelect({
           <Tag size={13} className="text-amber-500" />
           <span>Product Tags & Curations (العلامات والتصنيفات)</span>
         </label>
-        <span className="text-[10px] text-neutral-500 font-mono">
+        <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
           {selectedTags.length} selected
         </span>
       </div>
@@ -107,7 +107,7 @@ export function SearchableTagSelect({
           {selectedTags.map((tag) => (
             <span
               key={tag.id}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-medium bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 shadow-xs"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 shadow-xs"
             >
               {tag.colorHex && (
                 <span
@@ -129,7 +129,7 @@ export function SearchableTagSelect({
           <button
             type="button"
             onClick={() => onChange([])}
-            className="text-[10px] text-neutral-400 hover:text-rose-500 underline ml-1"
+            className="text-xs text-neutral-500 hover:text-rose-500 underline ml-1"
           >
             Clear all
           </button>
@@ -217,7 +217,7 @@ export function SearchableTagSelect({
                           {tag.nameEn}
                         </div>
                         {tag.nameAr && (
-                          <div className="text-[10px] text-neutral-400 font-sans" dir="rtl">
+                          <div className="text-xs text-neutral-500 dark:text-neutral-400 font-sans" dir="rtl">
                             {tag.nameAr}
                           </div>
                         )}
@@ -226,12 +226,12 @@ export function SearchableTagSelect({
 
                     <div className="flex items-center gap-2">
                       {tag.isFeatured && (
-                        <span className="text-[9px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
+                        <span className="text-xs uppercase tracking-wider font-semibold px-2 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/20">
                           Featured
                         </span>
                       )}
                       {tag.productCount !== undefined && tag.productCount > 0 && (
-                        <span className="text-[10px] font-mono text-neutral-400">
+                        <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400">
                           {tag.productCount} prod
                         </span>
                       )}

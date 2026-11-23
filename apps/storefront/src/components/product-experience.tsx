@@ -601,7 +601,7 @@ export function ProductExperience({
               <div className="space-y-3 pt-4 border-t border-neutral-100 dark:border-neutral-800">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-medium uppercase tracking-wider text-neutral-900 dark:text-neutral-100 font-sans">
-                    {c("Select Flacon Volume", "اختر حجم الزجاجة")}
+                    {c("Select Bottle Size", "اختر حجم الزجاجة")}
                   </span>
                   <span className="text-neutral-500 font-mono text-xs">
                     {typeof selectedVariant?.volume === "number"
@@ -1059,7 +1059,7 @@ export function ProductExperience({
                     </p>
                     <p>
                       {c(
-                        "• Free returns within 7 days on unopened, factory-sealed flacons. Complimentary door-to-door courier collection arranged upon request.",
+                        "• Free returns within 7 days on unopened, factory-sealed bottles. Complimentary door-to-door courier collection arranged upon request.",
                         "• إرجاع مجاني خلال ٧ أيام للزجاجات المغلفة وغير المفتوحة. نوفر خدمة استلام مجانية من باب منزلك عند الطلب.",
                       )}
                     </p>

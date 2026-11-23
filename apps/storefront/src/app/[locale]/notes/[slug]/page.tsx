@@ -186,7 +186,7 @@ export default async function NoteDetailPage(
         <div className="flex items-end justify-between pb-4 border-b border-luxury-border">
           <div>
             <span className="eyebrow mb-1">
-              {c("AUTHENTICATED FLACONS", "العطور المسجلة")}
+              {c("FEATURED FRAGRANCES", "العطور المسجلة")}
             </span>
             <h2 className="font-serif text-2xl text-luxury-text font-normal">
               {c(
@@ -205,7 +205,7 @@ export default async function NoteDetailPage(
           <div className="py-16 text-center border border-luxury-border bg-luxury-surface">
             <p className="text-sm text-luxury-muted font-sans">
               {c(
-                "No flacons currently featured with this raw extract.",
+                "No fragrances currently featured with this note.",
                 "لا توجد عطور متوفرة حالياً تتضمن هذه الخلاصة العطرية.",
               )}
             </p>

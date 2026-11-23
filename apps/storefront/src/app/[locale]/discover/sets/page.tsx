@@ -172,7 +172,7 @@ export default function DiscoverySetsPage(
         </h1>
         <p className="text-xs sm:text-sm text-luxury-muted font-sans leading-relaxed">
           {c(
-            "Select five official 2ml atomizers to experience on bare skin before acquiring a full flacon. Priced at 280 AED, your bespoke discovery set includes a 100% redeemable 280 AED voucher credited automatically toward any full-bottle acquisition.",
+            "Select five official 2ml atomizers to experience on bare skin before acquiring a full bottle. Priced at 280 AED, your bespoke discovery set includes a 100% redeemable 280 AED voucher credited automatically toward any full-bottle purchase.",
             "اختر ٥ عينات رسمية بحجم ٢ مل لتجربتها على بشرتك في هدوء منزلك. سعر الصندوق ٢٨٠ درهم، ويشمل قسيمة شراء مستردة بالكامل بنفس القيمة (٢٨٠ درهم) تخصم تلقائياً عند طلب أي زجاجة بالحجم الكامل.",
           )}
         </p>
@@ -506,7 +506,7 @@ export default function DiscoverySetsPage(
               {c("280 AED Full Value Refund", "استرداد كامل بقيمة ٢٨٠ درهم")}
             </span>
             <span className="text-[11px] text-luxury-muted">
-              {c("Applied on your next full flacon", "تُخصم فوراً عند طلب عطرك المفضل")}
+              {c("Applied on your next full bottle", "تُخصم فوراً عند طلب عطرك المفضل")}
             </span>
           </div>
         </div>

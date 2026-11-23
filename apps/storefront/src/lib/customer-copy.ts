@@ -25,12 +25,19 @@ const PLAIN_ENGLISH: Record<string, string> = {
   "About the Maison": "About Us",
   "Contact & VIP Concierge": "Contact Us",
   "Track Order & Dispatch": "Track Order",
+  "Live Courier Tracking": "Live Tracking",
   "Client Vault & Account": "My Account",
+  "Private Client Suite & Loyalty": "My Account",
+  "Private Client Suite": "My Account",
+  "Private Client": "My Account",
+  "Back to Private Suite": "Back to Account",
   "Concierge & Socials": "Help & Social Media",
   "WhatsApp VIP Concierge": "WhatsApp Help",
   "VIP Concierge": "Customer Help",
+  "Contact Concierge": "Contact Support",
   "Olfactory Loyalty Credit": "Rewards Credit",
   "Olfactory Loyalty Rewards": "Rewards Earned",
+  "OLFACTORY LOYALTY BALANCE": "Rewards Balance",
   "Flacons Curated": "Fragrances",
   "Artisanal Discovery Box": "Sample Set",
   "Add Discovery Box to Bag": "Add Sample Set to Bag",
@@ -46,6 +53,26 @@ const PLAIN_ENGLISH: Record<string, string> = {
   "Maison Flacon": "Brand and Bottle",
   "Longevity & Sillage": "Lasting Power & Scent Trail",
   "Maison & Provenance": "Brand & Origin",
+  // Order history & account plain language
+  "HAUTE PARFUMERIE · CLIENT ACQUISITIONS": "ORDER HISTORY",
+  "HAUTE PARFUMERIE · ORDER HISTORY": "ORDER HISTORY",
+  "CLIENT ACQUISITIONS": "ORDERS",
+  "Total Consideration (Incl. VAT)": "Order Total (Incl. 5% VAT)",
+  "Total Consideration": "Total (Incl. 5% VAT)",
+  "Payment Channel": "Payment Method",
+  "Processing in Atelier": "Preparing Order",
+  "In Transit · GCC Courier": "On the way",
+  "Recent Acquisition": "Recent Order",
+  "No acquisitions recorded yet": "No orders yet",
+  "Accessing private order vaults…": "Loading your orders…",
+  "Refresh Archive": "Refresh Orders",
+  "GUEST ORDER LOOKUP": "Find Your Order",
+  "Questions regarding your dispatch or batch provenance?": "Need help with your order or delivery?",
+  // Theme toggle labels
+  "Dark Obsidian": "Dark Mode",
+  "Light Luxury": "Light Mode",
+  "Switch to Dark Obsidian theme": "Switch to Dark Mode",
+  "Switch to Light Luxury theme": "Switch to Light Mode",
 };
 
 export function repairMojibake(value: string): string {
@@ -53,7 +80,7 @@ export function repairMojibake(value: string): string {
   try {
     const bytes = Uint8Array.from(value, (character) => character.charCodeAt(0));
     const decoded = new TextDecoder("utf-8").decode(bytes);
-    return decoded.includes("�") ? value : decoded;
+    return decoded.includes("\uFFFD") ? value : decoded;
   } catch {
     return value;
   }

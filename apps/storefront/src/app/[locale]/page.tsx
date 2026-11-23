@@ -21,7 +21,7 @@ const DEFAULT_HERO = {
   titleAr: "فن",
   titleEmEn: "Noble Sillage.",
   titleEmAr: "الحضور المهيب.",
-  subtitleEn: "Curating the world's most formidable extraits de parfum, aged attars, and raw olfactory essences for the connoisseurs of the Gulf.",
+  subtitleEn: "Curating rare perfumes, pure attars, and private blends for fragrance lovers across the Arabian Gulf.",
   subtitleAr: "ننتقي أرقى خلاصات العطور العالمية المعتقة والزيوت النادرة لعشاق العطور الراقية في الخليج العربي.",
   ctaTextEn: "Shop the Collection",
   ctaTextAr: "تسوق المجموعة",
@@ -406,11 +406,11 @@ export default async function HomePage(
         eyebrow={c((sec?.config as any)?.eyebrowEn || "SIGNATURE SELECTION", (sec?.config as any)?.eyebrowAr || "المختارات المميزة")}
         title={c(sec?.titleEn || "Curated Masterpieces", sec?.titleAr || "تحف عطرية مختارة")}
         subtitle={c(
-          sec?.subtitleEn || "Explore our rare extraits de parfum, aged attars, and private collections hand-curated for olfactory connoisseurs.",
+          sec?.subtitleEn || "Explore rare perfumes, pure oils, and private collections curated for fragrance lovers across the GCC.",
           sec?.subtitleAr || "استكشف أنقى خلاصات العطور العالمية والأدهان المعتقة المنتقاة بعناية لصفوة عشاق العطور.",
         )}
         viewAllHref="/shop"
-        viewAllText={c("Shop All Flacons", "تسوق جميع العطور")}
+        viewAllText={c("Shop All Fragrances", "تسوق جميع العطور")}
         products={featuredProducts}
         collections={formattedCollections}
         locale={locale}
@@ -765,16 +765,18 @@ export default async function HomePage(
     <div className="space-y-16 md:space-y-24 pb-16">
       {/* Top Promotional Announcement Strip if active */}
       {promoStrip && (
-        <div className="bg-luxury-surface2 border-b border-luxury-border py-2.5 px-4 text-center">
+        <div className="bg-luxury-surface2/60 border-b border-luxury-border py-2 px-4 text-center">
           <Link
             href={promoStrip.ctaUrl || "/shop"}
-            className="inline-flex items-center gap-2 text-xs font-sans text-luxury-text hover:text-accent transition-colors"
+            className="inline-flex items-center justify-center gap-2 text-xs font-sans text-luxury-text hover:text-accent transition-colors group"
           >
-            <span className="bg-accent/20 text-accent px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider rounded">
+            <span className="shrink-0 whitespace-nowrap bg-accent/15 text-accent px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-sm">
               {c(promoStrip.eyebrowEn || "OFFER", promoStrip.eyebrowAr || "عرض")}
             </span>
-            <span className="font-medium">{c(promoStrip.titleEn, promoStrip.titleAr)}</span>
-            <ArrowUpRight size={12} className="text-luxury-muted" />
+            <span className="font-medium text-xs text-luxury-text group-hover:text-accent transition-colors">
+              {c(promoStrip.titleEn, promoStrip.titleAr)}
+            </span>
+            <ArrowUpRight size={13} className="text-luxury-muted group-hover:text-accent shrink-0 rtl:-scale-x-100" />
           </Link>
         </div>
       )}

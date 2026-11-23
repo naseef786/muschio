@@ -543,7 +543,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                 <span>{tab.label}</span>
                 {tab.count !== undefined && (
                   <span
-                    className={`ml-1 px-1.5 py-0.5 rounded-full text-[10px] font-mono ${
+                    className={`ml-1 px-2 py-0.5 rounded-full text-xs font-mono ${
                       isActive
                         ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
                         : "bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
@@ -709,12 +709,12 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                     <div key={tx.id} className="py-3 flex items-center justify-between">
                       <div className="space-y-0.5">
                         <div className="font-medium text-neutral-900 dark:text-neutral-100 flex items-center gap-2">
-                          <span className="font-mono text-[11px] px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800">
+                          <span className="font-mono text-xs px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800">
                             {tx.type}
                           </span>
                           <span>{tx.customer?.name || tx.customer?.email || "Customer"}</span>
                         </div>
-                        <p className="text-[11px] text-neutral-500">{tx.note || tx.referenceId || "Standard transaction"}</p>
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400">{tx.note || tx.referenceId || "Standard transaction"}</p>
                       </div>
                       <div className="text-right">
                         <span
@@ -724,7 +724,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                         >
                           {tx.points > 0 ? `+${tx.points}` : tx.points} pts
                         </span>
-                        <div className="text-[10px] text-neutral-400">{new Date(tx.createdAt).toLocaleDateString()}</div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{new Date(tx.createdAt).toLocaleDateString()}</div>
                       </div>
                     </div>
                   ))}
@@ -814,7 +814,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                     <tr key={p.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20">
                       <td className="py-3 px-4">
                         <div className="font-semibold text-neutral-900 dark:text-neutral-100">{p.nameEn}</div>
-                        <div className="text-[11px] text-neutral-400">{p.type}</div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{p.type}</div>
                       </td>
                       <td className="py-3 px-4 font-mono font-medium">
                         {p.type === "PERCENTAGE" && `${p.value}% OFF`}
@@ -824,14 +824,14 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                         {p.type === "BUY_X_GET_Y" && `Buy X Get Y (Val: ${p.value})`}
                         {p.type === "TIERED_DISCOUNT" && `Tiered (Max: ${p.value}%)`}
                       </td>
-                      <td className="py-3 px-4 text-neutral-500">
+                      <td className="py-3 px-4 text-neutral-600 dark:text-neutral-300">
                         {p.minSpend ? `Min spend AED ${p.minSpend}` : "No min spend"}
                         {p.maxDiscount ? ` (Cap AED ${p.maxDiscount})` : ""}
                         {p.isStackable ? <span className="ml-1 text-emerald-600 font-medium">• Stackable</span> : ""}
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             p.isActive
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
                               : "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400"
@@ -840,7 +840,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                           <span className={`w-1.5 h-1.5 rounded-full ${p.isActive ? "bg-emerald-500" : "bg-neutral-400"}`} />
                           {p.isActive ? "Active" : "Inactive"}
                         </span>
-                        <div className="text-[10px] text-neutral-400 mt-0.5">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                           {p.endsAt ? `Until ${new Date(p.endsAt).toLocaleDateString()}` : "No expiration"}
                         </div>
                       </td>
@@ -914,14 +914,14 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                       </td>
                       <td className="py-3 px-4">
                         {c.firstOrderOnly && (
-                          <span className="px-2 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-[10px] font-medium mr-1">
+                          <span className="px-2.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-medium mr-1">
                             First Order Only
                           </span>
                         )}
                         {c.minSpend ? (
-                          <span className="text-neutral-500 text-[11px]">Min AED {c.minSpend}</span>
+                          <span className="text-neutral-600 dark:text-neutral-400 text-xs">Min AED {c.minSpend}</span>
                         ) : (
-                          <span className="text-neutral-400 text-[11px]">None</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-xs">None</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-neutral-500">
@@ -992,11 +992,11 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                       </td>
                       <td className="py-3 px-4">
                         {v.isDiscoveryVoucher ? (
-                          <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-[10px] font-medium">
+                          <span className="px-2.5 py-0.5 rounded-full bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-medium">
                             Discovery Coffret
                           </span>
                         ) : (
-                          <span className="text-neutral-500">Bespoke VIP</span>
+                          <span className="text-neutral-600 dark:text-neutral-400 text-xs">Bespoke VIP</span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-neutral-500">
@@ -1004,7 +1004,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-mono font-medium ${
+                          className={`px-2.5 py-0.5 rounded text-xs font-mono font-medium ${
                             v.usedAt
                               ? "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300"
                               : "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
@@ -1081,11 +1081,11 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                         <div className="font-medium text-neutral-900 dark:text-neutral-100">
                           {gc.recipientName || "Anonymous"}
                         </div>
-                        <div className="text-[11px] text-neutral-400">{gc.recipientEmail || "No email assigned"}</div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">{gc.recipientEmail || "No email assigned"}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                          className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                             gc.status === "ACTIVE"
                               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300"
                               : gc.status === "DEPLETED"
@@ -1095,7 +1095,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                         >
                           {gc.status}
                         </span>
-                        <div className="text-[10px] text-neutral-400 mt-0.5">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 mt-0.5">
                           {gc.expiresAt ? `Exp: ${new Date(gc.expiresAt).toLocaleDateString()}` : "No expiry"}
                         </div>
                       </td>
@@ -1143,7 +1143,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-800 text-xs font-mono"
                   required
                 />
-                <p className="text-[11px] text-neutral-400 mt-1">E.g., 10 means 1 point earned per 10 AED spent</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">E.g., 10 means 1 point earned per 10 AED spent</p>
               </div>
 
               <div>
@@ -1159,7 +1159,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-800 text-xs font-mono"
                   required
                 />
-                <p className="text-[11px] text-neutral-400 mt-1">E.g., 0.5 means 100 points = 50 AED checkout discount</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">E.g., 0.5 means 100 points = 50 AED checkout discount</p>
               </div>
 
               <div>
@@ -1176,7 +1176,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-800 text-xs font-mono"
                   required
                 />
-                <p className="text-[11px] text-neutral-400 mt-1">Awarded automatically to new customer accounts</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Awarded automatically to new customer accounts</p>
               </div>
 
               <div>
@@ -1270,7 +1270,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   </div>
 
                   <div className="pt-2 border-t border-neutral-200 dark:border-neutral-700/60">
-                    <div className="text-[11px] font-semibold text-neutral-600 dark:text-neutral-400 mb-1.5 uppercase tracking-wider">
+                    <div className="text-xs font-semibold text-neutral-700 dark:text-neutral-300 mb-1.5 uppercase tracking-wider">
                       Tier Privileges
                     </div>
                     <ul className="space-y-1 text-xs text-neutral-500">
@@ -1327,13 +1327,13 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   </tr>
                 ) : (
                   ledgerEntries.map((tx) => (
-                    <tr key={tx.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 text-[11px]">
-                      <td className="py-3 px-4 text-neutral-400">{new Date(tx.createdAt).toLocaleString()}</td>
+                    <tr key={tx.id} className="hover:bg-neutral-50/50 dark:hover:bg-neutral-800/20 text-xs">
+                      <td className="py-3 px-4 text-neutral-500 dark:text-neutral-400">{new Date(tx.createdAt).toLocaleString()}</td>
                       <td className="py-3 px-4 font-sans">
                         <div className="font-medium text-neutral-900 dark:text-neutral-100">
                           {tx.customer?.name || "VIP Customer"}
                         </div>
-                        <div className="text-[10px] text-neutral-400 font-mono">{tx.customer?.email || tx.customerId}</div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{tx.customer?.email || tx.customerId}</div>
                       </td>
                       <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
@@ -1687,7 +1687,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
                   onChange={(e) => setVoucherForm({ ...voucherForm, discountAmount: e.target.value })}
                   className="w-full px-3 py-2 border border-neutral-200 dark:border-neutral-800 rounded-xl bg-neutral-50 dark:bg-neutral-800 font-mono"
                 />
-                <p className="text-[11px] text-neutral-400 mt-1">Default 150 AED for Discovery Coffret redemption</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">Default 150 AED for Discovery Coffret redemption</p>
               </div>
 
               <div>
@@ -1856,7 +1856,7 @@ export function MarketingPromotionsTab({ authHeaders, onNotification }: Marketin
             </div>
 
             <form onSubmit={handleAdjustLoyalty} className="mt-4 space-y-4 text-xs">
-              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed">
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-xl text-amber-800 dark:text-amber-300 text-xs leading-relaxed">
                 <span className="font-semibold">Security Audit Mandate:</span> All manual adjustments are recorded permanently in the immutable ledger alongside your administrator ID and required justification.
               </div>
 

@@ -51,7 +51,7 @@ export default function DeliveryPage(
         </h1>
         <p className="text-xs sm:text-sm text-luxury-muted font-sans leading-relaxed">
           {c(
-            "Every flacon dispatched from Muschio is treated as a cultural artifact. Shipped in custom climate-regulated packaging to protect delicate natural perfume oils, accompanied by free return up to 7 days and white-glove express tracking.",
+            "Every fragrance dispatched from Muschio is handled with care. Shipped in temperature-protected packaging to protect delicate natural perfume oils, accompanied by free 7-day returns and express door-to-door tracking.",
             "تُعامل كل زجاجة عطر في موسكيو كتحفة فنية أصيلة. تُشحن في عبوات مبردة تحمي الزيوت العطرية النقية من حرارة الطقس، مرفقة بضمان إرجاع مجاني حتى 7 أيام مع تتبع فوري مباشر.",
           )}
         </p>
@@ -139,7 +139,7 @@ export default function DeliveryPage(
                   </h4>
                   <p className="text-xs text-luxury-muted leading-relaxed">
                     {c(
-                      "Every full bottle arrives with our complimentary 7-day return guarantee. Returns and exchanges are seamlessly arranged on unopened, sealed flacons.",
+                      "Every full bottle arrives with our complimentary 7-day return guarantee. Returns and exchanges are seamlessly arranged on unopened, sealed bottles.",
                       "تصل كل زجاجة كاملة مع ضمان إرجاع مجاني لمدة 7 أيام. نوفر خدمة استلام وإرجاع مجانية وميسرة للزجاجات المغلفة وغير المفتوحة.",
                     )}
                   </p>

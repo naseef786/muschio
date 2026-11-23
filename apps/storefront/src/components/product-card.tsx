@@ -120,18 +120,18 @@ export function ProductCard({
       const parsed = activeVariants.map((v) => {
         const regular = Number(
           v.basePrice ??
-            v.regularPrice ??
-            v.originalPrice ??
-            (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price),
+          v.regularPrice ??
+          v.originalPrice ??
+          (v.compareAtPrice && v.compareAtPrice > v.price ? v.compareAtPrice : v.price),
         );
         const rawDisc =
           v.salePrice !== null && v.salePrice !== undefined
             ? Number(v.salePrice)
             : v.discountPrice !== null && v.discountPrice !== undefined
-            ? Number(v.discountPrice)
-            : v.compareAtPrice && v.compareAtPrice > v.price
-            ? Number(v.price)
-            : null;
+              ? Number(v.discountPrice)
+              : v.compareAtPrice && v.compareAtPrice > v.price
+                ? Number(v.price)
+                : null;
 
         const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regular;
         const sellingPrice = hasDisc ? rawDisc! : v.price || regular;
@@ -154,19 +154,19 @@ export function ProductCard({
     if (activeVariants.length === 1 && firstVar) {
       const regular = Number(
         firstVar.regularPrice ??
-          firstVar.originalPrice ??
-          (firstVar.compareAtPrice && firstVar.compareAtPrice > firstVar.price
-            ? firstVar.compareAtPrice
-            : firstVar.price),
+        firstVar.originalPrice ??
+        (firstVar.compareAtPrice && firstVar.compareAtPrice > firstVar.price
+          ? firstVar.compareAtPrice
+          : firstVar.price),
       );
       const rawDisc =
         firstVar.salePrice !== null && firstVar.salePrice !== undefined
           ? Number(firstVar.salePrice)
           : firstVar.discountPrice !== null && firstVar.discountPrice !== undefined
-          ? Number(firstVar.discountPrice)
-          : firstVar.compareAtPrice && firstVar.compareAtPrice > firstVar.price
-          ? Number(firstVar.price)
-          : null;
+            ? Number(firstVar.discountPrice)
+            : firstVar.compareAtPrice && firstVar.compareAtPrice > firstVar.price
+              ? Number(firstVar.price)
+              : null;
 
       const hasDisc = rawDisc !== null && rawDisc > 0 && rawDisc < regular;
       const sellingPrice = hasDisc ? rawDisc! : firstVar.price || regular;
@@ -212,18 +212,18 @@ export function ProductCard({
     aspectRatio === "square"
       ? "aspect-square"
       : aspectRatio === "4/5"
-      ? "aspect-[4/5]"
-      : "aspect-[3/4]";
+        ? "aspect-[4/5]"
+        : "aspect-[3/4]";
 
   return (
     <div className="group relative flex flex-col h-full select-none font-sans">
       {/* Image navigation is button-driven; the image and title remain product links. */}
       <div
-        className={`relative ${aspectClass} w-full bg-[#F8F8F8] dark:bg-neutral-900 overflow-hidden rounded-none select-none`}
+        className={`relative ${aspectClass} w-full bg-luxury-surface2 overflow-hidden rounded-none select-none`}
       >
         {/* Out of Stock Indicator */}
         {isOutOfStock && (
-          <div className="absolute top-3 start-3 z-30 pointer-events-none">
+          <div className="absolute top-2.5 start-2.5 z-30 pointer-events-none">
             <span className="px-2 py-0.5 text-[10px] uppercase font-sans tracking-wider bg-white/95 dark:bg-black/90 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-800">
               {isAr ? "غير متوفر" : "Out of Stock"}
             </span>
@@ -240,20 +240,19 @@ export function ProductCard({
                 ? "إزالة من المفضلة"
                 : "Remove from Wishlist"
               : isAr
-              ? "إضافة إلى المفضلة"
-              : "Add to Wishlist"
+                ? "إضافة إلى المفضلة"
+                : "Add to Wishlist"
           }
           aria-pressed={isWishlisted}
-          className="absolute top-3 end-3 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-white/70 bg-white/80 text-neutral-900 shadow-sm backdrop-blur-md transition-colors hover:bg-white/95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-900 dark:border-white/20 dark:bg-neutral-950/80 dark:text-white dark:hover:bg-neutral-950/95 dark:focus-visible:ring-white"
+          className="absolute top-2 end-2 sm:top-2.5 sm:end-2.5 z-30 flex h-7 w-7 sm:h-8 sm:w-8 items-center justify-center rounded-full border border-white/60 bg-white/70 text-neutral-900 shadow-xs backdrop-blur-xs transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-neutral-900 dark:border-white/20 dark:bg-neutral-950/70 dark:text-white dark:hover:bg-neutral-950/90 dark:focus-visible:ring-white"
         >
           <Heart
-            size={20}
-            strokeWidth={1.2}
-            className={`transition-colors duration-200 ${
-              isWishlisted
-                ? "fill-black text-black dark:fill-white dark:text-white"
-                : "text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white"
-            }`}
+            size={14}
+            strokeWidth={1.4}
+            className={`transition-colors duration-200 ${isWishlisted
+              ? "fill-black text-black dark:fill-white dark:text-white"
+              : "text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+              }`}
           />
         </button>
 

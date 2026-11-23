@@ -13,8 +13,8 @@ export function ImageGalleryControls({ count, index, onSelect, locale = "en" }: 
   const copy = productCardCopy[locale];
   const dots = Array.from({ length: count }, (_, dot) => dot);
   const select = (next: number) => onSelect((next + count) % count);
-  const glass = "border border-white/70 bg-white/45 text-neutral-900 shadow-[0_4px_16px_rgba(0,0,0,0.08),inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl backdrop-saturate-150 dark:border-white/20 dark:bg-neutral-950/40 dark:text-white";
-  const arrow = "pointer-events-auto absolute top-1/2 z-20 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent";
+  const glass = "border border-white/70 bg-white/80 text-neutral-900 shadow-sm backdrop-blur-md dark:border-white/20 dark:bg-neutral-950/80 dark:text-white";
+  const arrow = "pointer-events-auto absolute top-1/2 z-20 hidden sm:flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent";
 
   return (
     <div
@@ -32,25 +32,40 @@ export function ImageGalleryControls({ count, index, onSelect, locale = "en" }: 
         select(index + ((event.key === "ArrowRight") !== (locale === "ar") ? 1 : -1));
       }}
     >
-      <button type="button" aria-label={copy.previousImage} className={`${arrow} start-1`}
+      <button type="button" aria-label={copy.previousImage} className={`${arrow} start-1.5`}
         onClick={(event) => { event.preventDefault(); event.stopPropagation(); select(index - 1); }}>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/80 dark:hover:bg-neutral-900/80 ${glass}`}>
-          <ChevronLeft size={16} strokeWidth={1.5} aria-hidden="true" className="rtl:rotate-180" />
+        <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-white/95 dark:hover:bg-neutral-900 ${glass}`}>
+          <ChevronLeft size={15} strokeWidth={1.5} aria-hidden="true" className="rtl:rotate-180" />
         </span>
       </button>
-      <button type="button" aria-label={copy.nextImage} className={`${arrow} end-1`}
+      <button type="button" aria-label={copy.nextImage} className={`${arrow} end-1.5`}
         onClick={(event) => { event.preventDefault(); event.stopPropagation(); select(index + 1); }}>
-        <span className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/80 dark:hover:bg-neutral-900/80 ${glass}`}>
-          <ChevronRight size={16} strokeWidth={1.5} aria-hidden="true" className="rtl:rotate-180" />
+        <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors hover:bg-white/95 dark:hover:bg-neutral-900 ${glass}`}>
+          <ChevronRight size={15} strokeWidth={1.5} aria-hidden="true" className="rtl:rotate-180" />
         </span>
       </button>
-      <div className={`pointer-events-auto absolute bottom-3 left-1/2 flex max-w-[calc(100%-1.5rem)] -translate-x-1/2 flex-wrap items-center justify-center rounded-full px-2 py-1 ${glass}`}>
+      <div className="pointer-events-auto absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full bg-black/25 dark:bg-white/20 backdrop-blur-xs">
         {dots.map((dot) => (
-          <button key={dot} type="button" aria-label={`${copy.image} ${dot + 1} ${copy.of} ${count}`}
+          <button
+            key={dot}
+            type="button"
+            aria-label={`${copy.image} ${dot + 1} ${copy.of} ${count}`}
             aria-current={dot === index ? "true" : undefined}
-            className="flex h-8 w-6 shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); select(dot); }}>
-            <span aria-hidden="true" className={`h-1.5 rounded-full transition-all duration-300 motion-reduce:transition-none ${dot === index ? "w-4 bg-accent shadow-[0_0_8px_rgba(166,137,101,0.25)]" : "w-1.5 bg-neutral-900/30 dark:bg-white/40"}`} />
+            className="p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-accent"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              select(dot);
+            }}
+          >
+            <span
+              aria-hidden="true"
+              className={`block h-1 rounded-full transition-all duration-300 motion-reduce:transition-none ${
+                dot === index
+                  ? "w-3.5 bg-white shadow-xs"
+                  : "w-1 bg-white/50 hover:bg-white/80"
+              }`}
+            />
           </button>
         ))}
       </div>

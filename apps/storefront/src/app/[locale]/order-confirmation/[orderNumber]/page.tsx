@@ -87,7 +87,7 @@ export default function OrderStatusPage(
           } catch { }
           setPaymentSuccess(
             c(
-              "Payment successfully confirmed via Stripe! Your acquisition is now in Atelier preparation.",
+              "Payment successfully confirmed via Stripe! Your order is now in Atelier preparation.",
               "تم تأكيد الدفع بنجاح عبر Stripe! طلبك الآن قيد التجهيز الملكي في المشغل.",
             ),
           );
@@ -375,7 +375,7 @@ export default function OrderStatusPage(
             <p className="max-w-prose text-xs sm:text-sm text-neutral-500 leading-relaxed">
               {isPaid
                 ? c(
-                  "We have received your payment and our master perfumers are packaging your flacons for temperature-regulated delivery.",
+                  "We have received your payment and our master perfumers are packaging your fragrances for temperature-regulated delivery.",
                   "تم استلام الدفعة بنجاح ونقوم الآن بتجهيز وفحص عطورك للتوصيل المبرد.",
                 )
                 : c(
@@ -408,7 +408,7 @@ export default function OrderStatusPage(
             <div className="text-[11px] text-neutral-400 truncate">
               {order?.customerEmail
                 ? `${c("Sent to", "أرسل إلى")} ${order.customerEmail}`
-                : c("Receipt and flacon breakdown sent to your inbox", "تم إرسال الفاتورة وتفاصيل العطور إلى بريدك")}
+                : c("Receipt and order breakdown sent to your inbox", "تم إرسال الفاتورة وتفاصيل العطور إلى بريدك")}
             </div>
           </div>
         </div>
@@ -513,12 +513,12 @@ export default function OrderStatusPage(
             <div className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 p-6 sm:p-8 rounded-sm shadow-sm space-y-6">
               <div className="flex items-center justify-between border-b border-neutral-100 dark:border-neutral-800 pb-4">
                 <span className="text-xs font-semibold uppercase tracking-[0.16em] text-neutral-500 font-sans">
-                  {c("ACQUIRED CREATIONS", "القطع المقتناة في هذا الطلب")}
+                  {c("ORDERED ITEMS", "القطع المطلوبة في هذا الطلب")}
                 </span>
                 <span className="text-xs text-neutral-400 font-mono">
                   {order.items.length}{" "}
                   {c(
-                    order.items.length === 1 ? "Flacon" : "Flacons",
+                    order.items.length === 1 ? "Bottle" : "Bottles",
                     order.items.length === 1 ? "عطر" : "عطور",
                   )}
                 </span>

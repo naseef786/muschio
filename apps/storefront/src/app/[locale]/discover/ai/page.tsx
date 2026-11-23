@@ -202,7 +202,7 @@ export default function AIScentDiscoveryPage(
             : "Olfactory Aura: Live Curated Fragrance Selection",
           analysis: isAr
             ? "بناءً على تفضيلاتك للنفحات الفاخرة، انتقينا لك هذه العطور الملكية المعتمدة والمتاحة حالياً في متجرنا."
-            : "Based on your olfactory preferences, our sommelier has matched you with these verified live flacons from our vault.",
+            : "Based on your scent preferences, we've matched you with these verified fragrances from our collection.",
           recommendations: liveProducts.map((p) => {
             const v = p.variants?.find((variant: any) => !variant.isSampleVial) || p.variants?.[0];
             return {
@@ -216,7 +216,7 @@ export default function AIScentDiscoveryPage(
               image: p.images?.[0] || "/product-placeholder.svg",
               reason: isAr
                 ? "عطر نيش فاخر يجسد الحضور المهيب والفوحان الأرستقراطي."
-                : "Authenticated haute flacon embodying regal projection and refined sillage.",
+                : "Authenticated luxury fragrance with exceptional longevity and projection.",
               accords: p.notes?.map((n: any) => (isAr ? n.nameAr || n.nameEn : n.nameEn)).slice(0, 3) || [],
             };
           }),

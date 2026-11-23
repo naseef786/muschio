@@ -113,7 +113,7 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
               <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
                 {tagToEdit ? "Edit Fragrance Tag" : "Create New Fragrance Tag"}
               </h2>
-              <p className="text-[11px] text-neutral-500">
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
                 {tagToEdit ? `Updating #${tagToEdit.slug}` : "Curate tags for product discovery & filters"}
               </p>
             </div>
@@ -176,7 +176,7 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded font-mono text-xs focus:outline-none focus:border-black dark:focus:border-white"
             />
-            <p className="text-[10px] text-neutral-400 mt-1">
+            <p className="text-xs text-neutral-500 dark:text-neutral-400 mt-1">
               Storefront filter URL: <span className="font-mono">/shop?tag={formData.slug || "tag-slug"}</span>
             </p>
           </div>
@@ -195,11 +195,10 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
                     type="button"
                     onClick={() => setFormData({ ...formData, colorHex: p.hex })}
                     title={p.name}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] border transition-all ${
-                      isSelected
-                        ? "border-black dark:border-white ring-1 ring-black dark:ring-white bg-neutral-100 dark:bg-neutral-800 font-semibold"
-                        : "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-neutral-400"
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border transition-all ${isSelected
+                      ? "border-black dark:border-white ring-1 ring-black dark:ring-white bg-neutral-100 dark:bg-neutral-800 font-semibold"
+                      : "border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 hover:border-neutral-400"
+                      }`}
                   >
                     <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: p.hex }} />
                     <span className="text-neutral-700 dark:text-neutral-300">{p.name}</span>
@@ -231,7 +230,7 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
             </label>
             <textarea
               rows={2}
-              placeholder="e.g. Flacons defined by commanding sillage and exceptional longevity."
+              placeholder="e.g. Fragrances defined by commanding sillage and exceptional longevity."
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               className="w-full bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-neutral-900 dark:text-white p-2.5 rounded text-xs focus:outline-none focus:border-black dark:focus:border-white leading-relaxed"
@@ -246,7 +245,7 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
                 <span className="text-xs font-medium text-neutral-900 dark:text-white block">
                   Featured on Storefront Filter Strip
                 </span>
-                <span className="text-[11px] text-neutral-500">
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
                   Highlight this tag prominently in the trending filter bar on /shop
                 </span>
               </div>
@@ -264,7 +263,7 @@ export function TagModal({ isOpen, onClose, tagToEdit, onSave }: TagModalProps) 
 
           {/* Live Preview */}
           <div className="p-3 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-1.5">
-            <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-medium block">
+            <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-medium block">
               Live Badge Preview (Storefront & Admin)
             </span>
             <div className="flex flex-wrap items-center gap-2">

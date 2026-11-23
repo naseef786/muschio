@@ -90,14 +90,26 @@
 }
 
 .announcement-bar {
-  background: var(--text-primary);
-  color: var(--bg-canvas);
+  background: var(--bg-surface-2);
+  color: var(--text-muted);
   padding: 8px 16px;
   font-size: 11px;
-  font-weight: 400;
+  font-weight: 500;
   text-align: center;
   letter-spacing: 0.08em;
   border-bottom: 1px solid var(--border-subtle);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.announcement-bar a,
+.announcement-bar button {
+  color: var(--text-primary);
+  transition: color 0.2s ease;
+}
+
+.announcement-bar a:hover,
+.announcement-bar button:hover {
+  color: var(--accent-olive);
 }
 
 .site-header {

@@ -68,26 +68,26 @@ export function MediaLibraryPicker({ images, onChange, authHeaders, folder = "mu
   };
 
   return <>
-    <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-2.5 py-1.5 text-[10px] font-medium text-neutral-700 hover:border-black dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-white">
+    <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 rounded-md border border-neutral-300 px-3 py-1.5 text-xs font-medium text-neutral-700 hover:border-black dark:border-neutral-700 dark:text-neutral-200 dark:hover:border-white">
       <ImageIcon size={12} /> Select from Media Library
     </button>
 
     {open && <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/70 p-4" onMouseDown={(event) => { if (event.target === event.currentTarget) setOpen(false); }}>
       <div className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden rounded-lg border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
         <div className="flex items-center justify-between border-b border-neutral-200 px-5 py-4 dark:border-neutral-800">
-          <div><h3 className="text-sm font-medium text-neutral-900 dark:text-white">Cloudinary Media Library</h3><p className="mt-1 text-[10px] text-neutral-500">Images from {folder}</p></div>
+          <div><h3 className="text-sm font-medium text-neutral-900 dark:text-white">Cloudinary Media Library</h3><p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">Images from {folder}</p></div>
           <button type="button" onClick={() => setOpen(false)} className="text-neutral-500 hover:text-black dark:hover:text-white"><X size={17} /></button>
         </div>
         <div className="flex items-center gap-2 border-b border-neutral-200 p-4 dark:border-neutral-800">
           <div className="relative flex-1"><Search size={13} className="absolute start-2.5 top-2.5 text-neutral-400" /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by filename or SKU" className="w-full rounded-md border border-neutral-300 bg-white py-2 ps-8 pe-3 text-xs text-neutral-900 outline-none focus:border-black dark:border-neutral-700 dark:bg-black dark:text-white dark:focus:border-white" /></div>
-          <span className="text-[10px] text-neutral-500">{selected.length} selected</span>
+          <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{selected.length} selected</span>
         </div>
         <div className="min-h-[260px] flex-1 overflow-y-auto p-4">
           {loading ? <div className="flex h-48 items-center justify-center text-neutral-500"><Loader2 size={20} className="animate-spin" /></div> : error ? <p className="p-6 text-center text-xs text-red-600">{error}</p> : filteredAssets.length === 0 ? <p className="p-6 text-center text-xs text-neutral-500">No images found in this folder.</p> : <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 md:grid-cols-6">
             {filteredAssets.map((asset) => { const isSelected = selected.includes(asset.secureUrl); return <button key={asset.publicId} type="button" onClick={() => toggle(asset.secureUrl)} className={`group relative aspect-square overflow-hidden rounded-md border-2 bg-neutral-100 text-left dark:bg-neutral-900 ${isSelected ? "border-black dark:border-white" : "border-transparent hover:border-neutral-400"}`} title={asset.publicId}>
               <img src={asset.secureUrl} alt={asset.publicId} className="h-full w-full object-cover" />
               {isSelected && <span className="absolute end-1.5 top-1.5 rounded-full bg-black p-1 text-white dark:bg-white dark:text-black"><Check size={11} /></span>}
-              <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1.5 py-1 text-[9px] text-white">{asset.publicId.split("/").pop()}</span>
+              <span className="absolute inset-x-0 bottom-0 truncate bg-black/70 px-1.5 py-1 text-xs text-white">{asset.publicId.split("/").pop()}</span>
             </button>; })}
           </div>}
         </div>

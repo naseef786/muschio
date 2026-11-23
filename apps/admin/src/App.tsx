@@ -371,6 +371,17 @@ export function App() {
     false
   );
 
+  // Sync theme with <html> class for Tailwind dark: support & native color-scheme
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    if (adminTheme === "dark") {
+      root.classList.add("dark");
+    } else {
+      root.classList.remove("dark");
+    }
+  }, [adminTheme]);
+
   // Admin Security Authentication Session
   const [authSession, setAuthSession] = useState<AdminAuthSession | null>(() => {
     if (typeof window === "undefined") return null;
@@ -1139,7 +1150,7 @@ export function App() {
                 id: r.id,
                 customer: r.customer ? `${r.customer.firstName} ${r.customer.lastName || ""}`.trim() : "Collector",
                 email: r.customer?.email,
-                product: r.product?.nameEn || "Fragrance Flacon",
+                product: r.product?.nameEn || "Fragrance Bottle",
                 rating: r.rating,
                 review: r.body,
                 title: r.title,
@@ -1163,7 +1174,7 @@ export function App() {
             setReturns(
               json.data.map((r: any) => {
                 const firstItem = r.items?.[0];
-                const prodName = firstItem?.orderItem?.variant?.product?.nameEn || "Complimentary Flacon";
+                const prodName = firstItem?.orderItem?.variant?.product?.nameEn || "Complimentary Bottle";
                 const disposition = firstItem?.inspection?.disposition || (r.status === "COMPLETED" ? "RESTOCK_SELLABLE" : "PENDING_INSPECTION");
                 const condition = firstItem?.inspection?.condition || "PENDING";
                 return {
@@ -1407,7 +1418,7 @@ export function App() {
     youtubeUrl: "https://www.youtube.com/@muschiohaute",
     conciergeEmail: "concierge@muschio.luxury",
     conciergePhone: "+971 4 800 MUSCHIO",
-    announcementBarEn: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC MAISON FLACONS",
+    announcementBarEn: "COMPLIMENTARY WHITE-GLOVE GCC DELIVERY ON ORDERS OVER 500 AED · 100% AUTHENTIC LUXURY FRAGRANCES",
     announcementBarAr: "توصيل فاخر مجاني لكافة دول الخليج للطلبات فوق 500 درهم · عطور أصلية ومضمونة 100%",
     freeShippingThreshold: 500,
     footerTaglineEn: "Haute Parfumerie & Niche Fragrance Platform dedicated to the connoisseurs of the Arabian Gulf. Curating rare extraits de parfum, aged attars, and crystalline olfactory creations.",
@@ -2105,7 +2116,7 @@ export function App() {
       metaDescription: finalMetaDesc,
       imageUrl: productImages[0] || productForm.imageUrl || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85",
       images: productImages,
-      imageAlt: `${productForm.name} by ${productForm.brand} flacon`,
+      imageAlt: `${productForm.name} by ${productForm.brand} fragrance`,
       status: productForm.status,
       tags: tags.filter((t) => (productForm.tagIds || []).includes(t.id)),
       tagIds: productForm.tagIds || [],
@@ -3232,7 +3243,7 @@ export function App() {
 
   return (
     <div
-      className={`min-h-screen md:h-screen md:overflow-hidden ${adminTheme === "light" ? "bg-neutral-100 text-neutral-900" : "bg-black text-white"
+      className={`min-h-screen md:h-screen md:overflow-hidden ${adminTheme === "dark" ? "dark bg-[#0D0F0D] text-neutral-100" : "bg-[#F8F9FA] text-neutral-900"
         } flex flex-col md:flex-row font-sans antialiased selection:bg-black selection:text-white dark:selection:bg-white dark:selection:text-black`}
     >
       {/* MOBILE TOP NAVIGATION BAR (< md) */}
@@ -3248,7 +3259,7 @@ export function App() {
           </button>
           <div className="flex items-center gap-1.5">
             <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white">MUSCHIO</span>
-            <span className="text-[9px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black font-mono">
+            <span className="text-xs font-semibold uppercase tracking-wider px-2 py-0.5 rounded bg-black text-white dark:bg-white dark:text-black font-mono">
               Admin
             </span>
           </div>
@@ -3284,7 +3295,7 @@ export function App() {
           <button
             type="button"
             onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
-            className="px-2 py-1 text-[10px] rounded border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-colors"
+            className="px-2.5 py-1 text-xs font-semibold rounded border border-neutral-300 dark:border-neutral-700 text-neutral-800 dark:text-neutral-200 font-mono hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
             title="Toggle Light / Dark"
           >
             {adminTheme === "light" ? "DARK" : "LIGHT"}
@@ -3328,7 +3339,7 @@ export function App() {
               {(!isSidebarCollapsed || isMobileNavOpen) && (
                 <div className="transition-opacity duration-200 overflow-hidden">
                   <span className="font-serif tracking-widest text-base font-bold text-neutral-900 dark:text-white block whitespace-nowrap">MUSCHIO</span>
-                  <span className="text-[9px] uppercase tracking-[0.2em] text-neutral-500 dark:text-neutral-400 block font-mono whitespace-nowrap">Admin Panel</span>
+                  <span className="text-xs uppercase tracking-[0.15em] text-neutral-600 dark:text-neutral-400 font-semibold block font-mono whitespace-nowrap">Admin Panel</span>
                 </div>
               )}
             </div>
@@ -3337,7 +3348,7 @@ export function App() {
             <button
               type="button"
               onClick={() => setIsMobileNavOpen(false)}
-              className="md:hidden p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+              className="md:hidden p-1.5 text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
               aria-label="Close Navigation"
             >
               <X size={18} />
@@ -3348,7 +3359,7 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(true)}
-                className="hidden md:flex p-1.5 text-neutral-500 hover:text-black dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
+                className="hidden md:flex p-1.5 text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white rounded-md hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors shrink-0"
                 title="Collapse Sidebar (Ctrl+B)"
                 aria-label="Collapse Sidebar"
               >
@@ -3363,7 +3374,7 @@ export function App() {
               <button
                 type="button"
                 onClick={() => setIsSidebarCollapsed(false)}
-                className="p-1 text-neutral-500 hover:text-black dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
+                className="p-1 text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white rounded hover:bg-neutral-100 dark:hover:bg-neutral-900 transition-colors"
                 title="Expand Sidebar (Ctrl+B)"
                 aria-label="Expand Sidebar"
               >
@@ -3413,14 +3424,14 @@ export function App() {
                   className={`w-full shrink-0 flex items-center ${showText ? "justify-between px-3 py-2" : "justify-center px-2 py-2"
                     } rounded-lg text-xs font-medium transition-all ${isActive
                       ? "bg-black text-white dark:bg-white dark:text-black shadow-sm"
-                      : "text-neutral-600 hover:text-black dark:text-neutral-400 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                      : "text-neutral-700 hover:text-black dark:text-neutral-300 dark:hover:text-white hover:bg-neutral-100 dark:hover:bg-neutral-900"
                     }`}
                 >
                   <span className={`flex items-center min-w-0 ${showText ? "gap-2.5" : "justify-center"}`}>
                     <div className="relative flex items-center justify-center shrink-0">
                       <Icon size={16} />
                       {!showText && showCount && (
-                        <span className="absolute -top-1.5 -right-2.5 min-w-[14px] h-[14px] px-0.5 text-[8px] rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black">
+                        <span className="absolute -top-1.5 -right-2.5 min-w-[18px] h-[18px] px-1 text-xs rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold ring-2 ring-white dark:ring-black leading-none">
                           {(item.count ?? 0) > 99 ? "99+" : item.count}
                         </span>
                       )}
@@ -3429,9 +3440,9 @@ export function App() {
                   </span>
                   {showText && showCount && (
                     <span
-                      className={`text-[10px] px-1.5 py-0.5 rounded font-mono shrink-0 ${isActive
+                      className={`text-xs px-2 py-0.5 rounded font-mono font-medium shrink-0 ${isActive
                         ? "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black"
-                        : "bg-neutral-100 text-neutral-700 dark:bg-neutral-900 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800"
+                        : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
                         }`}
                     >
                       {item.count}
@@ -3443,7 +3454,7 @@ export function App() {
             })}
           </nav>
           {!isSidebarCollapsed || isMobileNavOpen ? (
-            <div className="px-3 pt-2 text-[11px] text-neutral-500 dark:text-neutral-400" role="status">
+            <div className="px-3 pt-2 text-xs text-neutral-600 dark:text-neutral-400 font-medium" role="status">
               {countsStatus === "loading" ? "Loading order and product totals…" : countsStatus === "fresh" && countsUpdatedAt ? `Totals updated ${new Date(countsUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : countsStatus === "stale" ? "Totals may be out of date" : "Totals unavailable"}
               {(countsStatus === "stale" || countsStatus === "error") && <button type="button" onClick={() => void refreshDashboardMetrics()} className="ml-2 underline underline-offset-2">Retry</button>}
             </div>
@@ -3489,7 +3500,7 @@ export function App() {
                   <div className="font-medium text-neutral-900 dark:text-white text-xs truncate leading-snug">
                     {authSession.user.name}
                   </div>
-                  <div className="text-[10px] text-neutral-500 font-mono truncate leading-tight">
+                  <div className="text-xs text-neutral-600 dark:text-neutral-400 font-mono font-medium truncate leading-tight">
                     {authSession.user.role.replace("_", " ")}
                   </div>
                 </div>
@@ -3536,10 +3547,10 @@ export function App() {
               <Menu size={18} />
             </button>
             <div>
-              <h1 className="font-serif text-2xl font-light text-neutral-900 dark:text-white capitalize">
+              <h1 className="font-serif text-2xl font-semibold text-neutral-900 dark:text-white capitalize">
                 {TAB_TITLES[activeTab] || activeTab}
               </h1>
-              <p className="text-xs text-neutral-500 font-sans mt-0.5">
+              <p className="text-sm text-neutral-600 dark:text-neutral-400 font-sans mt-0.5">
                 {TAB_SUBTITLES[activeTab] || "Muschio Fragrance Store Management"}
               </p>
             </div>
@@ -3550,9 +3561,9 @@ export function App() {
             <button
               onClick={() => setIsLiveActive(!isLiveActive)}
               title={isLiveActive ? "Live sync active (Click to pause)" : "Live sync paused (Click to resume)"}
-              className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-[11px] font-mono transition-colors ${isLiveActive
+              className={`flex items-center gap-2 px-3 py-1.5 border rounded-md text-xs font-mono font-medium transition-colors ${isLiveActive
                 ? "bg-neutral-100 dark:bg-neutral-900 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300"
-                : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-500"
+                : "bg-neutral-200 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400"
                 }`}
             >
               <span className="relative flex h-2 w-2">
@@ -3589,7 +3600,7 @@ export function App() {
                   <Bell size={15} />
                 )}
                 {liveEvents.filter((e) => !e.read).length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black font-bold text-[9px] px-1.5 py-0.2 rounded-full border border-neutral-400">
+                  <span className="absolute -top-1 -right-1 bg-black text-white dark:bg-white dark:text-black font-bold text-xs px-1.5 py-0.5 rounded-full border border-neutral-400">
                     {liveEvents.filter((e) => !e.read).length}
                   </span>
                 )}
@@ -3601,7 +3612,7 @@ export function App() {
                   <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between bg-neutral-50 dark:bg-neutral-900">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-xs text-neutral-900 dark:text-white">Live Activity Stream</span>
-                      <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                      <span className="text-xs font-mono px-2 py-0.5 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 font-medium">
                         {liveEvents.length} events
                       </span>
                     </div>
@@ -3610,7 +3621,7 @@ export function App() {
                         onClick={() => {
                           setLiveEvents((prev) => prev.map((e) => ({ ...e, read: true })));
                         }}
-                        className="text-[10px] text-neutral-500 hover:text-black dark:hover:text-white transition-colors"
+                        className="text-xs text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white transition-colors font-medium"
                       >
                         Mark all read
                       </button>
@@ -3619,10 +3630,10 @@ export function App() {
 
                   <div className="max-h-80 overflow-y-auto divide-y divide-neutral-200 dark:divide-neutral-800 text-xs">
                     {liveEvents.length === 0 ? (
-                      <div className="p-6 text-center text-neutral-400 text-xs space-y-1">
+                      <div className="p-6 text-center text-neutral-500 text-xs space-y-1">
                         <Clock size={20} className="mx-auto mb-1 opacity-50" />
                         <div>No new events received yet.</div>
-                        <div className="text-[10px] text-neutral-500">Live tracker is listening for orders, cancellations, and enquiries.</div>
+                        <div className="text-xs text-neutral-600 dark:text-neutral-400">Live tracker is listening for orders, cancellations, and enquiries.</div>
                       </div>
                     ) : (
                       liveEvents.map((evt) => {
@@ -3637,7 +3648,7 @@ export function App() {
                           >
                             <div className="flex items-start justify-between gap-2">
                               <span
-                                className={`text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded font-mono ${isCancel
+                                className={`text-xs uppercase font-bold tracking-wider px-2 py-0.5 rounded font-mono ${isCancel
                                   ? "bg-rose-100 text-rose-800 dark:bg-rose-950 dark:text-rose-300"
                                   : isOrder
                                     ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
@@ -3646,14 +3657,14 @@ export function App() {
                               >
                                 {evt.eventName.replace("_", " ")}
                               </span>
-                              <span className="text-[10px] text-neutral-400 font-mono">
+                              <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">
                                 {new Date(evt.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                               </span>
                             </div>
-                            <div className="font-medium text-neutral-900 dark:text-white mt-1">
+                            <div className="font-semibold text-neutral-900 dark:text-white mt-1">
                               {p.orderNumber || p.name || "Event Alert"}
                             </div>
-                            <div className="text-[11px] text-neutral-600 dark:text-neutral-400 line-clamp-2 mt-0.5">
+                            <div className="text-xs text-neutral-700 dark:text-neutral-300 line-clamp-2 mt-0.5">
                               {p.reason || p.message || `Total: ${p.totalAmount || 0} ${p.currency || "AED"} • ${p.customerName || ""}`}
                             </div>
                             <div className="mt-2 flex items-center justify-between">
@@ -3662,7 +3673,7 @@ export function App() {
                                   setActiveTab(isOrder ? "orders" : "enquiries");
                                   setIsNotificationOpen(false);
                                 }}
-                                className="text-[10px] underline text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white"
+                                className="text-xs font-medium underline text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white"
                               >
                                 View in {isOrder ? "Orders" : "Enquiries"} →
                               </button>
@@ -3678,7 +3689,7 @@ export function App() {
 
             <button
               onClick={() => setAdminTheme(adminTheme === "light" ? "dark" : "light")}
-              className="px-3 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white rounded-md flex items-center gap-2 transition-colors shadow-sm"
+              className="px-3 py-1.5 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-xs font-medium text-neutral-800 dark:text-neutral-200 hover:text-black dark:hover:text-white rounded-md flex items-center gap-2 transition-colors shadow-sm"
               title="Toggle Monochromatic Black & White Theme"
             >
               <span
@@ -3688,7 +3699,7 @@ export function App() {
               <span className="capitalize">{adminTheme} (B&W)</span>
             </button>
 
-            <div className="hidden sm:block px-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-600 dark:text-neutral-400 rounded-md">
+            <div className="hidden sm:block px-3 py-1.5 bg-neutral-100 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs font-mono font-medium text-neutral-700 dark:text-neutral-300 rounded-md">
               UAE: 5.0% • KSA: 15.0%
             </div>
 
@@ -3737,36 +3748,36 @@ export function App() {
           <div className="space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Total Net Revenue (MTD)</span>
+                <span className="text-xs uppercase tracking-wider font-semibold text-neutral-600 dark:text-neutral-400">Total Net Revenue (MTD)</span>
                 <div className="font-serif text-3xl text-neutral-900 dark:text-white font-light">
                   {Number(dashboardMetrics?.totalRevenue ?? totalRevenueFromOrders).toLocaleString()} AED
                 </div>
-                <div className="text-emerald-500 text-xs flex items-center gap-1 font-mono">
+                <div className="text-emerald-500 text-xs flex items-center gap-1 font-mono font-medium">
                   <TrendingUp size={12} />
                   <span>Verified captured sales</span>
                 </div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">All Orders</span>
+                <span className="text-xs uppercase tracking-wider font-semibold text-neutral-600 dark:text-neutral-400">All Orders</span>
                 <div className="font-serif text-3xl text-amber-500 dark:text-amber-400 font-light">
                   {dashboardMetrics?.totalOrders ?? "—"} Orders
                 </div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">All order statuses</div>
+                <div className="text-neutral-600 dark:text-neutral-400 text-xs font-mono">All order statuses</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Published Products</span>
+                <span className="text-xs uppercase tracking-wider font-semibold text-neutral-600 dark:text-neutral-400">Published Products</span>
                 <div className="font-serif text-3xl text-emerald-500 dark:text-emerald-400 font-light">
                   {dashboardMetrics?.totalProducts ?? "—"} Products
                 </div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs font-mono">{dashboardMetrics?.draftProducts ?? "—"} drafts · {totalStockUnits} sealed + {totalTesterUnits} testers</div>
+                <div className="text-neutral-600 dark:text-neutral-400 text-xs font-mono">{dashboardMetrics?.draftProducts ?? "—"} drafts · {totalStockUnits} sealed + {totalTesterUnits} testers</div>
               </div>
 
               <div className="p-6 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
-                <span className="text-[11px] uppercase tracking-wider text-neutral-500 dark:text-neutral-400">Pending Returns</span>
+                <span className="text-xs uppercase tracking-wider font-semibold text-neutral-600 dark:text-neutral-400">Pending Returns</span>
                 <div className="font-serif text-3xl text-purple-400 font-light">{returns.length} Cases</div>
-                <div className="text-neutral-500 dark:text-neutral-400 text-xs">Awaiting inspection</div>
+                <div className="text-neutral-600 dark:text-neutral-400 text-xs">Awaiting inspection</div>
               </div>
             </div>
 
@@ -3777,12 +3788,12 @@ export function App() {
                   <h3 className="font-serif text-sm font-semibold text-neutral-900 dark:text-white tracking-wide">
                     Executive Quick Actions & Campaign Launch
                   </h3>
-                  <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
-                    Direct shortcuts to launch hero campaigns, publish new flacons, and manage inventory.
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                    Direct shortcuts to launch hero campaigns, add new fragrances, and manage inventory.
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400">
+                  <span className="text-xs font-mono px-2 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 font-medium border border-neutral-200 dark:border-neutral-700">
                     {banners.length} active banners · {dashboardMetrics?.allProducts ?? "—"} total products
                   </span>
                 </div>
@@ -3799,7 +3810,7 @@ export function App() {
                     <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black flex items-center justify-center">
                       <ImageIcon size={15} />
                     </div>
-                    <span className="text-[10px] font-mono uppercase text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono uppercase text-emerald-600 dark:text-emerald-400 font-semibold bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
                       Campaigns
                     </span>
                   </div>
@@ -3808,7 +3819,7 @@ export function App() {
                       <span>+ Add New Banner</span>
                       <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1 mt-0.5">
                       Hero slider, offer deal, or promo bar
                     </p>
                   </div>
@@ -3824,7 +3835,7 @@ export function App() {
                     <div className="w-8 h-8 rounded bg-black text-white dark:bg-white dark:text-black flex items-center justify-center">
                       <Package size={15} />
                     </div>
-                    <span className="text-[10px] font-mono uppercase text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono uppercase text-neutral-700 dark:text-neutral-300 font-medium bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
                       Catalog
                     </span>
                   </div>
@@ -3833,8 +3844,8 @@ export function App() {
                       <span>+ Add New Product</span>
                       <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
-                      Publish single fragrance flacon
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                      Publish single fragrance
                     </p>
                   </div>
                 </button>
@@ -3849,7 +3860,7 @@ export function App() {
                     <div className="w-8 h-8 rounded bg-emerald-700 text-white flex items-center justify-center">
                       <Upload size={15} />
                     </div>
-                    <span className="text-[10px] font-mono uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono uppercase text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded font-medium">
                       Bulk Import
                     </span>
                   </div>
@@ -3858,7 +3869,7 @@ export function App() {
                       <span>Bulk Excel Upload</span>
                       <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1 mt-0.5">
                       Import multiple products via XLSX / CSV
                     </p>
                   </div>
@@ -3874,7 +3885,7 @@ export function App() {
                     <div className="w-8 h-8 rounded bg-neutral-200 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 flex items-center justify-center">
                       <Sparkles size={15} />
                     </div>
-                    <span className="text-[10px] font-mono uppercase text-neutral-600 dark:text-neutral-400 bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
+                    <span className="text-xs font-mono uppercase text-neutral-700 dark:text-neutral-300 font-medium bg-neutral-200 dark:bg-neutral-800 px-2 py-0.5 rounded">
                       CMS
                     </span>
                   </div>
@@ -3883,7 +3894,7 @@ export function App() {
                       <span>Manage All Banners</span>
                       <ArrowRight size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
-                    <p className="text-[11px] text-neutral-500 dark:text-neutral-400 line-clamp-1 mt-0.5">
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1 mt-0.5">
                       Reorder sections & edit active sliders
                     </p>
                   </div>
@@ -4006,16 +4017,16 @@ export function App() {
                           <span className="font-semibold text-sm text-neutral-900 dark:text-white truncate block">
                             {p.name}
                           </span>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300">
+                          <span className="px-2 py-0.5 rounded text-xs font-mono font-semibold bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200">
                             {p.brand}
                           </span>
                         </div>
                         {p.nameAr && (
-                          <span className="text-neutral-500 text-xs block truncate mt-0.5" dir="rtl">
+                          <span className="text-neutral-600 dark:text-neutral-400 text-xs block truncate mt-0.5" dir="rtl">
                             {p.nameAr}
                           </span>
                         )}
-                        <span className="text-[11px] font-mono text-neutral-400 block mt-0.5">
+                        <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400 block mt-0.5">
                           SKU: {p.sku}
                         </span>
                         {p.tags && p.tags.length > 0 && (
@@ -4023,7 +4034,7 @@ export function App() {
                             {p.tags.slice(0, 3).map((tg) => (
                               <span
                                 key={tg.id || tg.slug}
-                                className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+                                className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
                               >
                                 {tg.colorHex && (
                                   <span
@@ -4035,7 +4046,7 @@ export function App() {
                               </span>
                             ))}
                             {p.tags.length > 3 && (
-                              <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
+                              <span className="text-xs text-neutral-500 font-mono">+{p.tags.length - 3}</span>
                             )}
                           </div>
                         )}
@@ -4047,7 +4058,7 @@ export function App() {
                         <span className="font-mono font-bold text-sm text-neutral-900 dark:text-white block">
                           {p.price}
                         </span>
-                        <span className="text-[10px] text-neutral-500">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400">
                           {p.variants?.length ? `${p.variants.length} volume sizes` : `${p.volumeMl || 100}ml`}
                         </span>
                       </div>
@@ -4055,15 +4066,15 @@ export function App() {
                         <span className="font-mono text-emerald-600 dark:text-emerald-400 font-semibold block text-xs">
                           {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
                         </span>
-                        <span className="text-[10px] text-purple-500 font-mono">
+                        <span className="text-xs text-purple-600 dark:text-purple-400 font-mono font-medium">
                           +{p.testerStock || 0} testers
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900 gap-2">
-                      <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-800 text-[10px] font-medium rounded flex items-center gap-1">
-                        <CheckCircle2 size={11} className="text-emerald-500" />
+                      <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold rounded flex items-center gap-1">
+                        <CheckCircle2 size={12} className="text-emerald-500" />
                         <span>SEO Ready</span>
                       </span>
 
@@ -4103,7 +4114,7 @@ export function App() {
             {/* DESKTOP & LAPTOP PRODUCTS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[1100px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-700 dark:text-neutral-300 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start min-w-[260px]">Product (EN / AR)</th>
                     <th className="py-3.5 px-4 text-start min-w-[160px]">URL Slug</th>
@@ -4141,17 +4152,17 @@ export function App() {
                             <div>
                               <span className="font-semibold text-neutral-900 dark:text-white block">{p.name}</span>
                               {p.nameAr && (
-                                <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
+                                <span className="text-neutral-600 dark:text-neutral-400 text-xs block" dir="rtl">
                                   {p.nameAr}
                                 </span>
                               )}
-                              <span className="text-neutral-400 font-mono text-[11px] block mt-0.5">{p.sku}</span>
+                              <span className="text-neutral-600 dark:text-neutral-400 font-mono text-xs block mt-0.5">{p.sku}</span>
                               {p.tags && p.tags.length > 0 && (
                                 <div className="flex flex-wrap items-center gap-1 mt-1">
                                   {p.tags.slice(0, 3).map((tg) => (
                                     <span
                                       key={tg.id || tg.slug}
-                                      className="inline-flex items-center gap-1 text-[9px] font-medium px-1.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-200 dark:border-neutral-700"
+                                      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
                                     >
                                       {tg.colorHex && (
                                         <span
@@ -4163,19 +4174,19 @@ export function App() {
                                     </span>
                                   ))}
                                   {p.tags.length > 3 && (
-                                    <span className="text-[9px] text-neutral-400 font-mono">+{p.tags.length - 3}</span>
+                                    <span className="text-xs text-neutral-500 font-mono">+{p.tags.length - 3}</span>
                                   )}
                                 </div>
                               )}
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px]">
-                          <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
-                            <span className="text-neutral-400">/product/</span>
-                            <span className="text-emerald-500 font-medium">{p.slug}</span>
+                        <td className="py-3.5 px-4 font-mono text-xs">
+                          <div className="flex items-center gap-1 text-neutral-600 dark:text-neutral-400">
+                            <span className="text-neutral-500">/product/</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-medium">{p.slug}</span>
                           </div>
-                          <span className="text-[10px] text-neutral-500 font-sans block mt-0.5">
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400 font-sans block mt-0.5">
                             {p.concentration || "Extrait de Parfum"}
                           </span>
                         </td>
@@ -4191,30 +4202,30 @@ export function App() {
                             <span>{p.brand}</span>
                             <Award size={11} className="text-amber-400" />
                           </button>
-                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block font-mono mt-0.5">
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400 block font-mono mt-0.5">
                             {p.scentFamily || "Woody Amber"}
                           </span>
                           {p.perfumer && (
-                            <span className="text-[10px] text-amber-500 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
-                              <Sparkles size={10} className="text-amber-400 shrink-0" />
+                            <span className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1 mt-0.5" title={`Master Perfumer: ${p.perfumer}`}>
+                              <Sparkles size={10} className="text-amber-500 shrink-0" />
                               <span className="truncate max-w-[130px] font-sans">Nose: {p.perfumer}</span>
                             </span>
                           )}
                         </td>
-                        <td className="py-3.5 px-4 text-[11px]">
+                        <td className="py-3.5 px-4 text-xs">
                           <div className="space-y-0.5">
-                            <span className="text-neutral-700 dark:text-neutral-300 block">
+                            <span className="text-neutral-800 dark:text-neutral-200 block font-medium">
                               Top ({p.topNotes?.length || 0}) • Heart ({p.heartNotes?.length || 0}) • Base ({p.baseNotes?.length || 0})
                             </span>
                             {p.topNotes && p.topNotes.length > 0 && (
-                              <span className="text-neutral-400 text-[10px] block truncate max-w-xs">
+                              <span className="text-neutral-600 dark:text-neutral-400 text-xs block truncate max-w-xs">
                                 Opening: {p.topNotes.slice(0, 2).join(", ")}
                               </span>
                             )}
                           </div>
                         </td>
                         <td className="py-3.5 px-4 font-mono">
-                          <div className="font-semibold text-neutral-900 dark:text-white">{p.price}</div>
+                          <div className="font-semibold text-neutral-900 dark:text-white text-sm">{p.price}</div>
                           {p.variants && p.variants.length > 0 ? (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {p.variants.map((v, i) => {
@@ -4223,38 +4234,38 @@ export function App() {
                                 return (
                                   <span
                                     key={v.id || i}
-                                    className={`text-[9px] px-1.5 py-0.5 rounded border font-mono ${v.isDefault
-                                      ? "bg-amber-500/15 text-amber-600 dark:text-amber-300 border-amber-500/40"
-                                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border-neutral-200 dark:border-neutral-700"
+                                    className={`text-xs px-2 py-0.5 rounded border font-mono ${v.isDefault
+                                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/40 font-medium"
+                                      : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border-neutral-300 dark:border-neutral-700"
                                       }`}
                                     title={`${v.sku} - ${v.volume}: ${hasDisc ? `${v.discountPrice} AED (MRP: ${orig} AED)` : `${orig} AED`} | Stock: ${v.stockQuantity}`}
                                   >
                                     {v.volume}
-                                    {hasDisc && <span className="ms-0.5 text-emerald-500 font-bold">%</span>}
+                                    {hasDisc && <span className="ms-0.5 text-emerald-600 dark:text-emerald-400 font-bold">%</span>}
                                   </span>
                                 );
                               })}
                             </div>
                           ) : (
-                            <span className="text-[10px] text-neutral-500 block">{p.volumeMl || 100}ml</span>
+                            <span className="text-xs text-neutral-600 dark:text-neutral-400 block">{p.volumeMl || 100}ml</span>
                           )}
                         </td>
                         <td className="py-3.5 px-4 font-mono">
-                          <span className="text-emerald-600 dark:text-emerald-400 font-medium block">
+                          <span className="text-emerald-600 dark:text-emerald-400 font-medium block text-xs">
                             {p.stock} sealed ({p.warehouse || "DXB-MAIN"})
                           </span>
                           {p.variants && p.variants.length > 1 && (
-                            <span className="text-neutral-500 text-[10px] block">
-                              Total: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)} flacons
+                            <span className="text-neutral-600 dark:text-neutral-400 text-xs block">
+                              Total: {p.variants.reduce((sum, v) => sum + (Number(v.stockQuantity) || 0), 0)} bottles
                             </span>
                           )}
-                          <span className="text-purple-500 dark:text-purple-400 text-[11px] block mt-0.5">
+                          <span className="text-purple-600 dark:text-purple-400 text-xs block mt-0.5 font-medium">
                             +{p.testerStock} testers
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-[10px] font-bold rounded flex items-center gap-1 w-fit">
-                            <CheckCircle2 size={11} className="text-emerald-500" />
+                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-800 text-xs font-semibold rounded flex items-center gap-1 w-fit">
+                            <CheckCircle2 size={12} className="text-emerald-500" />
                             <span>SEO Ready</span>
                           </span>
                         </td>
@@ -4336,7 +4347,7 @@ export function App() {
                       <h3 className="font-serif text-lg text-neutral-900 dark:text-white font-medium">
                         {editingProductId ? "Edit Product" : "Add Product"}
                       </h3>
-                      <p className="text-[11px] text-neutral-500 dark:text-neutral-400">
+                      <p className="text-xs text-neutral-500 dark:text-neutral-400">
                         {editingProductId ? "Update product details, pricing, descriptions, and SEO meta tags" : "Product details, pricing, descriptions, and SEO meta tags"}
                       </p>
                     </div>
@@ -4458,19 +4469,19 @@ export function App() {
                     {/* Master Perfumer(s) / Nose Details */}
                     <div className="p-3.5 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-amber-500 dark:text-amber-400 flex items-center gap-1.5">
-                          <Award size={13} />
+                        <span className="text-xs font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                          <Award size={14} />
                           <span>Master Perfumer(s) / Nose (الأنف العطري)</span>
                         </span>
-                        <span className="text-[10px] text-neutral-500 font-mono">Storefront: Maison & Perfumer Details</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">Storefront: Maison & Perfumer Details</span>
                       </div>
 
                       <div>
                         <div className="flex items-center justify-between mb-1">
-                          <label className="text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">
+                          <label className="text-neutral-800 dark:text-neutral-200 text-xs font-medium">
                             Perfumer Names (multiple names can be written separated by commas)
                           </label>
-                          <span className="text-[10px] text-amber-600 dark:text-amber-400 font-sans">Multiple Noses Supported</span>
+                          <span className="text-xs text-amber-600 dark:text-amber-400 font-sans">Multiple Noses Supported</span>
                         </div>
                         <input
                           type="text"
@@ -4484,7 +4495,7 @@ export function App() {
                       {/* Interactive Perfumer Badges */}
                       {(productForm.perfumer || "").trim() && (
                         <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Tagged Perfumers:</span>
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400">Tagged Perfumers:</span>
                           {productForm.perfumer
                             .split(",")
                             .map((s) => s.trim())
@@ -4492,7 +4503,7 @@ export function App() {
                             .map((name, i) => (
                               <span
                                 key={i}
-                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-[11px] font-medium"
+                                className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-medium"
                               >
                                 <span>{name}</span>
                                 <button
@@ -4516,7 +4527,7 @@ export function App() {
 
                       {/* Quick-Add Renowned Noses */}
                       <div className="pt-1 border-t border-neutral-200 dark:border-neutral-800/80">
-                        <span className="text-[10px] text-neutral-500 dark:text-neutral-400 block mb-1.5">Quick-Add Master Perfumer:</span>
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 block mb-1.5 font-medium">Quick-Add Master Perfumer:</span>
                         <div className="flex flex-wrap gap-1">
                           {[
                             "Pierre Negrin",
@@ -4548,7 +4559,7 @@ export function App() {
                                   setProductForm({ ...productForm, perfumer: updated });
                                 }}
                                 disabled={isAlreadyAdded}
-                                className={`px-2 py-0.5 text-[10px] rounded transition-colors ${isAlreadyAdded
+                                className={`px-2.5 py-1 text-xs rounded transition-colors font-medium ${isAlreadyAdded
                                   ? "bg-neutral-100 dark:bg-neutral-800 text-neutral-400 border border-neutral-200 dark:border-neutral-700 cursor-default"
                                   : "bg-white dark:bg-neutral-900 hover:bg-amber-50 dark:hover:bg-amber-950/40 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700"
                                   }`}
@@ -4561,7 +4572,7 @@ export function App() {
                       </div>
 
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] mb-1 font-medium">Perfumer Heritage / Bio Note</label>
+                        <label className="block text-neutral-800 dark:text-neutral-200 text-xs mb-1 font-medium">Perfumer Heritage / Bio Note</label>
                         <input
                           type="text"
                           placeholder="e.g. Master French perfumer famed for architectural incense and royal extraits"
@@ -4575,13 +4586,13 @@ export function App() {
                     {/* Editorial Product Descriptions */}
                     <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
-                          <FileText size={13} className="text-amber-500 dark:text-amber-400" />
+                        <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                          <FileText size={14} className="text-amber-500 dark:text-amber-400" />
                           <span>Product Editorial Descriptions</span>
                         </span>
                       </div>
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Description (English)</label>
+                        <label className="block text-neutral-800 dark:text-neutral-200 mb-1 font-medium text-xs">Product Description (English)</label>
                         <textarea
                           rows={3}
                           placeholder="e.g. Formulated at a monumental 53% concentration and aged for six months in Oman. Opening with spicy oregano..."
@@ -4591,7 +4602,7 @@ export function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 mb-1 font-medium">Product Description (Arabic)</label>
+                        <label className="block text-neutral-800 dark:text-neutral-200 mb-1 font-medium text-xs">Product Description (Arabic)</label>
                         <textarea
                           rows={3}
                           dir="rtl"
@@ -4612,17 +4623,17 @@ export function App() {
                             <span className="text-xs font-semibold text-neutral-900 dark:text-white tracking-wide">
                               Multi-Volume Variants & Warehouse Inventory (أحجام العطور والمستودعات) *
                             </span>
-                            <span className="text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono">
+                            <span className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full font-mono font-medium">
                               Dynamic Builder
                             </span>
                           </div>
-                          <p className="text-[11px] text-neutral-600 dark:text-neutral-400 mt-1">
+                          <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-1">
                             Configure multiple volume options per product (e.g. 30ml, 50ml, 100ml) with dual pricing (Selling Price vs. Base MRP) and warehouse inventory.
                           </p>
                         </div>
                         {/* Quick-add buttons */}
                         <div className="flex items-center gap-1.5">
-                          <span className="text-[10px] text-neutral-500 dark:text-neutral-400">Quick Add:</span>
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400 font-medium">Quick Add:</span>
                           {[30, 50, 100, 200].map((volNum) => (
                             <button
                               key={volNum}
@@ -4654,7 +4665,7 @@ export function App() {
                                   variants: [...productForm.variants, newVariant],
                                 });
                               }}
-                              className="px-2.5 py-1 text-[10px] font-mono bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700 rounded transition-colors"
+                              className="px-2.5 py-1 text-xs font-mono font-medium bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 hover:text-amber-600 dark:hover:text-amber-300 border border-neutral-300 dark:border-neutral-700 rounded transition-colors"
                             >
                               + {volNum}ml
                             </button>
@@ -4665,7 +4676,7 @@ export function App() {
                       {/* Variant Table */}
                       <div className="overflow-x-auto border border-neutral-300 dark:border-neutral-800 rounded-md bg-white dark:bg-neutral-950">
                         <table className="w-full text-start text-xs font-sans min-w-[720px]">
-                          <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider text-[10px] border-b border-neutral-300 dark:border-neutral-800">
+                          <thead className="bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 uppercase tracking-wider text-xs font-semibold border-b border-neutral-300 dark:border-neutral-800">
                             <tr>
                               <th className="p-2.5 text-start font-medium">Volume (ml) *</th>
                               <th className="p-2.5 text-start font-medium">Selling Price (AED) *</th>
@@ -4727,7 +4738,7 @@ export function App() {
                                           className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white px-2.5 py-1.5 rounded text-xs font-mono focus:border-black dark:focus:border-white focus:outline-none"
                                           required
                                         />
-                                        <span className="absolute end-2 top-2 text-[10px] text-neutral-500 pointer-events-none">ml</span>
+                                        <span className="absolute end-2 top-2 text-xs text-neutral-500 pointer-events-none">ml</span>
                                       </div>
                                       <input
                                         type="text"
@@ -4738,7 +4749,7 @@ export function App() {
                                           updated[index] = { ...v, sku: e.target.value };
                                           setProductForm({ ...productForm, variants: updated });
                                         }}
-                                        className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-600 dark:text-neutral-400 text-[10px] px-1.5 py-0.5 rounded font-mono focus:text-neutral-900 dark:focus:text-white focus:outline-none"
+                                        className="w-24 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-neutral-700 dark:text-neutral-300 text-xs px-2 py-0.5 rounded font-mono focus:text-neutral-900 dark:focus:text-white focus:outline-none"
                                         title="Variant SKU (optional / auto-generated)"
                                       />
                                     </div>
@@ -4773,12 +4784,12 @@ export function App() {
                                         required
                                       />
                                       {isOverpriced && (
-                                        <div className="text-[9px] text-rose-500 font-mono">
+                                        <div className="text-xs text-rose-500 font-mono font-medium">
                                           ⚠ Exceeds Base ({base} AED)
                                         </div>
                                       )}
                                       {isDiscounted && (
-                                        <div className="text-[9px] text-emerald-600 dark:text-emerald-400 font-mono">
+                                        <div className="text-xs text-emerald-600 dark:text-emerald-400 font-mono font-medium">
                                           Save {savingsPct}% ({base - selling} AED off)
                                         </div>
                                       )}
@@ -4936,7 +4947,7 @@ export function App() {
                           <Plus size={13} />
                           <span>+ Add Volume Variant</span>
                         </button>
-                        <span className="text-[11px] text-neutral-600 dark:text-neutral-400 font-mono">
+                        <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono">
                           {productForm.variants.length} variant{productForm.variants.length === 1 ? "" : "s"} configured · Total Stock:{" "}
                           <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">
                             {productForm.variants.reduce((sum, v) => sum + (Number(v.stock ?? v.stockQuantity) || 0), 0)} units
@@ -4947,12 +4958,12 @@ export function App() {
 
                     {/* Scent Notes Pyramid */}
                     <div className="p-3 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded space-y-2">
-                      <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400 flex items-center gap-1">
+                      <span className="text-xs font-semibold text-purple-600 dark:text-purple-400 flex items-center gap-1">
                         <Layers size={13} />
                         <span>Scent Notes (comma-separated, auto-linked to note pages)</span>
                       </span>
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Top Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-xs font-medium text-neutral-800 dark:text-neutral-200">Top Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Bergamot, Pink Pepper, Taif Rose"
@@ -4962,7 +4973,7 @@ export function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Heart Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-xs font-medium text-neutral-800 dark:text-neutral-200">Heart Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Silver Frankincense, Jasmine, Cedarwood"
@@ -4972,7 +4983,7 @@ export function App() {
                         />
                       </div>
                       <div>
-                        <label className="block text-neutral-700 dark:text-neutral-300 text-[10px] font-medium">Base Notes</label>
+                        <label className="block text-neutral-700 dark:text-neutral-300 text-xs font-medium text-neutral-800 dark:text-neutral-200">Base Notes</label>
                         <input
                           type="text"
                           placeholder="e.g. Cambodian Oud, Ambergris, Sandalwood"
@@ -4984,7 +4995,7 @@ export function App() {
                     </div>
 
                     <MultiImageUploadField
-                      label="Product Flacon & Gallery Photography (Cloudinary)"
+                      label="Product Bottle & Gallery Photography (Cloudinary)"
                       images={productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : [])}
                       onChange={(urls) => {
                         setProductForm({
@@ -4995,7 +5006,7 @@ export function App() {
                       }}
                       folder="muschio/products"
                       authHeaders={{ ...(authSession?.token ? { Authorization: `Bearer ${authSession.token}` } : {}) }}
-                      hint="Upload multiple luxury photos (bottle flacon, packaging box, lifestyle presentation). The first photo with ★ is the primary storefront cover."
+                      hint="Upload multiple luxury photos (bottle, packaging box, lifestyle presentation). The first photo with ★ is the primary storefront cover."
                     />
                     <MediaLibraryPicker
                       images={productForm.images && productForm.images.length > 0 ? productForm.images : (productForm.imageUrl ? [productForm.imageUrl] : [])}
@@ -5007,7 +5018,7 @@ export function App() {
                     {/* Google SERP SEO Meta Title & Meta Description */}
                     <div className="space-y-3 pt-2 border-t border-neutral-200 dark:border-neutral-800">
                       <div className="flex items-center justify-between">
-                        <span className="text-[11px] font-medium text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
+                        <span className="text-xs font-semibold text-neutral-800 dark:text-neutral-200 flex items-center gap-1.5">
                           <Globe size={13} className="text-emerald-600 dark:text-emerald-400" />
                           <span>Search Engine Optimization (SEO) & Google SERP</span>
                         </span>
@@ -5028,7 +5039,7 @@ export function App() {
                               ),
                             });
                           }}
-                          className="text-[10px] text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium"
+                          className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium"
                           title="Auto-generate SEO title and description based on current name, brand, concentration, and notes"
                         >
                           <Sparkles size={11} />
@@ -5040,7 +5051,7 @@ export function App() {
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Title (Google)</label>
                           <span
-                            className={`text-[10px] font-mono ${(productForm.metaTitle || "").length > 60 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
+                            className={`text-xs font-mono ${(productForm.metaTitle || "").length > 60 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
                               }`}
                           >
                             {(productForm.metaTitle || "").length}/60 chars
@@ -5059,7 +5070,7 @@ export function App() {
                         <div className="flex items-center justify-between mb-1">
                           <label className="text-neutral-700 dark:text-neutral-300 font-medium">Meta Description (Google)</label>
                           <span
-                            className={`text-[10px] font-mono ${(productForm.metaDescription || "").length > 160 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500"
+                            className={`text-xs font-mono ${(productForm.metaDescription || "").length > 160 ? "text-amber-600 dark:text-amber-400 font-bold" : "text-neutral-500 dark:text-neutral-400"
                               }`}
                           >
                             {(productForm.metaDescription || "").length}/160 chars
@@ -5080,11 +5091,11 @@ export function App() {
 
                       {/* Live Google Search Preview Box */}
                       <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded space-y-1 font-sans">
-                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
+                        <span className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
                           <Globe size={11} />
                           <span>Google Search Preview</span>
                         </span>
-                        <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 overflow-x-auto text-[11px]">
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-1 overflow-x-auto">
                           <span>https://muschio.luxury</span>
                           <span>›</span>
                           <span>en</span>
@@ -5120,7 +5131,7 @@ export function App() {
                         />
                       </div>
                       <div className="p-3 bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded flex flex-col justify-center text-xs">
-                        <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">Primary Warehouse Fulfillment:</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-xs">Primary Warehouse Fulfillment:</span>
                         <span className="text-amber-600 dark:text-amber-400 font-medium">
                           {productForm.variants[0]?.warehouse || "DXB-MAIN (Dubai Hub)"}
                         </span>
@@ -5297,7 +5308,7 @@ export function App() {
                             ) : (
                               <div className="text-center p-4">
                                 <Sparkles size={24} className="mx-auto text-amber-400/50 mb-1" />
-                                <span className="text-[10px] uppercase font-mono tracking-widest text-neutral-400">
+                                <span className="text-xs uppercase font-mono tracking-widest text-neutral-400">
                                   Muschio Curation
                                 </span>
                               </div>
@@ -5308,7 +5319,7 @@ export function App() {
                             <div className="absolute top-3 inset-x-3 flex items-center justify-between gap-2">
                               <button
                                 onClick={() => handleToggleFeaturedCollection(col)}
-                                className={`px-2.5 py-1 rounded-full text-[10px] font-medium flex items-center gap-1.5 transition-colors shadow-sm backdrop-blur-md ${col.isFeatured
+                                className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-colors shadow-sm backdrop-blur-md ${col.isFeatured
                                   ? "bg-amber-500/90 text-black hover:bg-amber-400"
                                   : "bg-black/60 text-neutral-300 hover:text-white hover:bg-black/80 border border-white/10"
                                   }`}
@@ -5318,8 +5329,8 @@ export function App() {
                                 <span>{col.isFeatured ? "Featured on Slider" : "Standard"}</span>
                               </button>
 
-                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-black/60 text-white backdrop-blur-md border border-white/10">
-                                {resolvedProducts.length} Flacons
+                              <span className="px-2 py-0.5 rounded text-xs font-mono font-medium bg-black/60 text-white backdrop-blur-md border border-white/10">
+                                {resolvedProducts.length} Fragrances
                               </span>
                             </div>
 
@@ -5329,7 +5340,7 @@ export function App() {
                                 {col.nameEn}
                               </h3>
                               {col.nameAr && (
-                                <p className="text-[11px] text-amber-200/90 font-serif line-clamp-1" dir="rtl">
+                                <p className="text-xs text-amber-200/90 font-serif line-clamp-1" dir="rtl">
                                   {col.nameAr}
                                 </p>
                               )}
@@ -5338,9 +5349,9 @@ export function App() {
 
                           {/* Body: Details & Preferred Product Order */}
                           <div className="p-4 space-y-3">
-                            <div className="flex items-center justify-between text-[11px]">
-                              <span className="text-neutral-500 font-mono">/collections/{col.slug}</span>
-                              <span className="text-[10px] text-neutral-400">
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="text-neutral-500 dark:text-neutral-400 font-mono">/collections/{col.slug}</span>
+                              <span className="text-xs text-neutral-400">
                                 Priority Ordered
                               </span>
                             </div>
@@ -5354,17 +5365,17 @@ export function App() {
                             {/* Ordered Product Previews */}
                             <div className="pt-2 border-t border-neutral-100 dark:border-neutral-900">
                               <div className="flex items-center justify-between mb-2">
-                                <span className="text-[10px] uppercase font-mono tracking-wider text-neutral-500">
+                                <span className="text-xs uppercase font-mono tracking-wider text-neutral-500 dark:text-neutral-400">
                                   Admin Slide Sequence
                                 </span>
-                                <span className="text-[10px] text-neutral-400">
+                                <span className="text-xs text-neutral-500 dark:text-neutral-400">
                                   Exact Preference
                                 </span>
                               </div>
 
                               {resolvedProducts.length === 0 ? (
                                 <p className="text-xs text-neutral-400 italic py-2">
-                                  No products added yet. Click edit to curate flacons.
+                                  No products added yet. Click edit to curate fragrances.
                                 </p>
                               ) : (
                                 <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
@@ -5373,7 +5384,7 @@ export function App() {
                                       key={p.id}
                                       className="flex items-center gap-2 p-1.5 rounded bg-neutral-50 dark:bg-neutral-900/60 border border-neutral-100 dark:border-neutral-800 text-xs"
                                     >
-                                      <span className="w-4 h-4 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold text-[9px] shrink-0">
+                                      <span className="w-5 h-5 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold text-xs shrink-0">
                                         {idx + 1}
                                       </span>
                                       <div className="w-7 h-7 rounded bg-white dark:bg-neutral-800 overflow-hidden shrink-0 border border-neutral-200 dark:border-neutral-700">
@@ -5384,18 +5395,18 @@ export function App() {
                                         />
                                       </div>
                                       <div className="min-w-0 flex-1">
-                                        <p className="font-medium text-neutral-900 dark:text-white truncate text-[11px]">
+                                        <p className="font-medium text-neutral-900 dark:text-white truncate text-xs">
                                           {p.nameEn}
                                         </p>
-                                        <p className="text-[9px] text-neutral-500 truncate">
+                                        <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                                           {p.brand} {p.concentration ? `· ${p.concentration}` : ""}
                                         </p>
                                       </div>
                                     </div>
                                   ))}
                                   {resolvedProducts.length > 6 && (
-                                    <div className="text-[10px] text-center text-neutral-500 py-1 font-mono">
-                                      +{resolvedProducts.length - 6} more flacons in sequence
+                                    <div className="text-xs text-center text-neutral-500 py-1 font-mono">
+                                      +{resolvedProducts.length - 6} more fragrances in sequence
                                     </div>
                                   )}
                                 </div>
@@ -5530,14 +5541,14 @@ export function App() {
                             <div>
                               <span className="font-semibold text-xs text-neutral-900 dark:text-white block">{t.nameEn}</span>
                               {t.nameAr && (
-                                <span className="text-neutral-500 text-[11px] block" dir="rtl">
+                                <span className="text-neutral-500 dark:text-neutral-400 text-xs block" dir="rtl">
                                   {t.nameAr}
                                 </span>
                               )}
                             </div>
                           </div>
                           <span
-                            className={`px-2 py-0.5 text-[10px] font-semibold rounded shrink-0 ${t.isFeatured
+                            className={`px-2.5 py-0.5 text-xs font-semibold rounded shrink-0 ${t.isFeatured
                               ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
                               : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
                               }`}
@@ -5598,7 +5609,7 @@ export function App() {
             {/* DESKTOP & LAPTOP TAGS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[800px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-200 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start">Tag Name (EN / AR)</th>
                     <th className="py-3.5 px-4 text-start">Color Badge</th>
@@ -5654,26 +5665,26 @@ export function App() {
                                   </span>
                                 )}
                                 {t.description && (
-                                  <span className="text-[11px] text-neutral-400 block max-w-xs truncate mt-0.5">
+                                  <span className="text-xs text-neutral-500 dark:text-neutral-400 block max-w-xs truncate mt-0.5">
                                     {t.description}
                                   </span>
                                 )}
                               </div>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <td className="py-3.5 px-4 font-mono text-xs">
                             <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
                               <span className="w-2 h-2 rounded-full" style={{ backgroundColor: t.colorHex || "#D4AF37" }} />
                               <span className="text-neutral-700 dark:text-neutral-300">{t.colorHex || "#D4AF37"}</span>
                             </div>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <td className="py-3.5 px-4 font-mono text-xs">
                             <span className="text-neutral-500">/shop?tag=</span>
                             <span className="text-emerald-600 dark:text-emerald-400 font-semibold">{t.slug}</span>
                           </td>
                           <td className="py-3.5 px-4">
                             <span
-                              className={`px-2 py-0.5 text-[10px] font-semibold rounded ${t.isFeatured
+                              className={`px-2.5 py-0.5 text-xs font-semibold rounded ${t.isFeatured
                                 ? "bg-amber-500/15 text-amber-700 dark:text-amber-400 border border-amber-500/30"
                                 : "bg-neutral-100 dark:bg-neutral-800 text-neutral-600 dark:text-neutral-400 border border-neutral-200 dark:border-neutral-700"
                                 }`}
@@ -5681,7 +5692,7 @@ export function App() {
                               {t.isFeatured ? "Featured Filter" : "Standard Tag"}
                             </span>
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-[11px]">
+                          <td className="py-3.5 px-4 font-mono text-xs">
                             <span className="text-neutral-800 dark:text-neutral-200 font-semibold">
                               {t.productCount ?? (t._count?.products ?? products.filter((p) => (p.tags || []).some((pt) => pt.id === t.id || pt.slug === t.slug) || (p.tagIds || []).includes(t.id)).length)}
                             </span>{" "}
@@ -5781,7 +5792,7 @@ export function App() {
                             {b.name}
                           </span>
                           <span
-                            className={`px-2 py-0.5 text-[9px] font-bold rounded ${b.type === "NICHE"
+                            className={`px-2.5 py-0.5 text-xs font-bold rounded ${b.type === "NICHE"
                               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
                               : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
                               }`}
@@ -5789,7 +5800,7 @@ export function App() {
                             {b.type === "NICHE" ? "Niche" : "Designer"}
                           </span>
                         </div>
-                        <span className="text-[11px] text-neutral-500 block mt-0.5">
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400 block mt-0.5">
                           {b.countryEn || "Prestige House"} • Est. {b.year}
                         </span>
                       </div>
@@ -5838,7 +5849,7 @@ export function App() {
             {/* DESKTOP & LAPTOP BRANDS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[920px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-200 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start min-w-[220px]">Brand Name</th>
                     <th className="py-3.5 px-4 text-start min-w-[150px]">URL Slug</th>
@@ -5876,11 +5887,11 @@ export function App() {
                             </div>
                             <div>
                               <span className="font-semibold text-neutral-900 dark:text-white block text-sm">{b.name}</span>
-                              <span className="text-neutral-500 text-[11px]">{b.countryEn || "Prestige House"}</span>
+                              <span className="text-neutral-500 dark:text-neutral-400 text-xs">{b.countryEn || "Prestige House"}</span>
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <td className="py-3.5 px-4 font-mono text-xs">
                           <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
                             <span className="text-neutral-400">/brands/</span>
                             <span className="text-amber-500 font-medium">{b.slug}</span>
@@ -5888,7 +5899,7 @@ export function App() {
                         </td>
                         <td className="py-3.5 px-4">
                           <span
-                            className={`px-2 py-0.5 text-[10px] font-bold rounded ${b.type === "NICHE"
+                            className={`px-2.5 py-0.5 text-xs font-bold rounded ${b.type === "NICHE"
                               ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30"
                               : "bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/30"
                               }`}
@@ -5897,15 +5908,15 @@ export function App() {
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-neutral-900 dark:text-neutral-100 block">{b.countryEn}</span>
-                          <span className="text-neutral-500 text-[10px]">Est. {b.year}</span>
+                          <span className="text-neutral-900 dark:text-neutral-100 block text-xs">{b.countryEn}</span>
+                          <span className="text-neutral-500 dark:text-neutral-400 text-xs">Est. {b.year}</span>
                         </td>
-                        <td className="py-3.5 px-4 font-mono">
+                        <td className="py-3.5 px-4 font-mono text-xs">
                           <span className="text-emerald-600 dark:text-emerald-400 font-medium">
                             {products.filter((p) => p.brand.toLowerCase() === b.name.toLowerCase()).length} products
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-500 max-w-sm truncate text-[11px]">
+                        <td className="py-3.5 px-4 text-neutral-600 dark:text-neutral-300 max-w-sm truncate text-xs">
                           {b.storyEn || "Brand description available."}
                         </td>
                         <td className="py-3.5 px-4 text-end">
@@ -5978,25 +5989,25 @@ export function App() {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Requests</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-mono">Total Requests</span>
                   <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
                     {enquiries.length}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">New Pending</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-mono">New Pending</span>
                   <div className="font-serif text-2xl font-light text-amber-500 mt-1">
                     {enquiries.filter((e) => e.status === "NEW").length}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">In Progress</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-mono">In Progress</span>
                   <div className="font-serif text-2xl font-light text-blue-500 mt-1">
                     {enquiries.filter((e) => e.status === "IN_PROGRESS").length}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Resolved</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-mono">Resolved</span>
                   <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
                     {enquiries.filter((e) => e.status === "RESOLVED").length}
                   </div>
@@ -6046,7 +6057,7 @@ export function App() {
                           <div className="flex items-center gap-2">
                             <span className="font-medium text-sm text-neutral-900 dark:text-white">{enq.name}</span>
                             <span
-                              className={`text-[9px] font-mono px-2 py-0.5 rounded font-bold ${enq.status === "NEW"
+                              className={`text-xs font-mono px-2.5 py-0.5 rounded font-bold ${enq.status === "NEW"
                                 ? "bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300"
                                 : enq.status === "IN_PROGRESS"
                                   ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
@@ -6109,7 +6120,7 @@ export function App() {
 
                       {enq.fragranceInterest && (
                         <div className="text-xs">
-                          <span className="text-neutral-500 font-mono text-[11px] uppercase tracking-wider block">
+                          <span className="text-neutral-500 dark:text-neutral-400 font-mono text-xs uppercase tracking-wider block">
                             Fragrance / Maison of Interest:
                           </span>
                           <span className="font-serif text-sm text-neutral-900 dark:text-white mt-0.5 block">
@@ -6123,7 +6134,7 @@ export function App() {
                         {enq.message}
                       </div>
 
-                      <div className="flex items-center justify-between text-[11px] text-neutral-400 font-mono pt-1">
+                      <div className="flex items-center justify-between text-xs text-neutral-500 dark:text-neutral-400 font-mono pt-1">
                         <span>ID: {id}</span>
                         <span>
                           {enq.createdAt
@@ -6213,7 +6224,7 @@ export function App() {
                           <span className="font-semibold text-sm text-neutral-900 dark:text-white truncate block">
                             {n.nameEn}
                           </span>
-                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[9px] font-bold rounded">
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-xs font-bold rounded">
                             {n.family}
                           </span>
                         </div>
@@ -6222,7 +6233,7 @@ export function App() {
                             {n.nameAr}
                           </span>
                         )}
-                        <span className="text-[11px] text-neutral-400 block mt-0.5">
+                        <span className="text-xs text-neutral-500 dark:text-neutral-400 block mt-0.5">
                           Origin: {n.originEn || "Middle East"}
                         </span>
                       </div>
@@ -6271,7 +6282,7 @@ export function App() {
             {/* DESKTOP & LAPTOP NOTES TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[920px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-200 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start min-w-[220px]">Note Name (EN / AR)</th>
                     <th className="py-3.5 px-4 text-start min-w-[150px]">URL Slug</th>
@@ -6315,24 +6326,24 @@ export function App() {
                             </div>
                           </div>
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-[11px]">
+                        <td className="py-3.5 px-4 font-mono text-xs">
                           <div className="flex items-center gap-1 text-neutral-500 dark:text-neutral-400">
                             <span className="text-neutral-400">/notes/</span>
                             <span className="text-purple-500 font-medium">{n.slug}</span>
                           </div>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-[10px] font-bold rounded">
+                          <span className="px-2 py-0.5 bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-xs font-bold rounded">
                             {n.family}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 text-[11px]">
+                        <td className="py-3.5 px-4 text-neutral-700 dark:text-neutral-300 text-xs">
                           {n.originEn || "Middle East"}
                         </td>
                         <td className="py-3.5 px-4 font-mono text-emerald-600 dark:text-emerald-400 font-medium">
                           {n.perfumesCount} products
                         </td>
-                        <td className="py-3.5 px-4 text-neutral-500 max-w-xs truncate text-[11px]">
+                        <td className="py-3.5 px-4 text-neutral-500 max-w-xs truncate text-xs">
                           {n.descriptionEn || "Sensory description available."}
                         </td>
                         <td className="py-3.5 px-4 text-end">
@@ -6381,18 +6392,18 @@ export function App() {
               <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-neutral-900 dark:text-white">DXB-MAIN (Dubai Central Hub)</span>
-                  <span className="px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">DEFAULT WAREHOUSE</span>
+                  <span className="px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-xs font-bold rounded">DEFAULT WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "DXB-MAIN").reduce((a, b) => a + b.stock, 0)}</p>
-                <div className="text-[11px] font-mono text-neutral-500">Express Delivery: Dubai, Abu Dhabi, Sharjah</div>
+                <div className="text-xs font-mono text-neutral-500">Express Delivery: Dubai, Abu Dhabi, Sharjah</div>
               </div>
               <div className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-lg text-neutral-900 dark:text-white">RUH-HUB (Riyadh GCC Hub)</span>
-                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">REGIONAL WAREHOUSE</span>
+                  <span className="px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded">REGIONAL WAREHOUSE</span>
                 </div>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Total Allocated Sealed Units: {products.filter(p => p.warehouse === "RUH-HUB").reduce((a, b) => a + b.stock, 0)}</p>
-                <div className="text-[11px] font-mono text-neutral-500">Express Delivery: Riyadh, Jeddah, Khobar, GCC</div>
+                <div className="text-xs font-mono text-neutral-500">Express Delivery: Riyadh, Jeddah, Khobar, GCC</div>
               </div>
             </div>
           </div>
@@ -6416,7 +6427,7 @@ export function App() {
           <div className="space-y-6">
             <div className="flex items-center justify-between pb-2 border-b border-neutral-200 dark:border-neutral-800">
               <h2 className="font-serif text-lg text-neutral-900 dark:text-white font-light">Returns & Reverse Logistics</h2>
-              <span className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400 rounded">
+              <span className="px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-600 dark:text-neutral-400 rounded">
                 {returns.length} Return Cases
               </span>
             </div>
@@ -6439,7 +6450,7 @@ export function App() {
                           {r.number}
                         </span>
                         <div className="flex items-center gap-1.5 mt-0.5">
-                          <span className="text-[11px] text-neutral-500">{r.customer}</span>
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400">{r.customer}</span>
                           <span className="text-neutral-400">•</span>
                           <button
                             type="button"
@@ -6448,14 +6459,14 @@ export function App() {
                               setSelectedOrderForDetail(match || r.rawOrder || { id: r.orderId, orderNumber: r.orderNumber });
                               setShowOrderDetailModal(true);
                             }}
-                            className="font-mono text-[11px] text-accent hover:underline font-semibold"
+                            className="font-mono text-xs text-accent hover:underline font-semibold"
                           >
                             {r.orderNumber}
                           </button>
                         </div>
                       </div>
                       <span
-                        className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED"
+                        className={`px-2.5 py-0.5 text-xs font-bold rounded ${r.status === "COMPLETED"
                           ? "bg-black text-white dark:bg-white dark:text-black"
                           : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"
                           }`}
@@ -6466,27 +6477,27 @@ export function App() {
 
                     <div className="bg-neutral-50 dark:bg-neutral-900/60 p-2.5 rounded border border-neutral-200 dark:border-neutral-800 text-xs space-y-1.5">
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Returned Item:</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-xs">Returned Item:</span>
                         <span className="font-medium text-neutral-900 dark:text-white">{r.item}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Requested Action:</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-xs">Requested Action:</span>
                         <span className="font-mono font-semibold text-amber-600 dark:text-amber-400">
                           {r.requestedAction === "STORE_CREDIT" ? "STORE CREDIT VOUCHER" : "ORIGINAL PAYMENT REFUND"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Reverse Tracking:</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-xs">Reverse Tracking:</span>
                         <span className="font-mono text-neutral-700 dark:text-neutral-300">{r.trackingNumber}</span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-neutral-500 text-[11px]">Condition / Disposition:</span>
+                        <span className="text-neutral-500 dark:text-neutral-400 text-xs">Condition / Disposition:</span>
                         <span className="font-mono text-purple-600 dark:text-purple-400 font-medium">
                           {r.condition} → {r.disposition}
                         </span>
                       </div>
                       {r.reason && (
-                        <div className="pt-1 text-[11px] text-neutral-500 italic border-t border-neutral-200 dark:border-neutral-800">
+                        <div className="pt-1 text-xs text-neutral-500 dark:text-neutral-400 italic border-t border-neutral-200 dark:border-neutral-800">
                           "{r.reason}"
                         </div>
                       )}
@@ -6497,14 +6508,14 @@ export function App() {
                         <button
                           type="button"
                           onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                          className="py-1.5 px-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-black text-white text-[11px] font-semibold rounded shadow-sm text-center"
+                          className="py-1.5 px-2 bg-neutral-900 hover:bg-neutral-800 dark:bg-white dark:text-black text-white text-xs font-semibold rounded shadow-sm text-center"
                         >
                           Approve Restock
                         </button>
                         <button
                           type="button"
                           onClick={() => handleIssueReturnRefund(r.id, r.requestedAction === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND")}
-                          className="py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-semibold rounded shadow-sm text-center"
+                          className="py-1.5 px-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold rounded shadow-sm text-center"
                         >
                           Issue {r.requestedAction === "STORE_CREDIT" ? "Store Credit" : "Card Refund"}
                         </button>
@@ -6518,7 +6529,7 @@ export function App() {
             {/* DESKTOP & LAPTOP RETURNS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[950px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-200 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start min-w-[200px]">Return # / Order</th>
                     <th className="py-3.5 px-4 text-start min-w-[180px]">Customer & Reason</th>
@@ -6547,34 +6558,34 @@ export function App() {
                               setSelectedOrderForDetail(match || r.rawOrder || { id: r.orderId, orderNumber: r.orderNumber });
                               setShowOrderDetailModal(true);
                             }}
-                            className="text-[11px] font-mono text-accent hover:underline font-semibold flex items-center gap-1 mt-0.5"
+                            className="text-xs font-mono text-accent hover:underline font-semibold flex items-center gap-1 mt-0.5"
                           >
                             <span>{r.orderNumber}</span>
-                            <ExternalLink size={10} />
+                            <ExternalLink size={12} />
                           </button>
                         </td>
                         <td className="py-3.5 px-4">
                           <span className="font-medium text-neutral-900 dark:text-white block">{r.customer}</span>
-                          <span className="text-neutral-500 dark:text-neutral-400 text-[11px] line-clamp-1" title={r.reason}>
-                            {r.reason || "7-day guarantee flacon return"}
+                          <span className="text-neutral-600 dark:text-neutral-400 text-xs line-clamp-1" title={r.reason}>
+                            {r.reason || "7-day guarantee return"}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           <span className="text-neutral-800 dark:text-neutral-200 font-medium block">{r.item}</span>
-                          <span className="font-mono text-[10px] text-amber-600 dark:text-amber-400 block mt-0.5">
+                          <span className="font-mono text-xs text-amber-600 dark:text-amber-400 block mt-0.5">
                             {r.trackingNumber}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="font-mono text-neutral-600 dark:text-neutral-400 block text-[11px]">{r.condition}</span>
-                          <span className="font-mono text-purple-600 dark:text-purple-400 font-semibold text-[11px] block">{r.disposition}</span>
+                          <span className="font-mono text-neutral-600 dark:text-neutral-400 block text-xs">{r.condition}</span>
+                          <span className="font-mono text-purple-600 dark:text-purple-400 font-semibold text-xs block">{r.disposition}</span>
                         </td>
                         <td className="py-3.5 px-4">
                           <div className="space-y-1">
-                            <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
+                            <span className={`px-2 py-0.5 text-xs font-bold rounded ${r.status === "COMPLETED" ? "bg-black text-white dark:bg-white dark:text-black" : "bg-neutral-100 text-neutral-800 dark:bg-neutral-900 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                               {r.status}
                             </span>
-                            <span className="text-[10px] font-mono text-neutral-400 block">
+                            <span className="text-xs font-mono text-neutral-400 block">
                               {r.requestedAction === "STORE_CREDIT" ? "Credit Voucher" : "Card Refund"}
                             </span>
                           </div>
@@ -6586,8 +6597,8 @@ export function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleInspectReturn(r.id, "RESTOCK_SELLABLE")}
-                                  title="Inspect & Restock Flacon"
-                                  className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                                  title="Inspect & Restock Bottle"
+                                  className="px-2.5 py-1 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded shadow-sm"
                                 >
                                   Restock
                                 </button>
@@ -6595,7 +6606,7 @@ export function App() {
                                   type="button"
                                   onClick={() => handleIssueReturnRefund(r.id, r.requestedAction === "STORE_CREDIT" ? "STORE_CREDIT" : "REFUND")}
                                   title={`Issue ${r.requestedAction === "STORE_CREDIT" ? "Store Credit Voucher" : "Original Card Refund"}`}
-                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-[11px] font-medium rounded shadow-sm"
+                                  className="px-2.5 py-1 bg-rose-600 hover:bg-rose-700 text-white text-xs font-medium rounded shadow-sm"
                                 >
                                   {r.requestedAction === "STORE_CREDIT" ? "Credit" : "Refund"}
                                 </button>
@@ -6604,7 +6615,7 @@ export function App() {
                             <select
                               value={r.status}
                               onChange={(e) => handleAdvanceReturnStatus(r.id, e.target.value)}
-                              className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-[10px] px-1.5 py-1 rounded font-mono"
+                              className="bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 text-xs px-2 py-1 rounded font-mono"
                             >
                               <option value="REQUESTED">REQUESTED</option>
                               <option value="AUTHORIZED">AUTHORIZED</option>
@@ -6647,7 +6658,7 @@ export function App() {
               </div>
 
               <div className="flex items-center gap-2">
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono font-medium text-neutral-700 dark:text-neutral-300">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
                   <span>All orders: {dashboardMetrics?.totalOrders ?? "—"}</span>
                 </div>
@@ -6661,8 +6672,8 @@ export function App() {
                     key={mkt}
                     onClick={() => setOrderMarketFilter(mkt)}
                     className={`px-3 py-1.5 text-xs rounded border transition-colors ${orderMarketFilter === mkt
-                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
-                      : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-600 dark:text-neutral-400 hover:text-black dark:hover:text-white"
+                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white font-semibold"
+                      : "bg-white dark:bg-neutral-950 border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 hover:text-black dark:hover:text-white"
                       }`}
                   >
                     {mkt === "ALL" ? "All Markets" : `Market: ${mkt}`}
@@ -6674,7 +6685,7 @@ export function App() {
                 placeholder="Search by order # or customer..."
                 value={orderSearch}
                 onChange={(e) => setOrderSearch(e.target.value)}
-                className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
+                className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-700 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
               />
             </div>
 
@@ -6700,12 +6711,12 @@ export function App() {
                         <span className="font-mono font-bold text-sm text-neutral-900 dark:text-white">
                           {o.number}
                         </span>
-                        <span className="px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-mono font-bold rounded">
+                        <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-mono font-bold rounded">
                           {o.market}
                         </span>
                       </div>
                       <span
-                        className={`px-2 py-0.5 text-[10px] font-mono font-semibold uppercase rounded ${o.status === "DELIVERED"
+                        className={`px-2.5 py-0.5 text-xs font-mono font-semibold uppercase rounded ${o.status === "DELIVERED"
                           ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/30"
                           : o.status === "SHIPPED"
                             ? "bg-blue-500/10 text-blue-600 border border-blue-500/30"
@@ -6729,12 +6740,12 @@ export function App() {
                           {o.customer}
                         </span>
                         {o.email && (
-                          <span className="text-[11px] text-neutral-500 font-mono block">
+                          <span className="text-xs text-neutral-600 dark:text-neutral-400 font-mono block">
                             {o.email}
                           </span>
                         )}
                       </div>
-                      <span className="text-[11px] font-mono text-neutral-400">{o.date}</span>
+                      <span className="text-xs font-mono text-neutral-600 dark:text-neutral-400">{o.date}</span>
                     </div>
 
                     {/* Financials & Line Items */}
@@ -6743,13 +6754,13 @@ export function App() {
                         <span className="font-mono font-bold text-base text-neutral-900 dark:text-white">
                           {o.amount}
                         </span>
-                        <span className="text-[11px] font-mono text-cyan-600 dark:text-cyan-400 uppercase">
+                        <span className="text-xs font-mono font-semibold text-cyan-600 dark:text-cyan-400 uppercase">
                           {o.method}
                         </span>
                       </div>
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-[10px] font-mono text-neutral-600 dark:text-neutral-400">
-                        <Package size={10} />
-                        {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
+                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-xs font-mono text-neutral-700 dark:text-neutral-300 font-medium">
+                        <Package size={12} />
+                        {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "bottle" : "bottles"}
                       </span>
                     </div>
 
@@ -6809,7 +6820,7 @@ export function App() {
             {/* DESKTOP & LAPTOP ORDERS TABLE (hidden on mobile, visible md+) */}
             <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
               <table className="w-full text-start text-xs font-sans min-w-[980px]">
-                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-700 dark:text-neutral-300 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
                     <th className="py-3.5 px-4 text-start min-w-[200px]">Order ID / Client</th>
                     <th className="py-3.5 px-4 text-start min-w-[110px]">Line Items</th>
@@ -6825,7 +6836,7 @@ export function App() {
                   {filteredOrders.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-neutral-500 font-sans">
-                        No orders currently placed in this view. Completed storefront acquisitions will stream here live.
+                        No orders currently placed in this view. Completed storefront orders will stream here live.
                       </td>
                     </tr>
                   ) : (
@@ -6842,19 +6853,19 @@ export function App() {
                           <span className="font-semibold text-neutral-900 dark:text-white block hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors">
                             {o.number}
                           </span>
-                          <span className="text-neutral-600 dark:text-neutral-400 text-[11px] block mt-0.5">
+                          <span className="text-neutral-700 dark:text-neutral-300 text-xs font-medium block mt-0.5">
                             {o.customer}
                           </span>
                           {o.email && (
-                            <span className="text-neutral-400 dark:text-neutral-500 text-[10px] block font-mono">
+                            <span className="text-neutral-500 dark:text-neutral-400 text-xs block font-mono">
                               {o.email}
                             </span>
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono text-[11px] text-neutral-700 dark:text-neutral-300">
-                            <Package size={11} className="text-neutral-400" />
-                            {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "flacon" : "flacons"}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 font-mono text-xs text-neutral-700 dark:text-neutral-300 font-medium">
+                            <Package size={12} className="text-neutral-400" />
+                            {o.items?.length || 1} {(o.items?.length || 1) === 1 ? "bottle" : "bottles"}
                           </span>
                         </td>
                         <td className="py-3.5 px-4 font-mono font-semibold text-neutral-900 dark:text-white">
@@ -6864,7 +6875,7 @@ export function App() {
                           {o.method}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-[10px] font-bold rounded">
+                          <span className="px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 text-xs font-bold rounded">
                             {o.market}
                           </span>
                         </td>
@@ -6894,7 +6905,7 @@ export function App() {
                                 setShowOrderDetailModal(true);
                               }}
                               title="Inspect Full Order Dossier & Tracking"
-                              className="px-2.5 py-1 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-[11px] flex items-center gap-1 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
+                              className="px-2.5 py-1 rounded bg-black dark:bg-white text-white dark:text-black font-semibold text-xs flex items-center gap-1 hover:opacity-90 transition-opacity shadow-sm whitespace-nowrap"
                             >
                               <Eye size={12} />
                               <span>Details</span>
@@ -6903,7 +6914,7 @@ export function App() {
                               type="button"
                               onClick={() => handleResendNotification(o.id, "whatsapp")}
                               title="Send WhatsApp"
-                              className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                              className="px-2 py-1 rounded bg-[#128C7E]/10 hover:bg-[#128C7E]/20 text-[#128C7E] border border-[#128C7E]/30 text-xs font-medium flex items-center gap-1 transition-colors"
                             >
                               <MessageSquare size={12} />
                               <span className="hidden xl:inline">WhatsApp</span>
@@ -6912,7 +6923,7 @@ export function App() {
                               type="button"
                               onClick={() => handleResendNotification(o.id, "email")}
                               title="Send Email"
-                              className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-[11px] font-medium flex items-center gap-1 transition-colors"
+                              className="px-2 py-1 rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-900 dark:hover:bg-neutral-800 text-neutral-700 dark:text-neutral-300 border border-neutral-300 dark:border-neutral-700 text-xs font-medium flex items-center gap-1 transition-colors"
                             >
                               <Mail size={12} />
                               <span className="hidden xl:inline">Email</span>
@@ -6955,25 +6966,25 @@ export function App() {
               {/* KPI Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Total Reviews</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 font-mono">Total Reviews</span>
                   <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1">
                     {reviews.length}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Pending Approval</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 font-mono">Pending Approval</span>
                   <div className="font-serif text-2xl font-light text-amber-500 mt-1">
                     {pendingCount}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Approved Active</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 font-mono">Approved Active</span>
                   <div className="font-serif text-2xl font-light text-emerald-500 mt-1">
                     {approvedReviews.length}
                   </div>
                 </div>
                 <div className="p-4 bg-white dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded-lg">
-                  <span className="text-[10px] uppercase tracking-wider text-neutral-500 font-mono">Storefront Average</span>
+                  <span className="text-xs uppercase tracking-wider text-neutral-500 font-mono">Storefront Average</span>
                   <div className="font-serif text-2xl font-light text-neutral-900 dark:text-white mt-1 flex items-center gap-1.5">
                     <span>{avgScore}</span>
                     <span className="text-amber-500 text-base">★</span>
@@ -7000,7 +7011,7 @@ export function App() {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search reviews by flacon, collector, keyword..."
+                  placeholder="Search reviews by fragrance, customer, keyword..."
                   value={reviewSearch}
                   onChange={(e) => setReviewSearch(e.target.value)}
                   className="w-full sm:w-72 bg-white dark:bg-black border border-neutral-300 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-3 py-1.5 rounded focus:outline-none"
@@ -7024,10 +7035,10 @@ export function App() {
                           <span className="font-semibold text-xs text-neutral-900 dark:text-white block">
                             {r.product}
                           </span>
-                          <span className="text-[11px] text-neutral-500">By {r.customer}</span>
+                          <span className="text-xs text-neutral-500 dark:text-neutral-400">By {r.customer}</span>
                         </div>
                         <span
-                          className={`px-2 py-0.5 text-[10px] font-bold rounded shrink-0 ${r.status === "APPROVED"
+                          className={`px-2.5 py-0.5 text-xs font-bold rounded shrink-0 ${r.status === "APPROVED"
                             ? "bg-black text-white dark:bg-white dark:text-black"
                             : r.status === "REJECTED"
                               ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
@@ -7044,7 +7055,7 @@ export function App() {
                           {r.title && <span className="text-neutral-900 dark:text-white font-medium text-xs">"{r.title}"</span>}
                         </div>
                         {r.review && <p className="text-neutral-600 dark:text-neutral-300 text-xs">{r.review}</p>}
-                        <div className="font-mono text-[11px] text-neutral-500 flex items-center gap-3">
+                        <div className="font-mono text-xs text-neutral-500 dark:text-neutral-400 flex items-center gap-3">
                           <span>Longevity: <strong className="text-neutral-700 dark:text-neutral-300">{r.longevity || 4}/5</strong></span>
                           <span>•</span>
                           <span>Sillage: <strong className="text-neutral-700 dark:text-neutral-300">{r.sillage || 4}/5</strong></span>
@@ -7089,7 +7100,7 @@ export function App() {
               {/* DESKTOP & LAPTOP REVIEWS TABLE (hidden on mobile, visible md+) */}
               <div className="hidden md:block border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-950 overflow-x-auto rounded-lg shadow-sm">
                 <table className="w-full text-start text-xs font-sans min-w-[850px]">
-                  <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-600 dark:text-neutral-400 font-semibold uppercase tracking-wider text-[11px] border-b border-neutral-200 dark:border-neutral-800">
+                  <thead className="bg-neutral-50 dark:bg-neutral-900/80 text-neutral-700 dark:text-neutral-200 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                     <tr>
                       <th className="py-3.5 px-4 text-start min-w-[200px]">Product / Customer</th>
                       <th className="py-3.5 px-4 text-start min-w-[240px]">Title, Rating & Impression</th>
@@ -7110,9 +7121,9 @@ export function App() {
                         <tr key={r.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
                           <td className="py-3.5 px-4">
                             <span className="font-semibold text-neutral-900 dark:text-white block">{r.product}</span>
-                            <span className="text-neutral-500 dark:text-neutral-400 text-[11px]">{r.customer}</span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-xs">{r.customer}</span>
                             {r.isVerifiedPurchase && (
-                              <span className="text-[10px] text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono mt-0.5">
+                              <span className="text-xs text-emerald-600 dark:text-emerald-400 flex items-center gap-1 font-mono mt-0.5">
                                 ✓ Verified Purchase
                               </span>
                             )}
@@ -7133,7 +7144,7 @@ export function App() {
                           </td>
                           <td className="py-3.5 px-4">
                             <span
-                              className={`px-2 py-0.5 text-[10px] font-bold rounded ${r.status === "APPROVED"
+                              className={`px-2 py-0.5 text-xs font-bold rounded ${r.status === "APPROVED"
                                 ? "bg-black text-white dark:bg-white dark:text-black"
                                 : r.status === "REJECTED"
                                   ? "bg-rose-100 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-300 dark:border-rose-900"
@@ -7149,7 +7160,7 @@ export function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleReviewAction(r.id, "APPROVED")}
-                                  className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-[11px] font-medium rounded shadow-sm"
+                                  className="px-2.5 py-1.5 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded shadow-sm"
                                 >
                                   Approve
                                 </button>
@@ -7158,7 +7169,7 @@ export function App() {
                                 <button
                                   type="button"
                                   onClick={() => handleReviewAction(r.id, "REJECTED")}
-                                  className="px-2.5 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-[11px] rounded"
+                                  className="px-2.5 py-1.5 border border-amber-300 dark:border-amber-900/50 hover:bg-amber-50 dark:hover:bg-amber-950/30 text-amber-700 dark:text-amber-400 text-xs rounded"
                                 >
                                   Reject
                                 </button>
@@ -7191,17 +7202,17 @@ export function App() {
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-neutral-900 dark:text-white">United Arab Emirates (AE)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: AED • Standard VAT: 5.0%</p>
-                <span className="inline-block px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold rounded">PRIMARY ACTIVE MARKET</span>
+                <span className="inline-block px-2.5 py-0.5 bg-black text-white dark:bg-white dark:text-black text-xs font-bold rounded">PRIMARY ACTIVE MARKET</span>
               </div>
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-neutral-900 dark:text-white">Kingdom of Saudi Arabia (SA)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currency: SAR • Standard VAT: 15.0%</p>
-                <span className="inline-block px-2 py-0.5 bg-cyan-500/20 text-cyan-400 text-[10px] font-bold rounded">ACTIVE CROSS-BORDER</span>
+                <span className="inline-block px-2.5 py-0.5 bg-cyan-500/20 text-cyan-400 text-xs font-bold rounded">ACTIVE CROSS-BORDER</span>
               </div>
               <div className="p-5 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 space-y-2 rounded">
                 <span className="font-serif text-lg text-neutral-900 dark:text-white">State of Qatar (QA) & Kuwait (KW)</span>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">Currencies: QAR / KWD • DDP Express</p>
-                <span className="inline-block px-2 py-0.5 bg-slate-800 text-neutral-700 dark:text-neutral-300 text-[10px] font-bold rounded">WHITE-GLOVE GCC</span>
+                <span className="inline-block px-2.5 py-0.5 bg-slate-800 text-neutral-200 dark:text-neutral-300 text-xs font-bold rounded">WHITE-GLOVE GCC</span>
               </div>
             </div>
           </div>
@@ -7278,11 +7289,11 @@ export function App() {
                       <img src={b.imageUrl} alt="" className="w-24 h-16 object-cover rounded border border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-900" />
                       <div className="flex-1 space-y-1">
                         <div className="flex items-center gap-2">
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
+                          <span className={`px-2.5 py-0.5 text-xs font-bold rounded ${SLOT_COLORS[b.slot] || "bg-neutral-100 text-neutral-800 dark:bg-neutral-800 dark:text-neutral-200 border border-neutral-300 dark:border-neutral-700"}`}>
                             {SLOT_LABELS[b.slot] || b.slot}
                           </span>
                           {b.eyebrowEn && (
-                            <span className="text-[10px] font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">
+                            <span className="text-xs font-mono text-amber-600 dark:text-amber-400 uppercase tracking-wider font-semibold">
                               {b.eyebrowEn}
                             </span>
                           )}
@@ -7290,9 +7301,9 @@ export function App() {
                         </div>
                         <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-1">{b.subtitleEn}</p>
                         <div className="flex items-center gap-3">
-                          <span className="text-[10px] font-mono text-neutral-500 block">Link: {b.ctaUrl || "/shop"}</span>
+                          <span className="text-xs font-mono text-neutral-500 dark:text-neutral-400 block">Link: {b.ctaUrl || "/shop"}</span>
                           {b.overlayLabelEn && (
-                            <span className="text-[10px] font-mono px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded border border-neutral-200 dark:border-neutral-700">
+                            <span className="text-xs font-mono px-2 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded border border-neutral-200 dark:border-neutral-700">
                               {b.overlayLabelEn}
                             </span>
                           )}
@@ -7577,8 +7588,8 @@ export function App() {
                     <Sparkles size={16} className="text-amber-500" />
                     <span>Catalog Deals & Active Reductions ({catalogDeals.length})</span>
                   </h3>
-                  <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                    Flacons with promotional pricing (Compare-At Price &gt; Selling Price). These appear automatically under deals and special promotions.
+                  <p className="text-xs text-neutral-600 dark:text-neutral-400">
+                    Fragrances with promotional pricing (Compare-At Price &gt; Selling Price). These appear automatically under deals and special promotions.
                   </p>
                 </div>
                 <a
@@ -7605,12 +7616,12 @@ export function App() {
                     >
                       <img src={deal.image} alt="" className="w-12 h-14 object-cover rounded border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-black" />
                       <div className="flex-1 min-w-0">
-                        <span className="text-[10px] font-sans text-neutral-500 block truncate">{deal.brand} · {deal.volume}</span>
+                        <span className="text-xs font-sans text-neutral-500 dark:text-neutral-400 block truncate">{deal.brand} · {deal.volume}</span>
                         <h4 className="text-xs font-serif font-medium text-neutral-900 dark:text-white truncate">{deal.name}</h4>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 font-mono">{deal.dealPrice} AED</span>
-                          <span className="text-[10px] text-neutral-400 line-through font-mono">{deal.regularPrice} AED</span>
-                          <span className="px-1.5 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-[9px] font-bold rounded">
+                          <span className="text-xs text-neutral-400 line-through font-mono">{deal.regularPrice} AED</span>
+                          <span className="px-2 py-0.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 text-xs font-bold rounded">
                             -{deal.discountPct}% OFF
                           </span>
                         </div>
@@ -7656,28 +7667,28 @@ export function App() {
                       href={storeSettings.instagramUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      className="text-accent hover:underline flex items-center gap-1 font-mono text-xs"
                     >
                       <span>Open profile</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Handle / Username:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Handle / Username:</span>
                     <input
                       type="text"
                       value={storeSettings.instagramHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Full URL:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Full URL:</span>
                     <input
                       type="url"
                       value={storeSettings.instagramUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, instagramUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -7693,32 +7704,32 @@ export function App() {
                       href={`https://wa.me/${storeSettings.whatsappNumber}?text=${encodeURIComponent(storeSettings.whatsappDefaultMsg)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-emerald-400 hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      className="text-emerald-400 hover:underline flex items-center gap-1 font-mono text-xs"
                     >
                       <span>Open chat</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Display Hotline:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Display Hotline:</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappPhone}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappPhone: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Clean International Number (No +):</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Clean International Number (No +):</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappNumber}
                       onChange={(e) => setStoreSettings({ ...storeSettings, whatsappNumber: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Default Pre-filled Greeting:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Default Pre-filled Greeting:</span>
                     <input
                       type="text"
                       value={storeSettings.whatsappDefaultMsg}
@@ -7736,28 +7747,28 @@ export function App() {
                       href={storeSettings.tiktokUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      className="text-accent hover:underline flex items-center gap-1 font-mono text-xs"
                     >
                       <span>Open channel</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Handle:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Handle:</span>
                     <input
                       type="text"
                       value={storeSettings.tiktokHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">URL:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">URL:</span>
                     <input
                       type="url"
                       value={storeSettings.tiktokUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, tiktokUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -7770,28 +7781,28 @@ export function App() {
                       href={storeSettings.twitterUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      className="text-accent hover:underline flex items-center gap-1 font-mono text-xs"
                     >
                       <span>Open profile</span>
                       <ExternalLink size={10} />
                     </a>
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">Handle:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">Handle:</span>
                     <input
                       type="text"
                       value={storeSettings.twitterHandle}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterHandle: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                   <div>
-                    <span className="text-neutral-500 block text-[11px] mb-1">URL:</span>
+                    <span className="text-neutral-500 dark:text-neutral-400 block text-xs mb-1">URL:</span>
                     <input
                       type="url"
                       value={storeSettings.twitterUrl}
                       onChange={(e) => setStoreSettings({ ...storeSettings, twitterUrl: e.target.value })}
-                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                      className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                     />
                   </div>
                 </div>
@@ -7804,7 +7815,7 @@ export function App() {
                       href={storeSettings.youtubeUrl}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-accent hover:underline flex items-center gap-1 font-mono text-[10px]"
+                      className="text-accent hover:underline flex items-center gap-1 font-mono text-xs"
                     >
                       <span>Open channel</span>
                       <ExternalLink size={10} />
@@ -7814,7 +7825,7 @@ export function App() {
                     type="url"
                     value={storeSettings.youtubeUrl}
                     onChange={(e) => setStoreSettings({ ...storeSettings, youtubeUrl: e.target.value })}
-                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono"
+                    className="w-full bg-white dark:bg-neutral-950 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white p-2 rounded font-mono text-xs"
                   />
                 </div>
               </div>
@@ -7974,7 +7985,7 @@ export function App() {
                 <h3 className="font-serif text-xl font-light text-neutral-900 dark:text-white">Immutable Administrative Audit Log</h3>
                 <p className="text-xs text-neutral-500 dark:text-neutral-400">All administrative operations, creations, and transitions are tracked here.</p>
               </div>
-              <span className="self-start sm:self-auto px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono text-[10px] rounded">
+              <span className="self-start sm:self-auto px-2.5 py-1 bg-neutral-100 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 text-neutral-700 dark:text-neutral-300 font-mono text-xs rounded">
                 {auditLogs.length} Events Logged
               </span>
             </div>
@@ -7990,7 +8001,7 @@ export function App() {
                       <span className="text-purple-600 dark:text-purple-400 font-bold">{log.action}</span>
                       <span className="text-neutral-500 dark:text-neutral-400">[{log.res}]</span>
                     </div>
-                    <div className="flex items-center gap-3 text-neutral-500 text-[11px]">
+                    <div className="flex items-center gap-3 text-neutral-500 dark:text-neutral-400 text-xs">
                       <span className="font-medium text-neutral-700 dark:text-neutral-300">{log.user}</span>
                       <span>•</span>
                       <span>{log.time}</span>
@@ -8024,7 +8035,7 @@ export function App() {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="font-semibold text-xs">{t.title}</span>
-                <span className="text-[10px] text-neutral-400 font-mono">{t.time}</span>
+                <span className="text-xs text-neutral-500 dark:text-neutral-400 font-mono">{t.time}</span>
               </div>
               <p className="text-xs text-neutral-600 dark:text-neutral-400 mt-0.5 line-clamp-2">{t.message}</p>
             </div>
@@ -8135,7 +8146,7 @@ export function App() {
                   Are you sure you want to delete <span className="font-semibold text-neutral-900 dark:text-white">"{deleteConfirm.itemName}"</span>? This will permanently delete the record from the database.
                 </p>
                 {deleteConfirm.warning && (
-                  <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-2">
+                  <p className="text-xs text-amber-600 dark:text-amber-400 bg-amber-500/10 p-2 rounded border border-amber-500/20 mt-2">
                     {deleteConfirm.warning}
                   </p>
                 )}

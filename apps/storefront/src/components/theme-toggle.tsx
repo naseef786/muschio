@@ -6,7 +6,7 @@ import { Sun, Moon } from "lucide-react";
 
 export function ThemeToggle({
   locale = "en",
-  showLabel = false,
+  showLabel: _showLabel = false,
   className = "",
 }: {
   locale?: "en" | "ar";
@@ -28,24 +28,16 @@ export function ThemeToggle({
     setTheme(isDark ? "light" : "dark");
   };
 
-  const label = isDark
-    ? isAr
-      ? "الوضع النهاري"
-      : "Light Luxury"
-    : isAr
-      ? "الوضع الليلي"
-      : "Dark Obsidian";
-
   const ariaLabel = isDark
     ? isAr
-      ? "التبديل إلى الوضع النهاري"
-      : "Switch to Light Luxury theme"
+      ? "التبديل إلى الوضع الفاتح"
+      : "Switch to Light Mode"
     : isAr
-      ? "التبديل إلى الوضع الليلي"
-      : "Switch to Dark Obsidian theme";
+      ? "التبديل إلى الوضع الداكن"
+      : "Switch to Dark Mode";
 
-  const iconSize = showLabel ? 14 : 19;
-  const containerSize = showLabel ? "w-4 h-4" : "w-5 h-5";
+  const iconSize = 18;
+  const containerSize = "w-5 h-5";
 
   return (
     <button
@@ -53,7 +45,7 @@ export function ThemeToggle({
       onClick={toggleTheme}
       aria-label={ariaLabel}
       title={ariaLabel}
-      className={`inline-flex items-center justify-center gap-2 p-2 rounded-sm text-luxury-muted hover:text-luxury-text transition-colors duration-200 ${className}`}
+      className={`inline-flex items-center justify-center p-2 rounded-sm text-luxury-muted hover:text-luxury-text transition-colors duration-200 ${className}`}
     >
       <span className={`relative ${containerSize} flex items-center justify-center flex-shrink-0 self-center`}>
         {!mounted ? (
@@ -64,11 +56,6 @@ export function ThemeToggle({
           <Moon size={iconSize} className="transition-transform duration-300 -rotate-12 hover:rotate-0" />
         )}
       </span>
-      {showLabel && (
-        <span className="text-xs uppercase tracking-wider font-medium text-inherit self-center leading-none">
-          {mounted ? label : (isAr ? "الوضع" : "Theme")}
-        </span>
-      )}
     </button>
   );
 }

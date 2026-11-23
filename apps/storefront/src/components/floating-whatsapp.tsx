@@ -2,6 +2,7 @@
 
 import React from "react";
 import { usePathname } from "../navigation";
+import { useCart } from "../context/cart-context";
 
 export function FloatingWhatsApp({
   locale = "en",
@@ -15,25 +16,41 @@ export function FloatingWhatsApp({
 }) {
   const isAr = locale === "ar";
   const pathname = usePathname();
+  const { itemCount } = useCart();
+
   const isPdp = typeof pathname === "string" && pathname.includes("/product/");
+  const isExcludedPage =
+    typeof pathname === "string" &&
+    (pathname.startsWith("/checkout") ||
+      pathname.startsWith("/cart") ||
+      pathname.startsWith("/order-confirmation"));
+
+  // Check if floating cart bar is actively shown
+  const hasFloatingCartBar = itemCount > 0 && !isPdp && !isExcludedPage;
+
   const waNumber = settings?.whatsappNumber || "97148006872";
   const waMsg = settings?.whatsappDefaultMsg || (isAr
-      ? "مرحباً بكم في مسكيو للعطور الفاخرة، أود الاستفسار عن مجموعة العطور."
-      : "Hello Muschio Haute Parfumerie, I would like to inquire about your fragrance collection."
+    ? "مرحباً بكم في مسكيو للعطور الفاخرة، أود الاستفسار عن مجموعة العطور."
+    : "Hello Muschio Haute Parfumerie, I would like to inquire about your fragrance collection."
   );
 
   const whatsappUrl = `https://wa.me/${waNumber.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(waMsg)}`;
   const titleText = isAr ? "تواصل عبر واتساب" : "Chat on WhatsApp";
 
-  // On PDP, elevate the floating button on mobile to avoid overlapping the sticky Add to Cart bar
-  const bottomClass = isPdp
-    ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))] md:bottom-6"
-    : "bottom-[calc(4.75rem+env(safe-area-inset-bottom))] md:bottom-6";
+  // Prevent overlapping bottom bars:
+  // 1. When FloatingCartBar is active: elevate above the cart bar so Checkout button is not blocked
+  // 2. On PDP: elevate above the sticky PDP Add to Cart bar
+  // 3. Otherwise: position naturally near bottom edge
+  const bottomClass = hasFloatingCartBar
+    ? "bottom-[calc(6.25rem+env(safe-area-inset-bottom))] md:bottom-6"
+    : isPdp
+      ? "bottom-[calc(5.75rem+env(safe-area-inset-bottom))] md:bottom-6"
+      : "bottom-[calc(1.25rem+env(safe-area-inset-bottom))] md:bottom-6";
 
   return (
     <aside
       aria-label={titleText}
-      className={`fixed ${bottomClass} end-4 md:end-6 z-30 pointer-events-auto select-none transition-all duration-300`}
+      className={`fixed ${bottomClass} end-4 md:end-6 z-30 pointer-events-auto select-none transition-all duration-300 ease-out`}
     >
       <a
         href={whatsappUrl}

@@ -144,8 +144,8 @@ export function CollectionModal({
               <h3 className="text-sm font-semibold text-neutral-900 dark:text-white">
                 {collectionToEdit ? "Edit Curated Collection" : "Create New Collection"}
               </h3>
-              <p className="text-[11px] text-neutral-500">
-                Curate fragrance flacons and display order according to admin preference.
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Curate fragrances and display order according to admin preference.
               </p>
             </div>
           </div>
@@ -276,19 +276,19 @@ export function CollectionModal({
                 <h4 className="text-xs font-semibold uppercase tracking-wider text-neutral-900 dark:text-white">
                   Curate Products in Collection
                 </h4>
-                <p className="text-[11px] text-neutral-500">
+                <p className="text-xs text-neutral-500 dark:text-neutral-400">
                   Select and order products according to your preference. They will slide in this exact order.
                 </p>
               </div>
               <span className="text-xs px-2.5 py-1 rounded-full bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white font-medium self-start sm:self-auto">
-                {selectedProductIds.length} Flacons Selected
+                {selectedProductIds.length} Fragrances Selected
               </span>
             </div>
 
             {/* Selected Products in Order */}
             {selectedProducts.length > 0 && (
               <div className="space-y-1.5 border border-neutral-200 dark:border-neutral-800 rounded-md p-2 bg-white dark:bg-neutral-950 max-h-56 overflow-y-auto">
-                <span className="text-[10px] uppercase tracking-wider text-neutral-400 font-medium px-2 block mb-1">
+                <span className="text-xs uppercase tracking-wider text-neutral-500 dark:text-neutral-400 font-medium px-2 block mb-1">
                   Slide Sequence (Admin Preference Order)
                 </span>
                 {selectedProducts.map((p, idx) => (
@@ -297,7 +297,7 @@ export function CollectionModal({
                     className="flex items-center justify-between p-2 rounded border border-neutral-100 dark:border-neutral-800/80 bg-neutral-50 dark:bg-neutral-900/40 text-xs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-5 h-5 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                      <span className="w-5 h-5 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-mono font-bold text-xs shrink-0">
                         {idx + 1}
                       </span>
                       <div className="w-8 h-8 rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 overflow-hidden shrink-0 flex items-center justify-center">
@@ -315,7 +315,7 @@ export function CollectionModal({
                         <p className="font-medium text-neutral-900 dark:text-white truncate">
                           {p.name}
                         </p>
-                        <p className="text-[10px] text-neutral-400 truncate">
+                        <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                           {p.brand} • AED {p.price}
                         </p>
                       </div>
@@ -374,11 +374,10 @@ export function CollectionModal({
                     <div
                       key={p.id}
                       onClick={() => handleToggleProduct(p.id)}
-                      className={`flex items-center justify-between p-2 rounded cursor-pointer border transition-all text-xs ${
-                        isSelected
-                          ? "bg-neutral-100 dark:bg-neutral-900 border-black dark:border-white shadow-sm"
-                          : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 bg-transparent"
-                      }`}
+                      className={`flex items-center justify-between p-2 rounded cursor-pointer border transition-all text-xs ${isSelected
+                        ? "bg-neutral-100 dark:bg-neutral-900 border-black dark:border-white shadow-sm"
+                        : "border-neutral-200 dark:border-neutral-800 hover:border-neutral-400 bg-transparent"
+                        }`}
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <div className="w-7 h-7 rounded bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 shrink-0 flex items-center justify-center overflow-hidden">
@@ -393,10 +392,10 @@ export function CollectionModal({
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="font-medium text-neutral-900 dark:text-white truncate text-[11px]">
+                          <p className="font-medium text-neutral-900 dark:text-white truncate text-xs">
                             {p.name}
                           </p>
-                          <p className="text-[10px] text-neutral-400 truncate">
+                          <p className="text-xs text-neutral-500 dark:text-neutral-400 truncate">
                             {p.brand}
                           </p>
                         </div>
@@ -404,12 +403,12 @@ export function CollectionModal({
 
                       <div className="shrink-0 ps-1">
                         {isSelected ? (
-                          <span className="flex items-center gap-1 text-[10px] font-semibold text-black dark:text-white">
+                          <span className="flex items-center gap-1 text-xs font-semibold text-black dark:text-white">
                             <Check size={13} />
                             <span>Added</span>
                           </span>
                         ) : (
-                          <span className="flex items-center gap-0.5 text-[10px] text-neutral-500 hover:text-black dark:hover:text-white">
+                          <span className="flex items-center gap-0.5 text-xs text-neutral-500 hover:text-black dark:hover:text-white">
                             <Plus size={13} />
                             <span>Add</span>
                           </span>
