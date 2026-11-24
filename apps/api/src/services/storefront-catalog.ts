@@ -80,5 +80,17 @@ export function storefrontProduct(product: any) {
       colorHex: relation.tag?.colorHex || relation.colorHex || "#171717",
       isFeatured: Boolean(relation.tag?.isFeatured ?? relation.isFeatured),
     })),
+    scentProfiles: (product.scentProfiles || []).map((relation: any) => ({
+      id: relation.scentProfile?.id || relation.id,
+      nameEn: relation.scentProfile?.nameEn || relation.nameEn,
+      nameAr: relation.scentProfile?.nameAr || relation.nameAr,
+      slug: relation.scentProfile?.slug || relation.slug,
+      descriptionEn: relation.scentProfile?.descriptionEn ?? relation.descriptionEn ?? null,
+      descriptionAr: relation.scentProfile?.descriptionAr ?? relation.descriptionAr ?? null,
+      imageUrl: relation.scentProfile?.imageUrl ?? relation.imageUrl ?? null,
+      colorHex: relation.scentProfile?.colorHex || relation.colorHex || "#78350f",
+      isFeatured: Boolean(relation.scentProfile?.isFeatured ?? relation.isFeatured ?? true),
+      sortOrder: Number(relation.scentProfile?.sortOrder ?? relation.sortOrder ?? 0),
+    })),
   };
 }

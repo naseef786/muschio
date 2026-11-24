@@ -5,7 +5,7 @@ const ORDER_ROLES: AdminRole[] = ["ORDER_MANAGER"];
 const EDITOR_ROLES: AdminRole[] = ["EDITOR"];
 const SUPER_ADMIN_ONLY: AdminRole[] = ["SUPER_ADMIN"];
 
-const CATALOG_RESOURCES = new Set(["products", "tags", "brands", "notes", "collections"]);
+const CATALOG_RESOURCES = new Set(["products", "tags", "brands", "notes", "collections", "scent-profiles"]);
 const ORDER_RESOURCES = new Set(["orders", "enquiries", "messages", "returns"]);
 const CUSTOMER_RESOURCES = new Set(["customers", "customer-guests"]);
 const EDITOR_RESOURCES = new Set(["banners", "sections"]);

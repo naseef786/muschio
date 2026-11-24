@@ -212,6 +212,21 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
       return success(families);
     }
 
+    // 2.5. Scent Profiles
+    if (path === "scent-profiles" || path === "admin/scent-profiles") {
+      const profiles = await CatalogService.getScentProfiles();
+      return success(profiles);
+    }
+    if (route[0] === "scent-profiles" && route[1]) {
+      const slug = route[1];
+      const result = await CatalogService.getScentProfileBySlug(slug);
+      if (!result) return error("SCENT_PROFILE_NOT_FOUND", "Scent profile not found", 404);
+      if (route[2] === "products") {
+        return success(result.products);
+      }
+      return success(result);
+    }
+
     // 3. Notes
     if (path === "notes") {
       const search = url.searchParams.get("search") || undefined;
@@ -235,6 +250,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
       const search = url.searchParams.get("search") || undefined;
       const brandSlug = url.searchParams.get("brandSlug") || undefined;
       const tag = url.searchParams.get("tag") || url.searchParams.get("tagSlug") || undefined;
+      const scentProfile = url.searchParams.get("scentProfile") || url.searchParams.get("profile") || undefined;
       const page = Number(url.searchParams.get("page") || "1");
       const limit = Number(url.searchParams.get("limit") || "100");
       const paginate = url.searchParams.get("paginate") === "true";
@@ -242,6 +258,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
         search,
         brandSlug,
         tag,
+        scentProfile,
         page,
         limit,
         sort: "featured",
@@ -1931,6 +1948,25 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         await TagService.setProductTags(savedProduct.id, tagList);
       }
 
+      if (body?.scentProfileIds !== undefined || body?.scentProfiles !== undefined) {
+        const rawProfiles = body.scentProfileIds !== undefined ? body.scentProfileIds : body.scentProfiles;
+        const profileList: string[] = (Array.isArray(rawProfiles) ? rawProfiles : rawProfiles ? [rawProfiles] : [])
+          .map((item: any) => String(item?.id || item).trim())
+          .filter(Boolean);
+        await prisma.productScentProfile.deleteMany({
+          where: { productId: savedProduct.id },
+        });
+        if (profileList.length > 0) {
+          await prisma.productScentProfile.createMany({
+            data: profileList.map((scentProfileId) => ({
+              productId: savedProduct.id,
+              scentProfileId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
       const refreshedProduct = await prisma.product.findUnique({
         where: { id: savedProduct.id },
         include: {
@@ -1939,6 +1975,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
           perfumers: { include: { perfumer: true } },
           variants: { include: { inventory: true } },
           tags: { include: { tag: true } },
+          scentProfiles: { include: { scentProfile: true } },
         },
       });
 
@@ -1971,6 +2008,91 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
         isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : undefined,
       });
       return success(tag);
+    }
+
+    // 12c. Admin Scent Profiles Bulk Assignment
+    if (path === "admin/scent-profiles/bulk-assign") {
+      const { productIds, scentProfileIds, mode = "add" } = body || {};
+      if (!Array.isArray(productIds) || productIds.length === 0) {
+        return error("INVALID_INPUT", "productIds array is required and must not be empty", 400);
+      }
+      if (!Array.isArray(scentProfileIds)) {
+        return error("INVALID_INPUT", "scentProfileIds array is required", 400);
+      }
+
+      const pIds = productIds.map((id: any) => String(id).trim()).filter(Boolean);
+      const spIds = scentProfileIds.map((id: any) => String(id).trim()).filter(Boolean);
+
+      let totalUpdated = 0;
+      await prisma.$transaction(async (tx) => {
+        for (const productId of pIds) {
+          if (mode === "set") {
+            await tx.productScentProfile.deleteMany({ where: { productId } });
+            if (spIds.length > 0) {
+              await tx.productScentProfile.createMany({
+                data: spIds.map((scentProfileId) => ({ productId, scentProfileId })),
+                skipDuplicates: true,
+              });
+            }
+          } else if (mode === "add") {
+            if (spIds.length > 0) {
+              await tx.productScentProfile.createMany({
+                data: spIds.map((scentProfileId) => ({ productId, scentProfileId })),
+                skipDuplicates: true,
+              });
+            }
+          } else if (mode === "remove") {
+            if (spIds.length > 0) {
+              await tx.productScentProfile.deleteMany({
+                where: { productId, scentProfileId: { in: spIds } },
+              });
+            }
+          }
+          totalUpdated++;
+        }
+      });
+
+      return success({ message: `Successfully processed scent profile assignment for ${totalUpdated} products`, updatedCount: totalUpdated });
+    }
+
+    // 12d. Admin Scent Profiles Create or Update
+    if (path === "admin/scent-profiles") {
+      const { nameEn, nameAr, slug, descriptionEn, descriptionAr, imageUrl, colorHex, isFeatured, sortOrder } = body || {};
+      if (!nameEn) return error("INVALID_INPUT", "nameEn is required", 400);
+      const finalSlug = (slug || nameEn).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+      const created = await prisma.scentProfile.create({
+        data: {
+          nameEn,
+          nameAr: nameAr || nameEn,
+          slug: finalSlug,
+          descriptionEn,
+          descriptionAr,
+          imageUrl,
+          colorHex: colorHex || "#78350f",
+          isFeatured: isFeatured !== undefined ? Boolean(isFeatured) : true,
+          sortOrder: typeof sortOrder === "number" ? sortOrder : 0,
+        },
+      });
+      return success(created, 201);
+    }
+    if (route[0] === "admin" && route[1] === "scent-profiles" && route[2]) {
+      const profileId = route[2];
+      const { nameEn, nameAr, slug, descriptionEn, descriptionAr, imageUrl, colorHex, isFeatured, sortOrder } = body || {};
+      const updated = await prisma.scentProfile.update({
+        where: { id: profileId },
+        data: {
+          ...(nameEn ? { nameEn } : {}),
+          ...(nameAr ? { nameAr } : {}),
+          ...(slug ? { slug } : {}),
+          ...(descriptionEn !== undefined ? { descriptionEn } : {}),
+          ...(descriptionAr !== undefined ? { descriptionAr } : {}),
+          ...(imageUrl !== undefined ? { imageUrl } : {}),
+          ...(colorHex !== undefined ? { colorHex } : {}),
+          ...(isFeatured !== undefined ? { isFeatured: Boolean(isFeatured) } : {}),
+          ...(sortOrder !== undefined ? { sortOrder: Number(sortOrder) } : {}),
+        },
+      });
+      return success(updated);
     }
 
     // 13. Admin Create or Update Brand
@@ -3574,6 +3696,13 @@ export async function DELETE(req: NextRequest, props: { params: Promise<{ route:
       const tagId = route[2];
       await TagService.deleteTag(tagId);
       return success({ success: true, deleted: tagId });
+    }
+
+    if (route[0] === "admin" && route[1] === "scent-profiles" && route[2]) {
+      const profileId = route[2];
+      await prisma.productScentProfile.deleteMany({ where: { scentProfileId: profileId } });
+      await prisma.scentProfile.delete({ where: { id: profileId } });
+      return success({ success: true, deleted: profileId });
     }
 
     // 8. Admin Delete Brand

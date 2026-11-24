@@ -149,6 +149,7 @@ export default async function ProductPage(
       position: n.position,
     })),
     tags: live.tags || [],
+    scentProfiles: (live as any).scentProfiles || [],
   };
 
   const rawRelated = (result.relatedProducts || []).map((rp: any) => storefrontProduct(rp));

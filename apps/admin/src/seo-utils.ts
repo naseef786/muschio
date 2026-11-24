@@ -99,6 +99,17 @@ export interface ProductItem {
     isFeatured?: boolean;
   }>;
   tagIds?: string[];
+  scentProfiles?: Array<{
+    id: string;
+    nameEn: string;
+    nameAr: string;
+    slug: string;
+    colorHex?: string | null;
+    imageUrl?: string | null;
+    isFeatured?: boolean;
+    sortOrder?: number;
+  }>;
+  scentProfileIds?: string[];
 }
 
 export interface TagItem {

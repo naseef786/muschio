@@ -273,6 +273,38 @@ model ScentFamily {
   @@index([slug])
 }
 
+model ScentProfile {
+  id            String                @id @default(uuid())
+  nameEn        String
+  nameAr        String
+  slug          String                @unique
+  descriptionEn String?               @db.Text
+  descriptionAr String?               @db.Text
+  imageUrl      String?
+  icon          String?
+  colorHex      String?               @default("#78350f")
+  isFeatured    Boolean               @default(true)
+  sortOrder     Int                   @default(0)
+  products      ProductScentProfile[]
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+
+  @@index([slug])
+  @@index([isFeatured])
+}
+
+model ProductScentProfile {
+  id             String       @id @default(uuid())
+  productId      String
+  scentProfileId String
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  scentProfile   ScentProfile @relation(fields: [scentProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, scentProfileId])
+  @@index([productId])
+  @@index([scentProfileId])
+}
+
 model Accord {
   id            String          @id @default(uuid())
   nameEn        String
@@ -503,6 +535,7 @@ model Product {
   occasions        ProductOccasion[]
   seasons          ProductSeason[]
   tags             ProductTag[]
+  scentProfiles    ProductScentProfile[]
   primaryRelations ProductRelation[]   @relation("PrimaryProduct")
   relatedRelations ProductRelation[]   @relation("RelatedProduct")
   reviews          Review[]

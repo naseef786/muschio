@@ -293,6 +293,26 @@ router.get("/scent-families", async (req, res, next) => {
   }
 });
 
+// Dedicated Scent Profiles Discovery
+router.get("/scent-profiles", async (req, res, next) => {
+  try {
+    const profiles = await CatalogService.getScentProfiles();
+    res.json({ success: true, data: profiles, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/scent-profiles/:slug", async (req, res, next) => {
+  try {
+    const result = await CatalogService.getScentProfileBySlug(req.params.slug);
+    if (!result) throw new ApiError(404, "SCENT_PROFILE_NOT_FOUND", "Scent profile not found");
+    res.json({ success: true, data: result, meta: { requestId: req.id } });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Dedicated Notes Discovery
 router.get("/notes", async (req, res, next) => {
   try {

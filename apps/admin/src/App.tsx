@@ -47,6 +47,7 @@ import {
   Loader2,
   Gift,
   Users,
+  Compass,
 } from "lucide-react";
 import {
   BrandItem,
@@ -66,6 +67,9 @@ import { NoteModal } from "./components/NoteModal";
 import { CollectionModal } from "./components/CollectionModal";
 import { TagModal } from "./components/TagModal";
 import { SearchableTagSelect } from "./components/SearchableTagSelect";
+import { ScentProfileModal } from "./components/ScentProfileModal";
+import { BulkScentProfileModal } from "./components/BulkScentProfileModal";
+import { SearchableScentProfileSelect } from "./components/SearchableScentProfileSelect";
 import { AdminLoginGate, AdminAuthSession } from "./components/AdminLoginGate";
 import { MediaUploadField } from "./components/MediaUploadField";
 import { MultiImageUploadField } from "./components/MultiImageUploadField";
@@ -73,6 +77,7 @@ import { MediaLibraryPicker } from "./components/MediaLibraryPicker";
 import { MediaLibraryManager } from "./components/MediaLibraryManager";
 import { OrderDetailModal } from "./components/OrderDetailModal";
 import { MarketingPromotionsTab } from "./components/MarketingPromotionsTab";
+import { ScentProfile } from "@muschio/types";
 
 const CustomerManager = lazy(() => import("./components/CustomerManager").then((module) => ({ default: module.CustomerManager })));
 
@@ -82,6 +87,7 @@ type AdminTab =
   | "media"
   | "collections"
   | "tags"
+  | "scent-profiles"
   | "brands"
   | "notes"
   | "inventory"
@@ -103,6 +109,7 @@ const TAB_TITLES: Record<AdminTab, string> = {
   media: "Media Library",
   collections: "Collections",
   tags: "Tags & Curations",
+  "scent-profiles": "Scent Profiles",
   brands: "Brands",
   notes: "Notes",
   inventory: "Inventory",
@@ -125,6 +132,7 @@ const TAB_SUBTITLES: Record<AdminTab, string> = {
   media: "Bulk upload, organize, and remove Cloudinary product images",
   collections: "Curate fragrance collections and showcase them in storefront sliders according to your preference",
   tags: "Curate fragrance tags, olfactory classifications, and storefront filter badges",
+  "scent-profiles": "Manage 12 olfactory profiles, imagery, descriptions, and bulk fragrance mappings",
   brands: "Manage perfume brands and brand profiles",
   notes: "Manage scent notes and fragrance notes pyramid",
   inventory: "Warehouse locations and stock allocation",
@@ -484,6 +492,9 @@ export function App() {
 
   const [productSearch, setProductSearch] = useState("");
   const [selectedTagFilter, setSelectedTagFilter] = useState<string>("ALL");
+  const [selectedScentProfileFilter, setSelectedScentProfileFilter] = useState<string>("ALL");
+  const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
+  const [showBulkScentModal, setShowBulkScentModal] = useState(false);
   const [showProductModal, setShowProductModal] = useState(false);
   const [showCsvModal, setShowCsvModal] = useState(false);
   const [editingProductId, setEditingProductId] = useState<string | null>(null);
@@ -496,10 +507,16 @@ export function App() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [editingTag, setEditingTag] = useState<TagItem | null>(null);
 
+  // 1c. SCENT PROFILES STATE
+  const [scentProfiles, setScentProfiles] = useState<ScentProfile[]>([]);
+  const [scentProfileSearch, setScentProfileSearch] = useState("");
+  const [showScentProfileModal, setShowScentProfileModal] = useState(false);
+  const [scentProfileToEdit, setScentProfileToEdit] = useState<ScentProfile | null>(null);
+
   // GLOBAL DELETE CONFIRMATION STATE (SAFETY & FALLBACK)
   const [deleteConfirm, setDeleteConfirm] = useState<{
     isOpen: boolean;
-    itemType: "Product" | "Collection" | "Tag" | "Maison" | "Scent Note" | "Banner" | "Review" | "Enquiry";
+    itemType: "Product" | "Collection" | "Tag" | "Scent Profile" | "Maison" | "Scent Note" | "Banner" | "Review" | "Enquiry";
     itemId: string;
     itemName: string;
     warning?: string;
@@ -528,6 +545,12 @@ export function App() {
           (p.tagIds || []).includes(selectedTagFilter);
         if (!hasTag) return false;
       }
+      if (selectedScentProfileFilter !== "ALL") {
+        const hasProfile =
+          (p.scentProfiles || []).some((sp) => sp.id === selectedScentProfileFilter || sp.slug === selectedScentProfileFilter) ||
+          (p.scentProfileIds || []).includes(selectedScentProfileFilter);
+        if (!hasProfile) return false;
+      }
       if (!productSearch.trim()) return true;
       const q = productSearch.toLowerCase();
       return (
@@ -537,7 +560,7 @@ export function App() {
         (p.nameAr && p.nameAr.includes(q))
       );
     });
-  }, [products, productSearch, selectedTagFilter]);
+  }, [products, productSearch, selectedTagFilter, selectedScentProfileFilter]);
 
   const totalAdminProductPages = Math.ceil(filteredProducts.length / ADMIN_PRODUCTS_PER_PAGE) || 1;
 
@@ -603,6 +626,7 @@ export function App() {
     metaDescription: "",
     status: "PUBLISHED" as const,
     tagIds: [] as string[],
+    scentProfileIds: [] as string[],
     variants: [
       {
         id: "var-init-1",
@@ -735,8 +759,12 @@ export function App() {
       fetch("/api/v1/admin/collections", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/admin/dashboard", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/v1/admin/tags", { headers: authHeaders }).then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([prodRes, brandRes, noteRes, colRes, dashRes, tagRes]) => {
+      fetch("/api/v1/scent-profiles").then((r) => (r.ok ? r.json() : null)).catch(() => null),
+    ]).then(([prodRes, brandRes, noteRes, colRes, dashRes, tagRes, scentRes]) => {
       if (!active) return;
+      if (scentRes?.data && Array.isArray(scentRes.data)) {
+        setScentProfiles(scentRes.data);
+      }
       if (dashRes?.success && dashRes.data) {
         setDashboardMetrics((previous) => ({
           ...(previous || {}),
@@ -826,6 +854,8 @@ export function App() {
             status: p.isPublished ? "PUBLISHED" : "DRAFT",
             tags: Array.isArray(p.tags) ? p.tags.map((pt: any) => pt.tag || pt) : [],
             tagIds: Array.isArray(p.tags) ? p.tags.map((pt: any) => (pt.tag ? pt.tag.id : pt.id)) : [],
+            scentProfiles: Array.isArray(p.scentProfiles) ? p.scentProfiles.map((psp: any) => psp.scentProfile || psp) : [],
+            scentProfileIds: Array.isArray(p.scentProfiles) ? p.scentProfiles.map((psp: any) => (psp.scentProfile ? psp.scentProfile.id : psp.id || psp.scentProfileId)) : [],
             variants: variantsList,
           };
         });
@@ -1792,6 +1822,7 @@ export function App() {
       metaDescription: "",
       status: "PUBLISHED",
       tagIds: [] as string[],
+      scentProfileIds: [] as string[],
       variants: [
         {
           id: `var-${Date.now()}-1`,
@@ -1812,6 +1843,22 @@ export function App() {
       ],
     });
     setShowProductModal(true);
+  };
+
+  const toggleSelectAllProducts = () => {
+    if (selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0) {
+      setSelectedProductIds([]);
+    } else {
+      setSelectedProductIds(filteredProducts.map((p) => p.id));
+    }
+  };
+
+  const toggleSelectProduct = (id: string) => {
+    if (selectedProductIds.includes(id)) {
+      setSelectedProductIds(selectedProductIds.filter((pId) => pId !== id));
+    } else {
+      setSelectedProductIds([...selectedProductIds, id]);
+    }
   };
 
   function normalizeConcentrationKey(val: any): "EXTRAIT_DE_PARFUM" | "EAU_DE_PARFUM" | "EAU_DE_TOILETTE" | "EAU_DE_COLOGNE" | "PARFUM_OIL" | "ATTAR" | "DISCOVERY_SET" {
@@ -1974,6 +2021,7 @@ export function App() {
         generateProductMetaDescription(pName || "Fragrance", pBrand, pConcentration, topNotesArr),
       status: (p.status as any) || "PUBLISHED",
       tagIds: p.tags?.map((t: any) => t.id) || p.tagIds || [],
+      scentProfileIds: p.scentProfiles?.map((sp: any) => sp.id) || p.scentProfileIds || [],
       variants: initialVariants,
     });
     setShowProductModal(true);
@@ -2120,6 +2168,8 @@ export function App() {
       status: productForm.status,
       tags: tags.filter((t) => (productForm.tagIds || []).includes(t.id)),
       tagIds: productForm.tagIds || [],
+      scentProfiles: scentProfiles.filter((sp) => (productForm.scentProfileIds || []).includes(sp.id)),
+      scentProfileIds: productForm.scentProfileIds || [],
       variants: activeVariants,
     };
     // Persist directly to Neon PostgreSQL database via API
@@ -2143,6 +2193,8 @@ export function App() {
         id: editingProductId || undefined,
         productId: editingProductId || undefined,
         scentFamily: productForm.scentFamily || "Woody Amber",
+        scentProfileIds: productForm.scentProfileIds || [],
+        tagIds: productForm.tagIds || [],
         perfumer: productForm.perfumer.trim() || undefined,
         perfumers: perfumerArray,
         perfumerBio: productForm.perfumerBio.trim() || undefined,
@@ -2257,6 +2309,7 @@ export function App() {
       metaDescription: "",
       status: "PUBLISHED",
       tagIds: [] as string[],
+      scentProfileIds: [] as string[],
       variants: [
         {
           id: `var-${Date.now()}-1`,
@@ -2409,6 +2462,128 @@ export function App() {
 
   const handleDeleteTag = async (tagId: string, tagName: string) => {
     promptDeleteTag(tagId, tagName);
+  };
+
+  const handleBulkAssignScentProfiles = async (data: {
+    productIds: string[];
+    scentProfileIds: string[];
+    mode: "add" | "set" | "remove";
+  }) => {
+    const token = authSession?.token;
+    const res = await fetch("/api/v1/admin/scent-profiles/bulk-assign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(data),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message || err?.message || "Failed to bulk assign scent profiles");
+    }
+    addToast("system", "Scent Profiles Updated", `Successfully updated scent profiles for ${data.productIds.length} fragrances.`);
+    setSelectedProductIds([]);
+    void refreshDashboardMetrics();
+
+    // Re-fetch products to display new profiles
+    fetch("/api/v1/admin/products", {
+      headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((pData) => {
+        if (pData?.data && Array.isArray(pData.data)) {
+          setProducts((prev) =>
+            prev.map((prod) => {
+              const updated = pData.data.find((p: any) => p.id === prod.id);
+              if (!updated) return prod;
+              return {
+                ...prod,
+                scentProfiles: Array.isArray(updated.scentProfiles)
+                  ? updated.scentProfiles.map((psp: any) => psp.scentProfile || psp)
+                  : [],
+                scentProfileIds: Array.isArray(updated.scentProfiles)
+                  ? updated.scentProfiles.map((psp: any) => (psp.scentProfile ? psp.scentProfile.id : psp.id || psp.scentProfileId))
+                  : [],
+              };
+            })
+          );
+        }
+      })
+      .catch(() => null);
+
+    // Refresh profile counts
+    fetch("/api/v1/scent-profiles")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((scentRes) => {
+        if (scentRes?.data && Array.isArray(scentRes.data)) {
+          setScentProfiles(scentRes.data);
+        }
+      })
+      .catch(() => null);
+  };
+
+  const handleSaveScentProfile = async (profileData: Partial<ScentProfile>) => {
+    const token = authSession?.token;
+    const isEdit = Boolean(profileData.id);
+    const url = isEdit
+      ? `/api/v1/admin/scent-profiles/${profileData.id}`
+      : "/api/v1/admin/scent-profiles";
+    const res = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      },
+      body: JSON.stringify(profileData),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => null);
+      throw new Error(err?.error?.message || err?.message || "Failed to save scent profile");
+    }
+    const saved = await res.json();
+    const profile = saved.data || saved;
+    setScentProfiles((prev) => {
+      const exists = prev.some((p) => p.id === profile.id);
+      if (exists) {
+        return prev.map((p) => (p.id === profile.id ? { ...p, ...profile } : p));
+      }
+      return [...prev, profile].sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0));
+    });
+    addToast("system", isEdit ? "Profile Updated" : "Profile Created", `"${profile.nameEn}" scent profile is saved.`);
+  };
+
+  const promptDeleteScentProfile = (profileId: string, profileName: string) => {
+    setDeleteConfirm({
+      isOpen: true,
+      itemType: "Scent Profile",
+      itemId: profileId,
+      itemName: profileName,
+      warning: `This will remove the "${profileName}" scent profile and detach it from all products.`,
+      isDeleting: false,
+      onConfirm: async () => {
+        setDeleteConfirm((prev) => ({ ...prev, isDeleting: true }));
+        try {
+          const token = authSession?.token;
+          const res = await fetch(`/api/v1/admin/scent-profiles/${profileId}`, {
+            method: "DELETE",
+            headers: token ? { Authorization: `Bearer ${token}` } : {},
+          });
+          if (!res.ok) {
+            const errData = await res.json().catch(() => null);
+            throw new Error(errData?.error?.message || errData?.message || "Failed to delete scent profile");
+          }
+          setScentProfiles((prev) => prev.filter((p) => p.id !== profileId));
+          addToast("system", "Profile Deleted", `Scent profile "${profileName}" has been removed.`);
+          setDeleteConfirm((prev) => ({ ...prev, isOpen: false, isDeleting: false }));
+        } catch (err: any) {
+          console.error("Failed to delete scent profile:", err);
+          addToast("cancel", "Deletion Failed", err?.message || "Could not delete scent profile.");
+          setDeleteConfirm((prev) => ({ ...prev, isDeleting: false }));
+        }
+      },
+    });
   };
 
   const handleInlineCreateTag = async (nameEn: string): Promise<TagItem | null> => {
@@ -3398,6 +3573,7 @@ export function App() {
               { id: "brands", label: "Brands", icon: Award, count: brands.length },
               { id: "notes", label: "Notes", icon: Layers, count: notes.length },
               { id: "tags", label: "Tags", icon: Tag, count: tags.length },
+              { id: "scent-profiles", label: "Scent Profiles", icon: Compass, count: scentProfiles.length },
               { id: "purchasing", label: "Purchasing", icon: FileText },
               { id: "returns", label: "Returns", icon: RotateCcw, count: returns.length },
               { id: "enquiries", label: "Messages & Inquiries", icon: MessageSquare, count: enquiries.filter(e => e.status === "NEW").length || undefined },
@@ -3958,6 +4134,23 @@ export function App() {
                     ))}
                   </select>
                 </div>
+
+                {/* Filter by Scent Profile Dropdown */}
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <Compass size={13} className="text-amber-500" />
+                  <select
+                    value={selectedScentProfileFilter}
+                    onChange={(e) => setSelectedScentProfileFilter(e.target.value)}
+                    className="bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white px-2.5 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
+                  >
+                    <option value="ALL">All Profiles ({scentProfiles.length})</option>
+                    {scentProfiles.map((sp) => (
+                      <option key={sp.id} value={sp.id}>
+                        {sp.nameEn} ({sp.productCount ?? 0})
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
@@ -3991,6 +4184,34 @@ export function App() {
                 </button>
               </div>
             </div>
+
+            {/* Bulk Actions Floating Bar */}
+            {selectedProductIds.length > 0 && (
+              <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 rounded-lg flex flex-wrap items-center justify-between gap-3 animate-in fade-in">
+                <div className="flex items-center gap-2">
+                  <span className="font-semibold text-xs text-amber-900 dark:text-amber-200">
+                    {selectedProductIds.length} fragrance{selectedProductIds.length > 1 ? "s" : ""} selected
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedProductIds([])}
+                    className="text-[11px] text-amber-700 dark:text-amber-400 hover:underline"
+                  >
+                    Deselect All
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowBulkScentModal(true)}
+                    className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-500 text-white rounded font-semibold text-xs flex items-center gap-1.5 shadow-sm transition-colors"
+                  >
+                    <Compass size={13} />
+                    <span>Assign Scent Profiles</span>
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* MOBILE PRODUCTS CARDS (< md) */}
             <div className="space-y-3 md:hidden">
@@ -4116,6 +4337,15 @@ export function App() {
               <table className="w-full text-start text-xs font-sans min-w-[1100px]">
                 <thead className="bg-neutral-50 dark:bg-neutral-900/60 text-neutral-700 dark:text-neutral-300 font-semibold uppercase tracking-wider text-xs border-b border-neutral-200 dark:border-neutral-800">
                   <tr>
+                    <th className="w-10 py-3.5 px-3 text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedProductIds.length === filteredProducts.length && filteredProducts.length > 0}
+                        onChange={toggleSelectAllProducts}
+                        className="rounded border-neutral-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5 cursor-pointer"
+                        title="Select All"
+                      />
+                    </th>
                     <th className="py-3.5 px-4 text-start min-w-[260px]">Product (EN / AR)</th>
                     <th className="py-3.5 px-4 text-start min-w-[160px]">URL Slug</th>
                     <th className="py-3.5 px-4 text-start min-w-[160px]">Brand & House</th>
@@ -4129,13 +4359,21 @@ export function App() {
                 <tbody className="divide-y divide-neutral-200 dark:divide-neutral-800">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-neutral-500 font-sans">
+                      <td colSpan={9} className="py-12 text-center text-neutral-500 font-sans">
                         No products found in the catalog. Click "Add Product" or "Bulk Excel Upload" to add items.
                       </td>
                     </tr>
                   ) : (
                     paginatedAdminProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-900/50 transition-colors">
+                        <td className="w-10 py-3.5 px-3 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedProductIds.includes(p.id)}
+                            onChange={() => toggleSelectProduct(p.id)}
+                            className="rounded border-neutral-300 text-amber-600 focus:ring-amber-500 h-3.5 w-3.5 cursor-pointer"
+                          />
+                        </td>
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded border border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-hidden shrink-0 flex items-center justify-center p-0.5">
@@ -4221,6 +4459,25 @@ export function App() {
                               <span className="text-neutral-600 dark:text-neutral-400 text-xs block truncate max-w-xs">
                                 Opening: {p.topNotes.slice(0, 2).join(", ")}
                               </span>
+                            )}
+                            {p.scentProfiles && p.scentProfiles.length > 0 && (
+                              <div className="flex flex-wrap items-center gap-1 mt-1">
+                                {p.scentProfiles.slice(0, 3).map((sp) => (
+                                  <span
+                                    key={sp.id || sp.slug}
+                                    className="inline-flex items-center gap-1 text-[10px] font-medium px-1.5 py-0.5 rounded bg-neutral-100 dark:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200 dark:border-neutral-700"
+                                  >
+                                    <span
+                                      className="w-1.5 h-1.5 rounded-full shrink-0"
+                                      style={{ backgroundColor: sp.colorHex || "#78350f" }}
+                                    />
+                                    <span>{sp.nameEn}</span>
+                                  </span>
+                                ))}
+                                {p.scentProfiles.length > 3 && (
+                                  <span className="text-[10px] text-neutral-500 font-mono">+{p.scentProfiles.length - 3}</span>
+                                )}
+                              </div>
                             )}
                           </div>
                         </td>
@@ -4463,6 +4720,15 @@ export function App() {
                         selectedTagIds={productForm.tagIds || []}
                         onChange={(newIds) => setProductForm({ ...productForm, tagIds: newIds })}
                         onCreateTag={handleInlineCreateTag}
+                      />
+                    </div>
+
+                    {/* Scent Profiles Multi-Select (Allow each fragrance to belong to multiple scent profiles without primary or secondary classification) */}
+                    <div className="p-3.5 bg-neutral-50 dark:bg-black border border-neutral-200 dark:border-neutral-800 rounded">
+                      <SearchableScentProfileSelect
+                        allProfiles={scentProfiles}
+                        selectedProfileIds={productForm.scentProfileIds || []}
+                        onChange={(newIds) => setProductForm({ ...productForm, scentProfileIds: newIds })}
                       />
                     </div>
 
@@ -5735,6 +6001,134 @@ export function App() {
                   )}
                 </tbody>
               </table>
+            </div>
+          </div>
+        )}
+
+        {/* 2.4. SCENT PROFILES MANAGEMENT */}
+        {activeTab === "scent-profiles" && (
+          <div className="space-y-6">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search size={14} className="absolute inset-y-0 start-3 my-auto text-neutral-500" />
+                <input
+                  type="text"
+                  placeholder="Search scent profiles..."
+                  value={scentProfileSearch}
+                  onChange={(e) => setScentProfileSearch(e.target.value)}
+                  className="w-full bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 text-xs text-neutral-900 dark:text-white ps-9 pe-3 py-2 rounded focus:outline-none focus:border-neutral-400 dark:border-neutral-600 shadow-sm"
+                />
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-neutral-500">
+                  {scentProfiles.length} Olfactory Profiles · Multi-profile enabled
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScentProfileToEdit(null);
+                    setShowScentProfileModal(true);
+                  }}
+                  className="px-3.5 py-2 bg-black hover:bg-neutral-800 dark:bg-white dark:text-black dark:hover:bg-neutral-200 text-white text-xs font-medium rounded flex items-center gap-1.5 transition-colors shadow-sm"
+                >
+                  <Plus size={14} />
+                  <span>Create Scent Profile</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Scent Profiles Luxury Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {scentProfiles
+                .filter((p) => {
+                  if (!scentProfileSearch.trim()) return true;
+                  const q = scentProfileSearch.toLowerCase();
+                  return (
+                    p.nameEn.toLowerCase().includes(q) ||
+                    (p.nameAr && p.nameAr.toLowerCase().includes(q)) ||
+                    p.slug.toLowerCase().includes(q) ||
+                    (p.descriptionEn && p.descriptionEn.toLowerCase().includes(q))
+                  );
+                })
+                .map((p) => (
+                  <div
+                    key={p.id}
+                    className="p-4 bg-white dark:bg-neutral-950 border border-neutral-200 dark:border-neutral-800 rounded-xl shadow-sm space-y-3 relative overflow-hidden"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="w-16 h-16 rounded-lg border border-neutral-200 dark:border-neutral-800 overflow-hidden shrink-0 bg-neutral-100 dark:bg-neutral-900 relative">
+                        {p.imageUrl ? (
+                          <img src={p.imageUrl} alt={p.nameEn} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Compass size={22} className="text-neutral-400" />
+                          </div>
+                        )}
+                        <span
+                          className="absolute bottom-1 end-1 w-3 h-3 rounded-full border border-white dark:border-black shadow-xs"
+                          style={{ backgroundColor: p.colorHex || "#78350f" }}
+                        />
+                      </div>
+
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-1">
+                          <h4 className="font-semibold text-sm text-neutral-900 dark:text-white truncate">
+                            {p.nameEn}
+                          </h4>
+                          <span className="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-900/50">
+                            {p.productCount ?? 0} fragrances
+                          </span>
+                        </div>
+                        <div className="text-neutral-500 dark:text-neutral-400 text-xs truncate mt-0.5" dir="rtl">
+                          {p.nameAr}
+                        </div>
+                        <div className="text-[11px] font-mono text-neutral-400 truncate mt-0.5">
+                          /scent-profile/{p.slug}
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-neutral-600 dark:text-neutral-400 line-clamp-2 leading-relaxed">
+                      {p.descriptionEn || "Luxury olfactory profile curation."}
+                    </p>
+
+                    <div className="flex items-center justify-between pt-2 border-t border-neutral-100 dark:border-neutral-900">
+                      <span className="text-[11px] text-neutral-400 font-mono">
+                        Order #{p.sortOrder || 0}
+                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setScentProfileToEdit(p);
+                            setShowScentProfileModal(true);
+                          }}
+                          className="px-2.5 py-1 text-xs font-semibold rounded bg-neutral-100 hover:bg-neutral-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 text-neutral-800 dark:text-neutral-200 transition-colors"
+                        >
+                          Edit
+                        </button>
+                        <a
+                          href={`/en/scent-profile/${p.slug}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-neutral-400 hover:text-black dark:hover:text-white rounded transition-colors"
+                          title="View on Storefront"
+                        >
+                          <ExternalLink size={13} />
+                        </a>
+                        <button
+                          type="button"
+                          onClick={() => promptDeleteScentProfile(p.id, p.nameEn)}
+                          className="p-1.5 text-neutral-400 hover:text-rose-600 rounded transition-colors"
+                          title="Delete Scent Profile"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
             </div>
           </div>
         )}
@@ -8097,6 +8491,27 @@ export function App() {
         }}
         tagToEdit={editingTag}
         onSave={handleSaveTag}
+      />
+
+      <ScentProfileModal
+        isOpen={showScentProfileModal}
+        onClose={() => {
+          setShowScentProfileModal(false);
+          setScentProfileToEdit(null);
+        }}
+        profileToEdit={scentProfileToEdit}
+        onSave={handleSaveScentProfile}
+      />
+
+      <BulkScentProfileModal
+        isOpen={showBulkScentModal}
+        onClose={() => setShowBulkScentModal(false)}
+        selectedProductIds={selectedProductIds}
+        selectedProductNames={products
+          .filter((p) => selectedProductIds.includes(p.id))
+          .map((p) => p.name)}
+        allProfiles={scentProfiles}
+        onApply={handleBulkAssignScentProfiles}
       />
 
       <OrderDetailModal

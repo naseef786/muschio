@@ -320,6 +320,25 @@ export const muschioApi = {
     return null;
   },
 
+  // Scent Profiles
+  async getScentProfiles(): Promise<any[] | null> {
+    try {
+      const result = await apiRequest<any[]>("/scent-profiles");
+      if (Array.isArray(result) && result.length > 0) return result;
+    } catch {
+      // Fallback
+    }
+    return [];
+  },
+
+  async getScentProfileBySlug(slug: string): Promise<any | null> {
+    return apiRequest<any>(`/scent-profiles/${slug}`);
+  },
+
+  async getProductsByScentProfile(slug: string): Promise<any | null> {
+    return apiRequest<any>(`/scent-profiles/${slug}/products`);
+  },
+
   // Notes
   async getNotes(params?: Record<string, any>): Promise<Note[] | null> {
     try {

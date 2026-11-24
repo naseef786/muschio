@@ -82,6 +82,21 @@ export class CatalogService {
       };
     }
 
+    if ((filters as any).scentProfile || (filters as any).profile) {
+      const profileFilter = String((filters as any).scentProfile || (filters as any).profile).trim();
+      where.scentProfiles = {
+        some: {
+          scentProfile: {
+            OR: [
+              { slug: profileFilter },
+              { nameEn: { equals: profileFilter, mode: "insensitive" } },
+              { nameAr: { equals: profileFilter, mode: "insensitive" } },
+            ],
+          },
+        },
+      };
+    }
+
     if ((filters as any).collection || (filters as any).collectionSlug) {
       const colFilter = String((filters as any).collectionSlug || (filters as any).collection).trim();
       where.collections = {
@@ -150,6 +165,11 @@ export class CatalogService {
                 tag: true,
               },
             },
+            scentProfiles: {
+              include: {
+                scentProfile: true,
+              },
+            },
           },
           orderBy,
           skip,
@@ -204,6 +224,11 @@ export class CatalogService {
         tags: {
           include: {
             tag: true,
+          },
+        },
+        scentProfiles: {
+          include: {
+            scentProfile: true,
           },
         },
       },
@@ -302,6 +327,81 @@ export class CatalogService {
         },
       },
     });
+  }
+
+  static async getScentProfiles() {
+    const profiles = await prisma.scentProfile.findMany({
+      orderBy: { sortOrder: "asc" },
+      include: {
+        _count: {
+          select: {
+            products: {
+              where: {
+                product: { isPublished: true },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return profiles.map((p) => ({
+      ...p,
+      productCount: p._count.products,
+    }));
+  }
+
+  static async getScentProfileBySlug(slug: string) {
+    const profile = await prisma.scentProfile.findFirst({
+      where: {
+        slug: { equals: slug, mode: "insensitive" },
+      },
+      include: {
+        products: {
+          where: {
+            product: { isPublished: true },
+          },
+          include: {
+            product: {
+              include: {
+                brand: true,
+                scentFamily: true,
+                variants: {
+                  include: { inventory: true },
+                  orderBy: { price: "asc" },
+                },
+                notes: {
+                  include: { note: true },
+                },
+                tags: {
+                  include: { tag: true },
+                },
+                scentProfiles: {
+                  include: { scentProfile: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!profile) return null;
+
+    return {
+      id: profile.id,
+      nameEn: profile.nameEn,
+      nameAr: profile.nameAr,
+      slug: profile.slug,
+      descriptionEn: profile.descriptionEn,
+      descriptionAr: profile.descriptionAr,
+      imageUrl: profile.imageUrl,
+      colorHex: profile.colorHex,
+      isFeatured: profile.isFeatured,
+      sortOrder: profile.sortOrder,
+      productCount: profile.products.length,
+      products: profile.products.map((psp) => storefrontProduct(psp.product)),
+    };
   }
 }
 

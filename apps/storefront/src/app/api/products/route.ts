@@ -130,6 +130,25 @@ function serializeProduct(p: any) {
           isFeatured: Boolean(t.tag?.isFeatured ?? t.isFeatured),
         }))
       : [],
+    scentProfiles: Array.isArray(p.scentProfiles)
+      ? p.scentProfiles.map((sp: any) => ({
+          id: String(sp.scentProfile?.id || sp.id),
+          nameEn: sp.scentProfile?.nameEn || sp.nameEn,
+          nameAr: sp.scentProfile?.nameAr || sp.nameAr || sp.scentProfile?.nameEn || sp.nameEn,
+          slug: sp.scentProfile?.slug || sp.slug,
+          descriptionEn: sp.scentProfile?.descriptionEn ?? sp.descriptionEn ?? null,
+          descriptionAr: sp.scentProfile?.descriptionAr ?? sp.descriptionAr ?? null,
+          imageUrl: sp.scentProfile?.imageUrl ?? sp.imageUrl ?? null,
+          colorHex: sp.scentProfile?.colorHex || sp.colorHex || "#78350f",
+          isFeatured: Boolean(sp.scentProfile?.isFeatured ?? sp.isFeatured ?? true),
+          sortOrder: Number(sp.scentProfile?.sortOrder ?? sp.sortOrder ?? 0),
+        }))
+      : [],
+    scentProfileIds: Array.isArray(p.scentProfiles)
+      ? p.scentProfiles
+          .map((sp: any) => String(sp.scentProfile?.id || sp.scentProfileId || sp.id))
+          .filter(Boolean)
+      : [],
     isPublished: Boolean(p.isPublished),
     createdAt: p.createdAt ? new Date(p.createdAt).toISOString() : new Date().toISOString(),
   };
@@ -148,6 +167,7 @@ export async function GET(req: NextRequest) {
     const search = url.searchParams.get("search") || url.searchParams.get("q") || undefined;
     const brand = url.searchParams.get("brand") || url.searchParams.get("brandSlug") || undefined;
     const family = url.searchParams.get("family") || url.searchParams.get("scentFamily") || undefined;
+    const profile = url.searchParams.get("profile") || url.searchParams.get("scentProfile") || undefined;
     const sort = url.searchParams.get("sort") || "featured";
     const tag = url.searchParams.get("tag") || url.searchParams.get("tagSlug") || undefined;
     const dealOnly = url.searchParams.get("deal") === "true" || url.searchParams.get("deal") === "1";
@@ -216,6 +236,21 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    if (profile && profile.trim()) {
+      const prof = profile.trim();
+      where.scentProfiles = {
+        some: {
+          scentProfile: {
+            OR: [
+              { slug: { equals: prof, mode: "insensitive" } },
+              { nameEn: { equals: prof, mode: "insensitive" } },
+              { nameAr: { equals: prof, mode: "insensitive" } },
+            ],
+          },
+        },
+      };
+    }
+
     let orderBy: any = [{ createdAt: "desc" }];
     if (sort === "newest" || sort === "featured" || sort === "curated") {
       orderBy = [{ createdAt: "desc" }];
@@ -240,6 +275,9 @@ export async function GET(req: NextRequest) {
           },
           tags: {
             include: { tag: true },
+          },
+          scentProfiles: {
+            include: { scentProfile: true },
           },
         },
         orderBy,
@@ -553,6 +591,26 @@ export async function POST(req: NextRequest) {
           id: rawVariants[index]?.id,
           stockQuantity: iv.inventory.create.sealedQuantity,
         })), Array.isArray(body.variants) && body.variantSyncMode !== "merge");
+
+        if (Array.isArray(body.scentProfileIds) || Array.isArray(body.scentProfiles)) {
+          const profileIds: string[] = Array.isArray(body.scentProfileIds)
+            ? body.scentProfileIds.map((id: any) => String(id).trim()).filter(Boolean)
+            : body.scentProfiles.map((sp: any) => String(sp.id || sp).trim()).filter(Boolean);
+          
+          await tx.productScentProfile.deleteMany({
+            where: { productId: targetProduct.id },
+          });
+          if (profileIds.length > 0) {
+            await tx.productScentProfile.createMany({
+              data: profileIds.map((scentProfileId) => ({
+                productId: targetProduct.id,
+                scentProfileId,
+              })),
+              skipDuplicates: true,
+            });
+          }
+        }
+
         return tx.product.update({
           where: { id: targetProduct.id },
           data: {
@@ -575,6 +633,7 @@ export async function POST(req: NextRequest) {
             variants: { include: { inventory: true } },
             notes: { include: { note: true } },
             tags: { include: { tag: true } },
+            scentProfiles: { include: { scentProfile: true } },
           },
         });
       }, { timeout: 15000 });
@@ -627,6 +686,14 @@ export async function POST(req: NextRequest) {
         variants: {
           create: uniqueVariantsData,
         },
+        scentProfiles: (Array.isArray(body.scentProfileIds) && body.scentProfileIds.length > 0)
+          ? {
+              create: body.scentProfileIds
+                .map((id: any) => String(id).trim())
+                .filter(Boolean)
+                .map((scentProfileId: string) => ({ scentProfileId })),
+            }
+          : undefined,
       },
       include: {
         brand: true,
@@ -639,6 +706,9 @@ export async function POST(req: NextRequest) {
         },
         tags: {
           include: { tag: true },
+        },
+        scentProfiles: {
+          include: { scentProfile: true },
         },
       },
     });

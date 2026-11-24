@@ -4,6 +4,7 @@ import { Link } from "../../navigation";
 import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles, Tag } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
 import { ProductCard } from "../../components/product-card";
+import { DiscoverScentSection } from "../../components/discover-scent-section";
 import { muschioApi } from "../../lib/api";
 import { customerCopy } from "../../lib/customer-copy";
 import { BannerService, CatalogService, NotesService, storefrontProduct, prisma } from "@muschio/api";
@@ -74,6 +75,7 @@ export default async function HomePage(
   let liveNotes: any = null;
   let liveCollections: any = null;
   let liveJournalPost: any = null;
+  let liveScentProfiles: any = null;
 
   try {
     [
@@ -86,6 +88,7 @@ export default async function HomePage(
       liveNotes,
       liveCollections,
       liveJournalPost,
+      liveScentProfiles,
     ] = await Promise.all([
       BannerService.getActiveBanners("HERO_SLIDER").catch(() => muschioApi.getActiveBanners("HERO_SLIDER")),
       BannerService.getActiveBanners("CAMPAIGN_MID").catch(() => muschioApi.getActiveBanners("CAMPAIGN_MID")),
@@ -130,6 +133,7 @@ export default async function HomePage(
         orderBy: { publishedAt: "desc" },
         include: { category: true },
       }).catch(() => muschioApi.getBlogPosts(1, 1).then((r: any) => (Array.isArray(r) ? r[0] : (r?.items ? r.items[0] : null)))),
+      CatalogService.getScentProfiles().catch(() => muschioApi.getScentProfiles?.().catch(() => [])),
     ]);
   } catch (err) {
     console.warn("In-process home fetch fell back to muschioApi:", err);
@@ -169,6 +173,20 @@ export default async function HomePage(
   const visibleSections = [...(rawSections || [])]
     .filter((s: any) => s.isVisible !== false)
     .sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  // Ensure Discover Your Scent section is always active on homepage
+  if (!visibleSections.some((s: any) => s.sectionType === "SCENT_PROFILES" || s.sectionType === "DISCOVER_SCENT" || s.sectionType === "NOTES_GRID")) {
+    visibleSections.push({
+      sectionType: "SCENT_PROFILES",
+      sortOrder: 4.5,
+      isVisible: true,
+      titleEn: "Discover Your Scent",
+      titleAr: "اكتشف عالمك العطري",
+      eyebrowEn: "OLFACTORY LANDSCAPES",
+      eyebrowAr: "المجموعات العطرية",
+    });
+    visibleSections.sort((a: any, b: any) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+  }
 
   // Resolve hero banner
   const hero = heroBanners?.[0] ?? null;
@@ -528,6 +546,20 @@ export default async function HomePage(
     </section>
   );
 
+  const renderScentProfiles = (sec?: any) => (
+    <DiscoverScentSection
+      key="DISCOVER_SCENT"
+      locale={locale}
+      profiles={liveScentProfiles}
+      eyebrowEn={(sec?.config as any)?.eyebrowEn || sec?.eyebrowEn}
+      eyebrowAr={(sec?.config as any)?.eyebrowAr || sec?.eyebrowAr}
+      titleEn={sec?.titleEn}
+      titleAr={sec?.titleAr}
+      subtitleEn={sec?.subtitleEn}
+      subtitleAr={sec?.subtitleAr}
+    />
+  );
+
   const renderCustomBanner = () => (
     <section key="CUSTOM_BANNER" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
       {/* Promotional Campaign & Offer Banner */}
@@ -793,6 +825,9 @@ export default async function HomePage(
               return renderFeaturedProducts(sec);
             case "HOUSES_GRID":
               return renderHousesGrid(sec);
+            case "SCENT_PROFILES":
+            case "DISCOVER_SCENT":
+              return renderScentProfiles(sec);
             case "NOTES_GRID":
               return renderNotesGrid(sec);
             case "CUSTOM_BANNER":

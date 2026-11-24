@@ -66,6 +66,13 @@ export interface ProductDetailProps {
       colorHex?: string | null;
       isFeatured?: boolean;
     }>;
+    scentProfiles?: Array<{
+      id: string;
+      nameEn: string;
+      nameAr?: string;
+      slug: string;
+      colorHex?: string | null;
+    }>;
   };
   relatedProducts?: Array<any>;
   houseProducts?: Array<any>;
@@ -587,6 +594,30 @@ export function ProductExperience({
                   ))}
                 </div>
               )}
+
+              {/* Assigned Scent Profiles Badges */}
+              {product.scentProfiles && product.scentProfiles.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                  <span className="text-[11px] font-mono text-neutral-400 uppercase tracking-wider me-1">
+                    {c("Scent Profiles:", "المجموعات العطرية:")}
+                  </span>
+                  {product.scentProfiles.map((sp) => (
+                    <Link
+                      key={sp.slug || sp.id}
+                      href={`/scent-profile/${sp.slug}`}
+                      className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-xs font-medium bg-neutral-50 dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-800 dark:text-neutral-200 border border-neutral-200/80 dark:border-neutral-800 transition-colors"
+                    >
+                      {sp.colorHex && (
+                        <span
+                          className="w-2 h-2 rounded-full shrink-0"
+                          style={{ backgroundColor: sp.colorHex }}
+                        />
+                      )}
+                      <span>{c(sp.nameEn, sp.nameAr || sp.nameEn)}</span>
+                    </Link>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Price Display & Dynamic Stock Badge */}
@@ -875,6 +906,32 @@ export function ProductExperience({
                   </button>
                   {openAccordion === "olfactory" && (
                     <div className="pdp-accordion-content space-y-3 font-sans">
+                      {/* Scent Profiles Badges */}
+                      {product.scentProfiles && product.scentProfiles.length > 0 && (
+                        <div className="p-3 bg-[#F9F9FB] dark:bg-neutral-900/40 border border-neutral-100 dark:border-neutral-800/80 rounded-sm flex items-center justify-between flex-wrap gap-2">
+                          <span className="text-xs font-semibold uppercase tracking-wider text-neutral-800 dark:text-neutral-200">
+                            {c("Assigned Scent Profiles", "المجموعات العطرية")}
+                          </span>
+                          <div className="flex flex-wrap gap-1.5">
+                            {product.scentProfiles.map((sp) => (
+                              <Link
+                                key={sp.slug || sp.id}
+                                href={`/scent-profile/${sp.slug}`}
+                                className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-white dark:bg-neutral-800 border border-neutral-200/80 dark:border-neutral-700 text-neutral-900 dark:text-white hover:border-black dark:hover:border-white transition-colors"
+                              >
+                                {sp.colorHex && (
+                                  <span
+                                    className="w-2 h-2 rounded-full shrink-0"
+                                    style={{ backgroundColor: sp.colorHex }}
+                                  />
+                                )}
+                                <span>{c(sp.nameEn, sp.nameAr || sp.nameEn)}</span>
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                         {/* Top Notes */}
                         {topNotes.length > 0 && (

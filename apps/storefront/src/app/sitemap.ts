@@ -127,6 +127,31 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     console.warn("[Sitemap Generator] Database notes lookup fallback:", err);
   }
 
+  // Dynamic Scent Profile Pages from Database
+  try {
+    const profiles = await prisma.scentProfile.findMany({
+      where: { isFeatured: true },
+      select: { slug: true, updatedAt: true },
+    });
+
+    for (const p of profiles) {
+      if (!p.slug) continue;
+      for (const locale of locales) {
+        routes.push({
+          url: `${BASE_URL}/${locale}/scent-profile/${p.slug}`,
+          lastModified: p.updatedAt || new Date(),
+          changeFrequency: "weekly",
+          priority: 0.85,
+          alternates: {
+            languages: languageAlternates(`/scent-profile/${p.slug}`),
+          },
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("[Sitemap Generator] Database scent profiles lookup fallback:", err);
+  }
+
   // Published journal articles from the database
   try {
     const posts = await prisma.blogPost.findMany({

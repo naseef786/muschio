@@ -14,6 +14,8 @@ export interface ShopClientProps {
     search?: string;
     brandType?: string;
     family?: string;
+    profile?: string;
+    scentProfile?: string;
     brand?: string;
     tag?: string;
     tagSlug?: string;
@@ -24,6 +26,7 @@ export interface ShopClientProps {
   initialProducts: any[];
   initialFamilies: any[];
   initialTags: any[];
+  initialProfiles?: any[];
 }
 
 export function ShopClient({
@@ -32,6 +35,7 @@ export function ShopClient({
   initialProducts,
   initialFamilies,
   initialTags,
+  initialProfiles,
 }: ShopClientProps) {
   const isAr = locale === "ar";
   const c = (en: string, ar: string) => customerCopy(en, ar, isAr);
@@ -51,6 +55,9 @@ export function ShopClient({
   const [selectedFamily, setSelectedFamily] = useState<string>(
     searchParams.family ?? "",
   );
+  const [selectedProfile, setSelectedProfile] = useState<string>(
+    searchParams.profile ?? searchParams.scentProfile ?? "",
+  );
   const [selectedTag, setSelectedTag] = useState<string | null>(
     searchParams.tag ?? searchParams.tagSlug ?? null,
   );
@@ -64,6 +71,7 @@ export function ShopClient({
   const [sort, setSort] = useState("curated");
   const [live, setLive] = useState<any[]>(initialProducts || []);
   const [families, setFamilies] = useState<any[]>(initialFamilies || []);
+  const [profiles, setProfiles] = useState<any[]>(initialProfiles || []);
   const [tags, setTags] = useState<any[]>(initialTags || []);
   const [loading, setLoading] = useState(false);
 
@@ -109,6 +117,11 @@ export function ShopClient({
         : muschioApi.getScentFamilies().then((fams) => {
             if (active && fams) setFamilies(fams);
           }),
+      initialProfiles && initialProfiles.length > 0
+        ? Promise.resolve()
+        : muschioApi.getScentProfiles().then((profs) => {
+            if (active && profs) setProfiles(profs);
+          }),
       initialTags && initialTags.length > 0
         ? Promise.resolve()
         : muschioApi.getTags().then((tagsRes) => {
@@ -123,7 +136,7 @@ export function ShopClient({
       active = false;
       unsubscribe();
     };
-  }, [initialProducts, initialFamilies, initialTags]);
+  }, [initialProducts, initialFamilies, initialProfiles, initialTags]);
 
   const catalog = useMemo(() => {
     if (!live || live.length === 0) return [];
@@ -164,6 +177,15 @@ export function ShopClient({
         notes: Array.isArray(product.notes)
           ? product.notes.map((note: any) => (typeof note === "string" ? note : (isAr ? (note.nameAr || note.nameEn) : (note.nameEn || note.nameAr))))
           : [],
+        scentProfiles: Array.isArray(product.scentProfiles)
+          ? product.scentProfiles.map((sp: any) => ({
+              id: String(sp.scentProfile?.id || sp.id || ""),
+              slug: sp.scentProfile?.slug || sp.slug || "",
+              nameEn: sp.scentProfile?.nameEn || sp.nameEn || "",
+              nameAr: sp.scentProfile?.nameAr || sp.nameAr || sp.scentProfile?.nameEn || sp.nameEn || "",
+              colorHex: sp.scentProfile?.colorHex || sp.colorHex || "#171717",
+            }))
+          : [],
         tags: product.tags || [],
         collections: product.collections || [],
         variants: variantsList,
@@ -178,6 +200,16 @@ export function ShopClient({
         if (selectedBrandType && p.brandType !== selectedBrandType) return false;
         if (selectedBrand && p.brand.toLowerCase() !== selectedBrand.toLowerCase()) return false;
         if (selectedFamily && p.family !== selectedFamily) return false;
+        if (selectedProfile) {
+          const hasProfile = (p.scentProfiles || []).some(
+            (sp: any) =>
+              sp.slug?.toLowerCase() === selectedProfile.toLowerCase() ||
+              sp.id === selectedProfile ||
+              sp.nameEn?.toLowerCase() === selectedProfile.toLowerCase() ||
+              sp.nameAr === selectedProfile
+          );
+          if (!hasProfile) return false;
+        }
         if (selectedTag) {
           const hasTag = (p.tags || []).some(
             (t: any) =>
@@ -199,7 +231,7 @@ export function ShopClient({
         const query = search.trim().toLowerCase();
         if (
           query &&
-          ![p.nameEn, p.nameAr, p.brand, ...p.notes]
+          ![p.nameEn, p.nameAr, p.brand, ...p.notes, ...p.scentProfiles.map((sp: any) => sp.nameEn), ...p.scentProfiles.map((sp: any) => sp.nameAr)]
             .join(" ")
             .toLowerCase()
             .includes(query)
@@ -214,12 +246,12 @@ export function ShopClient({
         if (sort === "name") return a.nameEn.localeCompare(b.nameEn);
         return 0; // Default: newest / curated order
       });
-  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, selectedTag, selectedCollection, search, sort, dealOnly]);
+  }, [catalog, selectedBrandType, selectedBrand, selectedFamily, selectedProfile, selectedTag, selectedCollection, search, sort, dealOnly]);
 
   // Reset page to 1 whenever any filter or sort option changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedBrandType, selectedBrand, selectedFamily, selectedTag, selectedCollection, search, sort, dealOnly]);
+  }, [selectedBrandType, selectedBrand, selectedFamily, selectedProfile, selectedTag, selectedCollection, search, sort, dealOnly]);
 
   const totalPages = Math.ceil(filtered.length / ITEMS_PER_PAGE) || 1;
 
@@ -233,6 +265,7 @@ export function ShopClient({
     setSelectedBrandType(null);
     setSelectedBrand(null);
     setSelectedFamily("");
+    setSelectedProfile("");
     setSelectedTag(null);
     setSelectedCollection(null);
     setSearch("");
@@ -241,13 +274,14 @@ export function ShopClient({
   };
 
   const hasActiveFilters = Boolean(
-    selectedBrandType || selectedBrand || selectedFamily || selectedTag || search.trim() || dealOnly,
+    selectedBrandType || selectedBrand || selectedFamily || selectedProfile || selectedTag || search.trim() || dealOnly,
   );
 
   const activeFilterCount = [
     selectedBrandType ? 1 : 0,
     selectedBrand ? 1 : 0,
     selectedFamily ? 1 : 0,
+    selectedProfile ? 1 : 0,
     selectedTag ? 1 : 0,
     search.trim() ? 1 : 0,
   ].reduce((a, b) => a + b, 0);
@@ -342,6 +376,20 @@ export function ShopClient({
             ))}
           </select>
 
+          {/* Scent Profile Dropdown */}
+          <select
+            value={selectedProfile}
+            onChange={(e) => setSelectedProfile(e.target.value)}
+            className="px-3 py-1.5 border border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 text-neutral-800 dark:text-neutral-200 text-xs rounded-sm focus:outline-none focus:border-neutral-900 dark:focus:border-white"
+          >
+            <option value="">{c("All Scent Profiles", "جميع المجموعات العطرية")}</option>
+            {profiles.map((prof) => (
+              <option key={prof.slug} value={prof.slug}>
+                {isAr ? prof.nameAr : prof.nameEn}
+              </option>
+            ))}
+          </select>
+
           {/* Tag Filter Dropdown */}
           <select
             value={selectedTag || ""}
@@ -373,7 +421,36 @@ export function ShopClient({
         </div>
       </div>
 
-      {/* 2b. Featured Tags Trending Strip */}
+      {/* 2b. Scent Profiles Strip */}
+      {profiles.length > 0 && (
+        <div className="flex items-center gap-2 overflow-x-auto py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-xs no-scrollbar">
+          <span className="text-[11px] text-neutral-400 shrink-0 font-medium">{c("Scent Profiles:", "المجموعات العطرية:")}</span>
+          {profiles.map((prof) => {
+            const isSelected = selectedProfile === prof.slug || selectedProfile === prof.id;
+            return (
+              <button
+                key={prof.id || prof.slug}
+                type="button"
+                onClick={() => setSelectedProfile(isSelected ? "" : prof.slug)}
+                className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-all whitespace-nowrap ${isSelected
+                    ? "bg-neutral-950 text-white dark:bg-white dark:text-neutral-950 shadow-sm"
+                    : "bg-neutral-100 dark:bg-neutral-900 text-neutral-700 dark:text-neutral-300 hover:bg-neutral-200 dark:hover:bg-neutral-800 border border-neutral-200 dark:border-neutral-800"
+                  }`}
+              >
+                {prof.colorHex && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full"
+                    style={{ backgroundColor: prof.colorHex }}
+                  />
+                )}
+                <span>{isAr ? prof.nameAr : prof.nameEn}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
+      {/* 2c. Featured Tags Trending Strip */}
       {tags.length > 0 && (
         <div className="flex items-center gap-2 overflow-x-auto py-2.5 border-b border-neutral-100 dark:border-neutral-800 text-xs no-scrollbar">
           <span className="text-[11px] text-neutral-400 shrink-0 font-medium">{c("Trending Curations:", "المختارات الأكثر طلباً:")}</span>
@@ -451,6 +528,21 @@ export function ShopClient({
                 type="button"
                 onClick={() => setSelectedFamily("")}
                 aria-label="Remove filter"
+              >
+                <X size={12} />
+              </button>
+            </span>
+          )}
+          {selectedProfile && (
+            <span className="filter-chip">
+              <span>
+                {c("Profile: ", "المجموعة: ")}
+                {profiles.find((p) => p.slug === selectedProfile || p.id === selectedProfile)?.[isAr ? "nameAr" : "nameEn"] || selectedProfile}
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectedProfile("")}
+                aria-label="Remove scent profile filter"
               >
                 <X size={12} />
               </button>
@@ -701,6 +793,49 @@ export function ShopClient({
                   ))}
                 </div>
               </div>
+
+              {/* Scent Profiles */}
+              {profiles.length > 0 && (
+                <div>
+                  <span className="text-xs font-medium uppercase tracking-wider text-luxury-text block mb-3">
+                    {c("Scent Profile", "المجموعة العطرية")}
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedProfile("")}
+                      className={`px-3 py-1.5 border text-xs rounded-full transition-colors ${selectedProfile === ""
+                          ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
+                          : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
+                        }`}
+                    >
+                      {c("All Profiles", "جميع المجموعات")}
+                    </button>
+                    {profiles.map((prof) => {
+                      const isSelected = selectedProfile === prof.slug || selectedProfile === prof.id;
+                      return (
+                        <button
+                          key={prof.id || prof.slug}
+                          type="button"
+                          onClick={() => setSelectedProfile(isSelected ? "" : prof.slug)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 border text-xs rounded-full transition-colors ${isSelected
+                              ? "border-luxury-borderBold bg-luxury-surface font-medium text-luxury-text"
+                              : "border-luxury-border bg-luxury-surface/50 text-luxury-muted"
+                            }`}
+                        >
+                          {prof.colorHex && (
+                            <span
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: prof.colorHex }}
+                            />
+                          )}
+                          <span>{isAr ? prof.nameAr : prof.nameEn}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Fragrance Tags & Curations */}
               {tags.length > 0 && (
