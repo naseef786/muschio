@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { prisma } from "../src/prisma";
+import { prisma, isDatabaseConfigured } from "../src/prisma";
 import { ReviewsService } from "../src/services/reviews.service";
 
-describe("Product Reviews System E2E Audit", () => {
+describe.skipIf(!isDatabaseConfigured)("Product Reviews System E2E Audit", () => {
   let testProductId: string;
   let testCustomerId: string;
 

@@ -1,10 +1,10 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { prisma } from "../src/prisma";
+import { prisma, isDatabaseConfigured } from "../src/prisma";
 import { ReturnsService } from "../src/services/returns.service";
 import { PaymentService } from "../src/services/payment.service";
 import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 
-describe("Returns Tracking & Refund Issuing Workflow", { timeout: 35000 }, () => {
+describe.skipIf(!isDatabaseConfigured)("Returns Tracking & Refund Issuing Workflow", { timeout: 35000 }, () => {
   const createdOrderIds: string[] = [];
   const createdReturnIds: string[] = [];
   const createdVoucherCodes: string[] = [];

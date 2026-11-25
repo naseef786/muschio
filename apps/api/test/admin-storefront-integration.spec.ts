@@ -1,12 +1,12 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { prisma } from "../src/prisma";
+import { prisma, isDatabaseConfigured } from "../src/prisma";
 import { SettingsService } from "../src/services/settings.service";
 import { CheckoutService } from "../src/services/checkout.service";
 import { CatalogService } from "../src/services/catalog.service";
 import { PromotionService } from "../src/services/promotion.service";
 import { Prisma } from "@prisma/client";
 
-describe("Admin Functions & Storefront Integration Audit", () => {
+describe.skipIf(!isDatabaseConfigured)("Admin Functions & Storefront Integration Audit", () => {
   const cleanupCouponCodes: string[] = [];
   const cleanupCollectionIds: string[] = [];
   const cleanupOrderIds: string[] = [];

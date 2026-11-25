@@ -1,9 +1,9 @@
 import { describe, it, expect, afterAll } from "vitest";
-import { prisma } from "../src/prisma";
+import { prisma, isDatabaseConfigured } from "../src/prisma";
 import { CheckoutService } from "../src/services/checkout.service";
 import { OrderStatus, Prisma } from "@prisma/client";
 
-describe("Order Persistence & Short Pro Reference ID Audit", () => {
+describe.skipIf(!isDatabaseConfigured)("Order Persistence & Short Pro Reference ID Audit", () => {
   const createdOrderIds: string[] = [];
 
   afterAll(async () => {

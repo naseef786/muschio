@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { prisma } from "../src/prisma";
+import { prisma, isDatabaseConfigured } from "../src/prisma";
 import { CheckoutService } from "../src/services/checkout.service";
 import { OrderStatus, PaymentStatus, Prisma } from "@prisma/client";
 
-describe("Full Order Flow & Live Real-Time Poller / Socket Resilience Audit", () => {
+describe.skipIf(!isDatabaseConfigured)("Full Order Flow & Live Real-Time Poller / Socket Resilience Audit", () => {
   let createdOrderId: string;
   let createdOrderNumber: string;
   let createdAddressId: string;
