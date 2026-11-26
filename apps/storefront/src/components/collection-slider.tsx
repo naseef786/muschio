@@ -272,11 +272,11 @@ export function CollectionSlider({
         </div>
 
         {/* Action Bar: View All link + Slider Next/Prev Arrows */}
-        <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+        <div className="flex flex-wrap items-center justify-between sm:justify-end gap-3 sm:gap-4 shrink-0">
           {viewAllHref && (
             <Link
               href={viewAllHref}
-              className="editorial-text-link text-xs flex items-center gap-1 hover:text-accent transition-colors"
+              className="editorial-text-link text-xs flex items-center gap-1 hover:text-accent transition-colors py-1"
             >
               <span>{viewAllText || c("Explore All", "عرض كل التشكيلة")}</span>
               <ArrowUpRight size={14} className="rtl:rotate-[-90deg]" />
@@ -290,7 +290,7 @@ export function CollectionSlider({
               onClick={() => scroll("prev")}
               disabled={!canScrollPrev}
               aria-label={c("Previous slide", "الشريحة السابقة")}
-              className={`w-9 h-9 rounded-full border border-luxury-border flex items-center justify-center transition-all duration-200 ${
+              className={`w-11 h-11 sm:w-10 sm:h-10 rounded-full border border-luxury-border flex items-center justify-center transition-all duration-200 ${
                 canScrollPrev
                   ? "text-luxury-text hover:border-luxury-text hover:bg-luxury-surface2 hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                   : "text-luxury-muted/40 border-luxury-border/50 cursor-not-allowed opacity-40"
@@ -303,7 +303,7 @@ export function CollectionSlider({
               onClick={() => scroll("next")}
               disabled={!canScrollNext}
               aria-label={c("Next slide", "الشريحة التالية")}
-              className={`w-9 h-9 rounded-full border border-luxury-border flex items-center justify-center transition-all duration-200 ${
+              className={`w-11 h-11 sm:w-10 sm:h-10 rounded-full border border-luxury-border flex items-center justify-center transition-all duration-200 ${
                 canScrollNext
                   ? "text-luxury-text hover:border-luxury-text hover:bg-luxury-surface2 hover:scale-105 active:scale-95 cursor-pointer shadow-sm"
                   : "text-luxury-muted/40 border-luxury-border/50 cursor-not-allowed opacity-40"

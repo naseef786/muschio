@@ -921,6 +921,7 @@ export async function GET(req: NextRequest, props: { params: Promise<{ route: st
           variants: { include: { inventory: true } },
           notes: { include: { note: true } },
           tags: { include: { tag: true } },
+          scentProfiles: { include: { scentProfile: true } },
         },
       });
       return success(products);
@@ -1834,7 +1835,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
       if (targetProduct) {
         savedProduct = await prisma.$transaction(async (tx) => {
-          const mergeVariantsOnly = body.variantSyncMode === "merge";
           await syncProductVariants(
             tx,
             targetProduct.id,
@@ -1842,22 +1842,31 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
             Array.isArray(body.variants) && body.variantSyncMode !== "merge",
             numTesterStock,
           );
-          if (!mergeVariantsOnly) {
+          if (resolvedPerfumerIds.length > 0 || body.variantSyncMode !== "merge") {
             await tx.productPerfumer.deleteMany({ where: { productId: targetProduct.id } });
           }
           return tx.product.update({
             where: { id: targetProduct.id },
-            data: mergeVariantsOnly ? {} : {
+            data: {
               nameEn: resolvedName,
               nameAr: resolvedNameAr,
-              descriptionEn: String(descriptionEn || resolvedName).trim(),
-              descriptionAr: String(descriptionAr || resolvedNameAr || resolvedName).trim(),
+              descriptionEn: String(descriptionEn || targetProduct.descriptionEn || resolvedName).trim(),
+              descriptionAr: String(descriptionAr || targetProduct.descriptionAr || resolvedNameAr || resolvedName).trim(),
               brandId: brand.id,
-              scentFamilyId: scentFamily?.id,
+              ...(scentFamily?.id ? { scentFamilyId: scentFamily.id } : {}),
               concentration: resolveConcentration(concentration),
               gender: resolveGender(gender),
-              images: productImages,
+              ...(productImages.length > 0 && productImages[0] !== "/product-placeholder.svg"
+                ? { images: productImages }
+                : {}),
               isPublished: status !== "DRAFT",
+              ...(body.isFeatured !== undefined ? { isFeatured: Boolean(body.isFeatured) } : {}),
+              ...(body.longevity ? { longevity: String(body.longevity).trim() } : {}),
+              ...(body.sillage ? { sillage: String(body.sillage).trim() } : {}),
+              ...(body.countryOfOrigin ? { countryOfOrigin: String(body.countryOfOrigin).trim() } : {}),
+              ...(body.releaseYear ? { releaseYear: Number(body.releaseYear) || undefined } : {}),
+              ...(body.metaTitleEn || body.metaTitle ? { metaTitleEn: String(body.metaTitleEn || body.metaTitle).trim() } : {}),
+              ...(body.metaDescriptionEn || body.metaDescription ? { metaDescriptionEn: String(body.metaDescriptionEn || body.metaDescription).trim() } : {}),
               perfumers: resolvedPerfumerIds.length > 0
                 ? {
                   create: resolvedPerfumerIds.map((id, index) => ({
@@ -1921,6 +1930,13 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
             gender: resolveGender(gender),
             images: productImages,
             isPublished: status !== "DRAFT",
+            ...(body.isFeatured !== undefined ? { isFeatured: Boolean(body.isFeatured) } : {}),
+            ...(body.longevity ? { longevity: String(body.longevity).trim() } : {}),
+            ...(body.sillage ? { sillage: String(body.sillage).trim() } : {}),
+            ...(body.countryOfOrigin ? { countryOfOrigin: String(body.countryOfOrigin).trim() } : {}),
+            ...(body.releaseYear ? { releaseYear: Number(body.releaseYear) || undefined } : {}),
+            ...(body.metaTitleEn || body.metaTitle ? { metaTitleEn: String(body.metaTitleEn || body.metaTitle).trim() } : {}),
+            ...(body.metaDescriptionEn || body.metaDescription ? { metaDescriptionEn: String(body.metaDescriptionEn || body.metaDescription).trim() } : {}),
             perfumers: resolvedPerfumerIds.length > 0
               ? {
                 create: resolvedPerfumerIds.map((id, index) => ({
@@ -1950,17 +1966,83 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
       if (body?.scentProfileIds !== undefined || body?.scentProfiles !== undefined) {
         const rawProfiles = body.scentProfileIds !== undefined ? body.scentProfileIds : body.scentProfiles;
-        const profileList: string[] = (Array.isArray(rawProfiles) ? rawProfiles : rawProfiles ? [rawProfiles] : [])
-          .map((item: any) => String(item?.id || item).trim())
+        const profileTokens: string[] = (Array.isArray(rawProfiles) ? rawProfiles : rawProfiles ? [rawProfiles] : [])
+          .map((item: any) => String(item?.id || item?.slug || item?.nameEn || item).trim())
           .filter(Boolean);
+        let resolvedProfileIds: string[] = [];
+        if (profileTokens.length > 0) {
+          const allProfiles = await prisma.scentProfile.findMany({
+            select: { id: true, slug: true, nameEn: true, nameAr: true },
+          });
+          const tokenSet = new Set(profileTokens.map((t) => t.toLowerCase()));
+          resolvedProfileIds = allProfiles
+            .filter(
+              (p) =>
+                tokenSet.has(p.id.toLowerCase()) ||
+                tokenSet.has(p.slug.toLowerCase()) ||
+                tokenSet.has(p.nameEn.toLowerCase()) ||
+                (p.nameAr ? tokenSet.has(p.nameAr.toLowerCase()) : false),
+            )
+            .map((p) => p.id);
+        }
         await prisma.productScentProfile.deleteMany({
           where: { productId: savedProduct.id },
         });
-        if (profileList.length > 0) {
+        if (resolvedProfileIds.length > 0) {
           await prisma.productScentProfile.createMany({
-            data: profileList.map((scentProfileId) => ({
+            data: resolvedProfileIds.map((scentProfileId) => ({
               productId: savedProduct.id,
               scentProfileId,
+            })),
+            skipDuplicates: true,
+          });
+        }
+      }
+
+      // Sync Top / Heart / Base notes when provided (e.g. from bulk Excel import)
+      const notePositionGroups: Array<{ position: "TOP" | "HEART" | "BASE"; names: string[] }> = [
+        { position: "TOP", names: Array.isArray(body?.topNotes) ? body.topNotes : [] },
+        { position: "HEART", names: Array.isArray(body?.heartNotes) ? body.heartNotes : [] },
+        { position: "BASE", names: Array.isArray(body?.baseNotes) ? body.baseNotes : [] },
+      ];
+      const hasAnyNotesInput =
+        Array.isArray(body?.topNotes) || Array.isArray(body?.heartNotes) || Array.isArray(body?.baseNotes);
+      if (hasAnyNotesInput) {
+        const noteEntries: Array<{ noteId: string; position: "TOP" | "HEART" | "BASE" }> = [];
+        for (const group of notePositionGroups) {
+          for (const rawName of group.names) {
+            const noteName = String(rawName || "").trim();
+            if (!noteName) continue;
+            let noteRecord = await prisma.note.findFirst({
+              where: { nameEn: { equals: noteName, mode: "insensitive" } },
+            });
+            if (!noteRecord) {
+              const noteSlug =
+                noteName
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+                  .replace(/(^-|-$)/g, "") || `note-${Date.now()}`;
+              noteRecord = await prisma.note.upsert({
+                where: { slugEn: noteSlug },
+                update: {},
+                create: {
+                  slugEn: noteSlug,
+                  slugAr: noteSlug,
+                  nameEn: noteName,
+                  nameAr: noteName,
+                },
+              });
+            }
+            noteEntries.push({ noteId: noteRecord.id, position: group.position });
+          }
+        }
+        if (noteEntries.length > 0) {
+          await prisma.productNote.deleteMany({ where: { productId: savedProduct.id } });
+          await prisma.productNote.createMany({
+            data: noteEntries.map((entry) => ({
+              productId: savedProduct.id,
+              noteId: entry.noteId,
+              position: entry.position,
             })),
             skipDuplicates: true,
           });
@@ -1975,6 +2057,7 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
           perfumers: { include: { perfumer: true } },
           variants: { include: { inventory: true } },
           tags: { include: { tag: true } },
+          notes: { include: { note: true } },
           scentProfiles: { include: { scentProfile: true } },
         },
       });

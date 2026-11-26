@@ -60,6 +60,7 @@ import {
   generateProductMetaTitle,
   generateProductMetaDescription,
   downloadExcelTemplate,
+  exportCatalogToExcel,
 } from "./seo-utils";
 import { BulkCsvModal } from "./components/BulkCsvModal";
 import { BrandModal } from "./components/BrandModal";
@@ -2937,6 +2938,37 @@ export function App() {
       groupedProducts.set(key, {
         ...(current || product),
         ...product,
+        name: product.name || current?.name || "",
+        nameAr: product.nameAr || current?.nameAr || product.name || "",
+        scentFamily: product.scentFamily || current?.scentFamily,
+        scentProfileNames:
+          product.scentProfileNames && product.scentProfileNames.length > 0
+            ? product.scentProfileNames
+            : current?.scentProfileNames,
+        tagNames:
+          product.tagNames && product.tagNames.length > 0
+            ? product.tagNames
+            : current?.tagNames,
+        topNotes:
+          product.topNotes && product.topNotes.length > 0 ? product.topNotes : current?.topNotes,
+        heartNotes:
+          product.heartNotes && product.heartNotes.length > 0 ? product.heartNotes : current?.heartNotes,
+        baseNotes:
+          product.baseNotes && product.baseNotes.length > 0 ? product.baseNotes : current?.baseNotes,
+        descriptionEn: product.descriptionEn || current?.descriptionEn,
+        descriptionAr: product.descriptionAr || current?.descriptionAr,
+        perfumer: product.perfumer || current?.perfumer,
+        perfumerBio: product.perfumerBio || current?.perfumerBio,
+        longevity: product.longevity || current?.longevity,
+        sillage: product.sillage || current?.sillage,
+        countryOfOrigin: product.countryOfOrigin || current?.countryOfOrigin,
+        releaseYear: product.releaseYear || current?.releaseYear,
+        metaTitle: product.metaTitle || current?.metaTitle,
+        metaDescription: product.metaDescription || current?.metaDescription,
+        images:
+          product.images && product.images.length > 0 ? product.images : current?.images,
+        imageUrl: product.imageUrl || current?.imageUrl,
+        isFeatured: Boolean(product.isFeatured || current?.isFeatured),
         variants: [...variantsBySku.values()],
       });
     }
@@ -2954,6 +2986,13 @@ export function App() {
           name: product.name,
           nameEn: product.name,
           variantSyncMode: "merge",
+          tags: product.tagNames && product.tagNames.length > 0 ? product.tagNames : product.tags,
+          scentProfiles:
+            product.scentProfileNames && product.scentProfileNames.length > 0
+              ? product.scentProfileNames
+              : product.scentProfiles,
+          metaTitleEn: product.metaTitle,
+          metaDescriptionEn: product.metaDescription,
           images: product.images || (product.imageUrl ? [product.imageUrl] : []),
           variants: product.variants || [],
         }),
@@ -3008,6 +3047,24 @@ export function App() {
         status: saved.isPublished ? "PUBLISHED" : "DRAFT",
         tags: Array.isArray(saved.tags) ? saved.tags.map((relation: any) => relation.tag || relation) : product.tags,
         tagIds: Array.isArray(saved.tags) ? saved.tags.map((relation: any) => (relation.tag || relation).id) : product.tagIds,
+        scentProfiles: Array.isArray(saved.scentProfiles)
+          ? saved.scentProfiles.map((relation: any) => relation.scentProfile || relation)
+          : product.scentProfiles,
+        scentProfileIds: Array.isArray(saved.scentProfiles)
+          ? saved.scentProfiles.map((relation: any) => (relation.scentProfile || relation).id)
+          : product.scentProfileIds,
+        topNotes: Array.isArray(saved.notes)
+          ? saved.notes.filter((n: any) => n.position === "TOP").map((n: any) => n.note?.nameEn || n.nameEn).filter(Boolean)
+          : product.topNotes,
+        heartNotes: Array.isArray(saved.notes)
+          ? saved.notes.filter((n: any) => n.position === "HEART").map((n: any) => n.note?.nameEn || n.nameEn).filter(Boolean)
+          : product.heartNotes,
+        baseNotes: Array.isArray(saved.notes)
+          ? saved.notes.filter((n: any) => n.position === "BASE").map((n: any) => n.note?.nameEn || n.nameEn).filter(Boolean)
+          : product.baseNotes,
+        perfumer: Array.isArray(saved.perfumers) && saved.perfumers.length > 0
+          ? saved.perfumers.map((p: any) => p.perfumer?.name || p.name).filter(Boolean).join(", ")
+          : product.perfumer,
         sku: String(defaultVariant?.sku || product.sku),
         price: `${Number(defaultVariant?.price || 0)} AED`,
         stock: Number(defaultVariant?.stockQuantity || 0),
@@ -3026,21 +3083,22 @@ export function App() {
     });
     void refreshDashboardMetrics();
 
-    if (newBrands.length > 0) {
-      setBrands((prev) => {
-        const existingSlugs = new Set(prev.map((b) => b.slug));
-        const filteredNew = newBrands.filter((b) => !existingSlugs.has(b.slug));
-        return [...prev, ...filteredNew];
-      });
-    }
-
-    if (newNotes.length > 0) {
-      setNotes((prev) => {
-        const existingSlugs = new Set(prev.map((n) => n.slug));
-        const filteredNew = newNotes.filter((n) => !existingSlugs.has(n.slug));
-        return [...prev, ...filteredNew];
-      });
-    }
+    // Refresh live reference lists (tags, scent profiles, brands, notes) from DB
+    const authHeaders = { Authorization: `Bearer ${authSession.token}` };
+    await Promise.allSettled([
+      fetch("/api/v1/admin/tags", { headers: authHeaders })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j?.data) setTags(j.data); }),
+      fetch("/api/v1/admin/scent-profiles", { headers: authHeaders })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j?.data) setScentProfiles(j.data); }),
+      fetch("/api/v1/admin/brands", { headers: authHeaders })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j?.data) setBrands(j.data); }),
+      fetch("/api/v1/admin/notes", { headers: authHeaders })
+        .then((r) => (r.ok ? r.json() : null))
+        .then((j) => { if (j?.data) setNotes(j.data); }),
+    ]);
 
     addAuditLog(
       "BULK_CSV_SEO_IMPORT",
@@ -4154,6 +4212,16 @@ export function App() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => void exportCatalogToExcel(products, "muschio_catalog_export.xlsx")}
+                  className="px-3.5 py-2 bg-white dark:bg-neutral-900 hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-900 dark:text-neutral-100 text-xs font-medium rounded flex items-center gap-2 border border-neutral-300 dark:border-neutral-700 transition-colors shadow-sm"
+                  title="Export all loaded products to Excel (.xlsx) for editing and re-import"
+                >
+                  <FileSpreadsheet size={15} className="text-blue-600 dark:text-blue-400" />
+                  <span className="font-semibold">Export Excel</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleDownloadTemplateDirect}

@@ -1,13 +1,12 @@
 import React from "react";
 import Image from "next/image";
 import { Link } from "../../navigation";
-import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles, Tag } from "lucide-react";
+import { ArrowUpRight, ShieldCheck, Truck, RotateCcw, Sparkles } from "lucide-react";
 import { CollectionSlider } from "../../components/collection-slider";
-import { ProductCard } from "../../components/product-card";
 import { DiscoverScentSection } from "../../components/discover-scent-section";
 import { muschioApi } from "../../lib/api";
 import { customerCopy } from "../../lib/customer-copy";
-import { BannerService, CatalogService, NotesService, storefrontProduct, prisma } from "@muschio/api";
+import { BannerService, CatalogService, storefrontProduct, prisma } from "@muschio/api";
 
 export const dynamic = "force-dynamic";
 
@@ -72,7 +71,6 @@ export default async function HomePage(
   let liveSections: any = null;
   let liveProducts: any = null;
   let liveBrands: any = null;
-  let liveNotes: any = null;
   let liveCollections: any = null;
   let liveJournalPost: any = null;
   let liveScentProfiles: any = null;
@@ -85,7 +83,6 @@ export default async function HomePage(
       liveSections,
       liveProducts,
       liveBrands,
-      liveNotes,
       liveCollections,
       liveJournalPost,
       liveScentProfiles,
@@ -110,7 +107,6 @@ export default async function HomePage(
         take: 16,
       }).then((items) => items.map(storefrontProduct)).catch(() => muschioApi.getProducts({ limit: 16 })),
       CatalogService.getBrands().catch(() => muschioApi.getBrands()),
-      NotesService.getNotes({ limit: 6 }).then((res: any) => res?.items || res || []).catch(() => muschioApi.getNotes({ limit: 6 })),
       prisma.collection.findMany({
         where: { isFeatured: true },
         orderBy: [{ isFeatured: "desc" }, { createdAt: "desc" }],
@@ -144,9 +140,9 @@ export default async function HomePage(
       liveSections,
       liveProducts,
       liveBrands,
-      liveNotes,
       liveCollections,
       liveJournalPost,
+      liveScentProfiles,
     ] = await Promise.all([
       muschioApi.getActiveBanners("HERO_SLIDER"),
       muschioApi.getActiveBanners("CAMPAIGN_MID"),
@@ -154,9 +150,9 @@ export default async function HomePage(
       muschioApi.getHomepageSections(),
       muschioApi.getProducts({ limit: 16 }),
       muschioApi.getBrands(),
-      muschioApi.getNotes({ limit: 6 }),
       muschioApi.getCollections({ featured: true }),
       muschioApi.getBlogPosts(1, 1).then((r: any) => (Array.isArray(r) ? r[0] : (r?.items ? r.items[0] : null))),
+      muschioApi.getScentProfiles().catch(() => []),
     ]);
   }
 
@@ -325,14 +321,6 @@ export default async function HomePage(
     descAr: b.descriptionAr || "شريك رسمي معتمد",
   }));
 
-  const rawNotes = (liveNotes || []).slice(0, 4).map((n: any) => ({
-    nameEn: n.nameEn,
-    nameAr: n.nameAr,
-    slug: n.slugEn || n.slug,
-    familyEn: n.categoryEn || "Natural Note",
-    familyAr: n.categoryAr || "نوتة طبيعية",
-  }));
-
   // ─── SECTION RENDERERS ──────────────────────────────────────
 
   const renderHeroBanner = () => (
@@ -397,7 +385,7 @@ export default async function HomePage(
         {[
           ["/shop", c("Shop Fragrance", "تسوق العطور"), c("All Extraits", "جميع العطور")],
           ["/brands", c("The Houses", "دور العطور"), c("A–Z Directory", "دليل الدور")],
-          ["/notes", c("Scent Notes", "نوتات العطر"), c("Raw Ingredients", "المكونات الخام")],
+          ["/#discover-scent", c("Scent Profiles", "المجموعات العطرية"), c("12 Olfactory Families", "١٢ عائلة عطرية")],
           ["/discover/sets", c("Discovery Sets", "مجموعات العينات"), c("5 x 2ml Boxes", "صناديق ٥ عينات")],
         ].map(([href, title, subtitle]) => (
           <Link
@@ -501,51 +489,6 @@ export default async function HomePage(
     </section>
   );
 
-  const renderNotesGrid = (sec?: any) => (
-    <section key="NOTES_GRID" className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10">
-      <div className="flex items-end justify-between pb-6 border-b border-luxury-border mb-8">
-        <div>
-          <span className="eyebrow mb-1">
-            {c((sec?.config as any)?.eyebrowEn || "THE OLFACTORY LIBRARY", (sec?.config as any)?.eyebrowAr || "المكتبة العطرية")}
-          </span>
-          <h2 className="font-serif text-2xl sm:text-3xl text-luxury-text font-normal">
-            {c(sec?.titleEn || "Explore by Key Notes", sec?.titleAr || "استكشف حسب النوتات")}
-          </h2>
-        </div>
-        <Link href="/notes" className="editorial-text-link">
-          {c("All Scent Notes", "جميع النوتات")} ↗
-        </Link>
-      </div>
-
-      <div className="relative">
-        <div className="flex overflow-x-auto no-scrollbar scroll-smooth snap-x sm:grid sm:grid-cols-2 md:grid-cols-4 gap-4 pb-2">
-          {rawNotes.map((n: any) => (
-            <Link
-              key={n.slug}
-              href={`/notes/${n.slug}`}
-              className="w-[240px] shrink-0 snap-start sm:w-auto border border-luxury-border bg-luxury-surface hover:border-luxury-muted hover:bg-luxury-surface2 p-5 flex flex-col justify-between group h-36 transition-all duration-300 rounded-sm"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-sans uppercase tracking-[0.14em] text-accent font-medium">
-                  {c(n.familyEn, n.familyAr)}
-                </span>
-                <ArrowUpRight size={14} className="text-luxury-muted group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
-              </div>
-              <div>
-                <h3 className="font-serif text-lg text-luxury-text font-medium group-hover:text-accent transition-colors">
-                  {c(n.nameEn, n.nameAr)}
-                </h3>
-                <span className="text-xs text-luxury-muted mt-1 block">
-                  {c("View Perfumes", "عرض العطور")} →
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-
   const renderScentProfiles = (sec?: any) => (
     <DiscoverScentSection
       key="DISCOVER_SCENT"
@@ -602,40 +545,18 @@ export default async function HomePage(
         </div>
       </div>
 
-      {/* Special Offers & Discounted Flacons Showcase */}
+      {/* Special Offers & Discounted Flacons Showcase (Unified CollectionSlider UI) */}
       {dealProducts.length > 0 && (
-        <div className="mt-6 p-4 sm:p-6 border border-luxury-border bg-luxury-surface/50 rounded-sm">
-          <div className="flex items-center justify-between mb-4 pb-2 border-b border-luxury-border">
-            <div className="flex items-center gap-2">
-              <Tag size={16} className="text-accent" />
-              <h3 className="font-serif text-sm sm:text-base text-luxury-text font-medium">
-                {c("Featured Privé Reductions", "تخفيضات وعروض حصرية")}
-              </h3>
-            </div>
-            <Link href="/shop?deal=true" className="editorial-text-link text-xs">
-              {c("View All Deals", "عرض كل العروض")} ↗
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {dealProducts.slice(0, 4).map((p: any) => (
-              <ProductCard
-                key={p.slug}
-                slug={p.slug}
-                nameEn={p.nameEn}
-                nameAr={p.nameAr}
-                brand={p.brand}
-                concentration={p.concentration}
-                price={p.price}
-                compareAtPrice={p.compareAtPrice}
-                variants={p.variants}
-                image={p.image}
-                secondaryImage={p.secondaryImage}
-                images={p.images}
-                badge={p.badge}
-                locale={locale}
-              />
-            ))}
-          </div>
+        <div className="mt-10">
+          <CollectionSlider
+            eyebrow={c("PRIVÉ REDUCTIONS", "عروض خاصة")}
+            title={c("Featured Privé Reductions", "تخفيضات وعروض حصرية")}
+            viewAllHref="/shop?deal=true"
+            viewAllText={c("View All Deals", "عرض كل العروض")}
+            products={dealProducts}
+            locale={locale}
+            enableTabs={false}
+          />
         </div>
       )}
     </section>
@@ -829,7 +750,7 @@ export default async function HomePage(
             case "DISCOVER_SCENT":
               return renderScentProfiles(sec);
             case "NOTES_GRID":
-              return renderNotesGrid(sec);
+              return renderScentProfiles();
             case "CUSTOM_BANNER":
               return renderCustomBanner();
             case "DISCOVERY_SETS":

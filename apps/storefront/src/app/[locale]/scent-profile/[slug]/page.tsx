@@ -216,7 +216,7 @@ export default async function ScentProfilePage(props: {
 
           {/* Hero Content */}
           <div className="relative z-10 max-w-3xl space-y-3">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span
                 className="inline-flex items-center gap-1.5 px-2.5 py-0.5 text-[10px] font-mono uppercase tracking-widest bg-black/70 backdrop-blur-xs border border-white/20"
                 style={{ borderLeftColor: color, borderLeftWidth: "3px" }}

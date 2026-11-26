@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState, useMemo } from "react";
 import Image from "next/image";
 import { Link, usePathname, useRouter } from "../navigation";
+import { DEFAULT_SCENT_PROFILES } from "@muschio/types";
 import {
   Search,
   ShoppingBag,
@@ -16,7 +17,6 @@ import {
   ChevronDown,
   Globe,
   Compass,
-  BookOpen,
   User,
   ArrowLeftRight,
   Truck,
@@ -636,35 +636,38 @@ export function Header({
             </div>
           </div>
 
-          {/* Item 3: Scent Notes (Mega Dropdown) */}
+          {/* Item 3: Scent Profiles (Mega Dropdown) */}
           <div className="relative group py-1">
             <Link
-              href="/notes"
-              aria-current={pathname.startsWith("/notes") ? "page" : undefined}
+              href="/#discover-scent"
+              aria-current={pathname.startsWith("/scent-profile") ? "page" : undefined}
               className="inline-flex items-center gap-1 font-medium transition-colors hover:text-accent"
             >
-              {c("Scent Notes", "نوتات العطر")}
+              {c("Scent Profiles", "المجموعات العطرية")}
               <ChevronDown size={12} className="opacity-60 transition-transform duration-200 group-hover:rotate-180" />
             </Link>
-            <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[380px] space-y-3 text-start normal-case">
-              <span className="eyebrow">{c("Rare Raw Materials", "مكونات نادرة")}</span>
-              <div className="space-y-1.5 text-xs">
-                {navNotes.map((n) => (
+            <div className="mega-menu-panel opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto group-focus-within:opacity-100 group-focus-within:pointer-events-auto transition-all duration-200 w-[440px] space-y-3 text-start normal-case">
+              <span className="eyebrow">{c("Discover Your Scent", "اكتشف عالمك العطري")}</span>
+              <div className="grid grid-cols-2 gap-1.5 text-xs">
+                {DEFAULT_SCENT_PROFILES.map((sp) => (
                   <Link
-                    key={n.slug}
-                    href={`/notes/${n.slug}`}
-                    className="p-2 rounded hover:bg-luxury-surface2 flex items-center justify-between"
+                    key={sp.slug}
+                    href={`/scent-profile/${sp.slug}`}
+                    className="p-2 rounded hover:bg-luxury-surface2 flex items-center gap-2"
                   >
-                    <span className="font-medium text-luxury-text">{c(n.nameEn, n.nameAr)}</span>
-                    <span className="text-[10px] text-luxury-muted uppercase">
-                      {c(n.categoryEn || "Rare Essence", n.categoryAr || "خلاصة نادرة")}
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: sp.colorHex || "#1a1a1a" }}
+                    />
+                    <span className="font-medium text-luxury-text truncate">
+                      {c(sp.nameEn, sp.nameAr)}
                     </span>
                   </Link>
                 ))}
-                <Link href="/notes" className="pt-2 block text-xs font-medium text-accent hover:underline uppercase tracking-wider">
-                  {c("Explore Olfactory Compendium →", "استكشف معجم النوتات ←")}
-                </Link>
               </div>
+              <Link href="/#discover-scent" className="pt-2 block text-xs font-medium text-accent hover:underline uppercase tracking-wider">
+                {c("Explore All Scent Profiles →", "استكشف جميع المجموعات العطرية ←")}
+              </Link>
             </div>
           </div>
 
@@ -787,12 +790,12 @@ export function Header({
                     <Compass size={14} className="opacity-50" />
                   </Link>
                   <Link
-                    href="/notes"
+                    href="/#discover-scent"
                     onClick={() => setMenu(false)}
                     className="flex items-center justify-between p-2.5 rounded-sm text-luxury-text hover:bg-luxury-surface transition-colors uppercase text-xs tracking-wider"
                   >
-                    <span>{c("Scent Notes Library", "مكتبة النوتات العطرية")}</span>
-                    <BookOpen size={14} className="opacity-50" />
+                    <span>{c("Discover Your Scent (Profiles)", "المجموعات العطرية")}</span>
+                    <Sparkles size={14} className="opacity-50" />
                   </Link>
                   <Link
                     href="/guide"

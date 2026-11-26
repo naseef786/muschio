@@ -122,19 +122,93 @@ export function BulkCsvModal({
       const concentration = r["concentration"] || "EXTRAIT_DE_PARFUM";
       const gender = r["gender"] || "UNISEX";
       const volumeMl = Number(r["volumeMl"]) || 100;
-      const rawPrice = r["priceAed"] || r["price"] || "0";
-      const priceFormatted = rawPrice.includes("AED") ? rawPrice : `${rawPrice} AED`;
+      const isDefaultVariant = /^(true|1|yes)$/i.test((r["isDefaultVariant"] || "").trim());
+      const rawOriginal = (
+        r["originalPriceAed"] ||
+        r["compareAtPriceAed"] ||
+        r["regularPriceAed"] ||
+        r["priceAed"] ||
+        r["price"] ||
+        "0"
+      ).trim();
+      const rawOffer = (
+        r["offerPriceAed"] ||
+        r["discountPriceAed"] ||
+        r["salePriceAed"] ||
+        ""
+      ).trim();
+      const originalNum = Number(rawOriginal.replace(/[^0-9.]/g, "")) || 0;
+      const offerNum = rawOffer ? Number(rawOffer.replace(/[^0-9.]/g, "")) || 0 : 0;
+      const hasOffer = offerNum > 0 && originalNum > 0 && offerNum < originalNum;
+      const sellingNum = hasOffer ? offerNum : originalNum;
+      const rawPrice = String(sellingNum);
+      const priceFormatted = `${sellingNum} AED`;
+      const rawCompareAt = hasOffer ? String(originalNum) : "";
+      const rawDiscount = hasOffer ? String(offerNum) : "";
       const costPriceFormatted = r["costPriceAed"] ? (r["costPriceAed"].includes("AED") ? r["costPriceAed"] : `${r["costPriceAed"]} AED`) : "0 AED";
       const stock = Number(r["sealedStock"]) || Number(r["stock"]) || 20;
       const testerStock = Number(r["testerStock"]) || 2;
       const warehouse = r["warehouseCode"] || r["warehouse"] || "DXB-MAIN";
+
+      // Parse optional inline extra variants: "50ml:1450:1290:15:SKU-50 | 200ml:2950::10:SKU-200"
+      const extraVariants = (r["variants"] || "")
+        .split("|")
+        .map((chunk) => chunk.trim())
+        .filter(Boolean)
+        .map((chunk, vIdx) => {
+          const [rawVol = "", rawVOrig = "", rawVOffer = "", rawVStock = "", rawVSku = ""] = chunk
+            .split(":")
+            .map((part) => part.trim());
+          const vVolNum = parseInt(rawVol.replace(/[^0-9]/g, ""), 10) || 100;
+          const vOrigNum = Number(rawVOrig.replace(/[^0-9.]/g, "")) || 0;
+          const vOfferNum = rawVOffer ? Number(rawVOffer.replace(/[^0-9.]/g, "")) || 0 : 0;
+          const vHasOffer = vOfferNum > 0 && vOrigNum > 0 && vOfferNum < vOrigNum;
+          const vSelling = vHasOffer ? vOfferNum : vOrigNum;
+          const vStockNum = rawVStock ? Number(rawVStock.replace(/[^0-9]/g, "")) : stock;
+          const vSku = rawVSku || `${sku}-${vVolNum}ML-${vIdx + 1}`;
+          return {
+            sku: vSku,
+            volume: `${vVolNum}ml`,
+            volumeMl: vVolNum,
+            price: `${vSelling} AED`,
+            compareAtPrice: vHasOffer ? String(vOrigNum) : null,
+            discountPrice: vHasOffer ? String(vOfferNum) : null,
+            stockQuantity: Number.isFinite(vStockNum) ? vStockNum : stock,
+            warehouse,
+            isDefault: false,
+          };
+        })
+        .filter((v) => v.volumeMl > 0 && Number(v.price.replace(/[^0-9.]/g, "")) > 0);
+      const longevity = (r["longevity"] || "").trim() || undefined;
+      const sillage = (r["sillage"] || "").trim() || undefined;
+      const countryOfOrigin = (r["countryOfOrigin"] || r["origin"] || "").trim() || undefined;
+      const releaseYearNum = Number(r["releaseYear"]);
+      const releaseYear = Number.isFinite(releaseYearNum) && releaseYearNum > 1800 ? releaseYearNum : undefined;
+      const isFeatured = /^(true|1|yes)$/i.test((r["isFeatured"] || "").trim());
       const taglineEn = r["taglineEn"] || "";
       const taglineAr = r["taglineAr"] || "";
       const descriptionEn = r["descriptionEn"] || "";
       const descriptionAr = r["descriptionAr"] || "";
       const imageUrl = r["imageUrl"] || "https://images.unsplash.com/photo-1547887537-6158d64c35b3?auto=format&fit=crop&w=1000&q=85";
+      const extraImages = (r["galleryImages"] || r["images"] || "")
+        .split(",")
+        .map((u) => u.trim())
+        .filter((u) => u.length > 0 && u !== imageUrl);
+      const images = Array.from(new Set([imageUrl, ...extraImages].filter(Boolean)));
       const imageAlt = r["imageAlt"] || `${nameEn} by ${brand} bottle`;
-      const status = (r["status"] as "PUBLISHED" | "DRAFT" | "ARCHIVED") || "PUBLISHED";
+      const rawStatus = (r["status"] || "PUBLISHED").trim().toUpperCase();
+      const status: "PUBLISHED" | "DRAFT" | "ARCHIVED" =
+        rawStatus === "DRAFT" || rawStatus === "ARCHIVED" ? rawStatus : "PUBLISHED";
+
+      // Scent Profiles & Tags parsing (comma-separated lists)
+      const scentProfiles = (r["scentProfiles"] || r["profiles"] || "")
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p.length > 0);
+      const tags = (r["tags"] || "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter((t) => t.length > 0);
 
       // Notes parsing (comma-separated lists)
       const topNotes = (r["topNotes"] || "").split(",").map((n) => n.trim()).filter((n) => n.length > 0);
@@ -257,12 +331,18 @@ export function BulkCsvModal({
         brand,
         brandSlug,
         scentFamily,
+        scentProfiles,
+        tags,
         perfumer: perfumer || undefined,
         perfumerBio: perfumerBio || undefined,
         concentration,
         gender,
         volumeMl,
+        isDefaultVariant,
+        extraVariants,
         price: priceFormatted,
+        compareAtPrice: rawCompareAt || null,
+        discountPrice: rawDiscount || null,
         costPrice: costPriceFormatted,
         stock,
         testerStock,
@@ -270,6 +350,10 @@ export function BulkCsvModal({
         topNotes,
         heartNotes,
         baseNotes,
+        longevity,
+        sillage,
+        countryOfOrigin,
+        releaseYear,
         taglineEn,
         taglineAr,
         descriptionEn,
@@ -277,7 +361,9 @@ export function BulkCsvModal({
         metaTitle,
         metaDescription,
         imageUrl,
+        images,
         imageAlt,
+        isFeatured,
         status,
         validationStatus,
         validationMessages,
@@ -318,6 +404,8 @@ export function BulkCsvModal({
       brand: p.brand,
       brandSlug: p.brandSlug,
       scentFamily: p.scentFamily,
+      scentProfileNames: p.scentProfiles,
+      tagNames: p.tags,
       perfumer: p.perfumer || undefined,
       perfumerBio: p.perfumerBio || undefined,
       concentration: p.concentration,
@@ -332,6 +420,10 @@ export function BulkCsvModal({
       topNotes: p.topNotes,
       heartNotes: p.heartNotes,
       baseNotes: p.baseNotes,
+      longevity: p.longevity,
+      sillage: p.sillage,
+      countryOfOrigin: p.countryOfOrigin,
+      releaseYear: p.releaseYear,
       taglineEn: p.taglineEn,
       taglineAr: p.taglineAr,
       descriptionEn: p.descriptionEn,
@@ -339,19 +431,39 @@ export function BulkCsvModal({
       metaTitle: p.metaTitle,
       metaDescription: p.metaDescription,
       imageUrl: p.imageUrl,
+      images: p.images,
       imageAlt: p.imageAlt,
+      isFeatured: p.isFeatured,
       status: p.status,
       variants: [
         {
           sku: p.sku,
           volume: `${p.volumeMl || 100}ml`,
           volumeMl: p.volumeMl || 100,
+          basePrice: p.compareAtPrice || p.price,
+          regularPrice: p.compareAtPrice || p.price,
+          originalPrice: p.compareAtPrice || p.price,
           price: p.price,
+          compareAtPrice: p.compareAtPrice,
+          discountPrice: p.discountPrice,
           stockQuantity: p.stock || 0,
-          // The merge service preserves an existing default. For a new product,
-          // the API assigns the first uploaded variant as the default.
-          isDefault: false,
+          warehouse: p.warehouse,
+          isDefault: p.isDefaultVariant,
         },
+        ...p.extraVariants.map((ev) => ({
+          sku: ev.sku,
+          volume: ev.volume,
+          volumeMl: ev.volumeMl,
+          basePrice: ev.compareAtPrice || ev.price,
+          regularPrice: ev.compareAtPrice || ev.price,
+          originalPrice: ev.compareAtPrice || ev.price,
+          price: ev.price,
+          compareAtPrice: ev.compareAtPrice,
+          discountPrice: ev.discountPrice,
+          stockQuantity: ev.stockQuantity,
+          warehouse: ev.warehouse,
+          isDefault: ev.isDefault,
+        })),
       ],
     }));
 
@@ -596,8 +708,8 @@ export function BulkCsvModal({
                       </td>
                     </tr>
                   ) : (
-                    parsedResult.products.map((p) => (
-                      <React.Fragment key={p.sku}>
+                    parsedResult.products.map((p, idx) => (
+                      <React.Fragment key={`${p.sku}-${idx}`}>
                         <tr className="hover:bg-neutral-100 dark:hover:bg-neutral-800/60 transition-colors">
                           <td className="p-3">
                             <span className="font-medium text-neutral-900 dark:text-white block">{p.nameEn}</span>
@@ -619,10 +731,25 @@ export function BulkCsvModal({
                             )}
                           </td>
                           <td className="p-3 text-xs">
-                            <div className="space-y-0.5">
+                            <div className="space-y-1">
                               <span className="text-neutral-700 dark:text-neutral-300 block">
                                 Top: {p.topNotes.length} • Heart: {p.heartNotes.length} • Base: {p.baseNotes.length}
                               </span>
+                              {p.scentFamily && (
+                                <span className="text-[11px] px-1.5 py-0.5 bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300 rounded block w-fit">
+                                  Family: {p.scentFamily}
+                                </span>
+                              )}
+                              {p.scentProfiles.length > 0 && (
+                                <span className="text-[11px] px-1.5 py-0.5 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded block w-fit">
+                                  Profiles: {p.scentProfiles.join(", ")}
+                                </span>
+                              )}
+                              {p.tags.length > 0 && (
+                                <span className="text-[11px] px-1.5 py-0.5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 rounded block w-fit">
+                                  Tags: {p.tags.join(", ")}
+                                </span>
+                              )}
                               {p.newNotesCount > 0 && (
                                 <span className="text-xs px-1.5 py-0.5 bg-amber-500/20 text-amber-700 dark:text-amber-300 rounded block w-fit">
                                   +{p.newNotesCount} new notes
@@ -631,8 +758,22 @@ export function BulkCsvModal({
                             </div>
                           </td>
                           <td className="p-3 font-mono text-xs">
-                            <span className="text-neutral-900 dark:text-white block font-medium">{p.price}</span>
-                            <span className="text-neutral-500 dark:text-neutral-400 text-xs">{p.stock} sealed ({p.warehouse})</span>
+                            <span className="text-neutral-900 dark:text-white block font-medium">
+                              {p.price}
+                              {p.compareAtPrice && (
+                                <span className="ms-1.5 text-neutral-400 line-through font-normal">
+                                  {p.compareAtPrice} AED
+                                </span>
+                              )}
+                            </span>
+                            <span className="text-neutral-500 dark:text-neutral-400 text-xs block">
+                              {p.volumeMl}ml · {p.stock} sealed ({p.warehouse})
+                            </span>
+                            {p.extraVariants.length > 0 && (
+                              <span className="text-[11px] text-indigo-600 dark:text-indigo-400 block mt-0.5">
+                                +{p.extraVariants.length} extra variant{p.extraVariants.length > 1 ? "s" : ""} ({p.extraVariants.map((v) => v.volume).join(", ")})
+                              </span>
+                            )}
                           </td>
                           <td className="p-3">
                             {p.validationStatus === "VALID" ? (

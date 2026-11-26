@@ -202,8 +202,8 @@ export function Footer({
               </Link>
             </li>
             <li>
-              <Link href="/notes" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
-                {c("Olfactory Notes Library", "مكتبة النوتات العطرية")}
+              <Link href="/#discover-scent" className="hover:translate-x-1 rtl:hover:-translate-x-1 transition-transform inline-block">
+                {c("Discover Your Scent", "المجموعات العطرية")}
               </Link>
             </li>
             <li>

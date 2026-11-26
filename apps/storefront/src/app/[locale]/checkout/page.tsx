@@ -47,6 +47,47 @@ export default function CheckoutPage(
     "CREDIT_CARD" | "APPLE_PAY" | "GOOGLE_PAY" | "CASH_ON_DELIVERY" | "TABBY" | "TAMARA"
   >("CREDIT_CARD");
 
+  // Browser-aware wallet availability (Apple Pay on Safari/iOS, Google Pay on Chrome/Android/Desktop non-Safari)
+  const [walletSupport, setWalletSupport] = useState<{
+    detected: boolean;
+    applePay: boolean;
+    googlePay: boolean;
+  }>({ detected: false, applePay: false, googlePay: false });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const ua = navigator.userAgent || "";
+    const isIOS =
+      /iPad|iPhone|iPod/i.test(ua) ||
+      (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    const isSafari =
+      /Safari/i.test(ua) &&
+      !/Chrome|Chromium|CriOS|Edg|OPR|Firefox|FxiOS/i.test(ua);
+    let hasApplePayApi = false;
+    try {
+      hasApplePayApi = Boolean(
+        (window as any).ApplePaySession &&
+          typeof (window as any).ApplePaySession.canMakePayments === "function" &&
+          (window as any).ApplePaySession.canMakePayments(),
+      );
+    } catch {
+      hasApplePayApi = false;
+    }
+
+    const applePay = hasApplePayApi || isSafari || isIOS;
+    const googlePay = !isSafari && !isIOS;
+    setWalletSupport({ detected: true, applePay, googlePay });
+  }, []);
+
+  useEffect(() => {
+    if (!walletSupport.detected) return;
+    if (paymentMethod === "APPLE_PAY" && !walletSupport.applePay) {
+      setPaymentMethod("CREDIT_CARD");
+    } else if (paymentMethod === "GOOGLE_PAY" && !walletSupport.googlePay) {
+      setPaymentMethod("CREDIT_CARD");
+    }
+  }, [walletSupport, paymentMethod]);
+
   // Voucher / Promotion State
   const [promoCode, setPromoCode] = useState("");
   const [appliedPromo, setAppliedPromo] = useState<{ code: string; discount: number } | null>(null);
@@ -533,51 +574,61 @@ export default function CheckoutPage(
         </div>
       )}
 
-      {/* EXPRESS 1-TAP CHECKOUT (Apple Pay & Google Pay) */}
-      <div className="mb-6 sm:mb-8 p-4 sm:p-5 border border-luxury-border bg-luxury-surface rounded-sm shadow-xs">
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-[11px] font-sans uppercase tracking-[0.18em] text-accent font-medium">
-            {c("Express 1-Tap Checkout", "الدفع الفوري بنقرة واحدة")}
-          </span>
-          <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1">
-            <ShieldCheck size={12} />
-            {c("Instant & Encrypted", "مشفر ومضمون 100%")}
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {/* Apple Pay Button */}
-          <button
-            type="button"
-            onClick={() => handleExpressCheckout("APPLE_PAY")}
-            className="w-full h-12 bg-black hover:bg-neutral-900 text-white rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm font-medium border border-black dark:border-neutral-700 cursor-pointer"
-          >
-            <svg className="w-5 h-5 fill-current" viewBox="0 0 170 170">
-              <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
-            </svg>
-            <span className="text-sm font-sans tracking-wide">Pay</span>
-          </button>
-
-          {/* Google Pay Button */}
-          <button
-            type="button"
-            onClick={() => handleExpressCheckout("GOOGLE_PAY")}
-            className="w-full h-12 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm font-medium cursor-pointer"
-          >
-            <span className="font-bold text-base text-blue-600">G</span>
-            <span className="text-sm font-sans tracking-wide">Pay</span>
-          </button>
-        </div>
-
-        <div className="relative my-4 text-center">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-luxury-border"></div>
+      {/* EXPRESS 1-TAP CHECKOUT (Apple Pay on Safari/iOS, Google Pay on Chrome/Android/Desktop) */}
+      {(walletSupport.applePay || walletSupport.googlePay) && (
+        <div className="mb-6 sm:mb-8 p-4 sm:p-5 border border-luxury-border bg-luxury-surface rounded-sm shadow-xs">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-[11px] font-sans uppercase tracking-[0.18em] text-accent font-medium">
+              {c("Express 1-Tap Checkout", "الدفع الفوري بنقرة واحدة")}
+            </span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono flex items-center gap-1">
+              <ShieldCheck size={12} />
+              {c("Instant & Encrypted", "مشفر ومضمون 100%")}
+            </span>
           </div>
-          <span className="relative px-3 bg-luxury-surface text-[10px] uppercase font-sans tracking-[0.2em] text-luxury-muted">
-            {c("OR CONTINUE WITH STANDARD ORDER DETAILS", "أو تابع إدخال بيانات التوصيل أدناه")}
-          </span>
+
+          <div
+            className={`grid grid-cols-1 ${
+              walletSupport.applePay && walletSupport.googlePay ? "sm:grid-cols-2" : ""
+            } gap-3`}
+          >
+            {/* Apple Pay Button (Safari / iOS only) */}
+            {walletSupport.applePay && (
+              <button
+                type="button"
+                onClick={() => handleExpressCheckout("APPLE_PAY")}
+                className="w-full h-12 bg-black hover:bg-neutral-900 text-white rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm font-medium border border-black dark:border-neutral-700 cursor-pointer"
+              >
+                <svg className="w-5 h-5 fill-current" viewBox="0 0 170 170">
+                  <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
+                </svg>
+                <span className="text-sm font-sans tracking-wide">Pay</span>
+              </button>
+            )}
+
+            {/* Google Pay Button (Non-Safari / Chrome / Android) */}
+            {walletSupport.googlePay && (
+              <button
+                type="button"
+                onClick={() => handleExpressCheckout("GOOGLE_PAY")}
+                className="w-full h-12 bg-white hover:bg-neutral-50 text-neutral-900 border border-neutral-300 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:bg-neutral-800 rounded-sm flex items-center justify-center gap-2 transition-all active:scale-[0.99] shadow-sm font-medium cursor-pointer"
+              >
+                <span className="font-bold text-base text-blue-600">G</span>
+                <span className="text-sm font-sans tracking-wide">Pay</span>
+              </button>
+            )}
+          </div>
+
+          <div className="relative my-4 text-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-luxury-border"></div>
+            </div>
+            <span className="relative px-3 bg-luxury-surface text-[10px] uppercase font-sans tracking-[0.2em] text-luxury-muted">
+              {c("OR CONTINUE WITH STANDARD ORDER DETAILS", "أو تابع إدخال بيانات التوصيل أدناه")}
+            </span>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* MOBILE ACCORDION: Order Summary (Visible only on <lg screens) */}
       <div className="lg:hidden mb-5 border border-luxury-border bg-luxury-surface rounded-sm overflow-hidden">
@@ -1074,77 +1125,81 @@ export default function CheckoutPage(
                 )}
               </div>
 
-              {/* Option B: Apple Pay */}
-              <div
-                onClick={() => setPaymentMethod("APPLE_PAY")}
-                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
-                  paymentMethod === "APPLE_PAY"
-                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethodRadio"
-                    value="APPLE_PAY"
-                    checked={paymentMethod === "APPLE_PAY"}
-                    onChange={() => setPaymentMethod("APPLE_PAY")}
-                    className="mt-1 accent-black dark:accent-white shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
-                        <svg className="w-4 h-4 fill-current inline-block" viewBox="0 0 170 170">
-                          <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
-                        </svg>
-                        <span>Apple Pay</span>
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-luxury-text font-mono">
-                        {c("Touch / Face ID", "الدفع البيومتري")}
-                      </span>
+              {/* Option B: Apple Pay (Safari / iOS only) */}
+              {walletSupport.applePay && (
+                <div
+                  onClick={() => setPaymentMethod("APPLE_PAY")}
+                  className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                    paymentMethod === "APPLE_PAY"
+                      ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                      : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethodRadio"
+                      value="APPLE_PAY"
+                      checked={paymentMethod === "APPLE_PAY"}
+                      onChange={() => setPaymentMethod("APPLE_PAY")}
+                      className="mt-1 accent-black dark:accent-white shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
+                          <svg className="w-4 h-4 fill-current inline-block" viewBox="0 0 170 170">
+                            <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.35-8.27-9.52-17.58-12.51-27.93-2.99-10.35-4.49-20.5-4.49-30.46 0-14.63 3.6-26.78 10.8-36.46 7.2-9.68 16.32-14.61 27.36-14.78 4.7 0 9.77 1.25 15.22 3.75 5.45 2.5 9.38 3.84 11.78 4.02 2.01-.2 5.86-1.54 11.55-4.02 5.69-2.48 10.45-3.67 14.28-3.57 10.34.42 18.77 4.12 25.29 11.11 6.52 6.99 10.66 15.42 12.42 25.3-9.28 5.6-13.82 13.35-13.62 23.25.2 9.49 4.14 17.29 11.82 23.41 4.3 3.49 9.17 5.76 14.61 6.81-1.63 5.46-3.71 11.11-6.24 16.96zM119.22 31.81c0-7.39 2.65-14.16 7.95-20.31 5.3-6.15 11.77-10.27 19.41-12.36 1.04 7.42-.82 14.23-5.58 20.43-4.76 6.2-11.14 10.28-19.14 12.24-.76-.71-1.64-1.25-2.64-1.62-1.01-.38-2.01-.58-3.01-.61z" />
+                          </svg>
+                          <span>Apple Pay</span>
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-black/5 dark:bg-white/10 text-luxury-text font-mono">
+                          {c("Touch / Face ID", "الدفع البيومتري")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-luxury-muted mt-0.5">
+                        {c("Authorize seamlessly using Touch ID, Face ID or Apple passcode.", "تأكيد الطلب الفوري بنقرة واحدة عبر بصمة الوجه أو الإصبع.")}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-luxury-muted mt-0.5">
-                      {c("Authorize seamlessly using Touch ID, Face ID or Apple passcode.", "تأكيد الطلب الفوري بنقرة واحدة عبر بصمة الوجه أو الإصبع.")}
-                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
-              {/* Option C: Google Pay */}
-              <div
-                onClick={() => setPaymentMethod("GOOGLE_PAY")}
-                className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
-                  paymentMethod === "GOOGLE_PAY"
-                    ? "border-luxury-text bg-luxury-surface2 shadow-sm"
-                    : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <input
-                    type="radio"
-                    name="paymentMethodRadio"
-                    value="GOOGLE_PAY"
-                    checked={paymentMethod === "GOOGLE_PAY"}
-                    onChange={() => setPaymentMethod("GOOGLE_PAY")}
-                    className="mt-1 accent-black dark:accent-white shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
-                        <span className="font-bold">G</span>
-                        <span>Pay</span>
-                      </span>
-                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
-                        {c("Instant 1-Tap", "نقرة واحدة")}
-                      </span>
+              {/* Option C: Google Pay (Non-Safari / Chrome / Android) */}
+              {walletSupport.googlePay && (
+                <div
+                  onClick={() => setPaymentMethod("GOOGLE_PAY")}
+                  className={`p-3.5 sm:p-4 border rounded-sm cursor-pointer transition-all ${
+                    paymentMethod === "GOOGLE_PAY"
+                      ? "border-luxury-text bg-luxury-surface2 shadow-sm"
+                      : "border-luxury-border bg-luxury-surface hover:border-luxury-borderBold"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    <input
+                      type="radio"
+                      name="paymentMethodRadio"
+                      value="GOOGLE_PAY"
+                      checked={paymentMethod === "GOOGLE_PAY"}
+                      onChange={() => setPaymentMethod("GOOGLE_PAY")}
+                      className="mt-1 accent-black dark:accent-white shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-luxury-text flex items-center gap-1.5">
+                          <span className="font-bold">G</span>
+                          <span>Pay</span>
+                        </span>
+                        <span className="text-[9px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono">
+                          {c("Instant 1-Tap", "نقرة واحدة")}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-luxury-muted mt-0.5">
+                        {c("Pay securely with cards saved in your Google Account.", "ادفع فوراً وبأمان عبر البطاقات المحفوظة في حساب جوجل.")}
+                      </p>
                     </div>
-                    <p className="text-[11px] text-luxury-muted mt-0.5">
-                      {c("Pay securely with cards saved in your Google Account.", "ادفع فوراً وبأمان عبر البطاقات المحفوظة في حساب جوجل.")}
-                    </p>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Cash on Delivery / VIP Concierge */}
               <div

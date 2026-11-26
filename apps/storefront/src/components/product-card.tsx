@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import { Link } from "../navigation";
 import { Heart } from "lucide-react";
 import { formatCurrency } from "@muschio/ui";
 import { useWishlist } from "../context/wishlist-context";
 import { productCardCopy } from "../lib/customer-copy";
-import { ImageGalleryControls } from "./image-gallery-controls";
 
 export interface ProductCardVariant {
   id?: string;
@@ -69,7 +68,6 @@ export function ProductCard({
   compareAtPrice,
   variants,
   image,
-  secondaryImage,
   images,
   badge,
   tags,
@@ -82,61 +80,10 @@ export function ProductCard({
 
   const title = isAr && nameAr ? nameAr : nameEn;
   const copy = productCardCopy[locale];
-  const galleryImages = Array.from(new Set(
-    [...(images ?? []), image, secondaryImage]
+  const primaryImage =
+    [...(images ?? []), image]
       .filter((src): src is string => typeof src === "string" && Boolean(src.trim()))
-      .map((src) => src.trim()),
-  ));
-  if (!galleryImages.length) galleryImages.push("/product-placeholder.svg");
-  const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const activeImageIndex = selectedImageIndex % galleryImages.length;
-
-  const touchStartXRef = React.useRef<number | null>(null);
-  const touchStartYRef = React.useRef<number | null>(null);
-  const isSwipingRef = React.useRef(false);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    if (!touch) return;
-    touchStartXRef.current = touch.clientX;
-    touchStartYRef.current = touch.clientY;
-    isSwipingRef.current = false;
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    const touch = e.touches[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
-    const diffX = touch.clientX - touchStartXRef.current;
-    const diffY = touch.clientY - touchStartYRef.current;
-    if (Math.abs(diffX) > 12 && Math.abs(diffX) > Math.abs(diffY)) {
-      isSwipingRef.current = true;
-    }
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    const touch = e.changedTouches[0];
-    if (!touch || touchStartXRef.current === null || touchStartYRef.current === null) return;
-    const diffX = touch.clientX - touchStartXRef.current;
-    const diffY = touch.clientY - touchStartYRef.current;
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-
-    if (Math.abs(diffX) > 35 && Math.abs(diffX) > Math.abs(diffY) && galleryImages.length > 1) {
-      isSwipingRef.current = true;
-      if (diffX < 0) {
-        setSelectedImageIndex((prev) => (prev + 1) % galleryImages.length);
-      } else {
-        setSelectedImageIndex((prev) => (prev - 1 + galleryImages.length) % galleryImages.length);
-      }
-      setTimeout(() => {
-        isSwipingRef.current = false;
-      }, 150);
-    } else {
-      setTimeout(() => {
-        isSwipingRef.current = false;
-      }, 50);
-    }
-  };
+      .map((src) => src.trim())[0] || "/product-placeholder.svg";
 
   // Resolve variants from props
   const activeVariants: ProductCardVariant[] = useMemo(() => {
@@ -306,41 +253,17 @@ export function ProductCard({
         <Link
           href={`/product/${slug}`}
           aria-label={`${copy.viewProduct}: ${title}`}
-          onClick={(e) => {
-            if (isSwipingRef.current) {
-              e.preventDefault();
-            }
-          }}
           className="group/cover relative block h-full w-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-neutral-900 dark:focus-visible:ring-white"
         >
-          <div
-            dir="ltr"
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            className="flex h-full w-full transition-transform duration-500 ease-out motion-reduce:transition-none"
-            style={{ transform: `translateX(-${activeImageIndex * 100}%)` }}
-          >
-            {galleryImages.map((src, index) => (
-              <div key={src} className="relative h-full w-full shrink-0" aria-hidden={index !== activeImageIndex}>
-                <Image
-                  src={src}
-                  alt={index === activeImageIndex ? title : ""}
-                  fill
-                  sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                  className="object-cover object-center"
-                  draggable={false}
-                />
-              </div>
-            ))}
-          </div>
+          <Image
+            src={primaryImage}
+            alt={title}
+            fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
+            className="object-cover object-center transition-transform duration-500 ease-out group-hover/cover:scale-[1.03]"
+            draggable={false}
+          />
         </Link>
-        <ImageGalleryControls
-          count={galleryImages.length}
-          index={activeImageIndex}
-          onSelect={setSelectedImageIndex}
-          locale={locale}
-        />
       </div>
 
       {/* 2. Text / Information (Exact Level Shoes Hierarchy) */}

@@ -8,7 +8,6 @@ import { Link } from "../navigation";
 import { Heart, Share2, ChevronDown, Check, ShieldCheck, Truck, RotateCcw, ShoppingBag, ArrowLeftRight, Star } from "lucide-react";
 import { PriceDisplay, formatCurrency } from "@muschio/ui";
 import { CollectionSlider } from "./collection-slider";
-import { ImageGalleryControls } from "./image-gallery-controls";
 import { ProductReviews } from "./product-reviews";
 import { useWishlist } from "../context/wishlist-context";
 import { useCart } from "../context/cart-context";
@@ -408,13 +407,6 @@ export function ProductExperience({
                   </div>
                 ))}
               </div>
-
-              <ImageGalleryControls
-                count={images.length}
-                index={selectedImageIndex % images.length}
-                onSelect={setSelectedImageIndex}
-                locale={locale}
-              />
 
               {/* Floating Luxury Action Dock (Circular Wishlist, Compare & Share) */}
               <div className="absolute top-4 end-4 z-20 flex flex-col items-center gap-1.5 p-1.5 rounded-full bg-white/95 dark:bg-neutral-800/95 backdrop-blur-md border border-neutral-100 dark:border-neutral-700/60 shadow-sm">
