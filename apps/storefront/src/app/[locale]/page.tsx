@@ -242,10 +242,10 @@ export default async function HomePage(
       variant.availableQuantity ??
       (variant.inventory
         ? Math.max(
-            0,
-            (variant.inventory.sealedQuantity ?? 0) -
-              (variant.inventory.reservedQuantity ?? 0),
-          )
+          0,
+          (variant.inventory.sealedQuantity ?? 0) -
+          (variant.inventory.reservedQuantity ?? 0),
+        )
         : undefined),
     warehouse: variant.warehouse,
     isDefault: Boolean(variant.isDefault),

@@ -781,16 +781,20 @@ export function App() {
             ? p.variants.map((v: any, idx: number) => {
               const regPrice = v.compareAtPrice ? Number(v.compareAtPrice) : Number(v.price) || 0;
               const discPrice = v.discountPrice ? Number(v.discountPrice) : (v.compareAtPrice ? Number(v.price) : null);
+              const sellingPrice = discPrice !== null && discPrice > 0 && discPrice < regPrice
+                ? discPrice
+                : (Number(v.price) || regPrice);
               return {
                 id: v.id,
                 sku: v.sku,
                 volume: v.volume || (v.volumeMl ? `${v.volumeMl}ml` : v.sizeLabelEn || "100ml"),
                 volumeMl: v.volumeMl || 100,
+                basePrice: regPrice,
                 regularPrice: regPrice,
                 originalPrice: regPrice,
-                price: regPrice,
-                discountPrice: discPrice,
-                salePrice: discPrice,
+                price: sellingPrice,
+                discountPrice: sellingPrice < regPrice ? sellingPrice : null,
+                salePrice: sellingPrice < regPrice ? sellingPrice : null,
                 stockQuantity: v.inventory?.sealedQuantity ?? v.stockQuantity ?? 20,
                 isDefault: v.isDefault ?? idx === 0,
                 isSampleVial: Boolean(v.isSampleVial),
