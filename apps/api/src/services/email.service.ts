@@ -143,8 +143,10 @@ export class EmailService {
     error?: any;
     message?: string;
   }> {
-    const fromAddress = from || this.getFromEmail();
-    const toAddresses = Array.isArray(to) ? to : [to];
+    const sanitizeHeader = (value: string): string => value.replace(/[\r\n]+/g, " ").trim();
+    const fromAddress = sanitizeHeader(from || this.getFromEmail());
+    const toAddresses = (Array.isArray(to) ? to : [to]).map((addr) => sanitizeHeader(String(addr)));
+    const safeSubject = sanitizeHeader(subject);
     const plainText = text || this.stripHtmlToText(html);
 
     // 1. SendGrid API (Native REST fetch, non-blocking)
@@ -161,7 +163,7 @@ export class EmailService {
           body: JSON.stringify({
             personalizations: [{ to: toAddresses.map((email) => ({ email })) }],
             from: { email: fromEmailOnly, name: "Muschio Haute Parfumerie" },
-            subject,
+            subject: safeSubject,
             content: [
               { type: "text/plain", value: plainText },
               { type: "text/html", value: html },
@@ -190,7 +192,7 @@ export class EmailService {
         const info = await transporter.sendMail({
           from: fromAddress,
           to: toAddresses.join(", "),
-          subject,
+          subject: safeSubject,
           text: plainText,
           html,
         });

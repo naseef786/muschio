@@ -5,7 +5,7 @@ import { CatalogService, storefrontProduct } from "@muschio/api";
 import { ProductExperience } from "../../../../components/product-experience";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveProductSlug } from "../../../../lib/seo-redirects";
-import { generateProductJsonLd, generateBreadcrumbJsonLd } from "../../../../lib/seo";
+import { generateProductJsonLd, generateBreadcrumbJsonLd, safeJsonLd } from "../../../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -223,11 +223,11 @@ export default async function ProductPage(
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       <ProductExperience
         product={product}

@@ -8,7 +8,7 @@ import { NotesService } from "@muschio/api";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { resolveNoteSlug } from "../../../../lib/seo-redirects";
 import { customerCopy } from "../../../../lib/customer-copy";
-import { generateBreadcrumbJsonLd } from "../../../../lib/seo";
+import { generateBreadcrumbJsonLd, safeJsonLd } from "../../../../lib/seo";
 
 export const dynamic = "force-dynamic";
 
@@ -118,7 +118,7 @@ export default async function NoteDetailPage(
     <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-6 md:py-10 space-y-8">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       {/* 1. Breadcrumbs */}
       <nav aria-label="Breadcrumb" className="text-xs text-luxury-muted">

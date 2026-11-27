@@ -14,7 +14,7 @@ import { CompareProvider } from "../../context/compare-context";
 import { CurrencyProvider } from "../../context/currency-context";
 import { CompareBar } from "../../components/compare-bar";
 import { FloatingCartBar } from "../../components/floating-cart-bar";
-import { generateOrganizationJsonLd, generateWebSiteJsonLd } from "../../lib/seo";
+import { generateOrganizationJsonLd, generateWebSiteJsonLd, safeJsonLd } from "../../lib/seo";
 import { CatalogService, NotesService, SettingsService } from "@muschio/api";
 import { muschioApi } from "../../lib/api";
 import { Figtree, Cairo } from "next/font/google";
@@ -176,11 +176,11 @@ export default async function RootLayout(
         {/* Organization & WebSite SearchBox Structured Data for Google GCC Crawlers */}
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(orgJsonLd) }}
         />
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+          dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }}
         />
       </head>
       <body className={`${figtree.className} ${figtree.variable} ${cairo.variable} font-sans min-h-screen flex flex-col bg-luxury-canvas text-luxury-text selection:bg-accent selection:text-white transition-colors duration-300 w-full max-w-full overflow-x-hidden`}>

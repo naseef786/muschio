@@ -31,7 +31,11 @@ import {
   createGuestSession,
   verifyStorefrontToken,
 } from "@muschio/api";
-import { AdminCustomerIdSchema, AdminCustomerListQuerySchema } from "@muschio/types";
+import {
+  AdminCustomerIdSchema,
+  AdminCustomerListQuerySchema,
+  AIScentConsultationInputSchema,
+} from "@muschio/types";
 import { EmailService } from "@/lib/email-service";
 import { WhatsAppService } from "@/lib/whatsapp-service";
 import { getRequiredAdminRoles } from "@/lib/admin-rbac";
@@ -1250,7 +1254,11 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
 
     // 3. AI Scent Discovery
     if (path === "ai/scent-discovery") {
-      const result = await AIScentDiscoveryService.consult(body);
+      const parsed = AIScentConsultationInputSchema.safeParse(body);
+      if (!parsed.success) {
+        return error("INVALID_INPUT", "Invalid scent consultation request", 400);
+      }
+      const result = await AIScentDiscoveryService.consult(parsed.data);
       return success(result);
     }
 
@@ -1865,8 +1873,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
               ...(body.sillage ? { sillage: String(body.sillage).trim() } : {}),
               ...(body.countryOfOrigin ? { countryOfOrigin: String(body.countryOfOrigin).trim() } : {}),
               ...(body.releaseYear ? { releaseYear: Number(body.releaseYear) || undefined } : {}),
-              ...(body.metaTitleEn || body.metaTitle ? { metaTitleEn: String(body.metaTitleEn || body.metaTitle).trim() } : {}),
-              ...(body.metaDescriptionEn || body.metaDescription ? { metaDescriptionEn: String(body.metaDescriptionEn || body.metaDescription).trim() } : {}),
               perfumers: resolvedPerfumerIds.length > 0
                 ? {
                   create: resolvedPerfumerIds.map((id, index) => ({
@@ -1935,8 +1941,6 @@ export async function POST(req: NextRequest, props: { params: Promise<{ route: s
             ...(body.sillage ? { sillage: String(body.sillage).trim() } : {}),
             ...(body.countryOfOrigin ? { countryOfOrigin: String(body.countryOfOrigin).trim() } : {}),
             ...(body.releaseYear ? { releaseYear: Number(body.releaseYear) || undefined } : {}),
-            ...(body.metaTitleEn || body.metaTitle ? { metaTitleEn: String(body.metaTitleEn || body.metaTitle).trim() } : {}),
-            ...(body.metaDescriptionEn || body.metaDescription ? { metaDescriptionEn: String(body.metaDescriptionEn || body.metaDescription).trim() } : {}),
             perfumers: resolvedPerfumerIds.length > 0
               ? {
                 create: resolvedPerfumerIds.map((id, index) => ({

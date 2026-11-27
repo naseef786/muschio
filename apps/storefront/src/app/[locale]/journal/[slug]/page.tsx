@@ -9,7 +9,8 @@ import { muschioApi } from "../../../../lib/api";
 import { JournalService } from "@muschio/api";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { customerCopy } from "../../../../lib/customer-copy";
-import { generateArticleJsonLd, generateBreadcrumbJsonLd } from "../../../../lib/seo";
+import { generateArticleJsonLd, generateBreadcrumbJsonLd, safeJsonLd } from "../../../../lib/seo";
+import { sanitizeEditorialHtml } from "../../../../lib/sanitize";
 
 export const dynamic = "force-dynamic";
 
@@ -123,11 +124,11 @@ export default async function JournalDetailPage(
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-14 space-y-10">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(articleJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       {/* 1. Back link */}
       <Link
@@ -178,7 +179,7 @@ export default async function JournalDetailPage(
       <div
         className="text-luxury-text font-sans text-sm sm:text-base leading-relaxed space-y-6 prose dark:prose-invert max-w-none"
         dangerouslySetInnerHTML={{
-          __html: isAr ? (post.contentAr || post.contentEn) : (post.contentEn || post.contentAr),
+          __html: sanitizeEditorialHtml(isAr ? (post.contentAr || post.contentEn) : (post.contentEn || post.contentAr)),
         }}
       />
 

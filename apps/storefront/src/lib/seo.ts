@@ -232,3 +232,14 @@ export function generateArticleJsonLd(params: ArticleJsonLdParams) {
   };
 }
 
+/**
+ * Serializes JSON-LD safely for embedding inside <script type="application/ld+json">,
+ * escaping characters that could prematurely close the script tag.
+ */
+export function safeJsonLd(data: unknown): string {
+  return JSON.stringify(data)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e")
+    .replace(/&/g, "\\u0026");
+}
+

@@ -9,7 +9,7 @@ import { CatalogService, storefrontProduct, prisma } from "@muschio/api";
 import { DEFAULT_SCENT_PROFILES } from "@muschio/types";
 import { buildLocalizedMetadata } from "../../../../lib/page-metadata";
 import { customerCopy } from "../../../../lib/customer-copy";
-import { generateBreadcrumbJsonLd } from "../../../../lib/seo";
+import { generateBreadcrumbJsonLd, safeJsonLd } from "../../../../lib/seo";
 import { ArrowRight, Compass } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -164,11 +164,11 @@ export default async function ScentProfilePage(props: {
     <div className="min-h-screen bg-luxury-canvas text-luxury-text pb-20">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbJsonLd) }}
       />
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(collectionSchema) }}
       />
 
       {/* 1. Breadcrumbs */}

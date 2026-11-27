@@ -340,13 +340,24 @@ MFK-BR540E-70,"Baccarat Rouge 540 Extrait","باكارات روج 540 إكستر
 MFK-BR540E-200,"Baccarat Rouge 540 Extrait","باكارات روج 540 إكستريت",mfk-baccarat-rouge-540-extrait,"Maison Francis Kurkdjian","Amber Floral","Amber, Floral, Woody, Gourmand","Iconic, Best Seller","Francis Kurkdjian","Legendary Master Perfumer and Dior Perfume Creation Director, famed for crystalline olfactory radiance.",EXTRAIT_DE_PARFUM,UNISEX,200,FALSE,2950,2750,,1450,12,2,DXB-MAIN,"Bitter Almond, Saffron","Egyptian Jasmine Grandiflorum, Cedarwood","Ambergris, Woody Musk","10-12 Hours","Strong","France",2017,"Luminous Amber Crystal and Floral Radiance","إشراقة الكريستال العنبري والزهور الساحرة","Augments the strength and radiance of the perfume's amber woody floral aura. In this exalted version, jasmine blossoms and woody musks engage in an alchemy of the senses.","يعزز هذا الإصدار الاستثنائي قوة وإشراقة النفحات الخشبية العنبرية والزهرية لدار فرانسيس كوركدجيان.","Baccarat Rouge 540 Extrait by MFK | Authentic UAE","Shop authentic Baccarat Rouge 540 Extrait by Maison Francis Kurkdjian at Muschio. 100% genuine guaranteed with white-glove GCC delivery.",https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?auto=format&fit=crop&w=1000&q=85,"","Baccarat Rouge 540 Extrait flacon",TRUE,PUBLISHED
 ROJA-ELY-100,"Elysium Pour Homme Parfum","إليسيوم بور أوم بارفان",roja-elysium-pour-homme-parfum,"Roja Parfums","Fresh Aromatic","Fresh, Citrus, Aromatic, Woody","Fresh & Crisp, Daywear","Roja Dove","The premier British Master Perfumer and fragrance historian, famed for formulating without compromise on rare natural absolutes.",EXTRAIT_DE_PARFUM,MEN,100,TRUE,1950,,,980,25,2,RUH-HUB,"Grapefruit, Lemon, Bergamot, Lime","Lily of the Valley, Rose de Mai, Jasmin de Grasse, Apple","Galbanum, Pink Pepper, Cypriol, Vetiver, Cedarwood, Labdanum, Ambergris, Benzoin, Vanilla","8-10 Hours","Moderate to Strong","United Kingdom",2017,"Heroic Elysian Freshness and Royal Musk","الانتعاش الأسطوري والمسك الملكي","An ultra-fresh citrus blend of lemon, bergamot, grapefruit, and lime is further refreshed by thyme and lavender, enriched by an opulent base of ambergris and cedar.","مزيج منعش وفائق الفخامة من الحمضيات النادرة والزعتر واللافندر مع قاعدة ثرية من العنبر الأشهب وخشب الأرز.","Elysium Pour Homme Parfum by Roja Parfums | UAE GCC","Shop authentic Elysium Pour Homme Parfum by Roja Parfums at Muschio. 100% genuine luxury flacons with fast GCC delivery.",https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&w=1000&q=85,"","Roja Parfums Elysium luxury flacon",FALSE,PUBLISHED`;
 
+function sanitizeSpreadsheetRows<T extends Record<string, unknown>>(rows: T[]): Record<string, unknown>[] {
+  return rows.map((row) =>
+    Object.fromEntries(
+      Object.entries(row).map(([k, v]) => [
+        k,
+        typeof v === "string" && /^[=+\-@\t\r]/.test(v) ? `'${v}` : v,
+      ]),
+    ),
+  );
+}
+
 /**
  * Downloads a pre-formatted Excel (.xlsx) template for bulk product import.
  */
 export async function downloadExcelTemplate(filename = "muschio_luxury_catalog_template.xlsx"): Promise<void> {
   const XLSX = await import("xlsx");
   const { headers, rows } = parseCsvContent(PRO_SEO_CSV_TEMPLATE);
-  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const worksheet = XLSX.utils.json_to_sheet(sanitizeSpreadsheetRows(rows), { header: headers });
 
   worksheet["!cols"] = [
     { wch: 18 }, { wch: 30 }, { wch: 32 }, { wch: 34 }, { wch: 24 }, { wch: 20 },
@@ -471,7 +482,7 @@ export async function exportCatalogToExcel(
     };
   });
 
-  const worksheet = XLSX.utils.json_to_sheet(rows, { header: headers });
+  const worksheet = XLSX.utils.json_to_sheet(sanitizeSpreadsheetRows(rows), { header: headers });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, "Muschio Catalog");
   XLSX.writeFile(workbook, filename);
